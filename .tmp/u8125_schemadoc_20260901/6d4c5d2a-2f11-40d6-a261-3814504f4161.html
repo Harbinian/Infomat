@@ -1,0 +1,296 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>SA_CusPriceJustMainView View</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">SA_CusPriceJustMainView View 
+			&nbsp;(SA 销售管理)
+			&nbsp;[U870]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>客户调价单表头视图</p>
+		
+		<h4 class=dxh4>Columns</h4>
+		<TABLE CLASS="FilteredItemListTable" CellSpacing="0">
+			<TR VALIGN="top"><TH width=30%>Column Name</TH><TH width=50%>Description</TH><TH width=50%>Datatype</TH><TH width=50%>Length</TH>
+			<TR>
+			<TD CLASS=DescriptionCell>ireturncount
+			(U870)
+			</TD><TD CLASS="DescriptionCell">打回次数&nbsp;</TD>
+			<TD CLASS="DescriptionCell">tinyint&nbsp;</TD><TD CLASS="DescriptionCell">1&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cdefine7
+			(U870)
+			</TD><TD CLASS="DescriptionCell">表头自定义项７&nbsp;</TD>
+			<TD CLASS="DescriptionCell">float&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cdefine12
+			(U870)
+			</TD><TD CLASS="DescriptionCell">表头自定义项１２&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ufts
+			(U870)
+			</TD><TD CLASS="DescriptionCell">时间戳&nbsp;</TD>
+			<TD CLASS="DescriptionCell">char&nbsp;</TD><TD CLASS="DescriptionCell">30&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cdefine11
+			(U870)
+			</TD><TD CLASS="DescriptionCell">表头自定义项１１&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>dverifysystime
+			(U871)
+			</TD><TD CLASS="DescriptionCell">审核时间&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>dverifydate
+			(U870)
+			</TD><TD CLASS="DescriptionCell">审核日期&nbsp;</TD>
+			<TD CLASS="DescriptionCell">varchar&nbsp;</TD><TD CLASS="DescriptionCell">10&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cverifier
+			(U870)
+			</TD><TD CLASS="DescriptionCell">审核人&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cdefine2
+			(U870)
+			</TD><TD CLASS="DescriptionCell">表头自定义项２&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cdefine6
+			(U870)
+			</TD><TD CLASS="DescriptionCell">表头自定义项6&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cdefine16
+			(U870)
+			</TD><TD CLASS="DescriptionCell">表头自定义项１６&nbsp;</TD>
+			<TD CLASS="DescriptionCell">float&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ivtid
+			(U870)
+			</TD><TD CLASS="DescriptionCell">单据模版id&nbsp;</TD>
+			<TD CLASS="DescriptionCell">bigint&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cdefine8
+			(U870)
+			</TD><TD CLASS="DescriptionCell">表头自定义项８&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cmodifier
+			(U871)
+			</TD><TD CLASS="DescriptionCell">修改人&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cdefine13
+			(U870)
+			</TD><TD CLASS="DescriptionCell">表头自定义项１３&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>iswfcontrolled
+			(U870)
+			</TD><TD CLASS="DescriptionCell">启用工作流&nbsp;</TD>
+			<TD CLASS="DescriptionCell">tinyint&nbsp;</TD><TD CLASS="DescriptionCell">1&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>dmodifysystime
+			(U871)
+			</TD><TD CLASS="DescriptionCell">修改时间&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>bsaleprice
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">报价含税标识&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ccurrentauditor
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">当前审批人&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">400&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>dcreatesystime
+			(U871)
+			</TD><TD CLASS="DescriptionCell">制单时间&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cmainmemo
+			(U870)
+			</TD><TD CLASS="DescriptionCell">表头备注&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ddate
+			(U870)
+			</TD><TD CLASS="DescriptionCell">单据日期&nbsp;</TD>
+			<TD CLASS="DescriptionCell">varchar&nbsp;</TD><TD CLASS="DescriptionCell">10&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ccode
+			(U870)
+			</TD><TD CLASS="DescriptionCell">单据号&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cdepname
+			(U870)
+			</TD><TD CLASS="DescriptionCell">部门名称&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>drdate
+			(U870)
+			</TD><TD CLASS="DescriptionCell">系统日期&nbsp;</TD>
+			<TD CLASS="DescriptionCell">varchar&nbsp;</TD><TD CLASS="DescriptionCell">10&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cdefine15
+			(U870)
+			</TD><TD CLASS="DescriptionCell">表头自定义项１５&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cdefine1
+			(U870)
+			</TD><TD CLASS="DescriptionCell">表头自定义项１&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cdefine5
+			(U870)
+			</TD><TD CLASS="DescriptionCell">表头自定义项５&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>id
+			(U870)
+			</TD><TD CLASS="DescriptionCell">主表id&nbsp;</TD>
+			<TD CLASS="DescriptionCell">bigint&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cpersoncode
+			(U870)
+			</TD><TD CLASS="DescriptionCell">业务员编码&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cdefine10
+			(U870)
+			</TD><TD CLASS="DescriptionCell">表头自定义项１０&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">120&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>dmoddate
+			(U871)
+			</TD><TD CLASS="DescriptionCell">修改日期&nbsp;</TD>
+			<TD CLASS="DescriptionCell">varchar&nbsp;</TD><TD CLASS="DescriptionCell">10&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cdefine3
+			(U870)
+			</TD><TD CLASS="DescriptionCell">表头自定义项３&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cdefine14
+			(U870)
+			</TD><TD CLASS="DescriptionCell">表头自定义项１４&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cpersonname
+			(U870)
+			</TD><TD CLASS="DescriptionCell">业务员名称&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">80&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>iverifystate
+			(U870)
+			</TD><TD CLASS="DescriptionCell">审核状态&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>csysbarcode
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">单据条码&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">120&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ivouchstate
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">单据状态&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">18&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cdefine9
+			(U870)
+			</TD><TD CLASS="DescriptionCell">表头自定义项9&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">16&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>iprintcount
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">打印次数&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cdepcode
+			(U870)
+			</TD><TD CLASS="DescriptionCell">部门编码&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">24&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cdefine4
+			(U870)
+			</TD><TD CLASS="DescriptionCell">表头自定义项４&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cmaker
+			(U870)
+			</TD><TD CLASS="DescriptionCell">制单人&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+		</TABLE>
+			<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

@@ -1,0 +1,603 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>SA_PreOrderMainView View</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">SA_PreOrderMainView View 
+			&nbsp;(SA 销售管理)
+			&nbsp;[U872]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>预订单表头视图</p>
+		
+		<h4 class=dxh4>Columns</h4>
+		<TABLE CLASS="FilteredItemListTable" CellSpacing="0">
+			<TR VALIGN="top"><TH width=30%>Column Name</TH><TH width=50%>Description</TH><TH width=50%>Datatype</TH><TH width=50%>Length</TH>
+			<TR>
+			<TD CLASS=DescriptionCell>cdefine8
+			(U872)
+			</TD><TD CLASS="DescriptionCell">表头自定义项8&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cdccode
+			(U872)
+			</TD><TD CLASS="DescriptionCell">地区编码&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">24&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cpaycode
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">客户付款条件编码&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">6&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>csysbarcode
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">单据条码&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">120&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cexch_name
+			(U872)
+			</TD><TD CLASS="DescriptionCell">币种&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">100&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ddate
+			(U872)
+			</TD><TD CLASS="DescriptionCell">订单日期&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ccusdefine15
+			(U872)
+			</TD><TD CLASS="DescriptionCell">客户自定义项15&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ivouchstate
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">单据状态&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">18&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ccusdefine6
+			(U872)
+			</TD><TD CLASS="DescriptionCell">客户自定义项6&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">120&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ccuscode
+			(U872)
+			</TD><TD CLASS="DescriptionCell">客户编码&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>csccode
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">发运方式编码&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cdefine1
+			(U872)
+			</TD><TD CLASS="DescriptionCell">表头自定义项1&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>dverifydate
+			(U872)
+			</TD><TD CLASS="DescriptionCell">审核日期&nbsp;</TD>
+			<TD CLASS="DescriptionCell">varchar&nbsp;</TD><TD CLASS="DescriptionCell">10&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cdefine4
+			(U872)
+			</TD><TD CLASS="DescriptionCell">表头自定义项4&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cdefine5
+			(U872)
+			</TD><TD CLASS="DescriptionCell">表头自定义项5&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cchanger
+			(U8101)
+			</TD><TD CLASS="DescriptionCell">修改人&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ccusdefine1
+			(U872)
+			</TD><TD CLASS="DescriptionCell">客户自定义项1&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ddependdate
+			(U872)
+			</TD><TD CLASS="DescriptionCell">撤销日期&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ccurrentauditor
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">当前审批人&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">400&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cdepname
+			(U872)
+			</TD><TD CLASS="DescriptionCell">部门名称&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ccontactname
+			(U872)
+			</TD><TD CLASS="DescriptionCell">联系人名称&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">100&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cverifier
+			(U872)
+			</TD><TD CLASS="DescriptionCell">审核人&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ufts
+			(U872)
+			</TD><TD CLASS="DescriptionCell">时间戳&nbsp;</TD>
+			<TD CLASS="DescriptionCell">char&nbsp;</TD><TD CLASS="DescriptionCell">30&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>blimitcus
+			(U872)
+			</TD><TD CLASS="DescriptionCell">是否控制允限销&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>iprintcount
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">打印次数&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>iexchrate
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">汇率&nbsp;</TD>
+			<TD CLASS="DescriptionCell">decimal&nbsp;</TD><TD CLASS="DescriptionCell">17&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cdefine12
+			(U872)
+			</TD><TD CLASS="DescriptionCell">表头自定义项12&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ccusdefine8
+			(U872)
+			</TD><TD CLASS="DescriptionCell">客户自定义项8&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ccusdefine14
+			(U872)
+			</TD><TD CLASS="DescriptionCell">客户自定义项14&nbsp;</TD>
+			<TD CLASS="DescriptionCell">float&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cofficephone
+			(U872)
+			</TD><TD CLASS="DescriptionCell">办公电话&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">200&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ccusdefine9
+			(U872)
+			</TD><TD CLASS="DescriptionCell">客户自定义项9&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>blimited
+			(U872)
+			</TD><TD CLASS="DescriptionCell">是否允销&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ccusaddress
+			(U872)
+			</TD><TD CLASS="DescriptionCell">地址&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">510&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>bcal
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">折算方式&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>dcreatesystime
+			(U872)
+			</TD><TD CLASS="DescriptionCell">制单时间&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ccusabbname
+			(U872)
+			</TD><TD CLASS="DescriptionCell">客户简称&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">120&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>bcreditdate
+			(U872)
+			</TD><TD CLASS="DescriptionCell">是否控制信用期限&nbsp;</TD>
+			<TD CLASS="DescriptionCell">bit&nbsp;</TD><TD CLASS="DescriptionCell">1&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cdefine14
+			(U872)
+			</TD><TD CLASS="DescriptionCell">表头自定义项14&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>itaxrate
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">税率&nbsp;</TD>
+			<TD CLASS="DescriptionCell">decimal&nbsp;</TD><TD CLASS="DescriptionCell">17&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ccode
+			(U872)
+			</TD><TD CLASS="DescriptionCell">单据号&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ccusdefine2
+			(U872)
+			</TD><TD CLASS="DescriptionCell">客户自定义项2&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ccusdefine3
+			(U872)
+			</TD><TD CLASS="DescriptionCell">客户自定义项3&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cmemo
+			(U872)
+			</TD><TD CLASS="DescriptionCell">备注&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">120&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ccuspersoncode
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">联系人编码&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cdefine9
+			(U872)
+			</TD><TD CLASS="DescriptionCell">表头自定义项9&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">16&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ccloser
+			(U872)
+			</TD><TD CLASS="DescriptionCell">关闭人&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cmobilephone
+			(U872)
+			</TD><TD CLASS="DescriptionCell">移动电话&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">200&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cCusHand
+			(U872)
+			</TD><TD CLASS="DescriptionCell">手机&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cpersonname
+			(U872)
+			</TD><TD CLASS="DescriptionCell">业务员名称&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">80&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ccusdefine5
+			(U872)
+			</TD><TD CLASS="DescriptionCell">客户自定义项5&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">120&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cdefine10
+			(U872)
+			</TD><TD CLASS="DescriptionCell">表头自定义项10&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">120&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cdefine16
+			(U872)
+			</TD><TD CLASS="DescriptionCell">表头自定义项16&nbsp;</TD>
+			<TD CLASS="DescriptionCell">float&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cdefine15
+			(U872)
+			</TD><TD CLASS="DescriptionCell">表头自定义项15&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ccusdefine4
+			(U872)
+			</TD><TD CLASS="DescriptionCell">客户自定义项4&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">120&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ccusdefine11
+			(U872)
+			</TD><TD CLASS="DescriptionCell">客户自定义项11&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>caddcode
+			(U872)
+			</TD><TD CLASS="DescriptionCell">收货地址编码&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cdefine7
+			(U872)
+			</TD><TD CLASS="DescriptionCell">表头自定义项7&nbsp;</TD>
+			<TD CLASS="DescriptionCell">float&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>dEndDate
+			(U872)
+			</TD><TD CLASS="DescriptionCell">停用日期&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ivtid
+			(U872)
+			</TD><TD CLASS="DescriptionCell">单据模版号&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>iswfcontrolled
+			(U872)
+			</TD><TD CLASS="DescriptionCell">是否进入工作流&nbsp;</TD>
+			<TD CLASS="DescriptionCell">tinyint&nbsp;</TD><TD CLASS="DescriptionCell">1&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cdeliverunit
+			(U872)
+			</TD><TD CLASS="DescriptionCell">收货单位&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">510&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>iverifystate
+			(U872)
+			</TD><TD CLASS="DescriptionCell">审核状态&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cmaker
+			(U872)
+			</TD><TD CLASS="DescriptionCell">制单人&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cauthid
+			(U872)
+			</TD><TD CLASS="DescriptionCell">权限ID&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ccusdefine10
+			(U872)
+			</TD><TD CLASS="DescriptionCell">客户自定义项10&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cstcode
+			(U872)
+			</TD><TD CLASS="DescriptionCell">销售类型编码&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ccusperson
+			(U872)
+			</TD><TD CLASS="DescriptionCell">联系人&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">200&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ccccode
+			(U872)
+			</TD><TD CLASS="DescriptionCell">客户分类编码&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">24&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cdefine2
+			(U872)
+			</TD><TD CLASS="DescriptionCell">表头自定义项2&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cstname
+			(U872)
+			</TD><TD CLASS="DescriptionCell">销售类型名称&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cdefine6
+			(U872)
+			</TD><TD CLASS="DescriptionCell">表头自定义项6&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cdefine11
+			(U872)
+			</TD><TD CLASS="DescriptionCell">表头自定义项11&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cdefine13
+			(U872)
+			</TD><TD CLASS="DescriptionCell">表头自定义项13&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cpersoncode
+			(U872)
+			</TD><TD CLASS="DescriptionCell">业务员编码&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ccusname
+			(U872)
+			</TD><TD CLASS="DescriptionCell">客户名称&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>dmoddate
+			(U872)
+			</TD><TD CLASS="DescriptionCell">修改日期&nbsp;</TD>
+			<TD CLASS="DescriptionCell">varchar&nbsp;</TD><TD CLASS="DescriptionCell">10&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cdepcode
+			(U872)
+			</TD><TD CLASS="DescriptionCell">部门编码&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">24&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ccusdefine16
+			(U872)
+			</TD><TD CLASS="DescriptionCell">客户自定义项16&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ccusoaddress
+			(U872)
+			</TD><TD CLASS="DescriptionCell">发货地址&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">510&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ireturncount
+			(U872)
+			</TD><TD CLASS="DescriptionCell">（暂时不用）&nbsp;</TD>
+			<TD CLASS="DescriptionCell">tinyint&nbsp;</TD><TD CLASS="DescriptionCell">1&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cscname
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">发运方式名称&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cmodifier
+			(U872)
+			</TD><TD CLASS="DescriptionCell">修改人&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ccusdefine12
+			(U872)
+			</TD><TD CLASS="DescriptionCell">客户自定义项12&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>dverifysystime
+			(U872)
+			</TD><TD CLASS="DescriptionCell">审核时间&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cdefine3
+			(U872)
+			</TD><TD CLASS="DescriptionCell">表头自定义项3&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>icreditstate
+			(U872)
+			</TD><TD CLASS="DescriptionCell">信用审批状态&nbsp;</TD>
+			<TD CLASS="DescriptionCell">varchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ccreditcuscode
+			(U872)
+			</TD><TD CLASS="DescriptionCell">信用单位编号&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ccusphone
+			(U872)
+			</TD><TD CLASS="DescriptionCell">电话&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">200&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ccusdefine7
+			(U872)
+			</TD><TD CLASS="DescriptionCell">客户自定义项7&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>dmodifysystime
+			(U872)
+			</TD><TD CLASS="DescriptionCell">修改时间&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cpayname
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">客户付款条件名称&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">120&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>id
+			(U872)
+			</TD><TD CLASS="DescriptionCell">ID&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ccusdefine13
+			(U872)
+			</TD><TD CLASS="DescriptionCell">客户自定义项13&nbsp;</TD>
+			<TD CLASS="DescriptionCell">float&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>fadvancepaymentratio
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">销售定金比例
+销售定金比例&nbsp;</TD>
+			<TD CLASS="DescriptionCell">float&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+		</TABLE>
+			<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

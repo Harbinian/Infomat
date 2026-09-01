@@ -1,0 +1,1202 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>SR_View_ServiceBill_List View</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">SR_View_ServiceBill_List View 
+			&nbsp;(SR 售后服务)
+			&nbsp;[U872]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>服务回访字表</p>
+		
+		<h4 class=dxh4>Columns</h4>
+		<TABLE CLASS="FilteredItemListTable" CellSpacing="0">
+			<TR VALIGN="top"><TH width=30%>Column Name</TH><TH width=50%>Description</TH><TH width=50%>Datatype</TH><TH width=50%>Length</TH>
+			<TR>
+			<TD CLASS=DescriptionCell>iPrintCount
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cAgrCode
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>dVerifydate
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cCusDefine15
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDefine12
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cCusDefine13
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">float&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>mFreeSum
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">decimal&nbsp;</TD><TD CLASS="DescriptionCell">13&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>SerTypeName
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">100&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cCusDefine5
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">120&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>fDrawJSSum
+			(U890)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">money&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ContactID
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cCusDefine6
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">120&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>brepair
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">tinyint&nbsp;</TD><TD CLASS="DescriptionCell">1&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cCusPhone
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">200&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cInvDefine3
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cItem_class
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>fQuantity
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">float&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>fJSumQuantity
+			(U890)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">float&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDefine13
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>SerExpenseOID
+			(U890)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cCusAddress
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">510&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDefine22
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">120&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cfree9
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cCusDefine8
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>mNatCompensateSum
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">decimal&nbsp;</TD><TD CLASS="DescriptionCell">13&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>BODY_OID
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">160&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cHomePhone
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">200&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cBatchProperty3
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">decimal&nbsp;</TD><TD CLASS="DescriptionCell">17&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>fYFSumQuantity
+			(U890)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">float&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cCusAdvice
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">400&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>MOID
+			(U890)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cBatchProperty5
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">decimal&nbsp;</TD><TD CLASS="DescriptionCell">17&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cModifier
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cBatchProperty10
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDefine36
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cSerDepCode
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">48&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cModType
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>SerStateID
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cHomeAddress
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">300&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cSNDefine8
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">400&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDefine1
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cfree2
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cfree10
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cInvccode
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">24&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>SerModeID
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>dReqDate
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cCusCode
+			(U872)
+			</TD><TD CLASS="DescriptionCell">客户编码&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cInvCode
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">80&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cMobilePhone
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">200&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cWorkAddress
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">300&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cInvDefine1
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>OID
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">80&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDefine6
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cOfficePhone
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">200&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cCusDefine12
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>dServiceEndDate
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>SerBillID
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">160&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cInvName
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">510&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cItem_CName
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cCusDefine1
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cfree3
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cCusName
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">196&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cIntendInstance
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">800&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cVerifier
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDefine16
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">float&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>dCreatedDate
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>mNatDiscountSum
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">money&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDefine32
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cfree8
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>mNatGatheringSum
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">money&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cItemCode
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDefine14
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>dCompletedDate
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cIntendStatus
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>IRETURNCOUNT
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>DistDate
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>CustomerKCode
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>mNatChargeSum
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">money&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cSerPrincipalName
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">80&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cReqDepName
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">510&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cCusAuthid
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cBatchProperty1
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">decimal&nbsp;</TD><TD CLASS="DescriptionCell">17&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDefine3
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cfree5
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cContactName
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">100&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cReqContent
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">1000&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDefine10
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">120&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>dIntendTime
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>PreClosedStateID
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">80&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cSNDefine10
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">400&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>dArriveDate
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDefine26
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">float&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cCusDefine9
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ModCount
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDefine9
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">16&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cBatchProperty6
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDefine28
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cBatchProperty2
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">decimal&nbsp;</TD><TD CLASS="DescriptionCell">17&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cInvDefine4
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">120&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cSNDefine9
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">400&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>bFeedback
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">bit&nbsp;</TD><TD CLASS="DescriptionCell">1&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDepName
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">510&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDefine33
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDefine37
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cBatchProperty9
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cInvDefine7
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDefine35
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>dCompletedTime
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cExchName
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">16&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>Distor
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cBatchProperty8
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cSNDefine6
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">400&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ISWFCONTROLLED
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>fDrawQuantitySum
+			(U890)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">float&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDefine29
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cTradeCCode
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">24&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cReqPersonCode
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cInvAuthid
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cfree6
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDefine24
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">120&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cCusDefine2
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cCusDefine16
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>dModifiedDate
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDefine25
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">120&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cSNDefine5
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">400&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cSerBillCode
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cCusTradeCCode
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">24&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDefine31
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cExplain
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">400&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cCusDefine10
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>bSettled
+			(U8111)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDefine11
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>mDiscountSum
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">money&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ID
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cfree4
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cBatch
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">120&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cInvDefine10
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDefine15
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDefine27
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">float&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>mChargeSum
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">money&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cCusDefine11
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cFailureMemo
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">800&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>dnVerifytime
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>mNatFreeSum
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">decimal&nbsp;</TD><TD CLASS="DescriptionCell">13&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cSNDefine7
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">400&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cInvDefine5
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">120&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cBatchProperty7
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cCusAbbName
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">120&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDefine2
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>dReqTime
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cSNDefine3
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">400&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>IVERIFYSTATEEX
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cInvDefine2
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>VT_ID
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cItemName
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">120&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>mCompensateSum
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">decimal&nbsp;</TD><TD CLASS="DescriptionCell">13&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDefine8
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDefine7
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">float&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDefine30
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>fExchRate
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">float&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cBatchProperty4
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">decimal&nbsp;</TD><TD CLASS="DescriptionCell">17&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cReqPersonName
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">80&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>dIntendDate
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cInvDefine6
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">120&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDefine23
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">120&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cfree1
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cCusHand
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">200&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cfree7
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>SerRequestID
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">160&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDefine34
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>dArriveTime
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>fDiscount
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">float&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cCusDefine7
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>mGatheringSum
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">money&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDefine5
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>SerTypeID
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cSNDefine4
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">400&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cSNDefine2
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">400&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cInvDefine9
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cSerPrincipalCode
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">80&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cReqDepCode
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">24&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cInvStd
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">510&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>SerRequestOID
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>DisHistoryFlag
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">bit&nbsp;</TD><TD CLASS="DescriptionCell">1&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ufts
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">char&nbsp;</TD><TD CLASS="DescriptionCell">30&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cCreator
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDefine4
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cCusDefine3
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cCCCode
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">24&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cSNDefine1
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">400&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cCusDefine14
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">float&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>SerialNoID
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">160&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cCusDefine4
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">120&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cInvDefine8
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+		</TABLE>
+			<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

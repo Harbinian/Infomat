@@ -1,0 +1,350 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>Hr_v_Ht_FixTerm View</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">Hr_v_Ht_FixTerm View 
+			&nbsp;(HT 人事合同管理)
+			&nbsp;[U871]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>全日制劳动合同</p>
+		
+		<h4 class=dxh4>Columns</h4>
+		<TABLE CLASS="FilteredItemListTable" CellSpacing="0">
+			<TR VALIGN="top"><TH width=30%>Column Name</TH><TH width=50%>Description</TH><TH width=50%>Datatype</TH><TH width=50%>Length</TH>
+			<TR>
+			<TD CLASS=DescriptionCell>cPsn_num
+			(U871)
+			</TD><TD CLASS="DescriptionCell">人员编码&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>rmanHourType
+			(U871)
+			</TD><TD CLASS="DescriptionCell">工时制度&nbsp;</TD>
+			<TD CLASS="DescriptionCell">UFreference&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>bEnder
+			(U872)
+			</TD><TD CLASS="DescriptionCell">解除／终止操作人&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>vSickLeaveWage
+			(U871)
+			</TD><TD CLASS="DescriptionCell">病假工资&nbsp;</TD>
+			<TD CLASS="DescriptionCell">ntext&nbsp;</TD><TD CLASS="DescriptionCell">16&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>bEndDate
+			(U872)
+			</TD><TD CLASS="DescriptionCell">解除／终止操作日期&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>iProWage
+			(U871)
+			</TD><TD CLASS="DescriptionCell">试用期工资&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>dSignDate
+			(U871)
+			</TD><TD CLASS="DescriptionCell">签订日期&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>iMonthWage
+			(U871)
+			</TD><TD CLASS="DescriptionCell">月工资&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>vWorkAddress
+			(U871)
+			</TD><TD CLASS="DescriptionCell">工作地点&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>rSignState
+			(U871)
+			</TD><TD CLASS="DescriptionCell">签订状态&nbsp;</TD>
+			<TD CLASS="DescriptionCell">UFreference&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>bChanged
+			(U871)
+			</TD><TD CLASS="DescriptionCell">是否变更&nbsp;</TD>
+			<TD CLASS="DescriptionCell">bit&nbsp;</TD><TD CLASS="DescriptionCell">1&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>bUpdater
+			(U872)
+			</TD><TD CLASS="DescriptionCell">修改操作人&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>rCancelReason
+			(U871)
+			</TD><TD CLASS="DescriptionCell">解除／终止原因&nbsp;</TD>
+			<TD CLASS="DescriptionCell">UFreference&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>dCancelDate
+			(U871)
+			</TD><TD CLASS="DescriptionCell">解除日期&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>vWaitWageExplain
+			(U871)
+			</TD><TD CLASS="DescriptionCell">待工工资说明&nbsp;</TD>
+			<TD CLASS="DescriptionCell">ntext&nbsp;</TD><TD CLASS="DescriptionCell">16&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>vOtherWageAssumpsit
+			(U871)
+			</TD><TD CLASS="DescriptionCell">其他工资约定&nbsp;</TD>
+			<TD CLASS="DescriptionCell">ntext&nbsp;</TD><TD CLASS="DescriptionCell">16&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>bUpdateDate
+			(U872)
+			</TD><TD CLASS="DescriptionCell">修改操作日期&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>vWelfare
+			(U871)
+			</TD><TD CLASS="DescriptionCell">福利待遇&nbsp;</TD>
+			<TD CLASS="DescriptionCell">ntext&nbsp;</TD><TD CLASS="DescriptionCell">16&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>vMonthWageExplain
+			(U871)
+			</TD><TD CLASS="DescriptionCell">月工资说明&nbsp;</TD>
+			<TD CLASS="DescriptionCell">ntext&nbsp;</TD><TD CLASS="DescriptionCell">16&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>dEndDate2
+			(U871)
+			</TD><TD CLASS="DescriptionCell">终止日期&nbsp;</TD>
+			<TD CLASS="DescriptionCell">UFDate&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>iLimit
+			(U871)
+			</TD><TD CLASS="DescriptionCell">合同期限（月）&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>vUnitLegalName
+			(U871)
+			</TD><TD CLASS="DescriptionCell">法定代表人&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>nUnitPay
+			(U871)
+			</TD><TD CLASS="DescriptionCell">补偿金额&nbsp;</TD>
+			<TD CLASS="DescriptionCell">numeric&nbsp;</TD><TD CLASS="DescriptionCell">9&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>iConTimes
+			(U871)
+			</TD><TD CLASS="DescriptionCell">续签次数&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>vJobType
+			(U871)
+			</TD><TD CLASS="DescriptionCell">职位（工种）&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>rHtCtrtType
+			(U871)
+			</TD><TD CLASS="DescriptionCell">劳动合同类型&nbsp;</TD>
+			<TD CLASS="DescriptionCell">UFreference&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>vMemo
+			(U871)
+			</TD><TD CLASS="DescriptionCell">备注&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">600&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>rHtState
+			(U871)
+			</TD><TD CLASS="DescriptionCell">合同状态&nbsp;</TD>
+			<TD CLASS="DescriptionCell">UFreference&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>bSigner
+			(U872)
+			</TD><TD CLASS="DescriptionCell">签订操作人&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>iLiveCostStandard
+			(U871)
+			</TD><TD CLASS="DescriptionCell">生活费标准&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>rTermType
+			(U871)
+			</TD><TD CLASS="DescriptionCell">合同期限类型&nbsp;</TD>
+			<TD CLASS="DescriptionCell">UFreference&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>vUnitPostCode
+			(U871)
+			</TD><TD CLASS="DescriptionCell">单位邮政编码&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">12&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>Pk_hr_hi_ctrt
+			(U871)
+			</TD><TD CLASS="DescriptionCell">主键&nbsp;</TD>
+			<TD CLASS="DescriptionCell">UFUID&nbsp;</TD><TD CLASS="DescriptionCell">16&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>hrts
+			(U871)
+			</TD><TD CLASS="DescriptionCell">时间戳&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>vWorkProtectItem
+			(U871)
+			</TD><TD CLASS="DescriptionCell">劳动保护条款&nbsp;</TD>
+			<TD CLASS="DescriptionCell">ntext&nbsp;</TD><TD CLASS="DescriptionCell">16&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>vAffixExplain
+			(U871)
+			</TD><TD CLASS="DescriptionCell">附件说明&nbsp;</TD>
+			<TD CLASS="DescriptionCell">ntext&nbsp;</TD><TD CLASS="DescriptionCell">16&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>vRestAssign
+			(U871)
+			</TD><TD CLASS="DescriptionCell">休息日安排&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>iCompTerm
+			(U871)
+			</TD><TD CLASS="DescriptionCell">补偿期限（月）&nbsp;</TD>
+			<TD CLASS="DescriptionCell">numeric&nbsp;</TD><TD CLASS="DescriptionCell">5&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>dTryEndDate
+			(U871)
+			</TD><TD CLASS="DescriptionCell">试用到期日期&nbsp;</TD>
+			<TD CLASS="DescriptionCell">UFDate&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>denddate
+			(U871)
+			</TD><TD CLASS="DescriptionCell">到期日期&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>vOtherProceeding
+			(U871)
+			</TD><TD CLASS="DescriptionCell">其他事项&nbsp;</TD>
+			<TD CLASS="DescriptionCell">ntext&nbsp;</TD><TD CLASS="DescriptionCell">16&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>iProMonth
+			(U871)
+			</TD><TD CLASS="DescriptionCell">试用期限（月）&nbsp;</TD>
+			<TD CLASS="DescriptionCell">numeric&nbsp;</TD><TD CLASS="DescriptionCell">5&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>vVacSystem
+			(U871)
+			</TD><TD CLASS="DescriptionCell">休假制度&nbsp;</TD>
+			<TD CLASS="DescriptionCell">ntext&nbsp;</TD><TD CLASS="DescriptionCell">16&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>bSignDate
+			(U872)
+			</TD><TD CLASS="DescriptionCell">签订操作日期&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>dbegindate
+			(U871)
+			</TD><TD CLASS="DescriptionCell">生效日期&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>iPayDay
+			(U871)
+			</TD><TD CLASS="DescriptionCell">发薪日&nbsp;</TD>
+			<TD CLASS="DescriptionCell">smallint&nbsp;</TD><TD CLASS="DescriptionCell">2&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>vContractCode
+			(U871)
+			</TD><TD CLASS="DescriptionCell">合同编号&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">80&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>rWageType
+			(U871)
+			</TD><TD CLASS="DescriptionCell">工资制度&nbsp;</TD>
+			<TD CLASS="DescriptionCell">UFreference&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>vUnitName
+			(U871)
+			</TD><TD CLASS="DescriptionCell">单位名称&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">80&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>tWorkStandard
+			(U871)
+			</TD><TD CLASS="DescriptionCell">应达工作标准&nbsp;</TD>
+			<TD CLASS="DescriptionCell">ntext&nbsp;</TD><TD CLASS="DescriptionCell">16&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>bCompFlag
+			(U871)
+			</TD><TD CLASS="DescriptionCell">是否补偿&nbsp;</TD>
+			<TD CLASS="DescriptionCell">bit&nbsp;</TD><TD CLASS="DescriptionCell">1&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>vUnitAddress
+			(U871)
+			</TD><TD CLASS="DescriptionCell">单位地址&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">160&nbsp;</TD>
+			</TR>
+		</TABLE>
+			<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

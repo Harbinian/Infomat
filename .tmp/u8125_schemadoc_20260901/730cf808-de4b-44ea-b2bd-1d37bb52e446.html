@@ -1,0 +1,98 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>V_HR_WA_PayChgType View</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">V_HR_WA_PayChgType View 
+			&nbsp;(WA 薪资管理)
+			&nbsp;[U861]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>工资变动类型视图</p>
+		<h4 class=dxh4>Remark</h4><p>替换工资变动情况表,工资变动情况咱存表中工资变动类型字段所参照的hr_ct125.</p>
+		<h4 class=dxh4>Columns</h4>
+		<TABLE CLASS="FilteredItemListTable" CellSpacing="0">
+			<TR VALIGN="top"><TH width=30%>Column Name</TH><TH width=50%>Description</TH><TH width=50%>Datatype</TH><TH width=50%>Length</TH>
+			<TR>
+			<TD CLASS=DescriptionCell>ccodeid
+			(U861)
+			</TD><TD CLASS="DescriptionCell">代码&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>vdescription
+			(U861)
+			</TD><TD CLASS="DescriptionCell">代码名称&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">208&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>vsimplename
+			(U861)
+			</TD><TD CLASS="DescriptionCell">简称&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">208&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>vsimplespell
+			(U861)
+			</TD><TD CLASS="DescriptionCell">简拼&nbsp;</TD>
+			<TD CLASS="DescriptionCell">varchar&nbsp;</TD><TD CLASS="DescriptionCell">1&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ilevels
+			(U861)
+			</TD><TD CLASS="DescriptionCell">代码级别 &nbsp;</TD>
+			<TD CLASS="DescriptionCell">varchar&nbsp;</TD><TD CLASS="DescriptionCell">1&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cpcodeid
+			(U861)
+			</TD><TD CLASS="DescriptionCell">上级代码&nbsp;</TD>
+			<TD CLASS="DescriptionCell">varchar&nbsp;</TD><TD CLASS="DescriptionCell">1&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>bsysflag
+			(U861)
+			</TD><TD CLASS="DescriptionCell">系统/自定义标志&nbsp;</TD>
+			<TD CLASS="DescriptionCell">varchar&nbsp;</TD><TD CLASS="DescriptionCell">1&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>bchildflag
+			(U861)
+			</TD><TD CLASS="DescriptionCell">是否有下级代码&nbsp;</TD>
+			<TD CLASS="DescriptionCell">varchar&nbsp;</TD><TD CLASS="DescriptionCell">1&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>bhideflag
+			(U861)
+			</TD><TD CLASS="DescriptionCell">显示/隐藏&nbsp;</TD>
+			<TD CLASS="DescriptionCell">varchar&nbsp;</TD><TD CLASS="DescriptionCell">1&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>vmemo
+			(U861)
+			</TD><TD CLASS="DescriptionCell">备注&nbsp;</TD>
+			<TD CLASS="DescriptionCell">varchar&nbsp;</TD><TD CLASS="DescriptionCell">1&nbsp;</TD>
+			</TR>
+		</TABLE>
+			<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

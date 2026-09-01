@@ -1,0 +1,186 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>SR_ServiceBillDetailHis Table</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">SR_ServiceBillDetailHis Table 
+			&nbsp;(SR 售后服务)
+			&nbsp;[U872]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>服务历史  此表的所有字段请参照服务单的表述</p>
+		<h4 class=dxh4>Remark</h4><p>服务历史  此表的所有字段请参照服务单的表述</p>
+		<h4 class=dxh4>Columns</h4>
+		<table class="columnlisttable" cellspacing="0">
+			<tr valign="top"><th align=middle>&nbsp;</th><th nowrap>Column Name</th><th nowrap>Description</th><th nowrap>Datatype</th><th nowrap>Length</th><th nowrap>Allow Nulls</th></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>SerRequestID
+			(U872)
+			</strong></td><td class="descriptioncell">请求oid&nbsp;</td><td>nvarchar</td><td>80&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine24
+			(U872)
+			</strong></td><td class="descriptioncell">自定义项&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine37
+			(U872)
+			</strong></td><td class="descriptioncell">自定义项&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine25
+			(U872)
+			</strong></td><td class="descriptioncell">自定义项&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine34
+			(U872)
+			</strong></td><td class="descriptioncell">自定义项&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>id
+			(U872)
+			</strong></td><td class="descriptioncell">id&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fQuantity
+			(U872)
+			</strong></td><td class="descriptioncell">数量&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine29
+			(U872)
+			</strong></td><td class="descriptioncell">自定义项&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine22
+			(U872)
+			</strong></td><td class="descriptioncell">自定义项&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cAgrCode
+			(U872)
+			</strong></td><td class="descriptioncell">服务协议id&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>SerBillID
+			(U872)
+			</strong></td><td class="descriptioncell">主表id&nbsp;</td><td>nvarchar</td><td>80&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine32
+			(U872)
+			</strong></td><td class="descriptioncell">自定义项&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine35
+			(U872)
+			</strong></td><td class="descriptioncell">自定义项&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dCompletedDate
+			(U872)
+			</strong></td><td class="descriptioncell">完工日期&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bRepair
+			(U872)
+			</strong></td><td class="descriptioncell">是否保修&nbsp;</td><td>tinyint</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>SerialNoID
+			(U872)
+			</strong></td><td class="descriptioncell">序列号&nbsp;</td><td>nvarchar</td><td>80&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine26
+			(U872)
+			</strong></td><td class="descriptioncell">自定义项&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine31
+			(U872)
+			</strong></td><td class="descriptioncell">自定义项&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cIntendInstance
+			(U872)
+			</strong></td><td class="descriptioncell">状态&nbsp;</td><td>nvarchar</td><td>400&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cIntendStatus
+			(U872)
+			</strong></td><td class="descriptioncell">状态&nbsp;</td><td>nvarchar</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Distor
+			(U872)
+			</strong></td><td class="descriptioncell">分配任&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cInvCode
+			(U872)
+			</strong></td><td class="descriptioncell">存货编码&nbsp;</td><td>nvarchar</td><td>40&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cFailureMemo
+			(U872)
+			</strong></td><td class="descriptioncell">故障描述&nbsp;</td><td>nvarchar</td><td>400&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine30
+			(U872)
+			</strong></td><td class="descriptioncell">自定义项&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine36
+			(U872)
+			</strong></td><td class="descriptioncell">自定义项&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>DistDate
+			(U872)
+			</strong></td><td class="descriptioncell">分配日期&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine33
+			(U872)
+			</strong></td><td class="descriptioncell">自定义项&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dIntendTime
+			(U872)
+			</strong></td><td class="descriptioncell">解决时间&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dIntendDate
+			(U872)
+			</strong></td><td class="descriptioncell">解决日期&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>OID
+			(U872)
+			</strong></td><td class="descriptioncell">oid&nbsp;</td><td>nvarchar</td><td>80&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine27
+			(U872)
+			</strong></td><td class="descriptioncell">自定义项&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine28
+			(U872)
+			</strong></td><td class="descriptioncell">自定义项&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cSerPrincipalCode
+			(U872)
+			</strong></td><td class="descriptioncell">服务负责人&nbsp;</td><td>nvarchar</td><td>40&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cSerDepCode
+			(U872)
+			</strong></td><td class="descriptioncell">服务部门&nbsp;</td><td>nvarchar</td><td>24&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dCompletedTime
+			(U872)
+			</strong></td><td class="descriptioncell">完工时间&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>DisHistoryFlag
+			(U872)
+			</strong></td><td class="descriptioncell">标记&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine23
+			(U872)
+			</strong></td><td class="descriptioncell">自定义项&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+		</table>
+		<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

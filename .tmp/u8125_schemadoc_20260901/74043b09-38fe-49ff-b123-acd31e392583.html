@@ -1,0 +1,230 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>v_sfc_workhrnote_rpt View</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">v_sfc_workhrnote_rpt View 
+			
+			&nbsp;[U861]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>生产订单工时记录表头</p>
+		<h4 class=dxh4>Remark</h4><p>生产订单工时记录表头</p>
+		<h4 class=dxh4>Columns</h4>
+		<TABLE CLASS="FilteredItemListTable" CellSpacing="0">
+			<TR VALIGN="top"><TH width=30%>Column Name</TH><TH width=50%>Description</TH><TH width=50%>Datatype</TH><TH width=50%>Length</TH>
+			<TR>
+			<TD CLASS=DescriptionCell>ReasonCode
+			(U870)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>WorkHrId
+			(U861)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ModifyTime
+			(U871)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>CreateTime
+			(U871)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>DocCode
+			(U861)
+			</TD><TD CLASS="DescriptionCell">单据号码&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>DocDate
+			(U861)
+			</TD><TD CLASS="DescriptionCell">单据日期&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>MoId
+			(U861)
+			</TD><TD CLASS="DescriptionCell">生产订单表头Id&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>MoDId
+			(U861)
+			</TD><TD CLASS="DescriptionCell">生产订单表体ID&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>MoRoutingId
+			(U861)
+			</TD><TD CLASS="DescriptionCell">生产订单工艺路线表头Id&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>CreateDate
+			(U861)
+			</TD><TD CLASS="DescriptionCell">制单日期&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>CreateUser
+			(U861)
+			</TD><TD CLASS="DescriptionCell">制单人&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ModifyDate
+			(U861)
+			</TD><TD CLASS="DescriptionCell">修改日期&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ModifyUser
+			(U861)
+			</TD><TD CLASS="DescriptionCell">修改人&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>UpdCount
+			(U861)
+			</TD><TD CLASS="DescriptionCell">内部使用&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>Ufts
+			(U861)
+			</TD><TD CLASS="DescriptionCell">时间戳&nbsp;</TD>
+			<TD CLASS="DescriptionCell">timestamp&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDefine1
+			(U861)
+			</TD><TD CLASS="DescriptionCell">表头自定义1&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDefine2
+			(U861)
+			</TD><TD CLASS="DescriptionCell">表头自定义2&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDefine3
+			(U861)
+			</TD><TD CLASS="DescriptionCell">表头自定义3&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDefine4
+			(U861)
+			</TD><TD CLASS="DescriptionCell">表头自定义4&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDefine5
+			(U861)
+			</TD><TD CLASS="DescriptionCell">表头自定义5&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDefine6
+			(U861)
+			</TD><TD CLASS="DescriptionCell">表头自定义6&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDefine7
+			(U861)
+			</TD><TD CLASS="DescriptionCell">表头自定义7&nbsp;</TD>
+			<TD CLASS="DescriptionCell">float&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDefine8
+			(U861)
+			</TD><TD CLASS="DescriptionCell">表头自定义8&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDefine9
+			(U861)
+			</TD><TD CLASS="DescriptionCell">表头自定义9&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">16&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDefine10
+			(U861)
+			</TD><TD CLASS="DescriptionCell">表头自定义10&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">120&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDefine11
+			(U861)
+			</TD><TD CLASS="DescriptionCell">表头自定义11&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDefine12
+			(U861)
+			</TD><TD CLASS="DescriptionCell">表头自定义12&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDefine13
+			(U861)
+			</TD><TD CLASS="DescriptionCell">表头自定义13&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDefine14
+			(U861)
+			</TD><TD CLASS="DescriptionCell">表头自定义14&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDefine15
+			(U861)
+			</TD><TD CLASS="DescriptionCell">表头自定义15&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDefine16
+			(U861)
+			</TD><TD CLASS="DescriptionCell">表头自定义16&nbsp;</TD>
+			<TD CLASS="DescriptionCell">float&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>VTid
+			(U861)
+			</TD><TD CLASS="DescriptionCell">模板号&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+		</TABLE>
+			<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

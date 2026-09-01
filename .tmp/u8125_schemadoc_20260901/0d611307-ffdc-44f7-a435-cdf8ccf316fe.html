@@ -1,0 +1,182 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>v_EX_WaitInForStock View</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">v_EX_WaitInForStock View 
+			&nbsp;(EX 出口管理)
+			&nbsp;[U861]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>到货在检，库存整理现存量使用</p>
+		
+		<h4 class=dxh4>Columns</h4>
+		<TABLE CLASS="FilteredItemListTable" CellSpacing="0">
+			<TR VALIGN="top"><TH width=30%>Column Name</TH><TH width=50%>Description</TH><TH width=50%>Datatype</TH><TH width=50%>Length</TH>
+			<TR>
+			<TD CLASS=DescriptionCell>cvmivencode
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">代管商编码&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">80&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>dprodate
+			(U861)
+			</TD><TD CLASS="DescriptionCell">生产日期&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>fInQuantity
+			(U861)
+			</TD><TD CLASS="DescriptionCell">累计成品入库量&nbsp;</TD>
+			<TD CLASS="DescriptionCell">decimal&nbsp;</TD><TD CLASS="DescriptionCell">17&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cFree7
+			(U861)
+			</TD><TD CLASS="DescriptionCell">自由项7&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cFree8
+			(U861)
+			</TD><TD CLASS="DescriptionCell">自由项8&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ddate
+			(U861)
+			</TD><TD CLASS="DescriptionCell">单据日期&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cFree9
+			(U861)
+			</TD><TD CLASS="DescriptionCell">自由项9&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cFree10
+			(U861)
+			</TD><TD CLASS="DescriptionCell">自由项10&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cexpirationdate
+			(U872)
+			</TD><TD CLASS="DescriptionCell">有效期至&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cFree4
+			(U861)
+			</TD><TD CLASS="DescriptionCell">自由项4&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cFree6
+			(U861)
+			</TD><TD CLASS="DescriptionCell">自由项6&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cFree5
+			(U861)
+			</TD><TD CLASS="DescriptionCell">自由项5&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>fInNum
+			(U8101)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">decimal&nbsp;</TD><TD CLASS="DescriptionCell">17&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>sodid
+			(U861)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">80&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>sotype
+			(U861)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">smallint&nbsp;</TD><TD CLASS="DescriptionCell">2&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>iexpiratdatecalcu
+			(U872)
+			</TD><TD CLASS="DescriptionCell">有效期推算方式&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cInvCode
+			(U861)
+			</TD><TD CLASS="DescriptionCell">存货编码&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>dexpirationdate
+			(U872)
+			</TD><TD CLASS="DescriptionCell">有效期计算项&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cBatch
+			(U861)
+			</TD><TD CLASS="DescriptionCell">批号&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cFree2
+			(U861)
+			</TD><TD CLASS="DescriptionCell">自由项2&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>dvdate
+			(U861)
+			</TD><TD CLASS="DescriptionCell">失效日期&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cWhCode
+			(U861)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">30&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cFree3
+			(U861)
+			</TD><TD CLASS="DescriptionCell">自由项3&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cFree1
+			(U861)
+			</TD><TD CLASS="DescriptionCell">自由项1&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+		</TABLE>
+			<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

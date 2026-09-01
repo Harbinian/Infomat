@@ -1,0 +1,142 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>HR_PF_Schema Table</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">HR_PF_Schema Table 
+			&nbsp;(PF 绩效管理)
+			&nbsp;[U8100]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>考核方案</p>
+		
+		<h4 class=dxh4>Columns</h4>
+		<table class="columnlisttable" cellspacing="0">
+			<tr valign="top"><th align=middle>&nbsp;</th><th nowrap>Column Name</th><th nowrap>Description</th><th nowrap>Datatype</th><th nowrap>Length</th><th nowrap>Allow Nulls</th></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cSchemaClassCode
+			(U8100)
+			</strong></td><td class="descriptioncell">方案分类编码&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iTableTemplate
+			(U8100)
+			</strong></td><td class="descriptioncell">量表模版&nbsp;</td><td>image</td><td>16&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bGoalMail
+			(U8100)
+			</strong></td><td class="descriptioncell">是否发送目标邮件&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cActionPlanStyle
+			(U8100)
+			</strong></td><td class="descriptioncell">行动计划样式定义&nbsp;</td><td>ntext</td><td>16&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>tStamp
+			(U8100)
+			</strong></td><td class="descriptioncell">时间戳&nbsp;</td><td>timestamp</td><td>8&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bShowCheckStandard
+			(U8100)
+			</strong></td><td class="descriptioncell">是否显示考核标准&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cTableStyle
+			(U8100)
+			</strong></td><td class="descriptioncell">量表样式定义&nbsp;</td><td>ntext</td><td>16&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cAppraisePeriodType
+			(U8100)
+			</strong></td><td class="descriptioncell">考核周期&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bResultMail
+			(U8100)
+			</strong></td><td class="descriptioncell">是否发送结果邮件&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bGoalNote
+			(U8100)
+			</strong></td><td class="descriptioncell">是否发送目标短信&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bResultNote
+			(U8100)
+			</strong></td><td class="descriptioncell">是否发送结果短信&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cSchemaCode
+			(U8100)
+			</strong></td><td class="descriptioncell">方案编码&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCheckPeriodType
+			(U8100)
+			</strong></td><td class="descriptioncell">考核周期&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cSchemaName
+			(U8100)
+			</strong></td><td class="descriptioncell">方案名称&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bShowTargetExplain
+			(U8100)
+			</strong></td><td class="descriptioncell">是否显示指标说明&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iTableAppraisePersonXPlace
+			(U8100)
+			</strong></td><td class="descriptioncell">量表评价人X位置&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDeptNums
+			(U8100)
+			</strong></td><td class="descriptioncell">部门权限&nbsp;</td><td>ntext</td><td>16&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sCheckMainbody
+			(U8100)
+			</strong></td><td class="descriptioncell">考核主体&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine2
+			(U8100)
+			</strong></td><td class="descriptioncell">预留字段2&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iTableDataYPlace
+			(U8100)
+			</strong></td><td class="descriptioncell">量表数据Y位置&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iActionPlanTemplate
+			(U8100)
+			</strong></td><td class="descriptioncell">计划模版&nbsp;</td><td>image</td><td>16&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sSchemeState
+			(U8100)
+			</strong></td><td class="descriptioncell">是否审核&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bIsUsed
+			(U8100)
+			</strong></td><td class="descriptioncell">是否引用&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cAuthSchemaCode
+			(U8100)
+			</strong></td><td class="descriptioncell">权限方案编码&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine3
+			(U8100)
+			</strong></td><td class="descriptioncell">预留字段3&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine1
+			(U8100)
+			</strong></td><td class="descriptioncell">预留字段1&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+		</table>
+		<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

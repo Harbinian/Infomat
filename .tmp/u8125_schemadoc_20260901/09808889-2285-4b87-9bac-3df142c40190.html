@@ -1,0 +1,836 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>KC_V_MoAllocate View</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">KC_V_MoAllocate View 
+			
+			&nbsp;[U8110]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		
+		
+		<h4 class=dxh4>Columns</h4>
+		<TABLE CLASS="FilteredItemListTable" CellSpacing="0">
+			<TR VALIGN="top"><TH width=30%>Column Name</TH><TH width=50%>Description</TH><TH width=50%>Datatype</TH><TH width=50%>Length</TH>
+			<TR>
+			<TD CLASS=DescriptionCell>iExpiratDateCalcu
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">smallint&nbsp;</TD><TD CLASS="DescriptionCell">2&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>InvDefine16
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>iquantity
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">Udt_QTY&nbsp;</TD><TD CLASS="DescriptionCell">13&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ByproductFlag
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">bit&nbsp;</TD><TD CLASS="DescriptionCell">1&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cassunit
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">70&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>Free10
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>Free1
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>WhCode
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cbatchproperty9
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>UnPickingAuxQty
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">decimal&nbsp;</TD><TD CLASS="DescriptionCell">17&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>istsodid
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cinva_unit
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>Define36
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>DeptName
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">510&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cmassunit
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">smallint&nbsp;</TD><TD CLASS="DescriptionCell">2&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>Free5
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>remark
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">510&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>istsotype
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>AuxUnitCode
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">70&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>Define29
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>Free3
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>csrpolicy
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>WcName
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">120&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>requisitionissnum
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">decimal&nbsp;</TD><TD CLASS="DescriptionCell">17&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>iunnum
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">decimal&nbsp;</TD><TD CLASS="DescriptionCell">17&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>FVFlag
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">tinyint&nbsp;</TD><TD CLASS="DescriptionCell">1&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cbatchproperty10
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>InvDefine1
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>InvDefine7
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cbatchproperty4
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">decimal&nbsp;</TD><TD CLASS="DescriptionCell">17&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>InvDefine4
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">120&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>AllocateId
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>Policy
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cciqbookcode
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>OpDecs
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">120&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>OrderSeq
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>Define22
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">120&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>InvDefine5
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">120&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>itemclass
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>Define26
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">float&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>OrderType
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">tinyint&nbsp;</TD><TD CLASS="DescriptionCell">1&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>InvDefine2
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ChangeRate
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">Udt_ChangeRate&nbsp;</TD><TD CLASS="DescriptionCell">13&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ParentScrap
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">Udt_Rate&nbsp;</TD><TD CLASS="DescriptionCell">5&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cbatchproperty2
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">decimal&nbsp;</TD><TD CLASS="DescriptionCell">17&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>Define35
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>Define33
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>InvDefine12
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>WIPType
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">tinyint&nbsp;</TD><TD CLASS="DescriptionCell">1&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>OrderDId
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>Demdate
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>isnum
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">decimal&nbsp;</TD><TD CLASS="DescriptionCell">17&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>WcCode
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">16&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>BaseQtyN
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">Udt_QTY&nbsp;</TD><TD CLASS="DescriptionCell">13&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>CompScrap
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">Udt_Rate&nbsp;</TD><TD CLASS="DescriptionCell">5&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cinvcode
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">120&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>IID
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cbatchproperty7
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>requisitionnum
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">decimal&nbsp;</TD><TD CLASS="DescriptionCell">17&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ComponentId
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ReplenishQty
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">Udt_QTY&nbsp;</TD><TD CLASS="DescriptionCell">13&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>PickingQty
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">Udt_QTY&nbsp;</TD><TD CLASS="DescriptionCell">13&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>Define31
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>Define30
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cbatchproperty5
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">decimal&nbsp;</TD><TD CLASS="DescriptionCell">17&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>Free4
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>InvDefine14
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">float&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>OrderCode
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">80&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>Free2
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>WhName
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>AuxBaseQtyN
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">Udt_QTY&nbsp;</TD><TD CLASS="DescriptionCell">13&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>BomQty
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">decimal&nbsp;</TD><TD CLASS="DescriptionCell">17&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>Free8
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>Free6
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>itemname
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">100&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>requisitionflag
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">bit&nbsp;</TD><TD CLASS="DescriptionCell">1&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>Define28
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>AuxQty
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">Udt_QTY&nbsp;</TD><TD CLASS="DescriptionCell">13&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>InvDefine11
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>Define23
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">120&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>costitemname
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">120&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>crejectcode
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>InvDefine9
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>InvName
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">510&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>costitemcode
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">120&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>Define24
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">120&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>MoDId
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>Define32
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>SoType
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">tinyint&nbsp;</TD><TD CLASS="DescriptionCell">1&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>requisitionissqty
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">Udt_QTY&nbsp;</TD><TD CLASS="DescriptionCell">13&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>InvDefine13
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">float&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>UnitCode
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">70&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>InvDefine8
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cbmemo
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">510&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>OPSeq
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nchar&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>inum
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">decimal&nbsp;</TD><TD CLASS="DescriptionCell">17&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>czjservicecode
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>Free9
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>WcId
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cbatchproperty8
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>AuditDate
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>Define34
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>Free7
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>BaseQtyD
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">Udt_QTY&nbsp;</TD><TD CLASS="DescriptionCell">13&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>SoCode
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>Define27
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">float&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>InvDefine10
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>iinvexchrate
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">Udt_ChangeRate&nbsp;</TD><TD CLASS="DescriptionCell">13&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>imassdate
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">smallint&nbsp;</TD><TD CLASS="DescriptionCell">2&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>requisitionqty
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">Udt_QTY&nbsp;</TD><TD CLASS="DescriptionCell">13&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cbatchproperty1
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">decimal&nbsp;</TD><TD CLASS="DescriptionCell">17&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>DemandCode
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>PickingAuxQty
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">decimal&nbsp;</TD><TD CLASS="DescriptionCell">17&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>InvDefine15
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>UnPickingQty
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">decimal&nbsp;</TD><TD CLASS="DescriptionCell">17&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>InvDefine6
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">120&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cbatchproperty3
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">decimal&nbsp;</TD><TD CLASS="DescriptionCell">17&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ccode
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>igrouptype
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">tinyint&nbsp;</TD><TD CLASS="DescriptionCell">1&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>Ufts
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">char&nbsp;</TD><TD CLASS="DescriptionCell">30&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>Define25
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">120&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>Define37
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>LotNo
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">120&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>IssQty
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">Udt_QTY&nbsp;</TD><TD CLASS="DescriptionCell">13&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>UnitName
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>Dept
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">24&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>InvAddCode
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">510&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>SoSeq
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>SoDId
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cbatchproperty6
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">240&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>InvStd
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">510&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>csubsysbarcode
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">200&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>InvDefine3
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+		</TABLE>
+			<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

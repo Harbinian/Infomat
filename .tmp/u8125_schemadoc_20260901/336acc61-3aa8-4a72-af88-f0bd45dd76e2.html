@@ -1,0 +1,727 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>rdrecords01 Table</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">rdrecords01 Table 
+			&nbsp;(ST 库存管理)
+			&nbsp;[U8100]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>采购入库单子表</p>
+		
+		<h4 class=dxh4>Columns</h4>
+		<table class="columnlisttable" cellspacing="0">
+			<tr valign="top"><th align=middle>&nbsp;</th><th nowrap>Column Name</th><th nowrap>Description</th><th nowrap>Datatype</th><th nowrap>Length</th><th nowrap>Allow Nulls</th></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iReworkMODetailsid
+			(U8111)
+			</strong></td><td class="descriptioncell">返工订单子表标识&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bnoitemused
+			(U8110)
+			</strong></td><td class="descriptioncell">bnoitemused&nbsp;</td><td>tinyint</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iSumBillQuantity
+			(U8100)
+			</strong></td><td class="descriptioncell">累计开票数量&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cExpirationdate
+			(U8100)
+			</strong></td><td class="descriptioncell">有效期至&nbsp;</td><td>varchar</td><td>10&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cMassUnit
+			(U8100)
+			</strong></td><td class="descriptioncell">保质期单位&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dMadeDate
+			(U8100)
+			</strong></td><td class="descriptioncell">生产日期&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cMainInvCode
+			(U8111)
+			</strong></td><td class="descriptioncell">主产品存货编码&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iorderseq
+			(U8100)
+			</strong></td><td class="descriptioncell">销售订单行号&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iUnitCost
+			(U8100)
+			</strong></td><td class="descriptioncell">单价&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cBatchProperty3
+			(U8100)
+			</strong></td><td class="descriptioncell">属性3&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iNNum
+			(U8100)
+			</strong></td><td class="descriptioncell">应收应发辅计量数量&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCheckPersonCode
+			(U8100)
+			</strong></td><td class="descriptioncell">检验员&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ioriSum
+			(U8100)
+			</strong></td><td class="descriptioncell">原币价税合计&nbsp;</td><td>money</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cPOID
+			(U8100)
+			</strong></td><td class="descriptioncell">订单号&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iRejectIds
+			(U8100)
+			</strong></td><td class="descriptioncell">不良品处理单ID&nbsp;</td><td>bigint</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fOldQuantity
+			(U8110)
+			</strong></td><td class="descriptioncell">降级前数量&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iSNum
+			(U8100)
+			</strong></td><td class="descriptioncell">累计结算辅计量数量&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iDebitIDs
+			(U8101)
+			</strong></td><td class="descriptioncell">借入单autoid&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ipreuseqty
+			(U8100)
+			</strong></td><td class="descriptioncell">卸载前消抵数量&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>coritracktype
+			(U8100)
+			</strong></td><td class="descriptioncell">原始入库单类型&nbsp;</td><td>nvarchar</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iordertype
+			(U8100)
+			</strong></td><td class="descriptioncell">订单类型&nbsp;</td><td>tinyint</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>comcode
+			(U8100)
+			</strong></td><td class="descriptioncell">委外订单号&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iFaQty
+			(U8100)
+			</strong></td><td class="descriptioncell">转资产数量&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bCosting
+			(U8100)
+			</strong></td><td class="descriptioncell">单据是否核算　&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cBatchProperty1
+			(U8100)
+			</strong></td><td class="descriptioncell">属性1&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cFree5
+			(U8100)
+			</strong></td><td class="descriptioncell">存货自由项5&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cVouchCode
+			(U8100)
+			</strong></td><td class="descriptioncell">对应入库单子表标识&nbsp;</td><td>bigint</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iInvSNCount
+			(U8100)
+			</strong></td><td class="descriptioncell">序列号数量&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iOMoMID
+			(U8100)
+			</strong></td><td class="descriptioncell">委外订单用料表ID&nbsp;</td><td>bigint</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cInVouchCode
+			(U8100)
+			</strong></td><td class="descriptioncell">对应入库单号&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iVMISettleNum
+			(U8100)
+			</strong></td><td class="descriptioncell">代管结算件数&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dbarvdate
+			(U8100)
+			</strong></td><td class="descriptioncell">到货日期&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iMoney
+			(U8100)
+			</strong></td><td class="descriptioncell">累计结算金额&nbsp;</td><td>money</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iFNum
+			(U8100)
+			</strong></td><td class="descriptioncell">实际辅计量数量&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iCheckIdBaks
+			(U8100)
+			</strong></td><td class="descriptioncell">检验单子表ID&nbsp;</td><td>bigint</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cplanlotcode
+			
+			</strong></td><td class="descriptioncell">生产批号&nbsp;</td><td>nvarchar</td><td>80&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iSOutNum
+			(U8100)
+			</strong></td><td class="descriptioncell">累计出库辅计量数量&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine29
+			(U8100)
+			</strong></td><td class="descriptioncell">表体自定义项29&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iIMBSID
+			(U8100)
+			</strong></td><td class="descriptioncell">进口的发票子表ID&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iVMISettleQuantity
+			(U8100)
+			</strong></td><td class="descriptioncell">代管结算数量&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine36
+			(U8100)
+			</strong></td><td class="descriptioncell">表体自定义项36&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iSMaterialFee
+			(U8100)
+			</strong></td><td class="descriptioncell">累计结算材料费&nbsp;</td><td>money</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cGspState
+			(U8100)
+			</strong></td><td class="descriptioncell">质检状态&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cbaccounter
+			(U8100)
+			</strong></td><td class="descriptioncell">表体记账人　&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine22
+			(U8100)
+			</strong></td><td class="descriptioncell">表体自定义项22&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iMergeCheckAutoId
+			(U8110)
+			</strong></td><td class="descriptioncell">合并检验明细ID&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine35
+			(U8100)
+			</strong></td><td class="descriptioncell">表体自定义项35&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cName
+			(U8100)
+			</strong></td><td class="descriptioncell">项目名称&nbsp;</td><td>nvarchar</td><td>255&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cbsysbarcode
+			(U8110)
+			</strong></td><td class="descriptioncell">单据行条码&nbsp;</td><td>nvarchar</td><td>80&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine27
+			(U8100)
+			</strong></td><td class="descriptioncell">表体自定义项27&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bmergecheck
+			(U8110)
+			</strong></td><td class="descriptioncell">合并检验标识&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>strContractId
+			(U8100)
+			</strong></td><td class="descriptioncell">合同标标识&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iTaxRate
+			(U8100)
+			</strong></td><td class="descriptioncell">税率&nbsp;</td><td>decimal</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>corufts
+			(U8100)
+			</strong></td><td class="descriptioncell">corufts&nbsp;</td><td>varchar</td><td>12&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fACost
+			(U8100)
+			</strong></td><td class="descriptioncell">暂估单价&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dCheckDate
+			(U8100)
+			</strong></td><td class="descriptioncell">检验日期&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cbMemo
+			(U8100)
+			</strong></td><td class="descriptioncell">表体备注&nbsp;</td><td>nvarchar</td><td>255&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dMSDate
+			(U8100)
+			</strong></td><td class="descriptioncell">核销日期&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iPUnitCost
+			(U8100)
+			</strong></td><td class="descriptioncell">计划价或售价&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bChecked
+			(U8100)
+			</strong></td><td class="descriptioncell">销售出库单是否报检&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cFree10
+			(U8100)
+			</strong></td><td class="descriptioncell">存货自由项10&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cvmivencode
+			(U8100)
+			</strong></td><td class="descriptioncell">代管商编码&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iArrsId
+			(U8100)
+			</strong></td><td class="descriptioncell">采购到货单子表标识&nbsp;</td><td>bigint</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iIMOSID
+			(U8100)
+			</strong></td><td class="descriptioncell">进口的订单子表ID　&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>chVencode
+			(U8100)
+			</strong></td><td class="descriptioncell">表头供应商&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iPPrice
+			(U8100)
+			</strong></td><td class="descriptioncell">计划金额或售价金额&nbsp;</td><td>money</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dExpirationdate
+			(U8100)
+			</strong></td><td class="descriptioncell">有效期计算项&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iOldPartId
+			(U8110)
+			</strong></td><td class="descriptioncell">降级前物料编码&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cciqbookcode
+			(U8100)
+			</strong></td><td class="descriptioncell">手册号&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cItemCName
+			(U8100)
+			</strong></td><td class="descriptioncell">项目大类名称&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cBatchProperty9
+			(U8100)
+			</strong></td><td class="descriptioncell">属性9&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cFree6
+			(U8100)
+			</strong></td><td class="descriptioncell">存货自由项6&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iExpiratDateCalcu
+			(U8100)
+			</strong></td><td class="descriptioncell">有效期推算方式&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dbKeepDate
+			(U8100)
+			</strong></td><td class="descriptioncell">表体记账日期&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cBatchProperty4
+			(U8100)
+			</strong></td><td class="descriptioncell">属性4&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine23
+			(U8100)
+			</strong></td><td class="descriptioncell">表体自定义项23&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cBatchProperty5
+			(U8100)
+			</strong></td><td class="descriptioncell">属性5&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bTaxCost
+			(U8100)
+			</strong></td><td class="descriptioncell">记税方式&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iorderdid
+			(U8100)
+			</strong></td><td class="descriptioncell">订单子表id&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iBillSettleCount
+			(U8100)
+			</strong></td><td class="descriptioncell">单据结算次数&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iShareMaterialFee
+			(U8111)
+			</strong></td><td class="descriptioncell">分摊材料费&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cFree7
+			(U8100)
+			</strong></td><td class="descriptioncell">存货自由项7&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cbarvcode
+			(U8100)
+			</strong></td><td class="descriptioncell">到货单号&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ID
+			(U8100)
+			</strong></td><td class="descriptioncell">收发记录主表标识&nbsp;</td><td>bigint</td><td>8&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iMassDate
+			(U8100)
+			</strong></td><td class="descriptioncell">保质期天数&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cFree8
+			(U8100)
+			</strong></td><td class="descriptioncell">存货自由项8&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iProcessFee
+			(U8100)
+			</strong></td><td class="descriptioncell">加工费&nbsp;</td><td>money</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cBatchProperty8
+			(U8100)
+			</strong></td><td class="descriptioncell">属性8&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cBVencode
+			(U8100)
+			</strong></td><td class="descriptioncell">供应商编码&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine33
+			(U8100)
+			</strong></td><td class="descriptioncell">表体自定义项33&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>rowufts
+			(U8100)
+			</strong></td><td class="descriptioncell">行时间戳&nbsp;</td><td>timestamp</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cRejectCode
+			(U8100)
+			</strong></td><td class="descriptioncell">不良品处理单号&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bLPUseFree
+			(U8100)
+			</strong></td><td class="descriptioncell">预留升级问题&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine28
+			(U8100)
+			</strong></td><td class="descriptioncell">表体自定义项28&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iOriTaxCost
+			(U8100)
+			</strong></td><td class="descriptioncell">原币含税单价&nbsp;</td><td>decimal</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>strContractGUID
+			(U8100)
+			</strong></td><td class="descriptioncell">合同GUID&nbsp;</td><td>uniqueidentifier</td><td>16&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dVDate
+			(U8100)
+			</strong></td><td class="descriptioncell">失效日期&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iSProcessFee
+			(U8100)
+			</strong></td><td class="descriptioncell">累计结算加工费&nbsp;</td><td>money</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iMatSettleState
+			(U8100)
+			</strong></td><td class="descriptioncell">结算状态&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine25
+			(U8100)
+			</strong></td><td class="descriptioncell">表体自定义项25&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dSDate
+			(U8100)
+			</strong></td><td class="descriptioncell">结算日期&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cInvCode
+			(U8100)
+			</strong></td><td class="descriptioncell">存货编码&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cItem_class
+			(U8100)
+			</strong></td><td class="descriptioncell">项目大类编码&nbsp;</td><td>nvarchar</td><td>10&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iTax
+			(U8100)
+			</strong></td><td class="descriptioncell">税额&nbsp;</td><td>money</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cFree3
+			(U8100)
+			</strong></td><td class="descriptioncell">存货自由项3&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iOMoDID
+			(U8100)
+			</strong></td><td class="descriptioncell">委外订单子表ID&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bRelated
+			(U8100)
+			</strong></td><td class="descriptioncell">是否为联副产品&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine37
+			(U8100)
+			</strong></td><td class="descriptioncell">表体自定义项37&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>isodid
+			(U8100)
+			</strong></td><td class="descriptioncell">销售订单子表ID&nbsp;</td><td>nvarchar</td><td>40&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cPosition
+			(U8100)
+			</strong></td><td class="descriptioncell">货位编码&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iinvexchrate
+			(U8100)
+			</strong></td><td class="descriptioncell">换算率&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bVMIUsed
+			(U8100)
+			</strong></td><td class="descriptioncell">代管消耗标识　&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>isTax
+			(U8100)
+			</strong></td><td class="descriptioncell">累计结算税额&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cItemCode
+			(U8100)
+			</strong></td><td class="descriptioncell">项目编码&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iTaxPrice
+			(U8100)
+			</strong></td><td class="descriptioncell">本币税额&nbsp;</td><td>money</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iOriTaxPrice
+			(U8100)
+			</strong></td><td class="descriptioncell">原币税额&nbsp;</td><td>money</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>AutoID
+			(U8100)
+			</strong></td><td class="descriptioncell">收发记录子表标识&nbsp;</td><td>bigint</td><td>8&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cFree4
+			(U8100)
+			</strong></td><td class="descriptioncell">存货自由项4&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cwhpersoncode
+			(U8100)
+			</strong></td><td class="descriptioncell">库管员编码&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iCheckIds
+			(U8100)
+			</strong></td><td class="descriptioncell">检验单子表标识&nbsp;</td><td>bigint</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cBatchProperty7
+			(U8100)
+			</strong></td><td class="descriptioncell">属性7&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iPrice
+			(U8100)
+			</strong></td><td class="descriptioncell">金额&nbsp;</td><td>money</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iQuantity
+			(U8100)
+			</strong></td><td class="descriptioncell">数量&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine24
+			(U8100)
+			</strong></td><td class="descriptioncell">表体自定义项24&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bGsp
+			(U8100)
+			</strong></td><td class="descriptioncell">是否质检&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cBatch
+			(U8100)
+			</strong></td><td class="descriptioncell">批号&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>strowguid
+			(U8100)
+			</strong></td><td class="descriptioncell">行唯一ID&nbsp;</td><td>uniqueidentifier</td><td>16&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iFlag
+			(U8100)
+			</strong></td><td class="descriptioncell">标志&nbsp;</td><td>tinyint</td><td>1&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cReworkMOCode
+			(U8111)
+			</strong></td><td class="descriptioncell">返工订单号&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iSQuantity
+			(U8100)
+			</strong></td><td class="descriptioncell">累计结算数量&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iordercode
+			(U8100)
+			</strong></td><td class="descriptioncell">订单号&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iAPrice
+			(U8100)
+			</strong></td><td class="descriptioncell">暂估金额&nbsp;</td><td>money</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine34
+			(U8100)
+			</strong></td><td class="descriptioncell">表体自定义项34&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cwhpersonname
+			(U8100)
+			</strong></td><td class="descriptioncell">库管员名称&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>irowno
+			(U8100)
+			</strong></td><td class="descriptioncell">单据体行号&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cinvouchtype
+			(U8100)
+			</strong></td><td class="descriptioncell">入库单单类型&nbsp;</td><td>nvarchar</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cFree9
+			(U8100)
+			</strong></td><td class="descriptioncell">存货自由项9&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iNQuantity
+			(U8100)
+			</strong></td><td class="descriptioncell">应收应发数量&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iMainMoDetailsID
+			(U8111)
+			</strong></td><td class="descriptioncell">主产品订单子表标识&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>isoseq
+			(U8100)
+			</strong></td><td class="descriptioncell">销售订单行号&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iSOutQuantity
+			(U8100)
+			</strong></td><td class="descriptioncell">累计出库数量&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iOriTrackID
+			(U8100)
+			</strong></td><td class="descriptioncell">ioritrackid&nbsp;</td><td>bigint</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>OutCopiedQuantity
+			(U8110)
+			</strong></td><td class="descriptioncell">已复制数量&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iProductType
+			(U8111)
+			</strong></td><td class="descriptioncell">产品类型&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iMaterialFee
+			(U8100)
+			</strong></td><td class="descriptioncell">材料费&nbsp;</td><td>money</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iOriMoney
+			(U8100)
+			</strong></td><td class="descriptioncell">原币无税金额&nbsp;</td><td>money</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>csocode
+			(U8100)
+			</strong></td><td class="descriptioncell">销售订单号&nbsp;</td><td>nvarchar</td><td>40&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine32
+			(U8100)
+			</strong></td><td class="descriptioncell">表体自定义项32&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cBarCode
+			(U8100)
+			</strong></td><td class="descriptioncell">对应条形码编码&nbsp;</td><td>nvarchar</td><td>200&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCheckCode
+			(U8100)
+			</strong></td><td class="descriptioncell">检验单号&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cBatchProperty6
+			(U8100)
+			</strong></td><td class="descriptioncell">属性6&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine30
+			(U8100)
+			</strong></td><td class="descriptioncell">表体自定义项30&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iPOsID
+			(U8100)
+			</strong></td><td class="descriptioncell">采购订单子表标识&nbsp;</td><td>bigint</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ipreuseinum
+			(U8100)
+			</strong></td><td class="descriptioncell">卸载前消抵件数&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iProcessCost
+			(U8100)
+			</strong></td><td class="descriptioncell">加工费单价&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>isotype
+			(U8100)
+			</strong></td><td class="descriptioncell">订单类型&nbsp;</td><td>tinyint</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>impcost
+			(U8100)
+			</strong></td><td class="descriptioncell">最高进价&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>strCode
+			(U8100)
+			</strong></td><td class="descriptioncell">合同号&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iNum
+			(U8100)
+			</strong></td><td class="descriptioncell">辅计量数量&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine26
+			(U8100)
+			</strong></td><td class="descriptioncell">表体自定义项26&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cBatchProperty10
+			(U8100)
+			</strong></td><td class="descriptioncell">属性10&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bgift
+			
+			</strong></td><td class="descriptioncell">是否赠品&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cFree2
+			(U8100)
+			</strong></td><td class="descriptioncell">存货自由项2&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine31
+			(U8100)
+			</strong></td><td class="descriptioncell">表体自定义项31&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cFree1
+			(U8100)
+			</strong></td><td class="descriptioncell">存货自由项1&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cAssUnit
+			(U8100)
+			</strong></td><td class="descriptioncell">辅计量单位编码&nbsp;</td><td>nvarchar</td><td>35&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iposflag
+			
+			</strong></td><td class="descriptioncell">是否货位&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iBondedSumQty
+			(U8100)
+			</strong></td><td class="descriptioncell">累计保税处理抽取数量
+&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iFQuantity
+			(U8100)
+			</strong></td><td class="descriptioncell">实际数量&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iOriCost
+			(U8100)
+			</strong></td><td class="descriptioncell">原币无税单价&nbsp;</td><td>decimal</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cBatchProperty2
+			(U8100)
+			</strong></td><td class="descriptioncell">属性2&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iSum
+			(U8100)
+			</strong></td><td class="descriptioncell">本币价税合计&nbsp;</td><td>money</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+		</table>
+		<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

@@ -1,0 +1,94 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>HB_AF_InsertAuditItemFormula Stored Procedure</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">HB_AF_InsertAuditItemFormula Stored Procedure 
+			&nbsp;(CR 合并报表)
+			&nbsp;[U861]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>公式审核--插入审核公式</p>
+		
+		<h4 class=dxh4>Parameters</h4>
+		<TABLE CLASS="FilteredItemListTable" CellSpacing="0">
+			<TR VALIGN="top"><TH width=30%>Parameter</TH><TH width=50%>Description</TH><TH width=50%>Datatype</TH><TH width=50%>Length</TH><TH width=50%>Allow Nulls</TH>
+			<TR>
+			<TD CLASS=DescriptionCell>@ItemID
+			(U861)
+			</TD><TD CLASS="DescriptionCell">公式项ID&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@FormulaID
+			(U861)
+			</TD><TD CLASS="DescriptionCell">公式ID&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@LBrackets
+			(U861)
+			</TD><TD CLASS="DescriptionCell">左括号&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">10&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@LFormula
+			(U861)
+			</TD><TD CLASS="DescriptionCell">左侧公式&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">511&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@Symbol
+			(U861)
+			</TD><TD CLASS="DescriptionCell">逻辑符号&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">2&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@RBrackets
+			(U861)
+			</TD><TD CLASS="DescriptionCell">右括号&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">10&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@RFormula
+			(U861)
+			</TD><TD CLASS="DescriptionCell">右侧公式&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">511&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@Relation
+			(U861)
+			</TD><TD CLASS="DescriptionCell">关系&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">10&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+		</TABLE>
+		<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

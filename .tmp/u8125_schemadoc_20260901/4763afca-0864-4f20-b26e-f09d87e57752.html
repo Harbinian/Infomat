@@ -1,0 +1,102 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>IM_VouchInfo Table</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">IM_VouchInfo Table 
+			&nbsp;(IM 进口管理)
+			&nbsp;[U870]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>进口单据数据表信息</p>
+		
+		<h4 class=dxh4>Columns</h4>
+		<table class="columnlisttable" cellspacing="0">
+			<tr valign="top"><th align=middle>&nbsp;</th><th nowrap>Column Name</th><th nowrap>Description</th><th nowrap>Datatype</th><th nowrap>Length</th><th nowrap>Allow Nulls</th></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>vouchtype
+			(U870)
+			</strong></td><td class="descriptioncell">单据类型&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>headerviewname
+			(U870)
+			</strong></td><td class="descriptioncell">表头视图名称&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>headerverifierdatesysfieldname
+			(U872)
+			</strong></td><td class="descriptioncell">表头审核日期&nbsp;</td><td>nvarchar</td><td>100&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>headerverifierfieldname
+			(U870)
+			</strong></td><td class="descriptioncell">表头审批人字段名称&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>headerclosedatefieldname
+			(U870)
+			</strong></td><td class="descriptioncell">表头关闭日期字段名称&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>detailtablename
+			(U870)
+			</strong></td><td class="descriptioncell">表体表名称&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>name
+			(U870)
+			</strong></td><td class="descriptioncell">名字&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>headerlockerfield
+			(U870)
+			</strong></td><td class="descriptioncell">表头锁定人字段&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>headercloserfieldname
+			(U870)
+			</strong></td><td class="descriptioncell">表头关闭人字段&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>headerverifystatefieldname
+			(U870)
+			</strong></td><td class="descriptioncell">表头审批状态字段&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>headertablename
+			(U870)
+			</strong></td><td class="descriptioncell">表头表名称&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>listviewname
+			(U870)
+			</strong></td><td class="descriptioncell">列表视图名称&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>headerverifierdatefieldname
+			(U870)
+			</strong></td><td class="descriptioncell">表头审批日期字段名称&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>detailidfieldname
+			(U870)
+			</strong></td><td class="descriptioncell">表体ID字段&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>headeridfieldname
+			(U870)
+			</strong></td><td class="descriptioncell">表头ID字段&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>detailviewname
+			(U870)
+			</strong></td><td class="descriptioncell">表体视图名&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+		</table>
+		<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

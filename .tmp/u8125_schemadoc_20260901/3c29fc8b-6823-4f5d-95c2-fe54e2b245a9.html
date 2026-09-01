@@ -1,0 +1,158 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>hr_bd_columnField View</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">hr_bd_columnField View 
+			&nbsp;(WM 保险福利管理)
+			&nbsp;[U890]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>栏目字段表</p>
+		
+		<h4 class=dxh4>Columns</h4>
+		<TABLE CLASS="FilteredItemListTable" CellSpacing="0">
+			<TR VALIGN="top"><TH width=30%>Column Name</TH><TH width=50%>Description</TH><TH width=50%>Datatype</TH><TH width=50%>Length</TH>
+			<TR>
+			<TD CLASS=DescriptionCell>iOrderType
+			(U890)
+			</TD><TD CLASS="DescriptionCell">排序方式&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cColKey
+			(U890)
+			</TD><TD CLASS="DescriptionCell">栏目主键&nbsp;</TD>
+			<TD CLASS="DescriptionCell">uniqueidentifier&nbsp;</TD><TD CLASS="DescriptionCell">16&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>iWidth
+			(U890)
+			</TD><TD CLASS="DescriptionCell">显示宽度&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cPath
+			(U890)
+			</TD><TD CLASS="DescriptionCell">路径&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">4000&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>bdisplay
+			(U890)
+			</TD><TD CLASS="DescriptionCell">是否显示&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cAstSql
+			(U890)
+			</TD><TD CLASS="DescriptionCell">关联Sql&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">4000&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>iAlignment
+			(U890)
+			</TD><TD CLASS="DescriptionCell">对齐方式&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>iRecord
+			(U890)
+			</TD><TD CLASS="DescriptionCell">显示顺序&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cFieldName
+			(U890)
+			</TD><TD CLASS="DescriptionCell">字段名称&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">400&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>iloadmode
+			(U890)
+			</TD><TD CLASS="DescriptionCell">加载模式&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cBaseObject
+			(U890)
+			</TD><TD CLASS="DescriptionCell">来源对象&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>bAssociate
+			(U890)
+			</TD><TD CLASS="DescriptionCell">是否关联项&nbsp;</TD>
+			<TD CLASS="DescriptionCell">bit&nbsp;</TD><TD CLASS="DescriptionCell">1&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>bSum
+			(U890)
+			</TD><TD CLASS="DescriptionCell">是否合计&nbsp;</TD>
+			<TD CLASS="DescriptionCell">bit&nbsp;</TD><TD CLASS="DescriptionCell">1&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cbasetable
+			(U890)
+			</TD><TD CLASS="DescriptionCell">基表&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cSourceField
+			(U890)
+			</TD><TD CLASS="DescriptionCell">源字段&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cGroupName
+			(U890)
+			</TD><TD CLASS="DescriptionCell">分组名称&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">400&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cSourceTable
+			(U890)
+			</TD><TD CLASS="DescriptionCell">源表&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cFieldID
+			(U890)
+			</TD><TD CLASS="DescriptionCell">字段主键&nbsp;</TD>
+			<TD CLASS="DescriptionCell">uniqueidentifier&nbsp;</TD><TD CLASS="DescriptionCell">16&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cbasefield
+			(U890)
+			</TD><TD CLASS="DescriptionCell">基字段&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>bFixed
+			(U890)
+			</TD><TD CLASS="DescriptionCell">是否固定列&nbsp;</TD>
+			<TD CLASS="DescriptionCell">bit&nbsp;</TD><TD CLASS="DescriptionCell">1&nbsp;</TD>
+			</TR>
+		</TABLE>
+			<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

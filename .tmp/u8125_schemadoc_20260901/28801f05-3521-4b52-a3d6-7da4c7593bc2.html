@@ -1,0 +1,353 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>CaF_PlanC_Mx Function</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">CaF_PlanC_Mx Function 
+			&nbsp;(CA 成本管理)
+			&nbsp;[U8100]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		
+		
+		<h4 class=dxh4>Parameters</h4>
+		<TABLE CLASS="FilteredItemListTable" CellSpacing="0">
+			<TR VALIGN="top"><TH width=30%>Parameter</TH><TH width=50%>Description</TH><TH width=50%>Datatype</TH><TH width=50%>Length</TH><TH width=50%>Allow Nulls</TH>
+			<TR>
+			<TD CLASS=DescriptionCell>free10_Child
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cInvM_Unit
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			<TD CLASS="DescriptionCell">&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>bIsWCID
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">bit&nbsp;</TD><TD CLASS="DescriptionCell">1&nbsp;</TD>
+			<TD CLASS="DescriptionCell">&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cAmoType
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			<TD CLASS="DescriptionCell">&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>Free6
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			<TD CLASS="DescriptionCell">&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>Version
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			<TD CLASS="DescriptionCell">&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>free8_Child
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cVerID
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			<TD CLASS="DescriptionCell">&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>iQua
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">decimal&nbsp;</TD><TD CLASS="DescriptionCell">17&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>Free1
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			<TD CLASS="DescriptionCell">&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>free5_Child
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>free3_Child
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>free4_Child
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDeptID
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			<TD CLASS="DescriptionCell">&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cInvAddCode
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">255&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>free9_Child
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cAmoName
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">255&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>iPartID
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			<TD CLASS="DescriptionCell">&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>free7_Child
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>Free7
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			<TD CLASS="DescriptionCell">&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cVerName
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>Free3
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			<TD CLASS="DescriptionCell">&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>free2_Child
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cInvStd
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">255&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>iPlanCOID
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cppid
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			<TD CLASS="DescriptionCell">&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>bProxyForeign
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			<TD CLASS="DescriptionCell">&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>Free9
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			<TD CLASS="DescriptionCell">&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>IdentCode
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			<TD CLASS="DescriptionCell">&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>iAmo
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">decimal&nbsp;</TD><TD CLASS="DescriptionCell">17&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>iPartHourAmo
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">decimal&nbsp;</TD><TD CLASS="DescriptionCell">17&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>free6_Child
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>iPartHourQua
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">decimal&nbsp;</TD><TD CLASS="DescriptionCell">17&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cAmoID
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDepName
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">100&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>Free2
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			<TD CLASS="DescriptionCell">&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>Free5
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			<TD CLASS="DescriptionCell">&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@iYear
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cInvName
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">255&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>Free10
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			<TD CLASS="DescriptionCell">&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>InvCode
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			<TD CLASS="DescriptionCell">&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>free1_Child
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>iBomID
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			<TD CLASS="DescriptionCell">&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>Free8
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			<TD CLASS="DescriptionCell">&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>Free4
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			<TD CLASS="DescriptionCell">&nbsp;</TD>
+			</TR>
+		</TABLE>
+		<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

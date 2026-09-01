@@ -1,0 +1,86 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>lotnumberrule Table</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">lotnumberrule Table 
+			&nbsp;(ST 库存管理)
+			&nbsp;[U870]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>批号规则子表</p>
+		
+		<h4 class=dxh4>Columns</h4>
+		<table class="columnlisttable" cellspacing="0">
+			<tr valign="top"><th align=middle>&nbsp;</th><th nowrap>Column Name</th><th nowrap>Description</th><th nowrap>Datatype</th><th nowrap>Length</th><th nowrap>Allow Nulls</th></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>creplacesign
+			(U870)
+			</strong></td><td class="descriptioncell">替换符&nbsp;</td><td>varchar</td><td>10&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cdatasrcformat
+			(U870)
+			</strong></td><td class="descriptioncell">数据源格式&nbsp;</td><td>varchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cinvcode
+			(U870)
+			</strong></td><td class="descriptioncell">存货大类编码或存货编码&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cnumgistformat
+			(U8100)
+			</strong></td><td class="descriptioncell">格式化串&nbsp;</td><td>nvarchar</td><td>10&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>crulename
+			(U870)
+			</strong></td><td class="descriptioncell">序列号规则名称&nbsp;</td><td>varchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bnumgist
+			(U872)
+			</strong></td><td class="descriptioncell">是否流水依据&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bShow
+			(U8100)
+			</strong></td><td class="descriptioncell">是否显示&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>igrade
+			(U870)
+			</strong></td><td class="descriptioncell">级次&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iformatlength
+			(U870)
+			</strong></td><td class="descriptioncell">数据源格式长度&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cdatasrctype
+			(U870)
+			</strong></td><td class="descriptioncell">数据源类型&nbsp;</td><td>varchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cpatchsign
+			(U870)
+			</strong></td><td class="descriptioncell">补位符&nbsp;</td><td>varchar</td><td>10&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cinvtype
+			(U870)
+			</strong></td><td class="descriptioncell">类型：0-存货大类，1-存货，2-总规则&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+		</table>
+		<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

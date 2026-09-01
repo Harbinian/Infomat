@@ -1,0 +1,236 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>v_sfc_moroutingdetail View</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">v_sfc_moroutingdetail View 
+			
+			&nbsp;[U861]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>生产订单工序明细</p>
+		<h4 class=dxh4>Remark</h4><p>生产订单工序明细</p>
+		<h4 class=dxh4>Columns</h4>
+		<TABLE CLASS="FilteredItemListTable" CellSpacing="0">
+			<TR VALIGN="top"><TH width=30%>Column Name</TH><TH width=50%>Description</TH><TH width=50%>Datatype</TH><TH width=50%>Length</TH>
+			<TR>
+			<TD CLASS=DescriptionCell>RdScrapQty
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">Udt_QTY&nbsp;</TD><TD CLASS="DescriptionCell">13&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ReworkedQty
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">Udt_QTY&nbsp;</TD><TD CLASS="DescriptionCell">13&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>completeqty
+			(U8111)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">Udt_QTY&nbsp;</TD><TD CLASS="DescriptionCell">13&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>PostScrapQty
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">Udt_QTY&nbsp;</TD><TD CLASS="DescriptionCell">13&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>FirstFlag
+			(U871)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">bit&nbsp;</TD><TD CLASS="DescriptionCell">1&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>SubQty
+			(U871)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">Udt_QTY&nbsp;</TD><TD CLASS="DescriptionCell">13&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ReworkQty
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">Udt_QTY&nbsp;</TD><TD CLASS="DescriptionCell">13&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>RdReworkedQty
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">Udt_QTY&nbsp;</TD><TD CLASS="DescriptionCell">13&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>MoId
+			(U871)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>PostReworkedQty
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">Udt_QTY&nbsp;</TD><TD CLASS="DescriptionCell">13&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>MoDId
+			(U861)
+			</TD><TD CLASS="DescriptionCell">生产订单明细资料Id&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>MoRoutingDId
+			(U861)
+			</TD><TD CLASS="DescriptionCell">生产订单工序明细资料Id&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>MoRoutingId
+			(U861)
+			</TD><TD CLASS="DescriptionCell">生产订单工序资料Id&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>OpSeq
+			(U861)
+			</TD><TD CLASS="DescriptionCell">工序行号&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nchar&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>Description
+			(U861)
+			</TD><TD CLASS="DescriptionCell">说明&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">120&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>WcId
+			(U861)
+			</TD><TD CLASS="DescriptionCell">工作中心Id&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>WcCode
+			(U861)
+			</TD><TD CLASS="DescriptionCell">工作中心代号&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">16&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>WcName
+			(U861)
+			</TD><TD CLASS="DescriptionCell">工作中心名称&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">120&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>StartDate
+			(U861)
+			</TD><TD CLASS="DescriptionCell">开工日期&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>DueDate
+			(U861)
+			</TD><TD CLASS="DescriptionCell">完工日期&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>SubFlag
+			(U861)
+			</TD><TD CLASS="DescriptionCell">是否委外&nbsp;</TD>
+			<TD CLASS="DescriptionCell">bit&nbsp;</TD><TD CLASS="DescriptionCell">1&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>SVendorCode
+			(U861)
+			</TD><TD CLASS="DescriptionCell">委外厂商&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>Remark
+			(U861)
+			</TD><TD CLASS="DescriptionCell">备注&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">510&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>LastFlag
+			(U861)
+			</TD><TD CLASS="DescriptionCell">是否末道工序&nbsp;</TD>
+			<TD CLASS="DescriptionCell">bit&nbsp;</TD><TD CLASS="DescriptionCell">1&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>BalQualifiedQty
+			(U861)
+			</TD><TD CLASS="DescriptionCell">已合格数量&nbsp;</TD>
+			<TD CLASS="DescriptionCell">Udt_QTY&nbsp;</TD><TD CLASS="DescriptionCell">13&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>BalScrapQty
+			(U861)
+			</TD><TD CLASS="DescriptionCell">已报废数量&nbsp;</TD>
+			<TD CLASS="DescriptionCell">Udt_QTY&nbsp;</TD><TD CLASS="DescriptionCell">13&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>BalRefusedQty
+			(U861)
+			</TD><TD CLASS="DescriptionCell">已拒绝数量&nbsp;</TD>
+			<TD CLASS="DescriptionCell">Udt_QTY&nbsp;</TD><TD CLASS="DescriptionCell">13&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>BalMachiningQty
+			(U861)
+			</TD><TD CLASS="DescriptionCell">已加工数量&nbsp;</TD>
+			<TD CLASS="DescriptionCell">Udt_QTY&nbsp;</TD><TD CLASS="DescriptionCell">13&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>BalDeclareQty
+			(U861)
+			</TD><TD CLASS="DescriptionCell">已报检数量&nbsp;</TD>
+			<TD CLASS="DescriptionCell">Udt_QTY&nbsp;</TD><TD CLASS="DescriptionCell">13&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>QualifiedQty
+			(U861)
+			</TD><TD CLASS="DescriptionCell">合格数量&nbsp;</TD>
+			<TD CLASS="DescriptionCell">Udt_QTY&nbsp;</TD><TD CLASS="DescriptionCell">13&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>ScrapQty
+			(U861)
+			</TD><TD CLASS="DescriptionCell">报废数量&nbsp;</TD>
+			<TD CLASS="DescriptionCell">Udt_QTY&nbsp;</TD><TD CLASS="DescriptionCell">13&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>RefusedQty
+			(U861)
+			</TD><TD CLASS="DescriptionCell">拒绝数量&nbsp;</TD>
+			<TD CLASS="DescriptionCell">Udt_QTY&nbsp;</TD><TD CLASS="DescriptionCell">13&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>Ufts
+			(U861)
+			</TD><TD CLASS="DescriptionCell">时间戳&nbsp;</TD>
+			<TD CLASS="DescriptionCell">timestamp&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+		</TABLE>
+			<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

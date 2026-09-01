@@ -15,10 +15,11 @@
 | `REPOSITORY_BOUNDARY.md` | 仓库职责边界 | 定义仓库放什么、不放什么 | 不替代目录级 README |
 | `DIRECTORY_OWNERSHIP.md` | 目录责任矩阵 | 定义每个目录怎么改 | 不记录具体迁移日志 |
 | `MAINLINE_MAP.md` | 主线数据流关系 | 定义资料、PMO、MDM、脚本的链路 | 不写平台实现细节 |
+| `.codex/config.toml` | 仓库内 Codex 展示与推理偏好 | 只保存非敏感的仓库级偏好，并继承根目录执行规则 | 不保存 Secret、主机连接、个人路径、运行状态或业务事实 |
 
 根目录不应继续新增临时 YAML、截图、压缩包、解包目录或一次性调查文本。历史散放的根目录 PMO YAML 已归档到 `pmo/archive/page-snapshots/2026-06-05-playwright-yaml/`。原根目录 `temp_survey.txt` 已登记后迁入 `docs/HardwareResearch/06B厂房接入民机非密园区网需求调查表_抽取文本.txt`，后续同类基础设施调查材料应直接进入对应资料目录。
 
-目录级 `AGENTS.md` 只放在有独立真源、生成副作用、运行命令、验证口径或禁止事项的关键目录。当前目录级入口为 `apps/mdm-platform/`、`apps/structured-output-service/`、`apps/structure-assistant/`、`apps/weekly-action-service/`、`apps/information-collection-service/`、`pmo/`、`pmo/procedure-management/`、`pmo/gantt-react/`、`pmo/deliverables/`、`docs/norms/`、`docs/Demo/` 和 `scripts/`。纯报告、归档、样例和说明性架构目录默认使用 README。
+目录级 `AGENTS.md` 只放在有独立真源、生成副作用、运行命令、验证口径或禁止事项的关键目录。当前目录级入口为 `apps/mdm-platform/`、`apps/structured-output-service/`、`apps/structure-assistant/`、`apps/weekly-action-service/`、`apps/information-collection-service/`、`pmo/`、`pmo/procedure-management/`、`pmo/gantt-react/`、`pmo/deliverables/`、`pmo/organization-dynamics/`、`docs/norms/`、`docs/organization/`、`docs/contracts/`、`docs/Demo/` 和 `scripts/`。纯报告、归档、样例和说明性架构目录默认使用 README。
 
 ## 2. 可运行系统
 
@@ -43,13 +44,13 @@
 |---|---|---|---|---|
 | `docs/` | 资料、说明、方案沉淀 | 子目录分工 | 文档按资产类型进入子目录 | 不放本地生成物 |
 | `docs/norms/` | 流程输入基线、制度/表单源文件材料、部门桑基图资产 | 部门映射 Markdown、制度/表单源文件 | 新增或修改流程输入基线后运行流程地图 parser；工作角色只写 confirmed 绑定并同步维护受控证据表 | 不放候选工作角色绑定、临时报告、截图、运行日志 |
-| `docs/organization/` | 正式切换前的组织架构、部门职责、正式工作角色和项目治理角色映射真源，以及人员参考资料 | `组织架构和部门职责.md`、`工作角色目录与岗位映射.md`、`信息化项目人员角色映射.md`；`花名册.md` 仅为参考 | 切换前，部门到域映射变化必须先改这里，工作角色由行政人事部维护并使用花名册岗位作参考核验；3000 行政人事功能完成对应首版发布并正式切换后，组织、员工主数据和正式工作角色以 3000 发布版本为唯一正式真源，本目录对应文件改为受控只读导出 | 不在页面、脚本或运行台账里另造组织、工作角色或项目治理角色口径；不得把花名册或其他参考资料自动认定为员工主数据 |
-| `docs/contracts/` | 自动化校验规则 | 规则说明、JSON规则文件 | 可修改校验规则和执行约定 | 不写业务流程正文，不替代流程输入基线或组织真源 |
+| `docs/organization/` | 正式切换前的组织架构、部门职责、正式工作角色和项目治理角色映射真源，以及人员参考资料 | `AGENTS.md`、`组织架构和部门职责.md`、`工作角色目录与岗位映射.md`、`信息化项目人员角色映射.md`；`花名册.md` 仅为参考 | 修改前读取本目录 `AGENTS.md`；切换前先改真源，再生成只读快照并验证；3000 正式切换后的真源边界按本目录 README 执行 | 不在页面、脚本或运行台账里另造组织、工作角色或项目治理角色口径；不得把花名册或其他参考资料自动认定为员工主数据 |
+| `docs/contracts/` | 自动化结构和校验规则 | `AGENTS.md`、规则说明、JSON规则文件 | 修改前读取本目录 `AGENTS.md`；发布版本变化必须同时处理旧数据兼容和回归 | 不写业务流程正文，不替代流程输入基线或组织真源，不保存 Secret |
 | `docs/integration/` | 集成和主数据治理方案 | 方案文档 | 可沉淀接口、主数据、系统协同方案 | 不作为当前流程输入基线 |
 | `docs/samples/` | 最小样例 | 样例 README 或文件名 | 只保留可复现、可说明格式的样例 | 不堆放完整生成输出 |
 | `docs/reports/` | 审计、测试、稳定化报告 | 报告日期和主题 | 新增仓库审计、稳定性检查、阶段总结 | 不放当前执行基线或真源 |
 | `docs/architecture/` | 架构说明 | 架构主题文档 | 用于说明长期结构、模块关系、职责规则 | 不替代 ADR |
-| `docs/adr/` | 架构决策记录 | ADR 编号 | 记录已经接受的长期决策 | 不写普通会议纪要 |
+| `docs/adr/` | 架构决策记录 | ADR 编号和明确状态 | 记录 `Proposed`、`Accepted` 等需长期追溯的决策；状态变化必须有评审依据 | 不把普通会议纪要或执行计划写成已接受决策 |
 | `docs/superpowers/` | 历史设计和计划 | 历史计划、设计文档 | 只用于追溯，旧路径按当前结构解释 | 不作为当前执行真源 |
 | `docs/archives/` | 历史归档 | 归档索引 | 后续迁移旧方案或废弃材料 | 不放仍在执行的基线或真源 |
 
@@ -61,6 +62,7 @@
 | `pmo/procedure-management/` | 流程地图驾驶舱 | `dashboard.html` 内嵌 `#sankey-data` | 页面展示和截图验证在此处 | 不手工复制第二份流程数据 |
 | `pmo/gantt-react/` | React 甘特图 / PMO 看板 | `public/tasks.json`、`src/` | 前端交互、看板展示、PMO 插件在此处 | 不放制度或流程输入基线 |
 | `pmo/deliverables/` | PMO 交付物 | `README.md`、`AGENTS.md`、DLV 文档与表格 | 交付物按编号维护；状态、版本和 PMO 真源影响需同步 | 构建目录、临时导出和未脱敏附件不应长期提交 |
+| `pmo/organization-dynamics/` | 组织数字化参与度模型和可视资产 | `AGENTS.md`、`README.md`、模型 Markdown、SVG、HTML、PPTX | 先改模型真源，再同步受影响的可视资产；PNG 写入 `artifacts/` | 不替代组织事实或绩效结论，不提交本地 PNG、缓存和调试输出 |
 | `pmo/scripts/` | PMO 局部测试脚本 | PMO 页面和插件 | 只放服务 PMO 应用的 smoke 脚本 | 不放仓库级流程 parser |
 
 ## 5. 仓库级脚本
@@ -72,18 +74,21 @@
 | `scripts/check-dashboard-data.mjs` | 驾驶舱数据检查 | PMO 驾驶舱 / JSON | 检查输出 | 只做校验，不改流程输入基线或组织真源 |
 | `scripts/glossary.mjs` | 术语表查询 | `docs/glossary.md` | 查询输出 | 新术语仍应写入术语表 |
 
-后续轻量收口时，可在 `scripts/` 下逐步新增 `process-governance/`、`mdm-maintenance/`、`repo-audit/`，但第一轮不移动现有脚本。
+`scripts/` 当前保持既有平铺入口和 README 分组。只有另行确认引用迁移、命令兼容和验证方案后，才可以新建分类子目录或移动脚本。
 
-## 6. 生成物、本地状态与历史资料
+## 6. 派生文件、本地状态与历史资料
+
+受控派生消费文件按 `docs/adr/0004-controlled-derived-consumer-files.md` 的 `Proposed` 清单维护：文件必须有固定真源、生成命令、直接消费方和一致性检查，且不得手工修改。该状态不授权处理历史文件。其他可再生成内容默认属于本地生成物。
 
 | 路径 | 当前状态 | 规则 |
 |---|---|---|
-| `artifacts/` | 生成物目录 | 默认不提交 |
+| `artifacts/` | 临时生成物和本地验证输出目录 | 默认不提交 |
 | `output/` | 历史渲染输出 | 后续迁移到 `artifacts/` 或保留为样例前先审计 |
 | `_tmp/` | PPTX 解包和临时脚本 | 不应作为仓库真源 |
 | `snapshots/` | norms 快照 | 需确认是否作为历史快照保留；若保留，应补 README |
 | `ai_materials/` | AI 处理输入材料 | 需确认是否为长期资料源；若是，应说明与 `docs/norms/` 的关系 |
 | `.agents/` | Codex 可用的项目技能和提示材料 | 可保留，但不放生成物 |
+| `.codex/config.toml` | 仓库内 Codex 偏好 | 可提交非敏感偏好，不放 Secret、主机信息、运行状态或业务事实 |
 | `.superpowers/` | Superpowers 工作输出 | 当前含截图等生成物，后续应迁移或忽略 |
 | `node_modules/` | 本地依赖 | 不提交 |
 | `test-results/` | 测试输出 | 不提交 |

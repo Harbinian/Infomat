@@ -67,7 +67,7 @@
 
 | 脚本 | 作用 | 副作用 |
 |---|---|---|
-| `init-mysql-schema.js` | 初始化MySQL schema，包含固定身份/RBAC字段、访问审计、责任记录、迁移备份、流程治理、数据地图、字段、术语、冲突、待办和平台审计表；不覆盖现有账号密码或状态 | 写MySQL结构，不写仓库真源 |
+| `init-mysql-schema.js` | 初始化MySQL schema，包含固定身份/RBAC字段、访问审计、责任记录、迁移备份、流程治理、导入问题指纹、数据地图、字段、术语、冲突、待办和平台审计表；不覆盖现有账号密码或状态 | 写MySQL结构，不写仓库真源；本任务只修复结构定义和静态测试，未对任何运行实例执行 |
 | `bootstrap-admin.js` | 仅在空身份库创建一次受控`ADMIN001`管理员入口；已有人员、账号或有效管理员时拒绝 | 写MySQL；一次性临时密码只在响应中显示 |
 | `migrate-rbac-raci-v2.js --dry-run` | 盘点人员、账号、部门、角色、重复标识、孤立关系、缺失部门和缺失最终负责人 | 只读MySQL |
 | `migrate-rbac-raci-v2.js --apply` | 备份身份授权数据，写入固定模型，仅保留`ADMIN001`管理员，停用其他旧账号并清除旧会话 | 写MySQL；执行前必须先dry-run |
@@ -81,7 +81,7 @@
 | `smoke-process-governance-mysql.js` | 可选真实 MySQL 端到端 smoke：初始化、导入、读回 Sankey | 缺少 `MYSQL_HOST`、`MYSQL_USER`、`MYSQL_DATABASE` 时跳过；不读取 `MDM_DB_PATH` |
 | `smoke-data-map-mysql.js` | 可选真实 MySQL 端到端 smoke：初始化、写入 Data Map context、字段、黄金源并读回 | 缺少 `MYSQL_HOST`、`MYSQL_USER`、`MYSQL_DATABASE` 时跳过；不读取 `MDM_DB_PATH` |
 | `import-process-input-baseline-review-mysql.js` | 将 `artifacts/process-input-baseline-review/<run-id>` 导入 MDM 输入基线问题复核表 | 写 MySQL `process_input_baseline_review_*` 表 |
-| `init-db.js` | 历史本地库初始化入口，迁移完成前仅服务遗留测试链 | 写 `data/platform.db` 或 `MDM_DB_PATH` 指定库 |
+| `init-db.js` | 历史本地库初始化实现，只通过`npm run legacy-sqlite:init-db`服务遗留测试链 | 写 `data/platform.db` 或 `MDM_DB_PATH` 指定库 |
 | `setup-local-baseline.js` | 历史本地库测试基线入口，不是正式账号初始化入口 | 只允许隔离遗留测试；不得用于正式开户 |
 | `seed-demo-data.js` | 历史演示数据入口；账号写入已拒绝 | 不得用于正式开户 |
 | `setup-mdm-project-users.js` | 已退休的项目角色批量开户入口 | 执行即拒绝，不写账号 |
@@ -93,10 +93,10 @@
 | 脚本 | 作用 | 副作用 |
 |---|---|---|
 | `sync-organization-structure.js` | 从组织真源同步部门、岗位、人员到 MDM 结构 | 写当前数据库 |
-| `sync-process-governance-org.js` | 为流程治理模块同步组织口径 | 写当前数据库 |
-| `import-process-governance.js` | 迁移过渡期导入 `docs/company-sankey-data.json` 到遗留本地库 | 写当前数据库；后续由 MySQL 导入替代 |
+| `sync-process-governance-org.js` | 遗留SQLite流程治理组织同步实现；公开命令为`npm run legacy-sqlite:sync-process-org` | 写`MDM_DB_PATH`指定的隔离SQLite库 |
+| `import-process-governance.js` | 遗留SQLite流程治理快照导入实现；公开命令为`npm run legacy-sqlite:import-process-governance` | 写`MDM_DB_PATH`指定的隔离SQLite库；不属于正式主线 |
 | `import-process-governance-mysql.js` | 导入 `docs/company-sankey-data.json` 到 MySQL 流程治理读模型 | 写 MySQL；不读取 `MDM_DB_PATH` |
-| `check-process-governance.js` | 检查当前数据库中的流程治理快照 | 只读 |
+| `check-process-governance.js` | 遗留SQLite流程治理快照检查实现；公开命令为`npm run legacy-sqlite:check-process-governance` | 只读`MDM_DB_PATH`指定的隔离SQLite库 |
 | `lib/processGovernanceImport.js` | 流程治理导入共享实现 | 被导入脚本和测试调用 |
 | `test-process-governance-mysql-repository.js` | 验证流程治理 MySQL 读模型 repository 可替换活动快照并读回 Sankey、A1、源文件、MDM 要求、证据和交互链数据 | 使用 fake MySQL pool，只读仓库；不切换现有 Express 路由 |
 | `test-process-governance-mysql-import.js` | 验证 `docs/company-sankey-data.json` 形态可转成 MySQL 读模型 bundle，并包含源文件、MDM 要求、证据和显式 A1 Markdown 数据 | 使用 fake repository，只读仓库 |

@@ -1,0 +1,234 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>IA_AccValuationAss Stored Procedure</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">IA_AccValuationAss Stored Procedure 
+			&nbsp;(IA 存货核算)
+			&nbsp;[U861]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>先进先出、后进先出计价方式记帐</p>
+		
+		<h4 class=dxh4>Parameters</h4>
+		<TABLE CLASS="FilteredItemListTable" CellSpacing="0">
+			<TR VALIGN="top"><TH width=30%>Parameter</TH><TH width=50%>Description</TH><TH width=50%>Datatype</TH><TH width=50%>Length</TH><TH width=50%>Allow Nulls</TH>
+			<TR>
+			<TD CLASS=DescriptionCell>@cFree7
+			(U870)
+			</TD><TD CLASS="DescriptionCell">自由项&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@cFree4
+			(U870)
+			</TD><TD CLASS="DescriptionCell">自由项&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@cFree8
+			(U870)
+			</TD><TD CLASS="DescriptionCell">自由项&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@cFree5
+			(U870)
+			</TD><TD CLASS="DescriptionCell">自由项&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@iYear
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">会计年&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@cFree3
+			(U870)
+			</TD><TD CLASS="DescriptionCell">自由项&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@VouchType
+			(U870)
+			</TD><TD CLASS="DescriptionCell">自由项&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@cFree1
+			(U870)
+			</TD><TD CLASS="DescriptionCell">自由项&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@cFree6
+			(U870)
+			</TD><TD CLASS="DescriptionCell">自由项&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@cFree9
+			(U870)
+			</TD><TD CLASS="DescriptionCell">自由项&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@cFree10
+			(U870)
+			</TD><TD CLASS="DescriptionCell">自由项&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@cFree2
+			(U870)
+			</TD><TD CLASS="DescriptionCell">自由项&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@cBatchIA
+			
+			</TD><TD CLASS="DescriptionCell">批号&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@ValueStyle
+			(U861)
+			</TD><TD CLASS="DescriptionCell">计价方式&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">12&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@RdFlag
+			(U861)
+			</TD><TD CLASS="DescriptionCell">出入库标示&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@WhStyle
+			(U861)
+			</TD><TD CLASS="DescriptionCell">核算方式&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@WhDepcode
+			(U861)
+			</TD><TD CLASS="DescriptionCell">仓库编码&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">50&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@VouchCode
+			(U861)
+			</TD><TD CLASS="DescriptionCell">入库单号&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">30&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@VouchIDs
+			(U861)
+			</TD><TD CLASS="DescriptionCell">入库单子表标示&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@VouchDate
+			(U861)
+			</TD><TD CLASS="DescriptionCell">单据日期&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@KeepDate
+			(U861)
+			</TD><TD CLASS="DescriptionCell">记账日期&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@InvCode
+			(U861)
+			</TD><TD CLASS="DescriptionCell">存货编码&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@iQuanPrec
+			(U861)
+			</TD><TD CLASS="DescriptionCell">数量位数&nbsp;</TD>
+			<TD CLASS="DescriptionCell">tinyint&nbsp;</TD><TD CLASS="DescriptionCell">1&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@Quantity
+			(U861)
+			</TD><TD CLASS="DescriptionCell">数量&nbsp;</TD>
+			<TD CLASS="DescriptionCell">float&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@Cost
+			(U861)
+			</TD><TD CLASS="DescriptionCell">单价&nbsp;</TD>
+			<TD CLASS="DescriptionCell">float&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@Price
+			(U861)
+			</TD><TD CLASS="DescriptionCell">金额&nbsp;</TD>
+			<TD CLASS="DescriptionCell">float&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@bSale
+			(U861)
+			</TD><TD CLASS="DescriptionCell">数据来源&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@AutoID
+			(U861)
+			</TD><TD CLASS="DescriptionCell">新增内容的AutoID&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+		</TABLE>
+		<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

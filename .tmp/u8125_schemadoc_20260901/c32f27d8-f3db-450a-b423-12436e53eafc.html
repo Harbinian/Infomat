@@ -1,0 +1,202 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>tc_mail_info Table</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">tc_mail_info Table 
+			&nbsp;(MK 营销管理)
+			&nbsp;[U8110]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>邮件信息表</p>
+		<h4 class=dxh4>Remark</h4><p>邮件信息表</p>
+		<h4 class=dxh4>Columns</h4>
+		<table class="columnlisttable" cellspacing="0">
+			<tr valign="top"><th align=middle>&nbsp;</th><th nowrap>Column Name</th><th nowrap>Description</th><th nowrap>Datatype</th><th nowrap>Length</th><th nowrap>Allow Nulls</th></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>mail_type
+			(U8110)
+			</strong></td><td class="descriptioncell">邮件类型: 1: 发送; 2: 接收&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>contact_id
+			
+			</strong></td><td class="descriptioncell">联系人id&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>send_time
+			(U8110)
+			</strong></td><td class="descriptioncell">发送时间&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>crm_timestamp
+			(U8110)
+			</strong></td><td class="descriptioncell">记录变动系统时间戳&nbsp;</td><td>timestamp</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>obj_type
+			(U8110)
+			</strong></td><td class="descriptioncell">发送时使用: 替换对象的类型&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>attach_flag
+			(U8110)
+			</strong></td><td class="descriptioncell">是否有附件&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>mail_brief
+			(U8110)
+			</strong></td><td class="descriptioncell">内容摘要&nbsp;</td><td>nvarchar</td><td>2000&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>recieve_time
+			(U8110)
+			</strong></td><td class="descriptioncell">接收时间&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>batch_no
+			(U8110)
+			</strong></td><td class="descriptioncell">批量发送时唯一标识&nbsp;</td><td>nvarchar</td><td>128&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>mail_account_id
+			(U8110)
+			</strong></td><td class="descriptioncell">接收/发送帐户ID&nbsp;</td><td>nvarchar</td><td>40&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>is_deleted
+			(U8110)
+			</strong></td><td class="descriptioncell">是否删除（0：否；1：是）&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>mail_size
+			(U8110)
+			</strong></td><td class="descriptioncell">邮件大小&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>account_id
+			
+			</strong></td><td class="descriptioncell">客户ID&nbsp;</td><td>nvarchar</td><td>40&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>mail_cc
+			(U8110)
+			</strong></td><td class="descriptioncell">抄送&nbsp;</td><td>nvarchar</td><td>1024&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>mail_priority
+			(U8110)
+			</strong></td><td class="descriptioncell">邮件优先级&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>plan_start_time
+			(U8110)
+			</strong></td><td class="descriptioncell">发送时使用: 计划开始发送时间&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>mail_subject
+			(U8110)
+			</strong></td><td class="descriptioncell">邮件主题&nbsp;</td><td>nvarchar</td><td>1024&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>server_flag
+			(U8110)
+			</strong></td><td class="descriptioncell">数据标识(保留未用)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>create_time
+			(U8110)
+			</strong></td><td class="descriptioncell">创建时间&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>mail_bcc
+			(U8110)
+			</strong></td><td class="descriptioncell">暗送&nbsp;</td><td>nvarchar</td><td>1024&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>mail_id
+			(U8110)
+			</strong></td><td class="descriptioncell">邮件ID&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>replace_flag
+			(U8110)
+			</strong></td><td class="descriptioncell">发送时使用: 替换标记: 1: 主题需要替换; 2: Text内容需要替换: 4: HTML内容需要替换&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>create_user_id
+			(U8110)
+			</strong></td><td class="descriptioncell">创建人的ID&nbsp;</td><td>nvarchar</td><td>40&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>need_confirm
+			(U8110)
+			</strong></td><td class="descriptioncell">是否发送回执&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>mail_charset
+			(U8110)
+			</strong></td><td class="descriptioncell">邮件字符集&nbsp;</td><td>nvarchar</td><td>32&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>actvt_id
+			(U8110)
+			</strong></td><td class="descriptioncell">邮件所在的行动ID&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fr_id
+			(U8110)
+			</strong></td><td class="descriptioncell">邮件内容文件资源ID&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>deleted_user_id
+			(U8110)
+			</strong></td><td class="descriptioncell">删除人的ID&nbsp;</td><td>nvarchar</td><td>40&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>mail_to
+			(U8110)
+			</strong></td><td class="descriptioncell">收件人&nbsp;</td><td>nvarchar</td><td>1024&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>mail_uid
+			(U8110)
+			</strong></td><td class="descriptioncell">邮件唯一标识ID&nbsp;</td><td>nvarchar</td><td>128&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>obj_id
+			(U8110)
+			</strong></td><td class="descriptioncell">发送时使用: 替换对象的ID&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>svr_ip
+			(U8110)
+			</strong></td><td class="descriptioncell">发送时使用: 正在发送的svrIP&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>deleted_id
+			(U8110)
+			</strong></td><td class="descriptioncell">删除表ID&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>is_exist_in_server
+			(U8110)
+			</strong></td><td class="descriptioncell">服务端有备份&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>mail_from
+			(U8110)
+			</strong></td><td class="descriptioncell">发件人&nbsp;</td><td>nvarchar</td><td>512&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>appserver_ip
+			(U8110)
+			</strong></td><td class="descriptioncell">正在发送该邮件的服务器IP&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>mail_status
+			(U8110)
+			</strong></td><td class="descriptioncell">发送时使用: 邮件状态&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>deleted_time
+			(U8110)
+			</strong></td><td class="descriptioncell">删除时间&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>plan_end_time
+			(U8110)
+			</strong></td><td class="descriptioncell">发送时使用: 计划结束发送时间&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>send_errmsg
+			(U8110)
+			</strong></td><td class="descriptioncell">发送时使用: 出错信息&nbsp;</td><td>nvarchar</td><td>512&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>retry_count
+			(U8110)
+			</strong></td><td class="descriptioncell">发送时使用: 重试次数&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+		</table>
+		<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

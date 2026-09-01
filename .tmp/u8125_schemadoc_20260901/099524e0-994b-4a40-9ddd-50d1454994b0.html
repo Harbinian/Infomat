@@ -1,0 +1,358 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>UFFA_Model_fa_Cards_Init Table</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">UFFA_Model_fa_Cards_Init Table 
+			&nbsp;(FA 固定资产)
+			&nbsp;[U861]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>fa_Cards模板</p>
+		
+		<h4 class=dxh4>Columns</h4>
+		<table class="columnlisttable" cellspacing="0">
+			<tr valign="top"><th align=middle>&nbsp;</th><th nowrap>Column Name</th><th nowrap>Description</th><th nowrap>Datatype</th><th nowrap>Length</th><th nowrap>Allow Nulls</th></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblValueAndTax
+			(U890)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bFromInv
+			(U890)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblAddTax
+			(U890)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sCommodityCode
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>varchar</td><td>400&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sSeriesNum
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>nvarchar</td><td>400&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sGroupNum
+			(U870)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>nvarchar</td><td>36&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sKeeper
+			(U8101)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bNewDepring
+			(U870)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bSplit
+			(U871)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dPurDate
+			(U8111)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cVenCode
+			(U8111)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sCardID
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sCardNum
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>nvarchar</td><td>5&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sAssetNum
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>nvarchar</td><td>27&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sAssetName
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>nvarchar</td><td>255&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>lOptID
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iOptType
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iNewType
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sZWVoucherType
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>nvarchar</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sZWVoucherNum
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>nvarchar</td><td>10&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sDeptNum
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>nvarchar</td><td>1000&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sTypeNum
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>nvarchar</td><td>10&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sOrgID
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>nvarchar</td><td>10&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sOrgAddID
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>nvarchar</td><td>10&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sOrgDisposeID
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>nvarchar</td><td>10&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sDisposeReason
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>nvarchar</td><td>100&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sStatusID
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>nvarchar</td><td>10&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sDeprMethodID
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>nvarchar</td><td>10&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sCurrency
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>nvarchar</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sDeprSubjectNum
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>nvarchar</td><td>15&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sDeprSubjectName
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>nvarchar</td><td>100&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sProjectNum
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sProjectName
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sStyle
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>nvarchar</td><td>255&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblBuildArea
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>lBuildNum
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>lMachinNum
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblMachinW
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sSite
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>lLife
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dStartdate
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dInputDate
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dTransDate
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dDisposeDate
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iInputPeriod
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iTransPeriod
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iDisposePeriod
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblFCValue
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblExchangeRate
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sOperator
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sDisposer
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblNetValueAct
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>lDeprMonthsAct
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblCanWorkAct
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblLegacy
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sVoucherNum
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>nvarchar</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sEvaluateNum
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>nvarchar</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblValue
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblDecDeprT
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblDecDepr
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblDecDeprRate
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>lDecDeprMonths
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblDecWorkT
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblDecPerDepr
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblBV
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblBVRate
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblCanWork
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblPerDepr
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>lUsedMonths
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sWorkUnit
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>nvarchar</td><td>10&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblTransInDeprTCard
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblTransOutDeprTCard
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iVouchsNextMonthAct
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sTransTypeNum
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sTransDepteNum
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>nvarchar</td><td>1000&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sLockedBy
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblDecPreValueT
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblRetDecPreValueT
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bMultiDept
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sDeptNames
+			(U861)
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>nvarchar</td><td>1500&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+		</table>
+		<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

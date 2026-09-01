@@ -1,0 +1,87 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>AA_GeneralBarCode Stored Procedure</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">AA_GeneralBarCode Stored Procedure 
+			&nbsp;(AA 系统管理)
+			&nbsp;[U8110]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		
+		<h4 class=dxh4>Remark</h4><p>用来生成单据条码</p>
+		<h4 class=dxh4>Parameters</h4>
+		<TABLE CLASS="FilteredItemListTable" CellSpacing="0">
+			<TR VALIGN="top"><TH width=30%>Parameter</TH><TH width=50%>Description</TH><TH width=50%>Datatype</TH><TH width=50%>Length</TH><TH width=50%>Allow Nulls</TH>
+			<TR>
+			<TD CLASS=DescriptionCell>@barCode
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">单据条码值&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">200&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@voucherNo
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">单据编号&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">100&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@voucherType
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">单据类型1，如普通发票、专用发票&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@splitStr
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">分割符&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">5&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@voucherKind
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">单据类型2，如果红字、蓝字&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@cardNumber
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">单据类型编号&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">100&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@accId
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">账套号&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">10&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+		</TABLE>
+		<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

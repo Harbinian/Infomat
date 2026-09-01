@@ -1,0 +1,234 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>Usp_MO_GetMO03008QueryData Stored Procedure</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">Usp_MO_GetMO03008QueryData Stored Procedure 
+			
+			&nbsp;[U872]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		
+		
+		<h4 class=dxh4>Parameters</h4>
+		<TABLE CLASS="FilteredItemListTable" CellSpacing="0">
+			<TR VALIGN="top"><TH width=30%>Parameter</TH><TH width=50%>Description</TH><TH width=50%>Datatype</TH><TH width=50%>Length</TH><TH width=50%>Allow Nulls</TH>
+			<TR>
+			<TD CLASS=DescriptionCell>@SDueDate
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@EOrgDueDate
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@SDeptCode
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">12&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@EOrgInvCode
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">30&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@EOrgDeptCode
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">12&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@v_str12
+			(U8101)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">4000&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@EStartDate
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@EOrgStartDate
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@SOrgMoCode
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">30&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@EInvCode
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">30&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@v_str3
+			(U890)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">4000&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@SMoCode
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">30&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@ReformType1
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">tinyint&nbsp;</TD><TD CLASS="DescriptionCell">1&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@v_str1
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">4000&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@SStartDate
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@SReformDate
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@v_str2
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">4000&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@SOrgStartDate
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@SOrgDeptCode
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">12&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@EReformDate
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@SInvCode
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">30&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@EDueDate
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@ReformType2
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">tinyint&nbsp;</TD><TD CLASS="DescriptionCell">1&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@EMoCode
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">30&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@EDeptCode
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">12&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@EOrgMoCode
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">30&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@SOrgInvCode
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">30&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@SOrgDueDate
+			(U872)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+		</TABLE>
+		<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

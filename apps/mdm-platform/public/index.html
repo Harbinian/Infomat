@@ -2477,7 +2477,7 @@
       </header>
       <div class="pdg-modal-body">
         <aside class="pdg-detail-list">
-          <div class="toolbar" style="margin-bottom:12px"><strong>待治理明细</strong><button type="button" class="btn secondary" id="pdgGenerateCandidatesBtn">生成待定候选</button></div>
+          <div class="toolbar" style="margin-bottom:12px"><strong>待治理明细</strong><button type="button" class="btn secondary" id="pdgGenerateCandidatesBtn">生成待治理明细</button></div>
           <div class="pdg-list" id="pdgDetailList"><div class="wb-empty">尚未生成治理明细</div></div>
         </aside>
         <main class="pdg-detail-content">
@@ -3634,7 +3634,7 @@
       state.processDataGovernance.workbench = payload;
       if ($('pdgFeatureNotice')) {
         $('pdgFeatureNotice').textContent = feature.enabled
-          ? '候选功能已启用，仅允许处理唯一试点process_version_id=' + safeText(feature.configured_process_version_id || '未配置') + '。系统不使用AI，也不会自动确认任何治理结论。'
+          ? '试点功能已启用，仅允许处理唯一试点process_version_id=' + safeText(feature.configured_process_version_id || '未配置') + '。系统不使用AI，也不会自动确认任何治理结论。'
           : '数据生命周期治理工作包默认关闭。当前未启用、未迁移业务数据，也没有形成业务验收结论。';
       }
       if ($('pdgResponsibilitySummary')) $('pdgResponsibilitySummary').innerHTML = pdgResponsibilityHtml(payload.responsibilities || feature.responsibilities);
@@ -3749,7 +3749,7 @@
       $('pdgDetailList').innerHTML = (detail.details || []).map(function(item) {
         var selected = Number(item.id) === Number(state.processDataGovernance.selectedDetailId);
         return '<button type="button" class="pdg-list-item' + (selected ? ' on' : '') + '" data-pdg-detail-id="' + Number(item.id) + '"><strong>' + safeText(pdgDetailTypeLabel(item.detail_type)) + '</strong><span>' + safeText(pdgSourceText(item)) + '</span><span>' + safeText(pdgDetailStatusLabel(item.status)) + (item.high_risk ? ' · 高风险' : '') + '</span></button>';
-      }).join('') || '<div class="wb-empty">尚未生成治理明细。MDM工作组可以使用固定规则生成待定候选；系统不会自动确认。</div>';
+      }).join('') || '<div class="wb-empty">尚未生成治理明细。MDM工作组可以使用固定规则生成待治理明细；系统不会自动确认。</div>';
       renderPdgSelectedDetail();
       renderPdgReviewHistory(detail);
       state.processDataGovernance.dirty = false;
@@ -3769,7 +3769,7 @@
       var canRequest = pdgHasAction(detail, 'request_business_fact') && detail.package.status !== 'completed';
       $('pdgSelectedDetail').innerHTML = '<h2>' + safeText(pdgDetailTypeLabel(selected.detail_type)) + '</h2>' +
         '<div class="pdg-source"><strong>固定流程版本中的业务事实</strong><br>' + safeText(pdgSourceText(selected)) + '</div>' +
-        '<div class="notice" style="margin-top:12px"><strong>确定性待定候选</strong><br>' + safeText(pdgCandidateText(selected)) + '</div>' +
+        '<div class="notice" style="margin-top:12px"><strong>固定规则生成的待核对内容</strong><br>' + safeText(pdgCandidateText(selected)) + '</div>' +
         (canDecide ? '<div class="pdg-form">' +
           '<label>处理状态<select id="pdgDecisionStatus" data-pdg-dirty><option value="pending">待MDM判断</option><option value="confirmed">已确认</option><option value="not_applicable">不适用</option><option value="terminated">已终止</option></select></label>' +
           '<label>治理结论<input id="pdgDecisionConclusion" data-pdg-dirty value="' + safeText(governance.conclusion || '') + '" placeholder="例如：认定为主数据 / 不纳入关键字段"></label>' +
@@ -3843,7 +3843,7 @@
 
     async function reconcilePdgWorkPackage() {
       var status = state.processDataGovernance.status || await ensureProcessDataGovernanceStatus();
-      if (!status.enabled || !status.configured_process_version_id) throw new Error('候选功能未启用或未配置唯一试点流程版本');
+      if (!status.enabled || !status.configured_process_version_id) throw new Error('试点功能未启用或未配置唯一试点流程版本');
       var result = await api('/api/process-data-governance/creation-tasks/reconcile', {
         method:'POST', body:JSON.stringify({ process_version_id:Number(status.configured_process_version_id) })
       });
@@ -3856,7 +3856,7 @@
       var result = await api('/api/process-data-governance/work-packages/' + Number(detail.package.id) + '/generate-candidates', {
         method:'POST', body:JSON.stringify({ expected_revision:Number(detail.package.revision_no) })
       });
-      showToast(result.idempotent ? '候选已经生成，没有重复创建' : '已生成' + Number(result.created) + '条确定性待定候选');
+      showToast(result.idempotent ? '待治理明细已经生成，没有重复创建' : '已生成' + Number(result.created) + '条待治理明细');
       state.processDataGovernance.dirty = false;
       await pdgReloadCurrent();
     }
@@ -11051,7 +11051,7 @@
       }
       if (event.target.closest('#pdgGenerateCandidatesBtn')) {
         event.preventDefault();
-        runPageTask(generatePdgCandidates, '待定候选生成失败');
+        runPageTask(generatePdgCandidates, '待治理明细生成失败');
         return;
       }
       if (event.target.closest('#pdgSaveDecisionBtn')) {

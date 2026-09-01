@@ -1,0 +1,86 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>IN_MonthEnd Table</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">IN_MonthEnd Table 
+			&nbsp;(QI 实施与维护工具)
+			
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>月末检查表</p>
+		
+		<h4 class=dxh4>Columns</h4>
+		<table class="columnlisttable" cellspacing="0">
+			<tr valign="top"><th align=middle>&nbsp;</th><th nowrap>Column Name</th><th nowrap>Description</th><th nowrap>Datatype</th><th nowrap>Length</th><th nowrap>Allow Nulls</th></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CheckContent
+			
+			</strong></td><td class="descriptioncell">检查内容&nbsp;</td><td>nvarchar</td><td>200&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>PreCheckId
+			
+			</strong></td><td class="descriptioncell">前置检查ID&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>AuthId
+			
+			</strong></td><td class="descriptioncell">权限ID&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ComName
+			
+			</strong></td><td class="descriptioncell">组件名称&nbsp;</td><td>nvarchar</td><td>100&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>DataSourceType
+			
+			</strong></td><td class="descriptioncell">数据源类型&nbsp;</td><td>nvarchar</td><td>2&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CheckId
+			
+			</strong></td><td class="descriptioncell">检查ID&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>TemplatePath
+			
+			</strong></td><td class="descriptioncell">模板路径&nbsp;</td><td>nvarchar</td><td>2000&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iOrder
+			
+			</strong></td><td class="descriptioncell">顺序号&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ModuleId
+			
+			</strong></td><td class="descriptioncell">模块ID&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>GuidDesc1
+			
+			</strong></td><td class="descriptioncell">操作指导1&nbsp;</td><td>nvarchar</td><td>200&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>GuidDesc2
+			
+			</strong></td><td class="descriptioncell">操作指导2&nbsp;</td><td>nvarchar</td><td>200&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>PreCondition
+			
+			</strong></td><td class="descriptioncell">前置检查条件&nbsp;</td><td>nvarchar</td><td>10&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+		</table>
+		<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

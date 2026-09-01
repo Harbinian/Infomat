@@ -1,0 +1,98 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>hr_v_tr_act View</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">hr_v_tr_act View 
+			&nbsp;(TR 培训管理)
+			&nbsp;[U861]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>培训活动其它信息</p>
+		<h4 class=dxh4>Remark</h4><p>由于培训活动与部门无法关联，所以创建培训活动视图，并洗注册为培训活动子集，用于统计分析(在统计培训活动信息时用于控制撤销部门)</p>
+		<h4 class=dxh4>Columns</h4>
+		<TABLE CLASS="FilteredItemListTable" CellSpacing="0">
+			<TR VALIGN="top"><TH width=30%>Column Name</TH><TH width=50%>Description</TH><TH width=50%>Datatype</TH><TH width=50%>Length</TH>
+			<TR>
+			<TD CLASS=DescriptionCell>dDepEndDate
+			(U861)
+			</TD><TD CLASS="DescriptionCell">培训部门撤销日期&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>nstatus2
+			(U861)
+			</TD><TD CLASS="DescriptionCell">status2&nbsp;</TD>
+			<TD CLASS="DescriptionCell">numeric&nbsp;</TD><TD CLASS="DescriptionCell">9&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>blastflag
+			(U861)
+			</TD><TD CLASS="DescriptionCell">当前记录标识&nbsp;</TD>
+			<TD CLASS="DescriptionCell">bit&nbsp;</TD><TD CLASS="DescriptionCell">1&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>vtrainname
+			(U861)
+			</TD><TD CLASS="DescriptionCell">培训名称&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">200&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>vtraincode
+			(U861)
+			</TD><TD CLASS="DescriptionCell">培训编码&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>iRecordID
+			(U861)
+			</TD><TD CLASS="DescriptionCell">记录序号&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>PK_hr_v_tr_act
+			(U861)
+			</TD><TD CLASS="DescriptionCell">主键&nbsp;</TD>
+			<TD CLASS="DescriptionCell">UFUID&nbsp;</TD><TD CLASS="DescriptionCell">16&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>rtraindpt
+			(U861)
+			</TD><TD CLASS="DescriptionCell">培训部门&nbsp;</TD>
+			<TD CLASS="DescriptionCell">UFreference&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>vstatus1
+			(U861)
+			</TD><TD CLASS="DescriptionCell">status1&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">100&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>hrts
+			(U861)
+			</TD><TD CLASS="DescriptionCell">时间戳&nbsp;</TD>
+			<TD CLASS="DescriptionCell">timestamp&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+		</TABLE>
+			<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

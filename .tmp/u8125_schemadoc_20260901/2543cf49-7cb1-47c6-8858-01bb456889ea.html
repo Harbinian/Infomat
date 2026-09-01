@@ -1,0 +1,383 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>fa_Cards_log Table</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">fa_Cards_log Table 
+			&nbsp;(FA 固定资产)
+			&nbsp;[U890]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>固定资产内控历史记录</p>
+		
+		<h4 class=dxh4>Columns</h4>
+		<table class="columnlisttable" cellspacing="0">
+			<tr valign="top"><th align=middle>&nbsp;</th><th nowrap>Column Name</th><th nowrap>Description</th><th nowrap>Datatype</th><th nowrap>Length</th><th nowrap>Allow Nulls</th></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>VariationLogId
+			(U890)
+			</strong></td><td class="descriptioncell">数据操作日志的Id
+数据操作日志的Id。
+数据操作日志的Id&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dInputDate
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sDeprSubjectName
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>nvarchar</td><td>100&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sAssetName
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sDeptNames
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>nvarchar</td><td>1500&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bFromInv
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblDecDeprT
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sVoucherNum
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>nvarchar</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sProjectName
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dPurDate
+			(U8111)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dStartdate
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblBVRate
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sLockedBy
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iNewType
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sDeprSubjectNum
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>nvarchar</td><td>15&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblAddTax
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bDeletedRst
+			(U890)
+			</strong></td><td class="descriptioncell">是否被删除
+&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dDisposeDate
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>HistoryId
+			(U890)
+			</strong></td><td class="descriptioncell">历史表Id,自增
+&nbsp;</td><td>bigint</td><td>8&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblPerDepr
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblRetDecPreValueT
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblDecWorkT
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sAssetNum
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>nvarchar</td><td>37&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblCanWork
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sTypeNum
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sTransTypeNum
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblDecDeprRate
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sSite
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sOrgDisposeID
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>nvarchar</td><td>10&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>VariationAction
+			(U890)
+			</strong></td><td class="descriptioncell">数据操作行为&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblMachinW
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sStyle
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblDecPerDepr
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bMultiDept
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sStatusID
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>nvarchar</td><td>10&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sOrgAddID
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>nvarchar</td><td>10&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bNewDepring
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sOrgID
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>nvarchar</td><td>10&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblBV
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblBuildArea
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iInputPeriod
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sDisposeReason
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>nvarchar</td><td>100&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dLogTime
+			(U890)
+			</strong></td><td class="descriptioncell">日志记录时间
+&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sCurrency
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>nvarchar</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iVouchsNextMonthAct
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>lBuildNum
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblValue
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sCardID
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblDecPreValueT
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sKeeper
+			(U8101)
+			</strong></td><td class="descriptioncell">保管人&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sTransDepteNum
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>nvarchar</td><td>280&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>lOptID
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblNetValueAct
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sWorkUnit
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>nvarchar</td><td>10&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>lDeprMonthsAct
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblTransInDeprTCard
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sZWVoucherNum
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>nvarchar</td><td>10&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>lDecDeprMonths
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sZWVoucherType
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>nvarchar</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sGroupNum
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>nvarchar</td><td>36&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dTransDate
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblDecDepr
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sEvaluateNum
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>nvarchar</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sDisposer
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>lLife
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bSplit
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>lMachinNum
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblTransOutDeprTCard
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iOptType
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sCardNum
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>nvarchar</td><td>5&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblFCValue
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sDeprMethodID
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>nvarchar</td><td>10&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cVenCode
+			(U8111)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblValueAndTax
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sDeptNum
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>nvarchar</td><td>1000&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sCommodityCode
+			
+			</strong></td><td class="descriptioncell">商品码&nbsp;</td><td>varchar</td><td>400&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iTransPeriod
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>lUsedMonths
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblCanWorkAct
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iDisposePeriod
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblExchangeRate
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblLegacy
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sOperator
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sProjectNum
+			(U890)
+			</strong></td><td class="descriptioncell">参照FA_CARDS同名字段&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>sSeriesNum
+			
+			</strong></td><td class="descriptioncell">序列号&nbsp;</td><td>nvarchar</td><td>400&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+		</table>
+		<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

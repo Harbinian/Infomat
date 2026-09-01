@@ -1,0 +1,78 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>AA_Init_Base Table</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">AA_Init_Base Table 
+			&nbsp;(AA 系统管理)
+			&nbsp;[U8100]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>结转服务基础表</p>
+		
+		<h4 class=dxh4>Columns</h4>
+		<table class="columnlisttable" cellspacing="0">
+			<tr valign="top"><th align=middle>&nbsp;</th><th nowrap>Column Name</th><th nowrap>Description</th><th nowrap>Datatype</th><th nowrap>Length</th><th nowrap>Allow Nulls</th></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Class
+			(U8100)
+			</strong></td><td class="descriptioncell">当ClassType值为”dll”，命名空间+类名；当值为”procedure”时，存储过程名称&nbsp;</td><td>nvarchar</td><td>512&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>BalanceNotDependArchive
+			(U8100)
+			</strong></td><td class="descriptioncell">余额是否依赖业务档案&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ClassType
+			(U8100)
+			</strong></td><td class="descriptioncell">结转服务类型，值可以为”dll”,”procedure”，分别对应COM组件和使用存储过程&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ArchiveNotDependArchive
+			(U8100)
+			</strong></td><td class="descriptioncell">业务档案是否同时结转&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Repeatable
+			(U8100)
+			</strong></td><td class="descriptioncell">是否可以重复结转&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>MenuID
+			(U8100)
+			</strong></td><td class="descriptioncell">产品对应的门户菜单ID&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>SubID
+			(U8100)
+			</strong></td><td class="descriptioncell">产品号&nbsp;</td><td>nvarchar</td><td>10&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Completed
+			(U8100)
+			</strong></td><td class="descriptioncell">是否结转完成&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iOrder
+			(U8100)
+			</strong></td><td class="descriptioncell">结转顺序&nbsp;</td><td>decimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>IncludeSubs
+			(U8100)
+			</strong></td><td class="descriptioncell">包含的产品号&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+		</table>
+		<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

@@ -1,0 +1,82 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>tc_product_class Table</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">tc_product_class Table 
+			&nbsp;(MK 营销管理)
+			&nbsp;[U8110]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>产品分类表</p>
+		<h4 class=dxh4>Remark</h4><p>产品分类表</p>
+		<h4 class=dxh4>Columns</h4>
+		<table class="columnlisttable" cellspacing="0">
+			<tr valign="top"><th align=middle>&nbsp;</th><th nowrap>Column Name</th><th nowrap>Description</th><th nowrap>Datatype</th><th nowrap>Length</th><th nowrap>Allow Nulls</th></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>tax_rate
+			(U8110)
+			</strong></td><td class="descriptioncell">税率&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>stop_flag
+			(U8110)
+			</strong></td><td class="descriptioncell">停用标志&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>tree_path
+			(U8110)
+			</strong></td><td class="descriptioncell">内部编码&nbsp;</td><td>nvarchar</td><td>1024&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>tree_level
+			(U8110)
+			</strong></td><td class="descriptioncell">内部级次&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>prod_class_parent_id
+			(U8110)
+			</strong></td><td class="descriptioncell">上级分类id&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>server_flag
+			(U8110)
+			</strong></td><td class="descriptioncell">数据标识(保留未用)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>crm_timestamp
+			(U8110)
+			</strong></td><td class="descriptioncell">记录变动系统时间戳&nbsp;</td><td>timestamp</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>prod_class_code
+			(U8110)
+			</strong></td><td class="descriptioncell">分类编码&nbsp;</td><td>nvarchar</td><td>32&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>prod_class_name
+			(U8110)
+			</strong></td><td class="descriptioncell">产品分类名称&nbsp;</td><td>nvarchar</td><td>128&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>prod_class_memo1k
+			(U8110)
+			</strong></td><td class="descriptioncell">备注&nbsp;</td><td>nvarchar</td><td>1024&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>prod_class_id
+			(U8110)
+			</strong></td><td class="descriptioncell">产分类id&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+		</table>
+		<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

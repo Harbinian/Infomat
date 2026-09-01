@@ -1,0 +1,383 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>CM_Contract_A Table</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">CM_Contract_A Table 
+			&nbsp;(CM 合同管理)
+			&nbsp;[U861]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>自由态合同概要表</p>
+		
+		<h4 class=dxh4>Columns</h4>
+		<table class="columnlisttable" cellspacing="0">
+			<tr valign="top"><th align=middle>&nbsp;</th><th nowrap>Column Name</th><th nowrap>Description</th><th nowrap>Datatype</th><th nowrap>Length</th><th nowrap>Allow Nulls</th></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dtModifyTime
+			(U871)
+			</strong></td><td class="descriptioncell">修改时间&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cZbjComputeMode
+			(U871)
+			</strong></td><td class="descriptioncell">质保金计算方式（总额，明细）&nbsp;</td><td>nvarchar</td><td>10&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>intExecControlType
+			(U8100)
+			</strong></td><td class="descriptioncell">时效控制方式&nbsp;</td><td>tinyint</td><td>1&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cSCCode
+			(U870)
+			</strong></td><td class="descriptioncell">运输方式&nbsp;</td><td>nvarchar</td><td>10&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dtCreateTime
+			(U871)
+			</strong></td><td class="descriptioncell">制单时间&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dtZbjStartDate
+			(U871)
+			</strong></td><td class="descriptioncell">质保金开始时间&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cExecControlVouch
+			(U8100)
+			</strong></td><td class="descriptioncell">时效控制环节&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cVaryModifer
+			(U871)
+			</strong></td><td class="descriptioncell">变更单修改人&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dtEffectTime
+			(U871)
+			</strong></td><td class="descriptioncell">生效时间&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dtVaryEffectTime
+			(U871)
+			</strong></td><td class="descriptioncell">变更单生效时间&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iPrintCount
+			(U8100)
+			</strong></td><td class="descriptioncell">打印次数&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dtVaryModifyDate
+			(U871)
+			</strong></td><td class="descriptioncell">变更单修改时间&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dtVaryCreateDate
+			(U871)
+			</strong></td><td class="descriptioncell">变更单制单日期&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dtVaryCreateTime
+			(U871)
+			</strong></td><td class="descriptioncell">变更单制单时间&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cStageGroupCode
+			(U871)
+			</strong></td><td class="descriptioncell">阶段组编码&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dtVaryModifyTime
+			(U871)
+			</strong></td><td class="descriptioncell">变更单修改时间&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>IreturnCount
+			(U870)
+			</strong></td><td class="descriptioncell">返回次数&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>intAuditSymbol
+			(U870)
+			</strong></td><td class="descriptioncell">工作流标志&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cGatheringPlan
+			(U870)
+			</strong></td><td class="descriptioncell">收付款计划&nbsp;</td><td>nvarchar</td><td>15&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>IsWfControlled
+			(U870)
+			</strong></td><td class="descriptioncell">是否工作流控制&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>IverifyState
+			(U870)
+			</strong></td><td class="descriptioncell">工作流状态&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dtZbjEndDate
+			(U871)
+			</strong></td><td class="descriptioncell">质保金结束日期&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bUseStage
+			(U871)
+			</strong></td><td class="descriptioncell">是否启用阶段&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dtModifyDate
+			(U871)
+			</strong></td><td class="descriptioncell">修改日期&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cModifer
+			(U871)
+			</strong></td><td class="descriptioncell">修改人&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>GUID
+			(U861)
+			</strong></td><td class="descriptioncell">GUID&nbsp;</td><td>uniqueidentifier</td><td>16&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>strContractID
+			(U861)
+			</strong></td><td class="descriptioncell">合同编号&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>strContractGrp
+			(U861)
+			</strong></td><td class="descriptioncell">合同分组编码&nbsp;</td><td>nvarchar</td><td>12&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>strContractType
+			(U861)
+			</strong></td><td class="descriptioncell">合同类型编码&nbsp;</td><td>nvarchar</td><td>12&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>strContractKind
+			(U861)
+			</strong></td><td class="descriptioncell">合同性质&nbsp;</td><td>nvarchar</td><td>32&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>strContractName
+			(U861)
+			</strong></td><td class="descriptioncell">合同名称&nbsp;</td><td>nvarchar</td><td>400&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>strBisectionUnit
+			(U861)
+			</strong></td><td class="descriptioncell">对方单位&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>strParentID
+			(U861)
+			</strong></td><td class="descriptioncell">所属主合同编码&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>strRepair
+			(U861)
+			</strong></td><td class="descriptioncell">保修期&nbsp;</td><td>nvarchar</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>strBisectionPerson
+			(U861)
+			</strong></td><td class="descriptioncell">对方负责人&nbsp;</td><td>nvarchar</td><td>10&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>strContractOrderDate
+			(U861)
+			</strong></td><td class="descriptioncell">合同签定日期&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>strContractStartDate
+			(U861)
+			</strong></td><td class="descriptioncell">合同开始日期&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>strContractEndDate
+			(U861)
+			</strong></td><td class="descriptioncell">合同结束日期&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>strContractDesc
+			(U861)
+			</strong></td><td class="descriptioncell">合同描述&nbsp;</td><td>nvarchar</td><td>128&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblMassassureScale
+			(U861)
+			</strong></td><td class="descriptioncell">质保金比例&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblMassassure
+			(U861)
+			</strong></td><td class="descriptioncell">质保金额度&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine1
+			(U861)
+			</strong></td><td class="descriptioncell">自定义项1&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine2
+			(U861)
+			</strong></td><td class="descriptioncell">自定义项2&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine3
+			(U861)
+			</strong></td><td class="descriptioncell">自定义项3&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine4
+			(U861)
+			</strong></td><td class="descriptioncell">自定义项4&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine5
+			(U861)
+			</strong></td><td class="descriptioncell">自定义项5&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine6
+			(U861)
+			</strong></td><td class="descriptioncell">自定义项6&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine7
+			(U861)
+			</strong></td><td class="descriptioncell">自定义项7&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine8
+			(U861)
+			</strong></td><td class="descriptioncell">自定义项8&nbsp;</td><td>nvarchar</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine9
+			(U861)
+			</strong></td><td class="descriptioncell">自定义项9&nbsp;</td><td>nvarchar</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine10
+			(U861)
+			</strong></td><td class="descriptioncell">自定义项10&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine11
+			(U861)
+			</strong></td><td class="descriptioncell">自定义项11&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine12
+			(U861)
+			</strong></td><td class="descriptioncell">自定义项12&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine13
+			(U861)
+			</strong></td><td class="descriptioncell">自定义项13&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine14
+			(U861)
+			</strong></td><td class="descriptioncell">自定义项14&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine15
+			(U861)
+			</strong></td><td class="descriptioncell">自定义项15&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine16
+			(U861)
+			</strong></td><td class="descriptioncell">自定义项16&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>strSetupPerson
+			(U861)
+			</strong></td><td class="descriptioncell">创建人&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>strSetupDate
+			(U861)
+			</strong></td><td class="descriptioncell">创建日期&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>strEndCasePerson
+			(U861)
+			</strong></td><td class="descriptioncell">结案人&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>strEndCaseDate
+			(U861)
+			</strong></td><td class="descriptioncell">结案日期&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>strInurePerson
+			(U861)
+			</strong></td><td class="descriptioncell">生效人&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>strInureDate
+			(U861)
+			</strong></td><td class="descriptioncell">生效日期&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>strDeptID
+			(U861)
+			</strong></td><td class="descriptioncell">部门编码&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>strPersonID
+			(U861)
+			</strong></td><td class="descriptioncell">业务员编码&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>intVaryID
+			(U861)
+			</strong></td><td class="descriptioncell">变更单号&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>strVaryCauseID
+			(U861)
+			</strong></td><td class="descriptioncell">变更原因码&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dtVaryDate
+			(U861)
+			</strong></td><td class="descriptioncell">变更日期&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>strVaryPersonID
+			(U861)
+			</strong></td><td class="descriptioncell">变更申请人&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>strVaryPassPersonID
+			(U861)
+			</strong></td><td class="descriptioncell">变更生效人&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>intPre
+			(U861)
+			</strong></td><td class="descriptioncell">期初标志&nbsp;</td><td>tinyint</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>strWay
+			(U861)
+			</strong></td><td class="descriptioncell">收支方向&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>strCurrency
+			(U861)
+			</strong></td><td class="descriptioncell">币种&nbsp;</td><td>nvarchar</td><td>16&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblExchange
+			(U861)
+			</strong></td><td class="descriptioncell">汇率&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>strVaryPerson
+			(U861)
+			</strong></td><td class="descriptioncell">变更制单人&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>tsTime
+			(U861)
+			</strong></td><td class="descriptioncell">时间戳&nbsp;</td><td>timestamp</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>strSpare1
+			(U861)
+			</strong></td><td class="descriptioncell">备用字段1&nbsp;</td><td>nvarchar</td><td>128&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>strSpare2
+			(U861)
+			</strong></td><td class="descriptioncell">备用字段2&nbsp;</td><td>nvarchar</td><td>128&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>strSpare3
+			(U861)
+			</strong></td><td class="descriptioncell">备用字段3&nbsp;</td><td>nvarchar</td><td>128&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>strSource
+			(U861)
+			</strong></td><td class="descriptioncell">备用&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblTotalCurrency
+			(U861)
+			</strong></td><td class="descriptioncell">备用&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblExecCurrency
+			(U861)
+			</strong></td><td class="descriptioncell">备用&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblTotalQuantity
+			(U861)
+			</strong></td><td class="descriptioncell">备用&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dblExecQuqantity
+			(U861)
+			</strong></td><td class="descriptioncell">备用&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cBusType
+			(U861)
+			</strong></td><td class="descriptioncell">业务类型&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+		</table>
+		<h4 class=dxh4>Indexes</h4>
+		<TABLE CLASS="FilteredItemListTable" CellSpacing="0">
+			<TR VALIGN="top"><TH width=30%>Index</TH><TH width=50%>Description</TH><TH>Primary</TH><TH>Unique</TH></TR>
+			<TR><TD CLASS=LinkCell WIDTH="50%"><A HREF="47414e8d-91f0-444b-99eb-1d42766d6422.html">IXGUID_CM_Contract_A</A></TD><TD CLASS="DescriptionCell" WIDTH="50%">&nbsp;</TD><TD Class="Centered"></TD><TD Class="Centered"></TD></TR>
+		</TABLE>
+		<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

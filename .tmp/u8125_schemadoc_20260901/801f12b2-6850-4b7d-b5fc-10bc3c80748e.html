@@ -1,0 +1,249 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>CurrentStock Table</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">CurrentStock Table 
+			&nbsp;(ST 库存管理)
+			&nbsp;[U861]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>现存量汇总表</p>
+		<h4 class=dxh4>Remark</h4><p>登记收发记录表时同时整理现存量表</p>
+		<h4 class=dxh4>Columns</h4>
+		<table class="columnlisttable" cellspacing="0">
+			<tr valign="top"><th align=middle>&nbsp;</th><th nowrap>Column Name</th><th nowrap>Description</th><th nowrap>Datatype</th><th nowrap>Length</th><th nowrap>Allow Nulls</th></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iSodid
+			(U861)
+			</strong></td><td class="descriptioncell">订单id&nbsp;</td><td>nvarchar</td><td>40&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ipenum
+			(U890)
+			</strong></td><td class="descriptioncell">pe预留件数&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ipeqty
+			(U890)
+			</strong></td><td class="descriptioncell">pe预留数量&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cExpirationdate
+			(U872)
+			</strong></td><td class="descriptioncell">有效期至&nbsp;</td><td>varchar</td><td>10&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iSoType
+			(U861)
+			</strong></td><td class="descriptioncell">订单类型&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cVMIVenCode
+			(U870)
+			</strong></td><td class="descriptioncell">代管商编码&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ItemId
+			(U870)
+			</strong></td><td class="descriptioncell">itemid&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iExpiratDateCalcu
+			(U872)
+			</strong></td><td class="descriptioncell">有效期推算方式&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dExpirationdate
+			(U872)
+			</strong></td><td class="descriptioncell">有效期计算项&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>AutoID
+			(U861)
+			</strong></td><td class="descriptioncell">自动编号&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cWhCode
+			(U861)
+			</strong></td><td class="descriptioncell">仓库编码&nbsp;</td><td>nvarchar</td><td>10&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cInvCode
+			(U861)
+			</strong></td><td class="descriptioncell">存货编码&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iQuantity
+			(U861)
+			</strong></td><td class="descriptioncell">结存数量&nbsp;</td><td>UDT_LogisticQuantity</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iNum
+			(U861)
+			</strong></td><td class="descriptioncell">结存辅计量数量&nbsp;</td><td>UDT_LogisticQuantity</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cFree1
+			(U861)
+			</strong></td><td class="descriptioncell">存货自由项1&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cFree2
+			(U861)
+			</strong></td><td class="descriptioncell">存货自由项2&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fOutQuantity
+			(U861)
+			</strong></td><td class="descriptioncell">待发货数量&nbsp;</td><td>UDT_LogisticQuantity</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fOutNum
+			(U861)
+			</strong></td><td class="descriptioncell">待发货辅计量数量&nbsp;</td><td>UDT_LogisticQuantity</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fInQuantity
+			(U861)
+			</strong></td><td class="descriptioncell">待入库数量&nbsp;</td><td>UDT_LogisticQuantity</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fInNum
+			(U861)
+			</strong></td><td class="descriptioncell">待入库辅计量数量&nbsp;</td><td>UDT_LogisticQuantity</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cFree3
+			(U861)
+			</strong></td><td class="descriptioncell">存货自由项3&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cFree4
+			(U861)
+			</strong></td><td class="descriptioncell">存货自由项4&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cFree5
+			(U861)
+			</strong></td><td class="descriptioncell">存货自由项5&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cFree6
+			(U861)
+			</strong></td><td class="descriptioncell">存货自由项6&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cFree7
+			(U861)
+			</strong></td><td class="descriptioncell">存货自由项7&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cFree8
+			(U861)
+			</strong></td><td class="descriptioncell">存货自由项8&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cFree9
+			(U861)
+			</strong></td><td class="descriptioncell">存货自由项9&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cFree10
+			(U861)
+			</strong></td><td class="descriptioncell">存货自由项10&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cBatch
+			(U861)
+			</strong></td><td class="descriptioncell">批号&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dVDate
+			(U861)
+			</strong></td><td class="descriptioncell">失效日期&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bStopFlag
+			(U861)
+			</strong></td><td class="descriptioncell">库存是否冻结&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fTransInQuantity
+			(U861)
+			</strong></td><td class="descriptioncell">调拨在途数量&nbsp;</td><td>UDT_LogisticQuantity</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dMdate
+			(U861)
+			</strong></td><td class="descriptioncell">生产日期&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fTransInNum
+			(U861)
+			</strong></td><td class="descriptioncell">调拨在途辅计量数量&nbsp;</td><td>UDT_LogisticQuantity</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fTransOutQuantity
+			(U861)
+			</strong></td><td class="descriptioncell">调拨待发数量&nbsp;</td><td>UDT_LogisticQuantity</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fTransOutNum
+			(U861)
+			</strong></td><td class="descriptioncell">调拨待发辅计量数量&nbsp;</td><td>UDT_LogisticQuantity</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fPlanQuantity
+			(U861)
+			</strong></td><td class="descriptioncell">计划备料数量&nbsp;</td><td>UDT_LogisticQuantity</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fPlanNum
+			(U861)
+			</strong></td><td class="descriptioncell">计划备料辅计量数量&nbsp;</td><td>UDT_LogisticQuantity</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fDisableQuantity
+			(U861)
+			</strong></td><td class="descriptioncell">不合格数量&nbsp;</td><td>UDT_LogisticQuantity</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fDisableNum
+			(U861)
+			</strong></td><td class="descriptioncell">不合格辅计量数量&nbsp;</td><td>UDT_LogisticQuantity</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fAvaQuantity
+			(U861)
+			</strong></td><td class="descriptioncell">可用数量&nbsp;</td><td>UDT_LogisticQuantity</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fAvaNum
+			(U861)
+			</strong></td><td class="descriptioncell">可用辅计量数量&nbsp;</td><td>UDT_LogisticQuantity</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ufts
+			(U861)
+			</strong></td><td class="descriptioncell">时间戳&nbsp;</td><td>timestamp</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iMassDate
+			(U861)
+			</strong></td><td class="descriptioncell">保质期天数&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>BGSPSTOP
+			(U861)
+			</strong></td><td class="descriptioncell">GSP是否冻结&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cMassUnit
+			(U861)
+			</strong></td><td class="descriptioncell">保质期单位&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fStopQuantity
+			(U861)
+			</strong></td><td class="descriptioncell">冻结数量&nbsp;</td><td>UDT_LogisticQuantity</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fStopNum
+			(U861)
+			</strong></td><td class="descriptioncell">冻结件数&nbsp;</td><td>UDT_LogisticQuantity</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dLastCheckDate
+			(U861)
+			</strong></td><td class="descriptioncell">最后检验日期&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCheckState
+			(U861)
+			</strong></td><td class="descriptioncell">检验状态&nbsp;</td><td>nvarchar</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dLastYearCheckDate
+			(U861)
+			</strong></td><td class="descriptioncell">上年最后检验日期&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+		</table>
+		<h4 class=dxh4>Indexes</h4>
+		<TABLE CLASS="FilteredItemListTable" CellSpacing="0">
+			<TR VALIGN="top"><TH width=30%>Index</TH><TH width=50%>Description</TH><TH>Primary</TH><TH>Unique</TH></TR>
+			<TR><TD CLASS=LinkCell WIDTH="50%"><A HREF="4f9ff4f1-0e81-4a14-b367-a243952dd4a5.html">ix_currentstock_cinvcode</A></TD><TD CLASS="DescriptionCell" WIDTH="50%">&nbsp;</TD><TD Class="Centered"></TD><TD Class="Centered"></TD></TR>
+			<TR><TD CLASS=LinkCell WIDTH="50%"><A HREF="fb704424-41fd-4c10-825b-5b03fbc27133.html">PK_CURRENTSTOCK</A></TD><TD CLASS="DescriptionCell" WIDTH="50%">&nbsp;</TD><TD Class="Centered"></TD><TD Class="Centered"><img src=images/tick.png></TD></TR>
+			<TR><TD CLASS=LinkCell WIDTH="50%"><A HREF="4e7e3292-59cb-4b34-a419-0c06b39dbf63.html">UnionKey</A></TD><TD CLASS="DescriptionCell" WIDTH="50%">&nbsp;</TD><TD Class="Centered"></TD><TD Class="Centered"></TD></TR>
+		</TABLE>
+		<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

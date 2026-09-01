@@ -1,0 +1,164 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>mps_atpdetail Table</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">mps_atpdetail Table 
+			&nbsp;(MP 主生产计划)
+			&nbsp;[U870]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>mps_atpdetail Atp 明细</p>
+		<h4 class=dxh4>Remark</h4><p>Atp 明细</p>
+		<h4 class=dxh4>Columns</h4>
+		<table class="columnlisttable" cellspacing="0">
+			<tr valign="top"><th align=middle>&nbsp;</th><th nowrap>Column Name</th><th nowrap>Description</th><th nowrap>Datatype</th><th nowrap>Length</th><th nowrap>Allow Nulls</th></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Free7
+			(U870)
+			</strong></td><td class="descriptioncell">Free7 自由项7
+&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>DocCode
+			(U870)
+			</strong></td><td class="descriptioncell">DocCode 单据号码&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>BalQty
+			(U870)
+			</strong></td><td class="descriptioncell">BalQty 单据余量&nbsp;</td><td>Udt_QTY</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ExternalFlag
+			(U870)
+			</strong></td><td class="descriptioncell">ExternalFlag 是否进口 0否/1是&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Date
+			(U870)
+			</strong></td><td class="descriptioncell">Date 日期&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>DocDId
+			(U870)
+			</strong></td><td class="descriptioncell">DocDId 销售订单明细Id&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Free6
+			(U870)
+			</strong></td><td class="descriptioncell">Free6 自由项6
+&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Free9
+			(U870)
+			</strong></td><td class="descriptioncell">Free9 自由项9
+&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>DemType
+			(U870)
+			</strong></td><td class="descriptioncell">DemType 供需类别&nbsp;</td><td>tinyint</td><td>1&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>DocSeq
+			(U870)
+			</strong></td><td class="descriptioncell">DocSeq 单据序号&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>guid
+			(U870)
+			</strong></td><td class="descriptioncell">Guid Guid主键&nbsp;</td><td>nvarchar</td><td>40&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Qty
+			(U870)
+			</strong></td><td class="descriptioncell">Qty 数量&nbsp;</td><td>Udt_QTY</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>AtpYn
+			(U870)
+			</strong></td><td class="descriptioncell">AtpYn 中间计算用&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Free3
+			(U870)
+			</strong></td><td class="descriptioncell">Free3 自由项3
+&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>SoDId
+			(U870)
+			</strong></td><td class="descriptioncell">SoDId 销售订单明细Id&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>SoCode
+			(U870)
+			</strong></td><td class="descriptioncell">SoCode 订单号码
+&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ReserveQty
+			(U890)
+			</strong></td><td class="descriptioncell">保留数量&nbsp;</td><td>Udt_QTY</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>PartId
+			(U870)
+			</strong></td><td class="descriptioncell">PartId 物料ID&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>SoSeq
+			(U870)
+			</strong></td><td class="descriptioncell">SoSeq 订单序号
+&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Free5
+			(U870)
+			</strong></td><td class="descriptioncell">Free5 自由项5
+&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Free10
+			(U870)
+			</strong></td><td class="descriptioncell">Free10 自由项10
+&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Free2
+			(U870)
+			</strong></td><td class="descriptioncell">Free2 自由项2
+&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Free1
+			(U870)
+			</strong></td><td class="descriptioncell">Free1 自由项1
+&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>InvCode
+			(U870)
+			</strong></td><td class="descriptioncell">InvCode 存货编码
+&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>SoType
+			(U870)
+			</strong></td><td class="descriptioncell">SoType 需求类型 1-销售/2-预测&nbsp;</td><td>tinyint</td><td>1&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Free4
+			(U870)
+			</strong></td><td class="descriptioncell">Free4 自由项4
+&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Free8
+			(U870)
+			</strong></td><td class="descriptioncell">Free8 自由项8
+&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+		</table>
+		<h4 class=dxh4>Indexes</h4>
+		<TABLE CLASS="FilteredItemListTable" CellSpacing="0">
+			<TR VALIGN="top"><TH width=30%>Index</TH><TH width=50%>Description</TH><TH>Primary</TH><TH>Unique</TH></TR>
+			<TR><TD CLASS=LinkCell WIDTH="50%"><A HREF="5825cdc4-61ff-4620-b03b-be6a38823b23.html">i_mps_atpdetail</A></TD><TD CLASS="DescriptionCell" WIDTH="50%">&nbsp;</TD><TD Class="Centered"></TD><TD Class="Centered"></TD></TR>
+		</TABLE>
+		<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

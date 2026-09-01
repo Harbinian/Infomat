@@ -1,0 +1,106 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>VoucherStatusDetails Table</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">VoucherStatusDetails Table 
+			&nbsp;(AS 公用目录设置)
+			&nbsp;[U8111]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>单据水印状态明细表</p>
+		
+		<h4 class=dxh4>Columns</h4>
+		<table class="columnlisttable" cellspacing="0">
+			<tr valign="top"><th align=middle>&nbsp;</th><th nowrap>Column Name</th><th nowrap>Description</th><th nowrap>Datatype</th><th nowrap>Length</th><th nowrap>Allow Nulls</th></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Height
+			(U8111)
+			</strong></td><td class="descriptioncell">水印状态在界面的显示高度(单位：像素)&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cColor
+			(U8111)
+			</strong></td><td class="descriptioncell">水印状态是文字情况下文字的颜色（先预置，暂时不支持自定义颜色）&nbsp;</td><td>nvarchar</td><td>100&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iStyle
+			(U8111)
+			</strong></td><td class="descriptioncell">样式：1、2、3&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cKey
+			(U8111)
+			</strong></td><td class="descriptioncell">水印状态Key，不可为空&nbsp;</td><td>nvarchar</td><td>100&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cProductID
+			(U8111)
+			</strong></td><td class="descriptioncell">产品信息&nbsp;</td><td>nvarchar</td><td>100&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>pufts
+			(U8111)
+			</strong></td><td class="descriptioncell">时间戳&nbsp;</td><td>timestamp</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CardNumber
+			(U8111)
+			</strong></td><td class="descriptioncell">单据CardNumber&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CardType
+			(U8111)
+			</strong></td><td class="descriptioncell">单据CardType&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Width
+			(U8111)
+			</strong></td><td class="descriptioncell">水印状态在界面的显示宽度(单位：像素)&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cID
+			(U8111)
+			</strong></td><td class="descriptioncell">GUID&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cRealKey
+			(U8111)
+			</strong></td><td class="descriptioncell">水印状态Key，可为空&nbsp;</td><td>nvarchar</td><td>100&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Description
+			(U8111)
+			</strong></td><td class="descriptioncell">状态描述&nbsp;</td><td>nvarchar</td><td>400&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cName
+			(U8111)
+			</strong></td><td class="descriptioncell">水印状态是文字的情况下显示在界面的多语信息&nbsp;</td><td>nvarchar</td><td>200&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iGroupID
+			(U8111)
+			</strong></td><td class="descriptioncell">分组信息：1、2、3&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>LocalID
+			(U8111)
+			</strong></td><td class="descriptioncell">语种&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cProjectNo
+			(U8111)
+			</strong></td><td class="descriptioncell">系统：U870,二开:U8CUSTDEF&nbsp;</td><td>nvarchar</td><td>100&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cGroupDescription
+			(U8111)
+			</strong></td><td class="descriptioncell">分组描述&nbsp;</td><td>nvarchar</td><td>200&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+		</table>
+		<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

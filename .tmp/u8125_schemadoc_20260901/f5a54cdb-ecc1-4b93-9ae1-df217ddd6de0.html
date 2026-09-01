@@ -1,0 +1,164 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>v_fc_optransformdetailcheck View</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">v_fc_optransformdetailcheck View 
+			&nbsp;(FC 车间管理)
+			&nbsp;[U8110]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>单据表体录入合格数量等数据，检查可用量视图，相当于以前版本的v_fc_optransformdetail视图，效率优化</p>
+		
+		<h4 class=dxh4>Columns</h4>
+		<TABLE CLASS="FilteredItemListTable" CellSpacing="0">
+			<TR VALIGN="top"><TH width=30%>Column Name</TH><TH width=50%>Description</TH><TH width=50%>Datatype</TH><TH width=50%>Length</TH>
+			<TR>
+			<TD CLASS=DescriptionCell>inopseq
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">移入工序行号&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nchar&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cverifier
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">审核人&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>balqualifiedqty
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">可用合格量&nbsp;</TD>
+			<TD CLASS="DescriptionCell">Udt_QTY&nbsp;</TD><TD CLASS="DescriptionCell">13&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>moroutingdid
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">工序ID&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>balmachiningqty
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">可用加工量&nbsp;</TD>
+			<TD CLASS="DescriptionCell">Udt_QTY&nbsp;</TD><TD CLASS="DescriptionCell">13&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>inopunitcode
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">工序单位编码(移入)&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">70&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>opseq
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">工序行号&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nchar&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>moid
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">生产订单表头ID &nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>refusedqty
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">拒绝数量&nbsp;</TD>
+			<TD CLASS="DescriptionCell">Udt_QTY&nbsp;</TD><TD CLASS="DescriptionCell">13&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>opstatus
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">工序状态&nbsp;</TD>
+			<TD CLASS="DescriptionCell">smallint&nbsp;</TD><TD CLASS="DescriptionCell">2&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>qualifiedqty
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">合格数量&nbsp;</TD>
+			<TD CLASS="DescriptionCell">Udt_QTY&nbsp;</TD><TD CLASS="DescriptionCell">13&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>balscrapqty
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">可用报废量&nbsp;</TD>
+			<TD CLASS="DescriptionCell">Udt_QTY&nbsp;</TD><TD CLASS="DescriptionCell">13&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>mdid
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">报工表体行ID &nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>balrefusedqty
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">可用拒绝量&nbsp;</TD>
+			<TD CLASS="DescriptionCell">Udt_QTY&nbsp;</TD><TD CLASS="DescriptionCell">13&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>baldeclareqty
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">可用检验量&nbsp;</TD>
+			<TD CLASS="DescriptionCell">Udt_QTY&nbsp;</TD><TD CLASS="DescriptionCell">13&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>machiningqty
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">加工数量&nbsp;</TD>
+			<TD CLASS="DescriptionCell">Udt_QTY&nbsp;</TD><TD CLASS="DescriptionCell">13&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>scrapqty
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">报废数量&nbsp;</TD>
+			<TD CLASS="DescriptionCell">Udt_QTY&nbsp;</TD><TD CLASS="DescriptionCell">13&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>inchangerate
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">换算率(移入)&nbsp;</TD>
+			<TD CLASS="DescriptionCell">decimal&nbsp;</TD><TD CLASS="DescriptionCell">13&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>mid
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">报工表头ID &nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>modid
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">生产订单行ID &nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>declareqty
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">检验数量&nbsp;</TD>
+			<TD CLASS="DescriptionCell">Udt_QTY&nbsp;</TD><TD CLASS="DescriptionCell">13&nbsp;</TD>
+			</TR>
+		</TABLE>
+			<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

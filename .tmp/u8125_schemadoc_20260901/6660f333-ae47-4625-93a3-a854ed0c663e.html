@@ -1,0 +1,682 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>tc_contract Table</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">tc_contract Table 
+			&nbsp;(MK 营销管理)
+			&nbsp;[U8110]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>订单表</p>
+		<h4 class=dxh4>Remark</h4><p>订单表</p>
+		<h4 class=dxh4>Columns</h4>
+		<table class="columnlisttable" cellspacing="0">
+			<tr valign="top"><th align=middle>&nbsp;</th><th nowrap>Column Name</th><th nowrap>Description</th><th nowrap>Datatype</th><th nowrap>Length</th><th nowrap>Allow Nulls</th></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>contract_payed_amount
+			(U8110)
+			</strong></td><td class="descriptioncell">收款金额&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_date02
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(日期型)&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>billing_city
+			(U8110)
+			</strong></td><td class="descriptioncell">发票地址-城市&nbsp;</td><td>nvarchar</td><td>40&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_char05
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(字符型)&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>title
+			(U8110)
+			</strong></td><td class="descriptioncell">员工签字人职务&nbsp;</td><td>nvarchar</td><td>32&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_dec06
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(数值型)&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_char03
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(字符型)&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_dec03
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(数值型)&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_int22
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(整型)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>submit_time
+			(U8110)
+			</strong></td><td class="descriptioncell">审批提交时间&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_dec07
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(数值型)&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_int01
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(整型)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>audit_time
+			(U8110)
+			</strong></td><td class="descriptioncell">审批时间&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>contract_quantity
+			(U8110)
+			</strong></td><td class="descriptioncell">合同数量&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>audit_flow_id
+			(U8110)
+			</strong></td><td class="descriptioncell">审批流ID&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>contract_name
+			(U8110)
+			</strong></td><td class="descriptioncell">合同名称&nbsp;</td><td>nvarchar</td><td>128&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_dec09
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(数值型)&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_date04
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(日期型)&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_int08
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(整型)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>add_score
+			(U8110)
+			</strong></td><td class="descriptioncell">新增积分&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>contract_src_id
+			(U8110)
+			</strong></td><td class="descriptioncell">来源id&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>close_date
+			(U8110)
+			</strong></td><td class="descriptioncell">关闭日期&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_int24
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(整型)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_int18
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(整型)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>contract_arap_amount
+			(U8110)
+			</strong></td><td class="descriptioncell">应收金额&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>audit_stage_id
+			(U8110)
+			</strong></td><td class="descriptioncell">当前审批阶段ID&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>quote_id
+			(U8110)
+			</strong></td><td class="descriptioncell">报价ID&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>privilege_03
+			(U8110)
+			</strong></td><td class="descriptioncell">管理维度03&nbsp;</td><td>nvarchar</td><td>255&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>contract_id
+			(U8110)
+			</strong></td><td class="descriptioncell">合同ID&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>shipping_street
+			(U8110)
+			</strong></td><td class="descriptioncell">发货地址-街道&nbsp;</td><td>nvarchar</td><td>128&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>contract_type
+			(U8110)
+			</strong></td><td class="descriptioncell">合同类型&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>billing_state
+			(U8110)
+			</strong></td><td class="descriptioncell">发票地址-省/州&nbsp;</td><td>nvarchar</td><td>40&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>contract_delivery_date
+			(U8110)
+			</strong></td><td class="descriptioncell">交付日期&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>contract_undelivered_quantity
+			(U8110)
+			</strong></td><td class="descriptioncell">未交付数量&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>billing_address
+			(U8110)
+			</strong></td><td class="descriptioncell">发票地址&nbsp;</td><td>nvarchar</td><td>256&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_char08
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(字符型)&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>deleted_time
+			(U8110)
+			</strong></td><td class="descriptioncell">删除时间&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_int11
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(整型)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>prod_invced_quantity
+			(U8110)
+			</strong></td><td class="descriptioncell">已开票数量&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_date01
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(日期型)&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_int02
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(整型)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>owner_user_id
+			(U8110)
+			</strong></td><td class="descriptioncell">业务员&nbsp;</td><td>nvarchar</td><td>40&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>contract_end_date
+			(U8110)
+			</strong></td><td class="descriptioncell">合同结束日期&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>contract_delivered_quantity
+			(U8110)
+			</strong></td><td class="descriptioncell">已交付数量&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_int13
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(整型)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>exchange_score
+			(U8110)
+			</strong></td><td class="descriptioncell">消费积分&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_refid01
+			(U8110)
+			</strong></td><td class="descriptioncell">报价单编号 ID&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dept_id
+			(U8110)
+			</strong></td><td class="descriptioncell">部门id&nbsp;</td><td>nvarchar</td><td>24&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>activated_user_id
+			(U8110)
+			</strong></td><td class="descriptioncell">生效人&nbsp;</td><td>nvarchar</td><td>40&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_date05
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(日期型)&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>account_signed_title
+			(U8110)
+			</strong></td><td class="descriptioncell">客户签字人职务&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_char07
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(字符型)&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>shipping_address
+			(U8110)
+			</strong></td><td class="descriptioncell">发货地址&nbsp;</td><td>nvarchar</td><td>256&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_int15
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(整型)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_multi05
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(枚举型)&nbsp;</td><td>nvarchar</td><td>255&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>lock_time
+			(U8110)
+			</strong></td><td class="descriptioncell">锁定日期&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>modify_user_id
+			(U8110)
+			</strong></td><td class="descriptioncell">修改人&nbsp;</td><td>nvarchar</td><td>40&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_char01
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(字符型)&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>deleted_id
+			(U8110)
+			</strong></td><td class="descriptioncell">删除ID&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>create_user_id
+			(U8110)
+			</strong></td><td class="descriptioncell">创建人&nbsp;</td><td>nvarchar</td><td>40&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>close_flag
+			(U8110)
+			</strong></td><td class="descriptioncell">关闭标志&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_int23
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(整型)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_int14
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(整型)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>is_locked
+			(U8110)
+			</strong></td><td class="descriptioncell">是否已加锁&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>billing_country
+			(U8110)
+			</strong></td><td class="descriptioncell">发票地址-国家/地区&nbsp;</td><td>nvarchar</td><td>40&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>contract_is_valid
+			(U8110)
+			</strong></td><td class="descriptioncell">当前状态&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>shipping_city
+			(U8110)
+			</strong></td><td class="descriptioncell">发货地址-城市&nbsp;</td><td>nvarchar</td><td>40&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>identify_code
+			(U8110)
+			</strong></td><td class="descriptioncell">符号&nbsp;</td><td>nvarchar</td><td>128&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>account_id
+			(U8110)
+			</strong></td><td class="descriptioncell">客户ID&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>close_user_id
+			(U8110)
+			</strong></td><td class="descriptioncell">关闭人&nbsp;</td><td>nvarchar</td><td>40&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>billing_zipcode
+			(U8110)
+			</strong></td><td class="descriptioncell">发票地址-邮编&nbsp;</td><td>nvarchar</td><td>16&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>book_id
+			(U8110)
+			</strong></td><td class="descriptioncell">价格表ID&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>signed_contact_id
+			(U8110)
+			</strong></td><td class="descriptioncell">签订联系人&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_int17
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(整型)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_date07
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(日期型)&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>currency_id
+			(U8110)
+			</strong></td><td class="descriptioncell">使用币种&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>billing_street
+			(U8110)
+			</strong></td><td class="descriptioncell">发票地址-街道&nbsp;</td><td>nvarchar</td><td>128&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>privilege_02
+			(U8110)
+			</strong></td><td class="descriptioncell">管理维度02&nbsp;</td><td>nvarchar</td><td>255&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_char04
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(字符型)&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>is_deleted
+			(U8110)
+			</strong></td><td class="descriptioncell">是否可删除&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>audit_flag
+			(U8110)
+			</strong></td><td class="descriptioncell">审批状态&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_date03
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(日期型)&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>optnty_id
+			(U8110)
+			</strong></td><td class="descriptioncell">机会ID&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_int19
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(整型)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>modify_time
+			(U8110)
+			</strong></td><td class="descriptioncell">修改时间&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>lock_user_id
+			(U8110)
+			</strong></td><td class="descriptioncell">锁定人&nbsp;</td><td>nvarchar</td><td>40&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_multi03
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(枚举型)&nbsp;</td><td>nvarchar</td><td>255&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_char10
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(字符型)&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>shipping_zipcode
+			(U8110)
+			</strong></td><td class="descriptioncell">发货地址-邮编&nbsp;</td><td>nvarchar</td><td>16&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_dec05
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(数值型)&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>contract_profit
+			(U8110)
+			</strong></td><td class="descriptioncell">税后毛利&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>contract_start_date
+			(U8110)
+			</strong></td><td class="descriptioncell">合同开始日期&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_dec15
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(数值型)&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>create_time
+			(U8110)
+			</strong></td><td class="descriptioncell">创建时间&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>contract_number
+			(U8110)
+			</strong></td><td class="descriptioncell">合同编号&nbsp;</td><td>nvarchar</td><td>256&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>contract_status
+			(U8110)
+			</strong></td><td class="descriptioncell">合同状态&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_int21
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(整型)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>trace_no
+			(U8110)
+			</strong></td><td class="descriptioncell">跟踪号&nbsp;</td><td>nvarchar</td><td>32&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_multi02
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(枚举型)&nbsp;</td><td>nvarchar</td><td>255&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>crm_timestamp
+			(U8110)
+			</strong></td><td class="descriptioncell">记录变动系统时间戳&nbsp;</td><td>timestamp</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>description
+			(U8110)
+			</strong></td><td class="descriptioncell">描述&nbsp;</td><td>text</td><td>16&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>shipping_country
+			(U8110)
+			</strong></td><td class="descriptioncell">发货地址-国家&nbsp;</td><td>nvarchar</td><td>40&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>exchange_ratio
+			(U8110)
+			</strong></td><td class="descriptioncell">汇率&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_dec01
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(数值型)&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>contract_undelivered_amount
+			(U8110)
+			</strong></td><td class="descriptioncell">未交付金额&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>privilege_04
+			(U8110)
+			</strong></td><td class="descriptioncell">管理维度04&nbsp;</td><td>nvarchar</td><td>255&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_dec10
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(数值型)&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>contract_src_type
+			(U8110)
+			</strong></td><td class="descriptioncell">来源类型&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_char02
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(字符型)&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_dec12
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(数值型)&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>foreign_amount
+			(U8110)
+			</strong></td><td class="descriptioncell">外币金额&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_char11
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(字符型)&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>account_signed_date
+			(U8110)
+			</strong></td><td class="descriptioncell">客户签订日期&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_dec02
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(数值型)&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>prod_invced_amount
+			(U8110)
+			</strong></td><td class="descriptioncell">已开票金额&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>company_signed_date
+			(U8110)
+			</strong></td><td class="descriptioncell">公司签订日期&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>expense
+			(U8110)
+			</strong></td><td class="descriptioncell">发生费用&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_char12
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(字符型)&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_char09
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(字符型)&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_int06
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(整型)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>expiration_notice
+			(U8110)
+			</strong></td><td class="descriptioncell">超期提醒&nbsp;</td><td>nvarchar</td><td>128&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_int05
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(整型)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_int16
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(整型)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>contract_payment_date
+			(U8110)
+			</strong></td><td class="descriptioncell">付款日期&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_int04
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(整型)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_dec11
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(数值型)&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_int09
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(整型)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_multi04
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(枚举型)&nbsp;</td><td>nvarchar</td><td>255&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>preplan_flag
+			(U8110)
+			</strong></td><td class="descriptioncell">当前状态&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>deleted_user_id
+			(U8110)
+			</strong></td><td class="descriptioncell">删除人&nbsp;</td><td>nvarchar</td><td>40&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>contract_amount
+			(U8110)
+			</strong></td><td class="descriptioncell">合同金额&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_multi01
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(枚举型)&nbsp;</td><td>nvarchar</td><td>255&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_int12
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(整型)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>activated_time
+			(U8110)
+			</strong></td><td class="descriptioncell">生效时间&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_date06
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(日期型)&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>server_flag
+			(U8110)
+			</strong></td><td class="descriptioncell">数据标识(保留未用)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>shipping_state
+			(U8110)
+			</strong></td><td class="descriptioncell">发货地址-省/州&nbsp;</td><td>nvarchar</td><td>40&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_refid02
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(引用型)&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>audit_user_id
+			(U8110)
+			</strong></td><td class="descriptioncell">审批人&nbsp;</td><td>nvarchar</td><td>40&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>privilege_01
+			(U8110)
+			</strong></td><td class="descriptioncell">管理维度01&nbsp;</td><td>nvarchar</td><td>255&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>submit_user_id
+			(U8110)
+			</strong></td><td class="descriptioncell">审批提交人ID&nbsp;</td><td>nvarchar</td><td>40&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>contract_term
+			(U8110)
+			</strong></td><td class="descriptioncell">付款期数&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_dec04
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(数值型)&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>contract_delivered_amount
+			(U8110)
+			</strong></td><td class="descriptioncell">合同金额&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_int07
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(整型)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>lead_id
+			(U8110)
+			</strong></td><td class="descriptioncell">线索ID&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_char06
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(字符型)&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_dec14
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(数值型)&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_int03
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(整型)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_dec08
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(数值型)&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_multi06
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(枚举型)&nbsp;</td><td>nvarchar</td><td>255&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_int10
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(整型)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>approved_expense
+			(U8110)
+			</strong></td><td class="descriptioncell">批准费用&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>contract_unpayed_amount
+			(U8110)
+			</strong></td><td class="descriptioncell">未收款金额&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_dec13
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(数值型)&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_int20
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(整型)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>signed_user_id
+			(U8110)
+			</strong></td><td class="descriptioncell">签订用户&nbsp;</td><td>nvarchar</td><td>40&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_date08
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(日期型)&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>copartner_id
+			(U8110)
+			</strong></td><td class="descriptioncell">合作伙伴&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cntrt_dec16
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(数值型)&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>contract_arap_profit
+			(U8110)
+			</strong></td><td class="descriptioncell">税后有效毛利&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+		</table>
+		<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

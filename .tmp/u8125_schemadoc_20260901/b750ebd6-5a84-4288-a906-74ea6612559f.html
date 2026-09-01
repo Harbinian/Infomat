@@ -1,0 +1,434 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>tc_competitor Table</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">tc_competitor Table 
+			&nbsp;(MK 营销管理)
+			&nbsp;[U8110]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>竞争对手</p>
+		<h4 class=dxh4>Remark</h4><p>竞争对手</p>
+		<h4 class=dxh4>Columns</h4>
+		<table class="columnlisttable" cellspacing="0">
+			<tr valign="top"><th align=middle>&nbsp;</th><th nowrap>Column Name</th><th nowrap>Description</th><th nowrap>Datatype</th><th nowrap>Length</th><th nowrap>Allow Nulls</th></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>privilege_04
+			(U8110)
+			</strong></td><td class="descriptioncell">管理维度04&nbsp;</td><td>nvarchar</td><td>255&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_int12
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(整型)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_website
+			(U8110)
+			</strong></td><td class="descriptioncell">网站&nbsp;</td><td>nvarchar</td><td>128&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_date02
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(日期型)&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_int02
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(整型)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_dec05
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(数值型)&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_dec01
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(数值型)&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>server_flag
+			(U8110)
+			</strong></td><td class="descriptioncell">数据标识(保留未用)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_int18
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(整型)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_date08
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(日期型)&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_int01
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(整型)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_char06
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(字符型)&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_code
+			(U8110)
+			</strong></td><td class="descriptioncell">编码&nbsp;</td><td>nvarchar</td><td>256&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>deleted_id
+			(U8110)
+			</strong></td><td class="descriptioncell">删除表ID&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dept_id
+			(U8110)
+			</strong></td><td class="descriptioncell">部门id&nbsp;</td><td>nvarchar</td><td>24&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>create_time
+			(U8110)
+			</strong></td><td class="descriptioncell">创建时间&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_dec14
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(数值型)&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_int06
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(整型)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_int23
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(整型)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_multi04
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(枚举型)&nbsp;</td><td>nvarchar</td><td>255&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_char02
+			(U8110)
+			</strong></td><td class="descriptioncell">威胁&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_name
+			(U8110)
+			</strong></td><td class="descriptioncell">名称&nbsp;</td><td>nvarchar</td><td>128&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_address
+			(U8110)
+			</strong></td><td class="descriptioncell">地址&nbsp;</td><td>nvarchar</td><td>255&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>privilege_01
+			(U8110)
+			</strong></td><td class="descriptioncell">管理维度01&nbsp;</td><td>nvarchar</td><td>255&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>deleted_time
+			(U8110)
+			</strong></td><td class="descriptioncell">删除时间&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>deleted_user_id
+			(U8110)
+			</strong></td><td class="descriptioncell">删除人的ID&nbsp;</td><td>nvarchar</td><td>40&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_char03
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(字符型)&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_char08
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(字符型)&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_int16
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(整型)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_multi02
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(枚举型)&nbsp;</td><td>nvarchar</td><td>255&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_simple_code
+			(U8110)
+			</strong></td><td class="descriptioncell">简称&nbsp;</td><td>nvarchar</td><td>16&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_int19
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(整型)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_date03
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(日期型)&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_int14
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(整型)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_char09
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(字符型)&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_refid01
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(引用型)&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_email
+			(U8110)
+			</strong></td><td class="descriptioncell">邮件&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_char04
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(字符型)&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_int05
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(整型)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_fax
+			(U8110)
+			</strong></td><td class="descriptioncell">传真&nbsp;</td><td>nvarchar</td><td>32&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>privilege_02
+			(U8110)
+			</strong></td><td class="descriptioncell">管理维度02&nbsp;</td><td>nvarchar</td><td>255&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_date01
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(日期型)&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_id
+			(U8110)
+			</strong></td><td class="descriptioncell">竞争对手ID&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_type
+			(U8110)
+			</strong></td><td class="descriptioncell">类型ID&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_date06
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(日期型)&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_note
+			(U8110)
+			</strong></td><td class="descriptioncell">备注&nbsp;</td><td>nvarchar</td><td>1024&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_dec13
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(数值型)&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_int21
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(整型)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_dec06
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(数值型)&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_zip_code
+			(U8110)
+			</strong></td><td class="descriptioncell">邮编&nbsp;</td><td>nvarchar</td><td>16&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_dec08
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(数值型)&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_char10
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(字符型)&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_phone
+			(U8110)
+			</strong></td><td class="descriptioncell">电话&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_int13
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(整型)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_city
+			(U8110)
+			</strong></td><td class="descriptioncell">城市&nbsp;</td><td>nvarchar</td><td>32&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_int17
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(整型)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_dec12
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(数值型)&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_dec11
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(数值型)&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_multi05
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(枚举型)&nbsp;</td><td>nvarchar</td><td>255&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>crm_timestamp
+			(U8110)
+			</strong></td><td class="descriptioncell">记录变动系统时间戳&nbsp;</td><td>timestamp</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_char05
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(字符型)&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_int11
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(整型)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_multi01
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(枚举型)&nbsp;</td><td>nvarchar</td><td>255&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_multi03
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(枚举型)&nbsp;</td><td>nvarchar</td><td>255&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_multi06
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(枚举型)&nbsp;</td><td>nvarchar</td><td>255&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>is_deleted
+			(U8110)
+			</strong></td><td class="descriptioncell">是否删除（0：否；1：是）&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_date04
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(日期型)&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_int04
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(整型)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>privilege_03
+			(U8110)
+			</strong></td><td class="descriptioncell">管理维度03&nbsp;</td><td>nvarchar</td><td>255&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_char12
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(字符型)&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_int03
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(整型)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_int10
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(整型)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>modify_time
+			(U8110)
+			</strong></td><td class="descriptioncell">修改时间&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_date05
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(日期型)&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_date07
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(日期型)&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_int20
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(整型)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_int22
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(整型)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_int15
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(整型)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_int09
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(整型)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_char07
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(字符型)&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_char01
+			(U8110)
+			</strong></td><td class="descriptioncell">机会&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_char11
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(字符型)&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_dec15
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(数值型)&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_int07
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(整型)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_refid02
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(引用型)&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_dec03
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(数值型)&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_disadvantage
+			(U8110)
+			</strong></td><td class="descriptioncell">劣势&nbsp;</td><td>nvarchar</td><td>1024&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_int08
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(整型)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_advantage
+			(U8110)
+			</strong></td><td class="descriptioncell">优势&nbsp;</td><td>nvarchar</td><td>1024&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_int24
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(整型)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_dec10
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(数值型)&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_country
+			(U8110)
+			</strong></td><td class="descriptioncell">国家&nbsp;</td><td>nvarchar</td><td>32&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_dec07
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(数值型)&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_dec04
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(数值型)&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_dec16
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(数值型)&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>create_user_id
+			(U8110)
+			</strong></td><td class="descriptioncell">创建人的ID&nbsp;</td><td>nvarchar</td><td>40&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_dec02
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(数值型)&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>modify_user_id
+			(U8110)
+			</strong></td><td class="descriptioncell">修改人的ID&nbsp;</td><td>nvarchar</td><td>40&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmpt_dec09
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展字段(数值型)&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+		</table>
+		<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

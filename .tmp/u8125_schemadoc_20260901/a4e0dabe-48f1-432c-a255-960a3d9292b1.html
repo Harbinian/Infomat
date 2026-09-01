@@ -1,0 +1,254 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>KC_SNDetail_Disp Table</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">KC_SNDetail_Disp Table 
+			&nbsp;(KC 条码管理)
+			&nbsp;[U8110]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>拣货退货单序列号</p>
+		<h4 class=dxh4>Remark</h4><p>废弃</p>
+		<h4 class=dxh4>Columns</h4>
+		<table class="columnlisttable" cellspacing="0">
+			<tr valign="top"><th align=middle>&nbsp;</th><th nowrap>Column Name</th><th nowrap>Description</th><th nowrap>Datatype</th><th nowrap>Length</th><th nowrap>Allow Nulls</th></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>csndefine3
+			(U8110)
+			</strong></td><td class="descriptioncell">序列号自定义项3&nbsp;</td><td>nvarchar</td><td>200&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>idlsid
+			(U8110)
+			</strong></td><td class="descriptioncell">发货单子表id&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>imassdate
+			(U8110)
+			</strong></td><td class="descriptioncell">保质期&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iRowNO
+			(U8110)
+			</strong></td><td class="descriptioncell">行号&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>id
+			(U8110)
+			</strong></td><td class="descriptioncell">拣货指令单主表标识&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>predvdate
+			(U8110)
+			</strong></td><td class="descriptioncell">日期&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>imassunit
+			(U8110)
+			</strong></td><td class="descriptioncell">保值期单位&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cpreVenCode
+			(U8110)
+			</strong></td><td class="descriptioncell">供应商&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cVenCode
+			(U8110)
+			</strong></td><td class="descriptioncell">供应商编码&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cWhCode
+			(U8110)
+			</strong></td><td class="descriptioncell">仓库编码&nbsp;</td><td>nvarchar</td><td>10&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ipremassdate
+			(U8110)
+			</strong></td><td class="descriptioncell">null&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cInvSN
+			(U8110)
+			</strong></td><td class="descriptioncell">序列号&nbsp;</td><td>nvarchar</td><td>200&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cfree4
+			(U8110)
+			</strong></td><td class="descriptioncell">存货自由项4&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cfree10
+			(U8110)
+			</strong></td><td class="descriptioncell">存货自由项10&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dmdate
+			(U8110)
+			</strong></td><td class="descriptioncell">生产日期&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iSNPreState
+			(U8110)
+			</strong></td><td class="descriptioncell">null&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>csndefine2
+			(U8110)
+			</strong></td><td class="descriptioncell">序列号自定义项2&nbsp;</td><td>nvarchar</td><td>200&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cprePosition
+			(U8110)
+			</strong></td><td class="descriptioncell">货位&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>csndefine9
+			(U8110)
+			</strong></td><td class="descriptioncell">序列号自定义项9&nbsp;</td><td>nvarchar</td><td>200&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cInCode
+			(U8110)
+			</strong></td><td class="descriptioncell">null&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cfree2
+			(U8110)
+			</strong></td><td class="descriptioncell">存货自由项2&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cfree5
+			(U8110)
+			</strong></td><td class="descriptioncell">存货自由项5&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cfree1
+			(U8110)
+			</strong></td><td class="descriptioncell">存货自由项1&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cfree7
+			(U8110)
+			</strong></td><td class="descriptioncell">存货自由项7&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cBatch
+			(U8110)
+			</strong></td><td class="descriptioncell">拣货批号&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dlid
+			(U8110)
+			</strong></td><td class="descriptioncell">发货主表id&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cpreincode
+			(U8110)
+			</strong></td><td class="descriptioncell">null&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iSNOperateCount
+			(U8110)
+			</strong></td><td class="descriptioncell">null&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>itrackid
+			(U8110)
+			</strong></td><td class="descriptioncell">null&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>csndefine7
+			(U8110)
+			</strong></td><td class="descriptioncell">序列号自定义项7&nbsp;</td><td>nvarchar</td><td>200&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>breturnflag
+			(U8110)
+			</strong></td><td class="descriptioncell">null&nbsp;</td><td>tinyint</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>csndefine1
+			(U8110)
+			</strong></td><td class="descriptioncell">序列号自定义项1&nbsp;</td><td>nvarchar</td><td>200&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cposition
+			(U8110)
+			</strong></td><td class="descriptioncell">拣货货位编码&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>csndefine5
+			(U8110)
+			</strong></td><td class="descriptioncell">序列号自定义项5&nbsp;</td><td>nvarchar</td><td>200&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Seedid
+			(U8110)
+			</strong></td><td class="descriptioncell">null&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>csnmemo
+			(U8110)
+			</strong></td><td class="descriptioncell">序列号说明&nbsp;</td><td>nvarchar</td><td>255&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dvdate
+			(U8110)
+			</strong></td><td class="descriptioncell">失效日期&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>csndefine8
+			(U8110)
+			</strong></td><td class="descriptioncell">序列号自定义项8&nbsp;</td><td>nvarchar</td><td>200&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>csndefine10
+			(U8110)
+			</strong></td><td class="descriptioncell">序列号自定义项10&nbsp;</td><td>nvarchar</td><td>200&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cInVouchType
+			(U8110)
+			</strong></td><td class="descriptioncell">对应入库单类型&nbsp;</td><td>nvarchar</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>preimassunit
+			(U8110)
+			</strong></td><td class="descriptioncell">null&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ipretrackid
+			(U8110)
+			</strong></td><td class="descriptioncell">null&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cfree9
+			(U8110)
+			</strong></td><td class="descriptioncell">存货自由项9&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cpreBatch
+			(U8110)
+			</strong></td><td class="descriptioncell">null&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cfree3
+			(U8110)
+			</strong></td><td class="descriptioncell">存货自由项3&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cfree6
+			(U8110)
+			</strong></td><td class="descriptioncell">存货自由项6&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cfree8
+			(U8110)
+			</strong></td><td class="descriptioncell">存货自由项8&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>csndefine6
+			(U8110)
+			</strong></td><td class="descriptioncell">序列号自定义项6&nbsp;</td><td>nvarchar</td><td>200&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bused
+			(U8110)
+			</strong></td><td class="descriptioncell">null&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>predmdate
+			(U8110)
+			</strong></td><td class="descriptioncell">null&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cInvCode
+			(U8110)
+			</strong></td><td class="descriptioncell">存货编码&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>csndefine4
+			(U8110)
+			</strong></td><td class="descriptioncell">序列号自定义项4&nbsp;</td><td>nvarchar</td><td>200&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>isdid
+			(U8110)
+			</strong></td><td class="descriptioncell">拣货指令子表标识&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cprewhcode
+			(U8110)
+			</strong></td><td class="descriptioncell">仓库&nbsp;</td><td>nvarchar</td><td>10&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+		</table>
+		<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

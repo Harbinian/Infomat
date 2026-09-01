@@ -1,0 +1,202 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>HR_TM_DutyClassDayResult Table</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">HR_TM_DutyClassDayResult Table 
+			&nbsp;(TM 考勤管理)
+			&nbsp;[U8100]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>班组排班记录</p>
+		
+		<h4 class=dxh4>Columns</h4>
+		<table class="columnlisttable" cellspacing="0">
+			<tr valign="top"><th align=middle>&nbsp;</th><th nowrap>Column Name</th><th nowrap>Description</th><th nowrap>Datatype</th><th nowrap>Length</th><th nowrap>Allow Nulls</th></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDepCode
+			(U8100)
+			</strong></td><td class="descriptioncell">部门编码&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nWorkHours
+			(U8100)
+			</strong></td><td class="descriptioncell">应出勤&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>p1Start
+			(U8100)
+			</strong></td><td class="descriptioncell">应上班1&nbsp;</td><td>nvarchar</td><td>19&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cShiftSource
+			(U8100)
+			</strong></td><td class="descriptioncell">排班来源&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>DB_dStartCTime
+			(U8100)
+			</strong></td><td class="descriptioncell">（临时班次）开始刷卡时间&nbsp;</td><td>UFTime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>p4Start
+			(U8100)
+			</strong></td><td class="descriptioncell">应上班4&nbsp;</td><td>UFDatetime</td><td>19&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dDutyDate
+			(U8100)
+			</strong></td><td class="descriptioncell">排班日期&nbsp;</td><td>UFDate</td><td>10&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>DB_iOffOver
+			(U8100)
+			</strong></td><td class="descriptioncell">（临时班次）下班跨天&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dDutyCardStart
+			(U8100)
+			</strong></td><td class="descriptioncell">班次开始刷卡&nbsp;</td><td>UFDatetime</td><td>19&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dDutyOff
+			(U8100)
+			</strong></td><td class="descriptioncell">班次下班时间&nbsp;</td><td>UFDatetime</td><td>19&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>DB_iWorkMinute
+			(U8100)
+			</strong></td><td class="descriptioncell">（临时班次）应出勤分钟&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dDutyCardEnd
+			(U8100)
+			</strong></td><td class="descriptioncell">班次截止刷卡&nbsp;</td><td>UFDatetime</td><td>19&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>p5End
+			(U8100)
+			</strong></td><td class="descriptioncell">应下班5&nbsp;</td><td>UFDatetime</td><td>19&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>pk_HR_TM_DutyClassDayResult
+			(U8100)
+			</strong></td><td class="descriptioncell">主键&nbsp;</td><td>UFUID</td><td>16&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>p2End
+			(U8100)
+			</strong></td><td class="descriptioncell">应下班2&nbsp;</td><td>nvarchar</td><td>19&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>DB_dEndCTime
+			(U8100)
+			</strong></td><td class="descriptioncell">（临时班次）截止刷卡时间&nbsp;</td><td>UFTime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>p1End
+			(U8100)
+			</strong></td><td class="descriptioncell">应下班1&nbsp;</td><td>nvarchar</td><td>19&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bJoinDuty
+			(U8100)
+			</strong></td><td class="descriptioncell">（临时班次）是否连班&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCode
+			(U8100)
+			</strong></td><td class="descriptioncell">班组编码&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dDutyStart
+			(U8100)
+			</strong></td><td class="descriptioncell">班次上班时间&nbsp;</td><td>UFDatetime</td><td>19&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDutyCode
+			(U8100)
+			</strong></td><td class="descriptioncell">班次&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>p5Start
+			(U8100)
+			</strong></td><td class="descriptioncell">应上班5&nbsp;</td><td>UFDatetime</td><td>19&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>DB_bStartOver
+			(U8100)
+			</strong></td><td class="descriptioncell">（临时班次）上班时间跨天&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bDutyBasic
+			(U8100)
+			</strong></td><td class="descriptioncell">是否临时班次&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>DB_bEndOver
+			(U8100)
+			</strong></td><td class="descriptioncell">（临时班次）下班时间跨天&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>vSaveDutyBasic
+			(U8100)
+			</strong></td><td class="descriptioncell">（临时班次）班次基本信息&nbsp;</td><td>nvarchar</td><td>4000&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>p3Start
+			(U8100)
+			</strong></td><td class="descriptioncell">应上班3&nbsp;</td><td>nvarchar</td><td>19&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>DB_dDutyStart
+			(U8100)
+			</strong></td><td class="descriptioncell">（临时班次）上班时间&nbsp;</td><td>UFTime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iWorkMinute
+			(U8100)
+			</strong></td><td class="descriptioncell">应出勤(分钟)&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>rDutyType
+			(U8100)
+			</strong></td><td class="descriptioncell">班次类别&nbsp;</td><td>UFreference</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>p2Start
+			(U8100)
+			</strong></td><td class="descriptioncell">应上班2&nbsp;</td><td>nvarchar</td><td>19&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iRecordId
+			(U8100)
+			</strong></td><td class="descriptioncell">记录序号&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>DB_ManHours
+			(U8100)
+			</strong></td><td class="descriptioncell">（临时班次）应出勤时间&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>DB_iDutyOver
+			(U8100)
+			</strong></td><td class="descriptioncell">（临时班次）上班时间跨天&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>p1StartCard
+			(U8100)
+			</strong></td><td class="descriptioncell">班段1开始刷卡时间&nbsp;</td><td>nvarchar</td><td>19&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>p4End
+			(U8100)
+			</strong></td><td class="descriptioncell">应下班4&nbsp;</td><td>UFDatetime</td><td>19&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>DB_dDutyOff
+			(U8100)
+			</strong></td><td class="descriptioncell">（临时班次）下班时间&nbsp;</td><td>UFTime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>rDateProperty
+			(U8100)
+			</strong></td><td class="descriptioncell">日期属性&nbsp;</td><td>UFreference</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>p3End
+			(U8100)
+			</strong></td><td class="descriptioncell">应下班3&nbsp;</td><td>nvarchar</td><td>19&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bNormal
+			(U8100)
+			</strong></td><td class="descriptioncell">是否正常&nbsp;</td><td>UFreference</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nWorkDays
+			(U8100)
+			</strong></td><td class="descriptioncell">应出勤(天数)&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+		</table>
+		<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

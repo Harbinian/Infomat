@@ -28,7 +28,7 @@
 
 ## PMO 分析模型
 
-`pmo/organization-dynamics/` 保存组织数字化参与度十六维分型模型的 Markdown 内容真源、可编辑 SVG、HTML 预览、16:9横屏单页PPT和使用说明。该模型用于 PMO 观察部门在结构化、透明化和责任明确化过程中的参与行为，并选择差异化治理策略；它不替代组织事实真源、PMO 计划真源或正式 DLV 交付物。
+`pmo/organization-dynamics/` 保存组织数字化参与度十六维分型模型的 Markdown 内容真源、可编辑 SVG、HTML 预览、16:9横屏单页PPT和使用说明。修改前先读该目录的 `AGENTS.md`。该模型用于 PMO 观察部门在结构化、透明化和责任明确化过程中的参与行为，并选择差异化治理策略；它不替代组织事实真源、PMO 计划真源或正式 DLV 交付物。
 
 PNG由 `pmo/scripts/export-organization-dynamics-png.mjs` 生成到被忽略的 `artifacts/pmo/organization-dynamics/`，不作为仓库正本。
 
@@ -127,6 +127,7 @@ pmo/
 │   ├── dashboard.html
 │   └── AGENTS.md
 ├── organization-dynamics/
+│   ├── AGENTS.md
 │   ├── README.md
 │   ├── index.html
 │   ├── 组织数字化参与度十六维分型模型.md

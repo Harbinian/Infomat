@@ -88,9 +88,18 @@ MDM 平台保留为后续承接应用。除非用户明确要求进入 MDM 平�
 - `pmo/procedure-management/AGENTS.md`
 - `pmo/gantt-react/AGENTS.md`
 - `pmo/deliverables/AGENTS.md`
+- `pmo/organization-dynamics/AGENTS.md`
 - `docs/norms/AGENTS.md`
+- `docs/organization/AGENTS.md`
+- `docs/contracts/AGENTS.md`
 - `docs/Demo/AGENTS.md`
 - `scripts/AGENTS.md`
+
+## 派生文件与仓库 AI 配置
+
+主线直接消费且具有固定生成命令、一致性或摘要检查的派生文件，按 `docs/adr/0004-controlled-derived-consumer-files.md` 的 `Proposed` 方案受控维护。修改真源时必须同时运行固定生成命令和检查，并共同审查真源、生成器及消费文件。该 ADR 尚未 `Accepted`；临时输出、缓存、日志、截图和一次性预览继续写入被忽略的 `artifacts/` 或工具临时目录。
+
+`.codex/config.toml` 只负责本仓库 Codex 的展示与推理偏好。它继承根目录执行规则，不得保存 Secret、主机连接信息、个人路径、运行状态或业务事实。
 
 ## 常用验证
 

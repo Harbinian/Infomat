@@ -1,0 +1,88 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>CM_CMInterface Table</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">CM_CMInterface Table 
+			&nbsp;(CM 合同管理)
+			&nbsp;[U861]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>合同结算单接口表</p>
+		
+		<h4 class=dxh4>Columns</h4>
+		<table class="columnlisttable" cellspacing="0">
+			<tr valign="top"><th align=middle>&nbsp;</th><th nowrap>Column Name</th><th nowrap>Description</th><th nowrap>Datatype</th><th nowrap>Length</th><th nowrap>Allow Nulls</th></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>decMoney
+			(U861)
+			</strong></td><td class="descriptioncell">执行金额&nbsp;</td><td>decimal</td><td>9&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Modifytamp
+			(U861)
+			</strong></td><td class="descriptioncell">时间戳&nbsp;</td><td>timestamp</td><td>8&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iQuantity
+			(U861)
+			</strong></td><td class="descriptioncell">收付数量&nbsp;</td><td>decimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>NoRateMoney
+			(U861)
+			</strong></td><td class="descriptioncell">执行无税金额&nbsp;</td><td>decimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Money
+			(U861)
+			</strong></td><td class="descriptioncell">收付含税金额&nbsp;</td><td>decimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>decCount
+			(U861)
+			</strong></td><td class="descriptioncell">执行数量&nbsp;</td><td>decimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cItemID
+			(U861)
+			</strong></td><td class="descriptioncell">对应项目编码&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cContractID
+			(U861)
+			</strong></td><td class="descriptioncell">合同编码&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>strSpare1
+			(U861)
+			</strong></td><td class="descriptioncell">备用字段1&nbsp;</td><td>nvarchar</td><td>128&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>strSpare2
+			(U861)
+			</strong></td><td class="descriptioncell">备用字段2&nbsp;</td><td>nvarchar</td><td>128&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>strSpare3
+			(U861)
+			</strong></td><td class="descriptioncell">备用字段3&nbsp;</td><td>nvarchar</td><td>128&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+		</table>
+		<h4 class=dxh4>Indexes</h4>
+		<TABLE CLASS="FilteredItemListTable" CellSpacing="0">
+			<TR VALIGN="top"><TH width=30%>Index</TH><TH width=50%>Description</TH><TH>Primary</TH><TH>Unique</TH></TR>
+			<TR><TD CLASS=LinkCell WIDTH="50%"><A HREF="50f45886-5550-4ea7-8930-06680ac79512.html">AK_KEY_1_CM_CMINT</A></TD><TD CLASS="DescriptionCell" WIDTH="50%">&nbsp;</TD><TD Class="Centered"></TD><TD Class="Centered"><img src=images/tick.png></TD></TR>
+			<TR><TD CLASS=LinkCell WIDTH="50%"><A HREF="6a43c0b4-dc4f-4571-a018-ff46f6a329f7.html">Index_1</A></TD><TD CLASS="DescriptionCell" WIDTH="50%">&nbsp;</TD><TD Class="Centered"></TD><TD Class="Centered"></TD></TR>
+		</TABLE>
+		<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

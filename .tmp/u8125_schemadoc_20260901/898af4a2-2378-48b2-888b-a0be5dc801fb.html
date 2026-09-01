@@ -1,0 +1,430 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>pl_CO_DispatchListCost Table</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">pl_CO_DispatchListCost Table 
+			&nbsp;(ED 标准成本管理)
+			
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>发出商品成本表</p>
+		
+		<h4 class=dxh4>Columns</h4>
+		<table class="columnlisttable" cellspacing="0">
+			<tr valign="top"><th align=middle>&nbsp;</th><th nowrap>Column Name</th><th nowrap>Description</th><th nowrap>Datatype</th><th nowrap>Length</th><th nowrap>Allow Nulls</th></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fUnitSemiVarManuDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fBillOMDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fBackOMdif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fStdSumLbr
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fSumPriceDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fStdSumPrice
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fUnitQuantityDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fBillFixManuDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fVarManuNumDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fStdBillLbr
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fUnitVarManuDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fStdBillFixManu
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fBillVarManuNumDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fStdFixManu
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fLbrPriceDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fUnitStdLbr
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cVouType
+			
+			</strong></td><td class="descriptioncell">单据类型&nbsp;</td><td>nvarchar</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iQuantity
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fSumOMDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fFixManuNumDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fBackVarManudif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fBillFixManuNumDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fStdOM
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fUnitStdFixManu
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fStdSumFixManu
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fUnitPriceDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fUnitStdVarManu
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fBillLbrQuantityDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fFixManuDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fSumSemiOMDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fBackSemiFixManudif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fStdBackPrice
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fBillQuantityDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fVarManuDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fBillLbrPriceDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fPriceDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fUnitSemiFixManuDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fStdBillOM
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fSumVarManuNumDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fUnitStdPrice
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fBackSemiLbrdif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fStdBillVarManu
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fUnitStdOM
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fStdPrice
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fStdSumVarManu
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fSumVarManuDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fUnitFixManuNumDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fBillVarManuDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fStdLbr
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fBillSemiVarManuDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fBackFixManuNumdif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fBackSemiVarManudif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fUnitFixManuDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fStdBackFixManu
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fBackQuantitydif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fUnitVarManuNumDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fBackFixManudif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fOMDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fUnitOMDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fStdBillPrice
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fSumSemiLbrDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iBackQuantity
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fUnitSemiOMDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iSumQuantity
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fLbrQuantityDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fStdBackLbr
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fStdBackOM
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fBackLbrPricedif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iBillQuantity
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>InID
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fBillSemiFixManuDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fUnitSemiLbrDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fSumLbrPriceDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fBackPricedif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fBackLbrQuantitydif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fStdSumOM
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iYear
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fUnitLbrQuantityDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fBillSemiLbrDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fUnitLbrPriceDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fBillPriceDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>AutoID
+			
+			</strong></td><td class="descriptioncell">autoid&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fSumSemiFixManuDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fSemiFixManuDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fStdBackVarManu
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fSemiVarManuDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fSumLbrQuantityDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fSemiLbrDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fSumFixManuDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fBillSemiOMDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fSumFixManuNumDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fSemiOMDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fBackVarManuNumdif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fQuantityDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fSumQuantityDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fBackSemiOMdif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fStdVarManu
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fSumSemiVarManuDif
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+		</table>
+		<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

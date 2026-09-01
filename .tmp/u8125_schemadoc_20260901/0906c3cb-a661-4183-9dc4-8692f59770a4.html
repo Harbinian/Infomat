@@ -1,0 +1,266 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>hr_v_vacrate View</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">hr_v_vacrate View 
+			
+			&nbsp;[U8110]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>请假额度视图</p>
+		
+		<h4 class=dxh4>Columns</h4>
+		<TABLE CLASS="FilteredItemListTable" CellSpacing="0">
+			<TR VALIGN="top"><TH width=30%>Column Name</TH><TH width=50%>Description</TH><TH width=50%>Datatype</TH><TH width=50%>Length</TH>
+			<TR>
+			<TD CLASS=DescriptionCell>nVacBalanceThis
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">上期结转到本期额度&nbsp;</TD>
+			<TD CLASS="DescriptionCell">numeric&nbsp;</TD><TD CLASS="DescriptionCell">5&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cPsn_Num
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">人员&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>nHasDeducted
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">已抵扣&nbsp;</TD>
+			<TD CLASS="DescriptionCell">numeric&nbsp;</TD><TD CLASS="DescriptionCell">5&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>nVacBalanceNext
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">本期结转到下期额度&nbsp;</TD>
+			<TD CLASS="DescriptionCell">numeric&nbsp;</TD><TD CLASS="DescriptionCell">5&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>pk_hr_tm_VacRate
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">主键&nbsp;</TD>
+			<TD CLASS="DescriptionCell">UFUID&nbsp;</TD><TD CLASS="DescriptionCell">16&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>nTotal
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">请假额度&nbsp;</TD>
+			<TD CLASS="DescriptionCell">numeric&nbsp;</TD><TD CLASS="DescriptionCell">5&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>JobNumber
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">工号&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">100&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>bBalance
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">结算标识&nbsp;</TD>
+			<TD CLASS="DescriptionCell">bit&nbsp;</TD><TD CLASS="DescriptionCell">1&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>dEndDate
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">截止日期&nbsp;</TD>
+			<TD CLASS="DescriptionCell">UFDate&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>bInvalid
+			(U8111)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">bit&nbsp;</TD><TD CLASS="DescriptionCell">1&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>vDepCode
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">部门&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>bCanceled
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">是否取消资格&nbsp;</TD>
+			<TD CLASS="DescriptionCell">bit&nbsp;</TD><TD CLASS="DescriptionCell">1&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>nVacRemain
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">上年剩余年假&nbsp;</TD>
+			<TD CLASS="DescriptionCell">numeric&nbsp;</TD><TD CLASS="DescriptionCell">9&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>dLeaveDate
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">离职日期&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cYear
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">请假期间&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>nVacRete
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">可休请假额度&nbsp;</TD>
+			<TD CLASS="DescriptionCell">numeric&nbsp;</TD><TD CLASS="DescriptionCell">5&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>bDisable
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">是否作废&nbsp;</TD>
+			<TD CLASS="DescriptionCell">bit&nbsp;</TD><TD CLASS="DescriptionCell">1&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cVacType
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">请假类别&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>dBeginDate
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">开始日期&nbsp;</TD>
+			<TD CLASS="DescriptionCell">UFDate&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>iVacRateOrigin
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">年假额度来源&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>nTotalSickLeave
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">累计病假&nbsp;</TD>
+			<TD CLASS="DescriptionCell">numeric&nbsp;</TD><TD CLASS="DescriptionCell">9&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>nDoneVac
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">已休请假&nbsp;</TD>
+			<TD CLASS="DescriptionCell">numeric&nbsp;</TD><TD CLASS="DescriptionCell">5&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>vBalanceMoth
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">结算月份&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">14&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>nBalancedVac
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">已结算请假&nbsp;</TD>
+			<TD CLASS="DescriptionCell">numeric&nbsp;</TD><TD CLASS="DescriptionCell">5&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>dEnterUnitDate
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">到职日期&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>bBalanceVacNext
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">结算余额标识&nbsp;</TD>
+			<TD CLASS="DescriptionCell">bit&nbsp;</TD><TD CLASS="DescriptionCell">1&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>nDelDataVac
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">已删除数据使用请假&nbsp;</TD>
+			<TD CLASS="DescriptionCell">numeric&nbsp;</TD><TD CLASS="DescriptionCell">5&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>nInitDoneVac
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">初始已休请假&nbsp;</TD>
+			<TD CLASS="DescriptionCell">numeric&nbsp;</TD><TD CLASS="DescriptionCell">5&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>vStatus2
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">vStatus2&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">120&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>dLastestTime
+			(U8111)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">datetime&nbsp;</TD><TD CLASS="DescriptionCell">8&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>nRested
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">numeric&nbsp;</TD><TD CLASS="DescriptionCell">9&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>nStatus1
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">nStatus1&nbsp;</TD>
+			<TD CLASS="DescriptionCell">numeric&nbsp;</TD><TD CLASS="DescriptionCell">9&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>nInvalidVac
+			(U8111)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">numeric&nbsp;</TD><TD CLASS="DescriptionCell">5&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>vRemark
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">备注&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">510&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>iDelayNum
+			(U8111)
+			</TD><TD CLASS="DescriptionCell">&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>nTotalAffairLeave
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">累计事假&nbsp;</TD>
+			<TD CLASS="DescriptionCell">numeric&nbsp;</TD><TD CLASS="DescriptionCell">9&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>bLastFlag
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">当前记录标识&nbsp;</TD>
+			<TD CLASS="DescriptionCell">bit&nbsp;</TD><TD CLASS="DescriptionCell">1&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>iRecordId
+			(U8110)
+			</TD><TD CLASS="DescriptionCell">记录序号&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+		</TABLE>
+			<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

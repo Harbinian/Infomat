@@ -39,6 +39,7 @@ apps/mdm-platform 流程治理快照导入
 
 - `docs/norms/{部门}部门-能力-流程-系统映射关系.md` 是流程输入基线。
 - `docs/company-sankey-data.json` 是 parser 生成快照。
+- parser按`docs/norms/`当前一级目录中以`能力层与MDM建设要求.md`结尾的文件名自动发现MDM建设要求输入，不维护另一份部门文件硬编码清单；`sourceManifest.files`记录实际发现文件及摘要，主线检查核对发现结果与清单完全一致。
 - `pmo/procedure-management/dashboard.html` 是展示副本，不是流程输入基线维护入口。
 - `apps/mdm-platform` 只在导入快照后承接结构化查看和后续治理，不反向覆盖 `docs/norms/`。
 
@@ -200,11 +201,14 @@ DeepSeek V4 Pro独立结构预审（`reasoning_effort=high`）
 ## 5. MDM 平台主线
 
 ```text
-docs/contracts/document-structured-output.schema.json
+docs/norms/ + docs/organization/
+  ↓ scripts/parse-sankey-data.mjs
+docs/company-sankey-data.json
+  ↓ scripts/sync-process-governance-mainline.mjs
+apps/mdm-platform/scripts/import-process-governance-mysql.js
   ↓
-apps/mdm-platform/server/db.js
-  ↓
-apps/mdm-platform/server/routes/*
+apps/mdm-platform/server/processGovernanceMysqlRepository.js
+apps/mdm-platform/server/routes/processDesignMysql.js
   ↓
 apps/mdm-platform/public/index.html
   ↓
@@ -233,7 +237,8 @@ npm run test:mainline
 - 运行态数据库不是仓库真源。
 - 平台脚本只服务 MDM 时留在 `apps/mdm-platform/scripts/`。
 - 跨资料、跨 PMO、跨 app 的脚本进入仓库级 `scripts/`。
-- MDM现有正式流程编制继续以`docs/contracts/process-governance-v3.schema.json`为结构规则；兼容导入v1、v2，保存和导出统一为v3。原生V7使用独立的预览核对、提升和正式版本路径，不把V7正文投影成v3，也不允许通过3000通用编辑、通用下一版草稿或旧结构化导入入口修改或降级V7正文。历史文档结构化输出字段仍以`docs/contracts/document-structured-output.schema.json`为兼容规则，各路径都不反向覆盖`docs/norms/`。
+- MDM现有正式流程编制继续以`docs/contracts/process-governance-v3.schema.json`为结构规则；导入v1至v3，保存和导出统一为v3。原生V7使用独立的预览核对、提升和正式版本路径，不把V7正文投影成v3，也不允许通过3000通用编辑、通用下一版草稿或旧结构化导入入口修改或降级V7正文。历史文档结构化输出字段仍以`docs/contracts/document-structured-output.schema.json`为兼容规则，各路径都不反向覆盖`docs/norms/`。
+- 正式流程治理快照同步只调用现有MySQL导入器。`server/db.js`、`init-db.js`、`sync-process-governance-org.js`、`import-process-governance.js`和`check-process-governance.js`只保留为SQLite遗留迁移或隔离测试实现，对外命令统一使用`legacy-sqlite:`前缀。
 - 3001继续作为独立、无状态的单流程编制工具运行。MDM不代管3001。用户在3001下载V7文件后，只有在3000预览和正式开关、唯一试点`process_ref`、权限、部门范围、摘要和阻断项全部通过时，才可人工上传并受控承接；3000不与3001通信，也不读取3001运行时草稿。
 - MDM“流程治理→流程编制”使用`apps/mdm-platform/public/process-governance-editor/`中的本地编制工作台，复用3001的字段编制、稳定排序、结构评分和跨职能流程图交互。页面通过MDM本地接口读取结构规则和目录，不访问3001服务。
 - 当前 MDM 不持久化 `work_role_bindings`；非空关系导入必须返回 `WORK_ROLE_BINDINGS_UNSUPPORTED`，避免静默丢失。行政人事目录和受控试点稳定后，再建设 MySQL 派生表和变更申请能力。
@@ -252,6 +257,7 @@ npm run test:mainline
 ```text
 pmo/信息化项目_计划管控真源.md
 pmo/信息化项目_WBS结构真源.md
+pmo/信息化项目_执行标准真源.md
 pmo/信息化项目_工作平衡.md
 pmo/信息化项目_工作开展原则.md
 pmo/信息化项目_协同工作规则.md
@@ -273,7 +279,7 @@ pmo/gantt-react/
 - 部门主备岗、会议和行动项协同规则以 `pmo/信息化项目_协同工作规则.md` 为准，当前主备岗人员以 `pmo/信息化项目_部门主备对接人名单.md` 为准。
 - `pmo/信息化项目_协同工作规则_群通知.md` 只用于信息化工作群发布，不是真源。
 - 历史 XLSX / MPP / CSV 任务导入文件已废弃，不作为当前输入、不再保留或读取。
-- `pmo/gantt-react/public/tasks.json` 是 React 应用消费数据，不是手工维护真源。
+- 两份`tasks.json`和两份`pmo-source-manifest.json`是React应用直接消费的受控派生文件，不是手工维护真源；修改七份PMO Markdown真源后必须运行固定生成命令和`npm run test:pmo-task-data`。
 - `apps/weekly-action-service/` 是 3002 周会行动项运行台账服务，默认写入 `artifacts/weekly-actions/`；它不回写 PMO Markdown 真源、`tasks.json` 或 MDM 数据库。
 
 ## 7. 信息表收集主线
@@ -304,6 +310,7 @@ docs/superpowers/specs/*
 docs/superpowers/plans/*
 .planning/*
 .agents/*
+.codex/config.toml
 AGENTS.md
 CODEX.md
 ```
@@ -313,6 +320,8 @@ CODEX.md
 - `docs/superpowers/` 用于追溯历史设计和计划，不作为当前执行真源。
 - `AGENTS.md` 和 `CODEX.md` 是 Codex 当前协作入口。
 - `.agents/` 是 Codex 可用的项目技能和提示材料，不放项目生成物。
+- `.codex/config.toml`只保存仓库内Codex展示与推理偏好，不保存Secret、主机连接、个人路径、运行状态或业务事实。
+- 主线直接消费的派生文件按`docs/adr/0004-controlled-derived-consumer-files.md`的`Proposed`清单维护；该状态不表示架构评审已经接受，也不授权处理历史输出。
 - 历史方案如与当前边界文件冲突，以 `REPOSITORY_BOUNDARY.md`、`DIRECTORY_OWNERSHIP.md` 和本文件为准。
 - 代码、脚本、接口、数据库结构、前端行为、启动命令或测试命令变化时，必须同步更新对应文档。
 
@@ -322,13 +331,14 @@ CODEX.md
 |---|---|---|
 | 改 MDM 时顺手改 `docs/norms/` | 平台代码和流程输入基线混线 | 先确认是否是资料变更任务 |
 | 改 PMO 驾驶舱时手工重造流程数据 | 展示副本会偏离流程输入基线 | 修改流程输入基线后运行 parser |
-| 跑测试时写共享 `platform.db` | 会污染平台本地状态 | 使用 `MDM_DB_PATH` 隔离数据库 |
+| 跑SQLite遗留测试时写共享 `platform.db` | 会污染平台本地状态 | 只用`legacy-sqlite:`命令并通过`MDM_DB_PATH`指定隔离库；正式主线使用MySQL |
 | 整理文档时移动 `apps/mdm-platform/` | 运行系统路径被脚本和说明引用 | 先写迁移计划和验证命令 |
 | 把截图、zip、解包目录作为证据长期提交 | 检索噪音高，容易误导 AI | 放入 `artifacts/` 或精选到 `docs/samples/` |
 
-## 10. 下一步收口路线
+## 10. 持续维护检查
 
-第一步：完成仓库边界审计和三份边界文件。  
-第二步：为 `docs/reports/`、`docs/architecture/`、`scripts/` 分组补 README。  
-第三步：只迁移低风险生成物和根目录临时文件。  
-第四步：评估是否需要拆仓库；拆仓库前必须保持流程治理链路可验证。
+1. 修改流程输入基线、组织真源或工作角色后，重新生成受控消费文件并运行摘要、引用和驾驶舱一致性检查。
+2. 修改七份PMO Markdown真源后，重新生成两份任务数据和两份清单，并核对全部真源摘要。
+3. 正式流程治理同步只使用MySQL入口；SQLite遗留实现只在显式隔离的迁移或测试场景使用。
+4. 新增受控派生消费文件、目录级`AGENTS.md`或长期架构例外时，同步更新边界文件、责任矩阵、上下文说明和对应ADR状态。
+5. 历史输出在责任、敏感性、直接消费关系和恢复路径确认前，只登记分类，不移动、不删除。

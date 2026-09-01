@@ -1,0 +1,509 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>SA_ReturnsApplyDetail Table</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">SA_ReturnsApplyDetail Table 
+			&nbsp;(SA 销售管理)
+			
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>退货申请单子表</p>
+		
+		<h4 class=dxh4>Columns</h4>
+		<table class="columnlisttable" cellspacing="0">
+			<tr valign="top"><th align=middle>&nbsp;</th><th nowrap>Column Name</th><th nowrap>Description</th><th nowrap>Datatype</th><th nowrap>Length</th><th nowrap>Allow Nulls</th></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iNatSum
+			
+			</strong></td><td class="descriptioncell">本币价税合计&nbsp;</td><td>money</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cParentCode
+			
+			</strong></td><td class="descriptioncell">父节点编码&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bgift
+			
+			</strong></td><td class="descriptioncell">赠品&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cbatchproperty10
+			
+			</strong></td><td class="descriptioncell">批次属性10&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine28
+			
+			</strong></td><td class="descriptioncell">表体自定义项7&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ID
+			
+			</strong></td><td class="descriptioncell">ID&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cFree9
+			
+			</strong></td><td class="descriptioncell">自由项9&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine29
+			
+			</strong></td><td class="descriptioncell">表体自定义项8&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cSCloser
+			
+			</strong></td><td class="descriptioncell">行关闭人&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cInVouchType
+			
+			</strong></td><td class="descriptioncell">入库单单类型&nbsp;</td><td>nvarchar</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iQuotedPrice
+			
+			</strong></td><td class="descriptioncell">报价&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cItemCode
+			
+			</strong></td><td class="descriptioncell">项目编码&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cvmivencode
+			
+			</strong></td><td class="descriptioncell">供货商编码&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cdemandcode
+			
+			</strong></td><td class="descriptioncell">需求跟踪号&nbsp;</td><td>nvarchar</td><td>40&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>idemandtype
+			
+			</strong></td><td class="descriptioncell">需求跟踪方式&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cFree3
+			
+			</strong></td><td class="descriptioncell">自由项3&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine25
+			
+			</strong></td><td class="descriptioncell">表体自定义项4&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>irowno
+			
+			</strong></td><td class="descriptioncell">行号&nbsp;</td><td>bigint</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iCorID
+			
+			</strong></td><td class="descriptioncell">原发货单号&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cFree8
+			
+			</strong></td><td class="descriptioncell">自由项8&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iExpiratDateCalcu
+			
+			</strong></td><td class="descriptioncell">有效期推算方式&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iAppNum
+			
+			</strong></td><td class="descriptioncell">申请件数&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iBatch
+			
+			</strong></td><td class="descriptioncell">批次&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cdemandid
+			
+			</strong></td><td class="descriptioncell">需求跟踪id&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine34
+			
+			</strong></td><td class="descriptioncell">表体自定义项13&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fcusminprice
+			
+			</strong></td><td class="descriptioncell">最低售价&nbsp;</td><td>decimal</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cchildcode
+			
+			</strong></td><td class="descriptioncell">子节点编码&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>AutoID
+			
+			</strong></td><td class="descriptioncell">autoid&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cbatchproperty5
+			
+			</strong></td><td class="descriptioncell">批次属性5&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iPPartID
+			
+			</strong></td><td class="descriptioncell">母件物料ID&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cContractRowGuid
+			
+			</strong></td><td class="descriptioncell">合同标的RowGuid&nbsp;</td><td>uniqueidentifier</td><td>16&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine35
+			
+			</strong></td><td class="descriptioncell">表体自定义项14&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine32
+			
+			</strong></td><td class="descriptioncell">表体自定义项11&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cInCode
+			
+			</strong></td><td class="descriptioncell">入库单号&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iMassDate
+			
+			</strong></td><td class="descriptioncell">保质期&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cFree1
+			
+			</strong></td><td class="descriptioncell">自由项1&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fSaleCost
+			
+			</strong></td><td class="descriptioncell">零售单价&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fretsum
+			
+			</strong></td><td class="descriptioncell">执行金额&nbsp;</td><td>decimal</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cFree2
+			
+			</strong></td><td class="descriptioncell">自由项2&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cdemandmemo
+			
+			</strong></td><td class="descriptioncell">需求分类说明&nbsp;</td><td>nvarchar</td><td>300&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cbSysBarCode
+			
+			</strong></td><td class="descriptioncell">单据行条码&nbsp;</td><td>nvarchar</td><td>80&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>KL
+			
+			</strong></td><td class="descriptioncell">扣率（%）&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iorderrowno
+			
+			</strong></td><td class="descriptioncell">订单行号&nbsp;</td><td>bigint</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cFree6
+			
+			</strong></td><td class="descriptioncell">自由项6&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cbatchproperty2
+			
+			</strong></td><td class="descriptioncell">批次属性2&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cContractTagCode
+			
+			</strong></td><td class="descriptioncell">合同标的编码&nbsp;</td><td>nvarchar</td><td>150&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iDLsID
+			
+			</strong></td><td class="descriptioncell">发货单子表id&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iNatDisCount
+			
+			</strong></td><td class="descriptioncell">本币折扣额&nbsp;</td><td>money</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine31
+			
+			</strong></td><td class="descriptioncell">表体自定义项10&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine30
+			
+			</strong></td><td class="descriptioncell">表体自定义项9&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cMemo
+			
+			</strong></td><td class="descriptioncell">备注&nbsp;</td><td>nvarchar</td><td>255&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cbatchproperty4
+			
+			</strong></td><td class="descriptioncell">批次属性4&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cItemName
+			
+			</strong></td><td class="descriptioncell">项目名称&nbsp;</td><td>nvarchar</td><td>255&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bneedbill
+			
+			</strong></td><td class="descriptioncell">需要开票&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iSum
+			
+			</strong></td><td class="descriptioncell">价税合计&nbsp;</td><td>money</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dvDate
+			
+			</strong></td><td class="descriptioncell">失效日期&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dExpirationdate
+			
+			</strong></td><td class="descriptioncell">有效期计算项&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cbatchproperty8
+			
+			</strong></td><td class="descriptioncell">批次属性8&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>KL2
+			
+			</strong></td><td class="descriptioncell">扣率2（%）&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bsaleprice
+			
+			</strong></td><td class="descriptioncell">报价含税&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iAppQuantity
+			
+			</strong></td><td class="descriptioncell">申请数量&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fSalePrice
+			
+			</strong></td><td class="descriptioncell">零售金额&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cVenAbbName
+			
+			</strong></td><td class="descriptioncell">入库单供应商简称&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine37
+			
+			</strong></td><td class="descriptioncell">表体自定义项16&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iNatTax
+			
+			</strong></td><td class="descriptioncell">本币税额&nbsp;</td><td>money</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDLCode
+			
+			</strong></td><td class="descriptioncell">发货单号&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cInvSN
+			
+			</strong></td><td class="descriptioncell">序列号&nbsp;</td><td>nvarchar</td><td>200&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine27
+			
+			</strong></td><td class="descriptioncell">表体自定义项6&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iPPartSeqID
+			
+			</strong></td><td class="descriptioncell">选配序号&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iInvExchRate
+			
+			</strong></td><td class="descriptioncell">换算率&nbsp;</td><td>userdecimal</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine26
+			
+			</strong></td><td class="descriptioncell">表体自定义项5&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dMDate
+			
+			</strong></td><td class="descriptioncell">生产日期&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cItem_class
+			
+			</strong></td><td class="descriptioncell">项目大类编码&nbsp;</td><td>nvarchar</td><td>10&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cWhCode
+			
+			</strong></td><td class="descriptioncell">仓库编码&nbsp;</td><td>nvarchar</td><td>10&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cvencode
+			
+			</strong></td><td class="descriptioncell">入库单供应商编码&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>isosid
+			
+			</strong></td><td class="descriptioncell">对应订单子表ID&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iNum
+			
+			</strong></td><td class="descriptioncell">批复件数&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cFree7
+			
+			</strong></td><td class="descriptioncell">自由项7&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iMoney
+			
+			</strong></td><td class="descriptioncell">无税金额&nbsp;</td><td>money</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine24
+			
+			</strong></td><td class="descriptioncell">表体自定义项3&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine36
+			
+			</strong></td><td class="descriptioncell">表体自定义项15&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cFree5
+			
+			</strong></td><td class="descriptioncell">自由项5&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iTB
+			
+			</strong></td><td class="descriptioncell">退补标志&nbsp;</td><td>tinyint</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cSoCode
+			
+			</strong></td><td class="descriptioncell">订单号&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fretqty
+			
+			</strong></td><td class="descriptioncell">执行数量&nbsp;</td><td>decimal</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cbatchproperty7
+			
+			</strong></td><td class="descriptioncell">批次属性7&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cExpirationdate
+			
+			</strong></td><td class="descriptioncell">有效期至&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iDisCount
+			
+			</strong></td><td class="descriptioncell">折扣额&nbsp;</td><td>money</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cFree10
+			
+			</strong></td><td class="descriptioncell">自由项10&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cbatchproperty1
+			
+			</strong></td><td class="descriptioncell">批次属性1&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cVerifyMemo
+			
+			</strong></td><td class="descriptioncell">批复意见&nbsp;</td><td>nvarchar</td><td>255&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iQuantity
+			
+			</strong></td><td class="descriptioncell">批复数量&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iTaxRate
+			
+			</strong></td><td class="descriptioncell">税率（%）&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iUnitPrice
+			
+			</strong></td><td class="descriptioncell">无税单价&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iTax
+			
+			</strong></td><td class="descriptioncell">税额&nbsp;</td><td>money</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cReasonCode
+			
+			</strong></td><td class="descriptioncell">退货原因编码&nbsp;</td><td>nvarchar</td><td>10&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>idemandseq
+			
+			</strong></td><td class="descriptioncell">需求跟踪行号&nbsp;</td><td>bigint</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusInvCode
+			
+			</strong></td><td class="descriptioncell">客户存货编码&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cBatch
+			
+			</strong></td><td class="descriptioncell">批号&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine22
+			
+			</strong></td><td class="descriptioncell">表体自定义项1&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine33
+			
+			</strong></td><td class="descriptioncell">表体自定义项12&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iTaxUnitPrice
+			
+			</strong></td><td class="descriptioncell">含税单价&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iNatMoney
+			
+			</strong></td><td class="descriptioncell">本币金额&nbsp;</td><td>money</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cInvCode
+			
+			</strong></td><td class="descriptioncell">存货编码&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDefine23
+			
+			</strong></td><td class="descriptioncell">表体自定义项2&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cItem_CName
+			
+			</strong></td><td class="descriptioncell">项目大类名称&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cContractID
+			
+			</strong></td><td class="descriptioncell">合同编码&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iPPartQty
+			
+			</strong></td><td class="descriptioncell">母件数量&nbsp;</td><td>userdecimal</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cbatchproperty3
+			
+			</strong></td><td class="descriptioncell">批次属性3&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cMassUnit
+			
+			</strong></td><td class="descriptioncell">保质期单位&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cFree4
+			
+			</strong></td><td class="descriptioncell">自由项4&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusInvName
+			
+			</strong></td><td class="descriptioncell">客户存货名称&nbsp;</td><td>nvarchar</td><td>100&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cbatchproperty9
+			
+			</strong></td><td class="descriptioncell">批次属性9&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iNatUnitPrice
+			
+			</strong></td><td class="descriptioncell">本币单价&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cbatchproperty6
+			
+			</strong></td><td class="descriptioncell">批次属性6&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cUnitID
+			
+			</strong></td><td class="descriptioncell">销售单位编码&nbsp;</td><td>nvarchar</td><td>35&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+		</table>
+		<h4 class=dxh4>Triggers</h4>
+		<TABLE CLASS="FilteredItemListTable" CellSpacing="0">
+			<TR VALIGN="top"><TH width=30%>Trigger</TH><TH width=50%>Description</TH>
+			<TR><TD CLASS=LinkCell WIDTH="50%"><A HREF="607255a5-5fe4-43ef-bb13-d0a83c27cee0.html">SA_TriOnAppReturnsIns</A></TD><TD CLASS="DescriptionCell" WIDTH="50%">&nbsp;</TD>
+			<TR><TD CLASS=LinkCell WIDTH="50%"><A HREF="8f299979-31ba-4172-9c9e-121e927d9168.html">SA_TriOnReturnsAppDel</A></TD><TD CLASS="DescriptionCell" WIDTH="50%">&nbsp;</TD>
+			<TR><TD CLASS=LinkCell WIDTH="50%"><A HREF="b646d4d1-d0c7-491a-b3d5-6da0fb9f1ead.html">SA_TriOnReturnsAppUpdate</A></TD><TD CLASS="DescriptionCell" WIDTH="50%">&nbsp;</TD>
+		</TABLE>
+		<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

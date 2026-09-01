@@ -31,17 +31,19 @@ Infomat 是航空复材制造领域的信息化资料与工具仓库，包含：
   - `docs/samples/`：必要样例（用于复现、格式示例与对齐）
   - `docs/superpowers/`：历史方案与计划（可能含旧路径，按仓库结构说明做替换）
   - `docs/norms/`：制度/表单源文件材料与部门流程输入基线（流程地图/数据地图）
-  - `docs/organization/`：组织架构与部门职责（**部门→域映射的真源**）
-  - `docs/contracts/`：脚本和模型使用的机器可读校验规则，例如文档结构化输出结构规则
+  - `docs/organization/`：组织架构与部门职责（**部门→域映射的真源**；修改前读取目录 `AGENTS.md`）
+  - `docs/contracts/`：脚本和模型使用的机器可读校验规则，例如文档结构化输出结构规则（修改前读取目录 `AGENTS.md`）
   - `pmo/procedure-management/dashboard.html`：桑基图数据内嵌于 `<script id="sankey-data">`，由 `scripts/parse-sankey-data.mjs` 直接注入
 - `pmo/`：项目管理工作室
   - `pmo/procedure-management/dashboard.html`：**流程地图驾驶舱**（单文件可双击打开，数据已内嵌于 `<script id="sankey-data">`）
   - `pmo/gantt-react/`：React 甘特图 / PMO 看板（开发模式 `npm run dev`）
   - `pmo/deliverables/`：PMO 受控交付物，修改前读取目录 `AGENTS.md`
+  - `pmo/organization-dynamics/`：组织数字化参与度模型，修改前读取目录 `AGENTS.md`
 - `scripts/`：仓库级脚本（修改前读取 `scripts/AGENTS.md`）
   - `scripts/parse-sankey-data.mjs`：从流程输入基线生成桑基图 JSON
 - `.planning/`：架构/结构/集成规划与扫描记录
 - `.agents/`：Codex 可用的项目技能与提示材料（不应包含生成物）
+- `.codex/config.toml`：仓库内 Codex 展示与推理偏好，不保存凭据、主机配置或业务事实
 
 ## 代码与文档同步
 
@@ -51,9 +53,10 @@ Infomat 是航空复材制造领域的信息化资料与工具仓库，包含：
 
 如果确认无需文档更新,提交或交付说明中必须写明原因。
 
-## 生成物与样例规则
+## 派生文件与样例规则
 
-- 所有可再生成输出统一放到 `artifacts/`（或工具自定义输出目录），不得提交到仓库
+- 主线直接消费、具有固定生成命令和一致性检查的文件，可以按 [ADR-0004](docs/adr/0004-controlled-derived-consumer-files.md) 的 `Proposed` 方案继续进入版本控制；该 ADR 尚未 `Accepted`
+- 临时输出、缓存、日志、截图、一次性预览和其他可再生成中间文件统一放到 `artifacts/`（或工具声明的临时目录），不得提交到仓库
 - 仅保留“必要样例”到 `docs/samples/`：用于说明输入输出格式、核对规则、复现最小流程
 - 禁止提交：浏览器 profile、抓取记录、临时解包目录、批量导出结果、含敏感信息的日志
 

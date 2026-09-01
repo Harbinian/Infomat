@@ -52,35 +52,26 @@ const processIssueCardBannedTerms = [
 ];
 
 const handoffCandidateCreatedIdentifier = ['handoff', 'candidate', 'created'].join('_');
-const allowedMachineIdentifierPattern = new RegExp(
-  '(^|[^A-Za-z0-9_])' + handoffCandidateCreatedIdentifier + '(?=[^A-Za-z0-9_]|$)',
-  'g'
-);
-
-function maskAllowedMachineIdentifier(line) {
-  return line.replace(allowedMachineIdentifierPattern, '$1');
-}
 
 function findBannedTerms(line) {
-  const maskedLine = maskAllowedMachineIdentifier(line);
-  const hits = bannedTerms.filter(term => maskedLine.includes(term));
-  if (/candidate/i.test(maskedLine)) hits.push('candidate');
-  return hits;
+  return bannedTerms.filter(term => line.includes(term));
 }
 
-assert.deepStrictEqual(findBannedTerms(handoffCandidateCreatedIdentifier), [], 'the exact machine event identifier must remain allowed');
+// API、事件和结构字段属于稳定机器约定，不按用户可见中文术语处理。
 [
   'candidate',
   'Candidate',
   'CANDIDATE',
-  '候' + '选',
-  `${handoffCandidateCreatedIdentifier} candidate`,
-  `${handoffCandidateCreatedIdentifier}候` + '选',
+  handoffCandidateCreatedIdentifier,
+  'detail.candidate',
+  'candidate_rule_code',
+  'generate_candidates',
   `${handoffCandidateCreatedIdentifier}_extra`,
   `foo_${handoffCandidateCreatedIdentifier}`
 ].forEach(sample => {
-  assert.ok(findBannedTerms(sample).length > 0, `user-facing sample must be rejected: ${sample}`);
+  assert.deepStrictEqual(findBannedTerms(sample), [], `stable machine term must remain allowed: ${sample}`);
 });
+assert.ok(findBannedTerms('候' + '选').length > 0, 'user-facing Chinese banned term must be rejected');
 
 function toRepoPath(filePath) {
   return filePath.replace(/\\/g, '/');

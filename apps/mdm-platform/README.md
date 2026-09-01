@@ -54,9 +54,9 @@
 
 ## 流程治理统一入口与3001格式适配
 
-- 3001继续作为独立、无状态的单流程编制工具运行。MDM不停止、不代管、不远程读取3001，只接收用户选择的v1/v2文件。
-- MDM顶部只保留一个“流程治理”入口。现有正式工作区为“流程编制、跨部门承接待办、承接冲突待办、V7预览核对”；默认关闭的数据生命周期治理候选入口只有在精确试点配置有效时才显示。
-- “流程编制”直接显示MDM本地的3001式工作台，包含文字编制、条目侧栏、稳定排序、结构化学习评分和跨职能流程图。MDM复用相同v2结构规则，但不通过浏览器调用3001服务。
+- 3001继续作为独立、无状态的单流程编制工具运行。MDM不停止、不代管、不远程读取3001。现有V3编制路径由用户选择v1至v3文件并统一规范化为v3；原生V7另走默认关闭、精确单流程的受控上传路径。
+- MDM顶部只保留一个“流程治理”入口。现有工作区为“流程编制、跨部门承接待办、承接冲突待办、V7预览核对”；默认关闭的数据生命周期治理试点入口只有在精确配置有效时才显示。
+- “流程编制”直接显示MDM本地工作台，包含文字编制、条目侧栏、稳定排序、结构评分和跨职能流程图。该路径使用v3结构规则，不通过浏览器调用3001服务。
 - 部门主对接人可以新建、导入、保存草稿和提交审核；管理员只能打开已有草稿查看。导出备份不替代保存草稿。
 - MDM兼容`process-governance-v1`、`process-governance-v2`和`process-governance-v3`，服务端统一规范化、保存和导出为v3；3001源文件不被修改。v1、v2表单状态设为`unspecified`，不得按名称或明细数量推断。
 - 用户可把3001导出的`process-governance-v7`文件上传到“V7预览核对”。3000保存案例、修订、双方部门核对结果和操作记录；预览阶段不转换为V3、不写正式草稿和版本，核对结果也不写回V7文件。预览和正式写入默认关闭，运行实例还必须通过`PROCESS_V7_TRIAL_PROCESS_REF`精确限定一个试点流程；只读访问不受该配置限制。正式库M1/M2已于2026-08-25按授权应用，当前只读检查确认迁移记录与目标结构一致；历史事后演练不能替代本次代码对应的隔离验收。本轮未启动3000，未开启V7开关，也未配置试点`process_ref`；新的全库备份恢复、隔离MySQL验收和真实脱敏流程试点均待分别批准。
@@ -76,7 +76,7 @@
 - 固定角色模型为每个角色返回只读`visibleTabs`。创建账号、编辑账号和授权角色时显示多角色标签并集，但菜单可见性不替代服务端权限校验。
 - 登录后的“待办优先”视图只显示“我现在该做什么”，最多给出3个下一步动作；职责图、角色说明和活动信息移到“全量职责”。历史V3流程编制器默认折叠并延迟加载，只用于旧草稿。
 - 流程发布后的数据对象身份、主数据认定、统一对象匹配、关键字段和生命周期规则由MDM工作组处理。业务部门只答复MDM定向提出的具体事实问题并提供可核对依据，不填写完整治理工作包。
-- 数据生命周期治理候选能力默认关闭，必须同时配置`PROCESS_DATA_GOVERNANCE_ENABLED=1`和唯一`PROCESS_DATA_GOVERNANCE_TRIAL_PROCESS_VERSION_ID`。工作包只绑定不可变`process_version_id`和来源摘要，不读取原始3001文件；确定性候选不调用AI，也不自动确认。
+- 数据生命周期治理试点能力默认关闭，必须同时配置`PROCESS_DATA_GOVERNANCE_ENABLED=1`和唯一`PROCESS_DATA_GOVERNANCE_TRIAL_PROCESS_VERSION_ID`。工作包只绑定不可变`process_version_id`和来源摘要，不读取原始3001文件；固定规则生成的待核对内容不调用AI，也不自动确认。
 
 ## 快速启动
 
@@ -177,7 +177,7 @@ $env:MDM_DB_PATH="$env:TEMP\mdm-platform-baseline.db"
 ## 常用命令
 
 ```bash
-npm run init-db
+npm run init:mysql
 npm run smoke
 npm run test:org
 npm run test:catalog
@@ -215,6 +215,8 @@ npm run migrate:rbac-raci-v2:apply
 npm run smoke:data-map-mysql
 npm run import:process-input-baseline-review -- --review-run artifacts/process-input-baseline-review/<run-id>
 ```
+
+正式运行和正式流程治理同步使用MySQL。`legacy-sqlite:init-db`、`legacy-sqlite:sync-process-org`、`legacy-sqlite:import-process-governance`和`legacy-sqlite:check-process-governance`只服务遗留迁移或隔离测试，不是当前正式入口。
 
 历史批量开户脚本已改为拒绝执行。新账号只能通过管理员接口创建为待启用状态；管理员明确启用时系统生成一次性临时密码，并要求首次登录改密。
 
@@ -257,6 +259,7 @@ npm run smoke:process-governance-mysql
 - 旧 SQLite `platform.db` 不迁移；MySQL 通过组织真源、流程快照和基线脚本重建。遗留 SQLite 只保留为隔离测试和待删除实现，不作为运行回退路径。
 - 流程治理、统一问题池、流程设计和指导意见以 MySQL 身份/RBAC、流程治理读模型和对应治理表为正式口径；问题池详情和写动作必须按 MySQL 角色、部门和权限二次校验。
 - 质量问题和映射待办关闭只支持 MySQL 路径；除“说明这条核验项不是问题”且填写原因外，关闭必须同时满足 `source_resolved` 和最新导入批次中对应问题指纹已消失。
+- MySQL基础结构包含`process_import_fingerprints`，用于保存每次导入的质量问题和映射待办指纹；`npm run init:mysql`以幂等建表补齐已有实例。本次只修复仓库结构定义并通过静态测试，没有对任何运行实例执行初始化或迁移。
 - 迁移过渡期仍依赖遗留本地库的测试，必须通过隔离路径运行，不能污染共享运行态文件，也不能写入新的 SQLite 专用能力。
 - 数据地图字段域已直接切换到 MySQL：`/api/data-map/contexts`、`/api/field-entries/*`、`/api/field-identities/*`、字段导入、字段导出和黄金源质量进度都通过 Data Map MySQL repository 访问；`context_id` 是公开主键，`mapping_id` 只作为短期兼容别名。
 - 术语治理已切换到 MySQL：`/api/terminology` 和 `/api/terminology/types` 通过 `terminologyMysqlRepository` 访问独立 `terminology_*` 表；`/api/terminology/processes` 使用流程治理 MySQL 读模型 `process_mapping_records` 作为流程选择来源，不再读取 SQLite `terms`。

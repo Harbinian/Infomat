@@ -1,0 +1,58 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>TCProc_BusinessData_Check Stored Procedure</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">TCProc_BusinessData_Check Stored Procedure 
+			&nbsp;(MK 营销管理)
+			
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>关于数据来源的修改，一旦自定义项设置以后，产生了业务数据，则不在允许修改数据来源。 </p>
+		<h4 class=dxh4>Remark</h4><p>关于数据来源的修改，一旦自定义项设置以后，产生了业务数据，则不在允许修改数据来源。
+
+所谓“数据来源的修改”包含：1、由其他来源（手工输入，系统档案）修改为引用CRM预置的档案
+2、由引用CRM预置的档案修改为其他方式（手工输入，系统档案，系统档案的其他CRM档案）
+不包含：只要修改前和修改后不涉及CRM预置的档案，还是可以随便改的。
+
+调用时机： U8在自定义项设置时调用(修改数据来源以及删除扩展自定义项)</p>
+		<h4 class=dxh4>Parameters</h4>
+		<TABLE CLASS="FilteredItemListTable" CellSpacing="0">
+			<TR VALIGN="top"><TH width=30%>Parameter</TH><TH width=50%>Description</TH><TH width=50%>Datatype</TH><TH width=50%>Length</TH><TH width=50%>Allow Nulls</TH>
+			<TR>
+			<TD CLASS=DescriptionCell>@cClass
+			
+			</TD><TD CLASS="DescriptionCell">基础档案对象的名字(客户，联系人，存货，单据头)&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">12&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>@cDicDbName
+			
+			</TD><TD CLASS="DescriptionCell">要增加的字段的名字UserDef_base.cDicDbName&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">120&nbsp;</TD>
+			<TD CLASS="DescriptionCell"><img src=images/tick.png>&nbsp;</TD>
+			</TR>
+		</TABLE>
+		<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>
