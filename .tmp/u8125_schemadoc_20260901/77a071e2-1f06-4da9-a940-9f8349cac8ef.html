@@ -1,0 +1,94 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>voucheritems_lang Table</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">voucheritems_lang Table 
+			&nbsp;(AS 公用目录设置)
+			&nbsp;[U861]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>单据显示模板明细语言表</p>
+		
+		<h4 class=dxh4>Columns</h4>
+		<table class="columnlisttable" cellspacing="0">
+			<tr valign="top"><th align=middle>&nbsp;</th><th nowrap>Column Name</th><th nowrap>Description</th><th nowrap>Datatype</th><th nowrap>Length</th><th nowrap>Allow Nulls</th></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fontstate
+			(U861)
+			</strong></td><td class="descriptioncell">单元控件字体&nbsp;</td><td>nvarchar</td><td>40&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap><img src=images/primarykey.png>&nbsp;</td><td class="linkcell">
+			<strong>guid
+			(U861)
+			</strong></td><td class="descriptioncell">ID&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>carditemname
+			(U861)
+			</strong></td><td class="descriptioncell">项目名称&nbsp;</td><td>nvarchar</td><td>500&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>vt_id
+			(U861)
+			</strong></td><td class="descriptioncell">单据模版号&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cardsection
+			(U861)
+			</strong></td><td class="descriptioncell">所在区域&nbsp;</td><td>nvarchar</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cMultiTableHeaderTitle
+			
+			</strong></td><td class="descriptioncell">多层表头情况下该列表头的各行数据，以{##}分隔&nbsp;</td><td>nvarchar</td><td>800&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cardnum
+			(U861)
+			</strong></td><td class="descriptioncell">所属单据编号&nbsp;</td><td>nvarchar</td><td>100&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ufts
+			(U861)
+			</strong></td><td class="descriptioncell">时间戳&nbsp;</td><td>timestamp</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cardformula1
+			(U861)
+			</strong></td><td class="descriptioncell">显示名称&nbsp;</td><td>nvarchar</td><td>500&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cardformula2
+			(U861)
+			</strong></td><td class="descriptioncell">工业用显示名称&nbsp;</td><td>nvarchar</td><td>500&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fieldname
+			(U861)
+			</strong></td><td class="descriptioncell">字段名称&nbsp;</td><td>nvarchar</td><td>40&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>localeid
+			(U861)
+			</strong></td><td class="descriptioncell">语言ID,zh-CN(简体中文),zh-TW(繁体中文),en-US(英文)&nbsp;</td><td>nvarchar</td><td>32&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+		</table>
+		<h4 class=dxh4>Indexes</h4>
+		<TABLE CLASS="FilteredItemListTable" CellSpacing="0">
+			<TR VALIGN="top"><TH width=30%>Index</TH><TH width=50%>Description</TH><TH>Primary</TH><TH>Unique</TH></TR>
+			<TR><TD CLASS=LinkCell WIDTH="50%"><A HREF="564efc74-95cc-426e-8dfa-3973cbe283d1.html">idx1_voucheritems_lang</A></TD><TD CLASS="DescriptionCell" WIDTH="50%">&nbsp;</TD><TD Class="Centered"></TD><TD Class="Centered"></TD></TR>
+			<TR><TD CLASS=LinkCell WIDTH="50%"><A HREF="9dd9a1ee-853c-4f0f-85d3-d3327a845144.html">idx_voucheritems_lang</A></TD><TD CLASS="DescriptionCell" WIDTH="50%">&nbsp;</TD><TD Class="Centered"></TD><TD Class="Centered"></TD></TR>
+			<TR><TD CLASS=LinkCell WIDTH="50%"><A HREF="c6c2c966-eebc-4a3e-a980-74630eb01837.html">pk_voucheritems_lang</A></TD><TD CLASS="DescriptionCell" WIDTH="50%">&nbsp;</TD><TD Class="Centered"><img src=images/tick.png></TD><TD Class="Centered"><img src=images/tick.png></TD></TR>
+			<TR><TD CLASS=LinkCell WIDTH="50%"><A HREF="cdd74c03-e97e-46fb-b2f7-a0452fa755f5.html">Idx_Main</A></TD><TD CLASS="DescriptionCell" WIDTH="50%">&nbsp;</TD><TD Class="Centered"></TD><TD Class="Centered"></TD></TR>
+		</TABLE>
+		<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

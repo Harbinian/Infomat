@@ -1,0 +1,445 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>QMMergeCheckDetail Table</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">QMMergeCheckDetail Table 
+			&nbsp;(QM 质量管理)
+			&nbsp;[U8110]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>检验单明细表</p>
+		
+		<h4 class=dxh4>Columns</h4>
+		<table class="columnlisttable" cellspacing="0">
+			<tr valign="top"><th align=middle>&nbsp;</th><th nowrap>Column Name</th><th nowrap>Description</th><th nowrap>Datatype</th><th nowrap>Length</th><th nowrap>Allow Nulls</th></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>DVDATE
+			(U8110)
+			</strong></td><td class="descriptioncell">失效日期&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CDEFINE35
+			(U8110)
+			</strong></td><td class="descriptioncell">表体自定义项14&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CVOUCHTYPE
+			(U8110)
+			</strong></td><td class="descriptioncell">单据类型&nbsp;</td><td>nvarchar</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>FREGNUM
+			(U8110)
+			</strong></td><td class="descriptioncell">合格接收件数&nbsp;</td><td>userdecimal</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>DARRIVALDATE
+			(U8110)
+			</strong></td><td class="descriptioncell">到货日期&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CFREE2
+			(U8110)
+			</strong></td><td class="descriptioncell">自由项2&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>SOURCECODE
+			(U8110)
+			</strong></td><td class="descriptioncell">到货单号&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CDEFINE27
+			(U8110)
+			</strong></td><td class="descriptioncell">表体自定义项6&nbsp;</td><td>userdecimal</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CMEMO
+			(U8110)
+			</strong></td><td class="descriptioncell">备注&nbsp;</td><td>nvarchar</td><td>255&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CITEMCODE
+			(U8110)
+			</strong></td><td class="descriptioncell">项目编码&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CITEMCNAME
+			(U8110)
+			</strong></td><td class="descriptioncell">项目大类名称&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CFREE9
+			(U8110)
+			</strong></td><td class="descriptioncell">自由项9&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>DEXPIRATIONDATE
+			(U8110)
+			</strong></td><td class="descriptioncell">有效期计算项&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CDEFINE24
+			(U8110)
+			</strong></td><td class="descriptioncell">表体自定义项3&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ISOURCEPROORDERAUTOID
+			(U8111)
+			</strong></td><td class="descriptioncell">源委外订单子表ID
+源委外订单子表ID
+&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>FDISNUM
+			(U8110)
+			</strong></td><td class="descriptioncell">不良品件数&nbsp;</td><td>userdecimal</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CINSPECTCODE
+			(U8110)
+			</strong></td><td class="descriptioncell">报检单单据编号&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ID
+			(U8110)
+			</strong></td><td class="descriptioncell">检验单ID&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ISOURCEPROORDERID
+			
+			</strong></td><td class="descriptioncell">来源生产订单ID&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>DINSPECTDATE
+			(U8110)
+			</strong></td><td class="descriptioncell">报检日期&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CWHCODE
+			(U8110)
+			</strong></td><td class="descriptioncell">仓库编码&nbsp;</td><td>nvarchar</td><td>10&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>DPRODATE
+			(U8110)
+			</strong></td><td class="descriptioncell">生产日期&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>FREGBREAKNUM
+			(U8110)
+			</strong></td><td class="descriptioncell">样本合格破坏件数&nbsp;</td><td>userdecimal</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CDEFINE28
+			(U8110)
+			</strong></td><td class="descriptioncell">表体自定义项7&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>IMASSDATE
+			(U8110)
+			</strong></td><td class="descriptioncell">保质期&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>INSPECTAUTOID
+			(U8110)
+			</strong></td><td class="descriptioncell">报检单行ID&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CINSPECTPERSON
+			(U8110)
+			</strong></td><td class="descriptioncell">报检人&nbsp;</td><td>nvarchar</td><td>40&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>BPUINFLAG
+			(U8110)
+			</strong></td><td class="descriptioncell">是否完全入库&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CDEFINE23
+			(U8110)
+			</strong></td><td class="descriptioncell">表体自定义项2&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bproinflag
+			
+			</strong></td><td class="descriptioncell">是否入库&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CPOCODE
+			(U8110)
+			</strong></td><td class="descriptioncell">采购/委外订单号&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>FCONNUM
+			(U8110)
+			</strong></td><td class="descriptioncell">让步接收件数&nbsp;</td><td>userdecimal</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CPROBATCH
+			
+			</strong></td><td class="descriptioncell">生产批号&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CFREE10
+			(U8110)
+			</strong></td><td class="descriptioncell">自由项10&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>INSPECTID
+			(U8110)
+			</strong></td><td class="descriptioncell">报检单ID&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CFREE1
+			(U8110)
+			</strong></td><td class="descriptioncell">自由项1&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>FDISQUANTITY
+			(U8110)
+			</strong></td><td class="descriptioncell">不良品数量&nbsp;</td><td>userdecimal</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>IBATCHCHKRESULT
+			(U8110)
+			</strong></td><td class="descriptioncell">批检验结果&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CDEFINE37
+			(U8110)
+			</strong></td><td class="descriptioncell">表体自定义项16&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CFREE8
+			(U8110)
+			</strong></td><td class="descriptioncell">自由项8&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CDEFINE33
+			(U8110)
+			</strong></td><td class="descriptioncell">表体自定义项12&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>BREJFLAG
+			(U8110)
+			</strong></td><td class="descriptioncell">是否生成了不良品处理单&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CCHECKTYPECODE
+			(U8110)
+			</strong></td><td class="descriptioncell">检验类型编码&nbsp;</td><td>nvarchar</td><td>10&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CITEMCLASS
+			(U8110)
+			</strong></td><td class="descriptioncell">项目大类编码&nbsp;</td><td>nvarchar</td><td>10&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CCHECKUNIT
+			(U8110)
+			</strong></td><td class="descriptioncell">检验计量单位编码&nbsp;</td><td>nvarchar</td><td>35&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ISOORDERTYPE
+			(U8110)
+			</strong></td><td class="descriptioncell">销售订单类型&nbsp;</td><td>tinyint</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CCONTRACTCODE
+			(U8110)
+			</strong></td><td class="descriptioncell">合同编号&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CFREE3
+			(U8110)
+			</strong></td><td class="descriptioncell">自由项3&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CCONTRACTSTRCODE
+			(U8110)
+			</strong></td><td class="descriptioncell">合同标的&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CPROORDERCODE
+			
+			</strong></td><td class="descriptioncell">生产订单号&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>UFTS
+			(U8110)
+			</strong></td><td class="descriptioncell">时间戳&nbsp;</td><td>timestamp</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>FQUANTITY
+			(U8110)
+			</strong></td><td class="descriptioncell">报检数量&nbsp;</td><td>userdecimal</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CDEFINE26
+			(U8110)
+			</strong></td><td class="descriptioncell">表体自定义项5&nbsp;</td><td>userdecimal</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CFREE4
+			(U8110)
+			</strong></td><td class="descriptioncell">自由项4&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>SOURCEAUTOID
+			(U8110)
+			</strong></td><td class="descriptioncell">来源单据子表ID&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CITEMNAME
+			(U8110)
+			</strong></td><td class="descriptioncell">项目名称&nbsp;</td><td>nvarchar</td><td>255&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CSOURCEPROORDERCODE
+			(U8111)
+			</strong></td><td class="descriptioncell">源委外订单号
+&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CDEFINE34
+			(U8110)
+			</strong></td><td class="descriptioncell">表体自定义项13&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CFREE6
+			(U8110)
+			</strong></td><td class="descriptioncell">自由项6&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>BEXIGENCY
+			(U8110)
+			</strong></td><td class="descriptioncell">是否急料&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CDEFINE25
+			(U8110)
+			</strong></td><td class="descriptioncell">表体自定义项4&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CFREE7
+			(U8110)
+			</strong></td><td class="descriptioncell">自由项7&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>FSUMNUM
+			(U8110)
+			</strong></td><td class="descriptioncell">累计入库件数&nbsp;</td><td>userdecimal</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CVENCODE
+			(U8110)
+			</strong></td><td class="descriptioncell">供应商编码&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>SOURCEID
+			(U8110)
+			</strong></td><td class="descriptioncell">来源单据主表ID&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>PLANLOTNUMBER
+			
+			</strong></td><td class="descriptioncell">计划批号&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>FSUMQUANTITY
+			(U8110)
+			</strong></td><td class="descriptioncell">累计入库数量&nbsp;</td><td>userdecimal</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CSOORDERCODE
+			(U8110)
+			</strong></td><td class="descriptioncell">需求跟踪号&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CDEFINE32
+			(U8110)
+			</strong></td><td class="descriptioncell">表体自定义项11&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CINSPECTTIME
+			(U8110)
+			</strong></td><td class="descriptioncell">报检时间&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>FCHECKQTY
+			(U8110)
+			</strong></td><td class="descriptioncell">检验数量&nbsp;</td><td>userdecimal</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CDEFINE30
+			(U8110)
+			</strong></td><td class="descriptioncell">表体自定义项9&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ISOORDERAUTOID
+			(U8110)
+			</strong></td><td class="descriptioncell">需求跟踪子表ID&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CDEFINE29
+			(U8110)
+			</strong></td><td class="descriptioncell">表体自定义项8&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>FREGQUANTITY
+			(U8110)
+			</strong></td><td class="descriptioncell">合格接收数量&nbsp;</td><td>userdecimal</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>FCONQUANTIY
+			(U8110)
+			</strong></td><td class="descriptioncell">让步接收数量&nbsp;</td><td>userdecimal</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>IORDERSEQ
+			(U8110)
+			</strong></td><td class="descriptioncell">销售订单行号&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>FNUM
+			(U8110)
+			</strong></td><td class="descriptioncell">报检件数&nbsp;</td><td>userdecimal</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>IPROORDERID
+			
+			</strong></td><td class="descriptioncell">生产订单ID&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>FCHECKRATE
+			(U8110)
+			</strong></td><td class="descriptioncell">检验换算率&nbsp;</td><td>userdecimal</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>IORDERTYPE
+			(U8110)
+			</strong></td><td class="descriptioncell">需求跟踪方式&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CMASSUNIT
+			(U8110)
+			</strong></td><td class="descriptioncell">保质期单位&nbsp;</td><td>nvarchar</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>IFREGBREAKQTYDEALTYPE
+			(U8110)
+			</strong></td><td class="descriptioncell">样本合格破坏数处理方式&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CUNITID
+			(U8110)
+			</strong></td><td class="descriptioncell">辅计量单位编码&nbsp;</td><td>nvarchar</td><td>35&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>AUTOID
+			(U8110)
+			</strong></td><td class="descriptioncell">合并检验明细表ID&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CDEFINE22
+			(U8110)
+			</strong></td><td class="descriptioncell">表体自定义项1&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>FCHECKCHANGRATE
+			(U8110)
+			</strong></td><td class="descriptioncell">检验后换算率&nbsp;</td><td>userdecimal</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>IORDERDID
+			(U8110)
+			</strong></td><td class="descriptioncell">销售订单子表ID&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>FCHECKNUM
+			(U8110)
+			</strong></td><td class="descriptioncell">检验件数&nbsp;</td><td>userdecimal</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CDEFINE36
+			(U8110)
+			</strong></td><td class="descriptioncell">表体自定义项15&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>FCHANGRATE
+			(U8110)
+			</strong></td><td class="descriptioncell">换算率&nbsp;</td><td>userdecimal</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CFREE5
+			(U8110)
+			</strong></td><td class="descriptioncell">自由项5&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>IDISBREAKQTYDEALTYPE
+			(U8110)
+			</strong></td><td class="descriptioncell">样本不合格品处理方式&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CINSPECTDEPCODE
+			(U8110)
+			</strong></td><td class="descriptioncell">采购/委外部门编码&nbsp;</td><td>nvarchar</td><td>12&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CORDERCODE
+			(U8110)
+			</strong></td><td class="descriptioncell">销售订单号&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ISOURCEPROORDERROWNO
+			
+			</strong></td><td class="descriptioncell">来源生产订单行号&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>IEXPIRATDATECALCU
+			(U8110)
+			</strong></td><td class="descriptioncell">有效期推算方式&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CEXPIRATIONDATE
+			(U8110)
+			</strong></td><td class="descriptioncell">有效期至&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>FREGBREAKQUANTITY
+			(U8110)
+			</strong></td><td class="descriptioncell">样本合格破坏数量&nbsp;</td><td>userdecimal</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CDEFINE31
+			(U8110)
+			</strong></td><td class="descriptioncell">表体自定义项10&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>IPROORDERAUTOID
+			
+			</strong></td><td class="descriptioncell">生产订单子表ID&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+		</table>
+		<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

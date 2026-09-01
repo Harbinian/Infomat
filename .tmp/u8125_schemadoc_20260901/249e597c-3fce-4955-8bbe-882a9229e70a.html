@@ -1,0 +1,791 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>ex_consignmentdetail_history Table</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">ex_consignmentdetail_history Table 
+			&nbsp;(EX 出口管理)
+			&nbsp;[U861]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>销货单历史表体</p>
+		
+		<h4 class=dxh4>Columns</h4>
+		<table class="columnlisttable" cellspacing="0">
+			<tr valign="top"><th align=middle>&nbsp;</th><th nowrap>Column Name</th><th nowrap>Description</th><th nowrap>Datatype</th><th nowrap>Length</th><th nowrap>Allow Nulls</th></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cBatchProperty6
+			(U872)
+			</strong></td><td class="descriptioncell">批次属性6&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>imassdate
+			(U861)
+			</strong></td><td class="descriptioncell">保质期&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ccontractrowguid
+			(U8101)
+			</strong></td><td class="descriptioncell">合同号行guid&nbsp;</td><td>uniqueidentifier</td><td>16&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bqaurgency
+			(U872)
+			</strong></td><td class="descriptioncell">急料标志&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cciqcode
+			(U872)
+			</strong></td><td class="descriptioncell">海关编码&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fnweights
+			(U861)
+			</strong></td><td class="descriptioncell">净重&nbsp;</td><td>exdecimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cdefine32
+			(U870)
+			</strong></td><td class="descriptioncell">表体自定义项11&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cdemandid
+			(U872)
+			</strong></td><td class="descriptioncell">需求跟踪标志&nbsp;</td><td>nvarchar</td><td>40&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fcomrate
+			(U861)
+			</strong></td><td class="descriptioncell">佣金率（％）&nbsp;</td><td>exdecimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cfree6
+			(U870)
+			</strong></td><td class="descriptioncell">自由项6&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dshippingdate
+			(U861)
+			</strong></td><td class="descriptioncell">预发货日期&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>guid_source
+			(U861)
+			</strong></td><td class="descriptioncell">源单guid&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>imuststockup
+			(U861)
+			</strong></td><td class="descriptioncell">是否需要备货&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dk
+			(U861)
+			</strong></td><td class="descriptioncell">倒扣1（％）&nbsp;</td><td>exdecimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fppartqty
+			(U861)
+			</strong></td><td class="descriptioncell">母件数量&nbsp;</td><td>exdecimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fnattaxprice
+			(U861)
+			</strong></td><td class="descriptioncell">本币单价&nbsp;</td><td>exprice</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>foutqty
+			(U861)
+			</strong></td><td class="descriptioncell">累计出库数量&nbsp;</td><td>exdecimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cdefine23
+			(U870)
+			</strong></td><td class="descriptioncell">表体自定义项2&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fnatfobmoney
+			(U861)
+			</strong></td><td class="descriptioncell">FOB本币金额&nbsp;</td><td>exmoney</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ffreight
+			(U861)
+			</strong></td><td class="descriptioncell">运费&nbsp;</td><td>exmoney</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cdefine25
+			(U870)
+			</strong></td><td class="descriptioncell">表体自定义项4&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fstockupqty
+			(U861)
+			</strong></td><td class="descriptioncell">累计备货数量&nbsp;</td><td>exdecimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>finvoicemoney
+			(U870)
+			</strong></td><td class="descriptioncell">发票金额&nbsp;</td><td>exdecimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cinvcode
+			(U861)
+			</strong></td><td class="descriptioncell">存货编码&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>finsurance
+			(U861)
+			</strong></td><td class="descriptioncell">保险费&nbsp;</td><td>exmoney</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fpayqty
+			(U861)
+			</strong></td><td class="descriptioncell">累计付款金额&nbsp;</td><td>exdecimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cinvouchtype
+			(U8100)
+			</strong></td><td class="descriptioncell">入库单类型&nbsp;</td><td>nvarchar</td><td>10&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cBatchProperty1
+			(U872)
+			</strong></td><td class="descriptioncell">批次属性1&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ftaxprice
+			(U861)
+			</strong></td><td class="descriptioncell">原币单价&nbsp;</td><td>exprice</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cdefine30
+			(U870)
+			</strong></td><td class="descriptioncell">表体自定义项9&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fchangrate
+			(U861)
+			</strong></td><td class="descriptioncell">换算率&nbsp;</td><td>exdecimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cciqbookcode
+			(U872)
+			</strong></td><td class="descriptioncell">海关手册编码&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cfree5
+			(U870)
+			</strong></td><td class="descriptioncell">自由项5&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>clinecloser
+			(U861)
+			</strong></td><td class="descriptioncell">行关闭人&nbsp;</td><td>nvarchar</td><td>40&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cvolumes
+			(U861)
+			</strong></td><td class="descriptioncell">体积&nbsp;</td><td>nvarchar</td><td>100&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cfree1
+			(U870)
+			</strong></td><td class="descriptioncell">自由项1&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cBatchProperty5
+			(U872)
+			</strong></td><td class="descriptioncell">批次属性5&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>icusbomid
+			(U861)
+			</strong></td><td class="descriptioncell">客户bomid&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>funinvoiceqty
+			(U861)
+			</strong></td><td class="descriptioncell">累计退票数量&nbsp;</td><td>exdecimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fstockupnum
+			(U870)
+			</strong></td><td class="descriptioncell">备货件数&nbsp;</td><td>exdecimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fnatinsurance
+			(U861)
+			</strong></td><td class="descriptioncell">本币保险费&nbsp;</td><td>exmoney</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ftaxmoney
+			(U861)
+			</strong></td><td class="descriptioncell">原币金额&nbsp;</td><td>exmoney</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fgweight
+			(U861)
+			</strong></td><td class="descriptioncell">单位毛重&nbsp;</td><td>exdecimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>VariationLogId
+			(U8100)
+			</strong></td><td class="descriptioncell">variationlogid&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ippartseqid
+			(U861)
+			</strong></td><td class="descriptioncell">选配序号&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cdefine26
+			(U870)
+			</strong></td><td class="descriptioncell">表体自定义项5&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cfree4
+			(U870)
+			</strong></td><td class="descriptioncell">自由项4&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iconfigstatusid
+			(U861)
+			</strong></td><td class="descriptioncell">选配状态id&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fnattaxmoney
+			(U861)
+			</strong></td><td class="descriptioncell">本币金额&nbsp;</td><td>exmoney</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>objectid_source
+			(U861)
+			</strong></td><td class="descriptioncell">源单单据类型&nbsp;</td><td>nvarchar</td><td>10&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cbsysbarcode
+			(U8110)
+			</strong></td><td class="descriptioncell">条形码编码&nbsp;</td><td>nvarchar</td><td>80&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cdefine35
+			(U870)
+			</strong></td><td class="descriptioncell">表体自定义项14&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cdemandmemo
+			(U872)
+			</strong></td><td class="descriptioncell">需求分类说明&nbsp;</td><td>nvarchar</td><td>300&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cdefine28
+			(U870)
+			</strong></td><td class="descriptioncell">表体自定义项7&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>idemandseq
+			(U872)
+			</strong></td><td class="descriptioncell">需求跟踪行号&nbsp;</td><td>bigint</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dlineclosedate
+			(U861)
+			</strong></td><td class="descriptioncell">行关闭日期&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cdefine29
+			(U870)
+			</strong></td><td class="descriptioncell">表体自定义项8&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fmoney
+			(U861)
+			</strong></td><td class="descriptioncell">原币无税金额&nbsp;</td><td>exmoney</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cdefine31
+			(U870)
+			</strong></td><td class="descriptioncell">表体自定义项10&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fnweight
+			(U861)
+			</strong></td><td class="descriptioncell">单位净重&nbsp;</td><td>exdecimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cfree8
+			(U870)
+			</strong></td><td class="descriptioncell">自由项8&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>csacomunitcode
+			(U861)
+			</strong></td><td class="descriptioncell">销售计量单位编码&nbsp;</td><td>nvarchar</td><td>35&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap><img src=images/primarykey.png>&nbsp;</td><td class="linkcell">
+			<strong>iversion
+			(U861)
+			</strong></td><td class="descriptioncell">版本号&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ccusinvname
+			(U861)
+			</strong></td><td class="descriptioncell">客户存货名称&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fstqty
+			(U861)
+			</strong></td><td class="descriptioncell">累计备货量&nbsp;</td><td>exdecimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fcomcoefficient
+			(U861)
+			</strong></td><td class="descriptioncell">佣金系数&nbsp;</td><td>exdecimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cdemandcode
+			(U872)
+			</strong></td><td class="descriptioncell">需求跟踪号&nbsp;</td><td>nvarchar</td><td>40&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iexcutetime
+			(U861)
+			</strong></td><td class="descriptioncell">执行次数&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ccontracttagcode
+			(U8101)
+			</strong></td><td class="descriptioncell">合同号标的编码&nbsp;</td><td>nvarchar</td><td>150&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fcommoney
+			(U861)
+			</strong></td><td class="descriptioncell">佣金&nbsp;</td><td>exmoney</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bpricecontailtax
+			(U861)
+			</strong></td><td class="descriptioncell">报价是否含税&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cBatchProperty9
+			(U872)
+			</strong></td><td class="descriptioncell">批次属性9&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>binvoiceflag
+			(U861)
+			</strong></td><td class="descriptioncell">是否生成发票&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>citemname
+			(U861)
+			</strong></td><td class="descriptioncell">项目名称&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>VariationAction
+			(U8100)
+			</strong></td><td class="descriptioncell">variationaction&nbsp;</td><td>tinyint</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cdefine36
+			(U870)
+			</strong></td><td class="descriptioncell">表体自定义项15&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ufts_source
+			(U861)
+			</strong></td><td class="descriptioncell">原单ufts&nbsp;</td><td>timestamp</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fwidth
+			(U870)
+			</strong></td><td class="descriptioncell">宽&nbsp;</td><td>exdecimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ftaxrate
+			(U861)
+			</strong></td><td class="descriptioncell">税率（％）&nbsp;</td><td>exdecimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cBatchProperty3
+			(U872)
+			</strong></td><td class="descriptioncell">批次属性3&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>funinvoicenum
+			(U870)
+			</strong></td><td class="descriptioncell">累计退票件数&nbsp;</td><td>exdecimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cBatchProperty7
+			(U872)
+			</strong></td><td class="descriptioncell">批次属性7&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fquotedprice
+			(U861)
+			</strong></td><td class="descriptioncell">报价&nbsp;</td><td>exprice</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dk2
+			(U861)
+			</strong></td><td class="descriptioncell">倒扣2（％）&nbsp;</td><td>exdecimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cwcomunitcode
+			(U861)
+			</strong></td><td class="descriptioncell">重量单位编码&nbsp;</td><td>nvarchar</td><td>35&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>icomruleid
+			(U861)
+			</strong></td><td class="descriptioncell">佣金规则id&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cvcomunitcode
+			(U861)
+			</strong></td><td class="descriptioncell">体积单位编码&nbsp;</td><td>nvarchar</td><td>35&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cfree3
+			(U870)
+			</strong></td><td class="descriptioncell">自由项3&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cfree7
+			(U870)
+			</strong></td><td class="descriptioncell">自由项7&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fnatinvoicemoney
+			(U870)
+			</strong></td><td class="descriptioncell">发票本币金额&nbsp;</td><td>exdecimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>foutnum
+			(U870)
+			</strong></td><td class="descriptioncell">累计出库件数&nbsp;</td><td>exdecimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cpackinfo
+			(U861)
+			</strong></td><td class="descriptioncell">包装要求&nbsp;</td><td>nvarchar</td><td>200&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fnattax
+			(U861)
+			</strong></td><td class="descriptioncell">本币税额&nbsp;</td><td>exmoney</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bqachecking
+			(U872)
+			</strong></td><td class="descriptioncell">在检标志&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fnum
+			(U861)
+			</strong></td><td class="descriptioncell">件数&nbsp;</td><td>exdecimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>guids
+			(U861)
+			</strong></td><td class="descriptioncell">guids&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fnatunsalemoney
+			(U870)
+			</strong></td><td class="descriptioncell">累计本币退货金额&nbsp;</td><td>exdecimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fciqchangrate
+			(U872)
+			</strong></td><td class="descriptioncell">海关换算率&nbsp;</td><td>exdecimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>funsaleqty
+			(U861)
+			</strong></td><td class="descriptioncell">累计退货数量&nbsp;</td><td>exdecimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bqaneedcheck
+			(U872)
+			</strong></td><td class="descriptioncell">质检标志&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bchargeflg
+			(U861)
+			</strong></td><td class="descriptioncell">是否生成费用支出单&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>funoutqty
+			(U861)
+			</strong></td><td class="descriptioncell">累计退库数量&nbsp;</td><td>exdecimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cfree2
+			(U870)
+			</strong></td><td class="descriptioncell">自由项2&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cBatchProperty10
+			(U872)
+			</strong></td><td class="descriptioncell">批次属性10&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cBatchProperty4
+			(U872)
+			</strong></td><td class="descriptioncell">批次属性4&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>idemandtype
+			(U872)
+			</strong></td><td class="descriptioncell">需求跟踪方式&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iinautoid
+			(U861)
+			</strong></td><td class="descriptioncell">入库单子表id&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fnatgatheringmoney
+			(U870)
+			</strong></td><td class="descriptioncell">累计本币收款金额&nbsp;</td><td>exdecimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>id
+			(U861)
+			</strong></td><td class="descriptioncell">id&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cfree9
+			(U870)
+			</strong></td><td class="descriptioncell">自由项9&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fnatcommoney
+			(U861)
+			</strong></td><td class="descriptioncell">本币佣金&nbsp;</td><td>exmoney</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fpackqty
+			(U861)
+			</strong></td><td class="descriptioncell">包装数量&nbsp;</td><td>exdecimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>addversion
+			(U861)
+			</strong></td><td class="descriptioncell">addversion&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dprodate
+			(U861)
+			</strong></td><td class="descriptioncell">生产日期&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fnatfreight
+			(U861)
+			</strong></td><td class="descriptioncell">本币运费&nbsp;</td><td>exmoney</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cBatchProperty8
+			(U872)
+			</strong></td><td class="descriptioncell">批次属性8&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cdefine24
+			(U870)
+			</strong></td><td class="descriptioncell">表体自定义项3&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>citem_class
+			(U861)
+			</strong></td><td class="descriptioncell">项目大类编码&nbsp;</td><td>nvarchar</td><td>10&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>imassunitid
+			(U861)
+			</strong></td><td class="descriptioncell">保质期单位id&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cincode
+			(U861)
+			</strong></td><td class="descriptioncell">入库单号&nbsp;</td><td>excode</td><td>40&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iconsignmentrowno
+			(U861)
+			</strong></td><td class="descriptioncell">销货单行号&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cBatchProperty2
+			(U872)
+			</strong></td><td class="descriptioncell">批次属性2&nbsp;</td><td>decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fprice
+			(U861)
+			</strong></td><td class="descriptioncell">原币无税单价&nbsp;</td><td>exprice</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iorderautoid
+			(U861)
+			</strong></td><td class="descriptioncell">订单行Autoid&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fqanum
+			(U872)
+			</strong></td><td class="descriptioncell">检验合格件数&nbsp;</td><td>exdecimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fgweights
+			(U861)
+			</strong></td><td class="descriptioncell">毛重&nbsp;</td><td>exdecimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fnatpaymoney
+			(U870)
+			</strong></td><td class="descriptioncell">累计本币付款&nbsp;</td><td>exdecimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmemo
+			(U861)
+			</strong></td><td class="descriptioncell">备注&nbsp;</td><td>nvarchar</td><td>200&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cexpirationdate
+			(U872)
+			</strong></td><td class="descriptioncell">有效期至&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fstrate
+			(U861)
+			</strong></td><td class="descriptioncell">备货率&nbsp;</td><td>exrate</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>kl2
+			(U861)
+			</strong></td><td class="descriptioncell">扣率2（％）&nbsp;</td><td>exdecimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iexecutetime
+			(U861)
+			</strong></td><td class="descriptioncell">执行次数&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fvolume
+			(U861)
+			</strong></td><td class="descriptioncell">单位体积&nbsp;</td><td>exdecimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fdiscount
+			(U861)
+			</strong></td><td class="descriptioncell">原币折扣额&nbsp;</td><td>exmoney</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bexecute
+			(U861)
+			</strong></td><td class="descriptioncell">是否已执行&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cdefine37
+			(U870)
+			</strong></td><td class="descriptioncell">表体自定义项16&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap><img src=images/primarykey.png>&nbsp;</td><td class="linkcell">
+			<strong>autoid
+			(U861)
+			</strong></td><td class="descriptioncell">autoid&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cdefine34
+			(U870)
+			</strong></td><td class="descriptioncell">表体自定义项13&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>HistoryId
+			(U8100)
+			</strong></td><td class="descriptioncell">historyid&nbsp;</td><td>bigint</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fpaymoney
+			(U870)
+			</strong></td><td class="descriptioncell">累计付款金额&nbsp;</td><td>exdecimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iciqbookid
+			(U872)
+			</strong></td><td class="descriptioncell">海关手册ID&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>coutwhcode
+			(U861)
+			</strong></td><td class="descriptioncell">出货仓库编码&nbsp;</td><td>nvarchar</td><td>15&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iststatus
+			(U861)
+			</strong></td><td class="descriptioncell">备货状态id&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cbatch
+			(U861)
+			</strong></td><td class="descriptioncell">批号&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fgatheringmoney
+			(U870)
+			</strong></td><td class="descriptioncell">累计收款金额&nbsp;</td><td>exdecimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fnatprice
+			(U861)
+			</strong></td><td class="descriptioncell">本币无税单价&nbsp;</td><td>exprice</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ftax
+			(U861)
+			</strong></td><td class="descriptioncell">原币税额&nbsp;</td><td>exmoney</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cfree10
+			(U870)
+			</strong></td><td class="descriptioncell">自由项10&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>funsalemoney
+			(U870)
+			</strong></td><td class="descriptioncell">累计退货金额&nbsp;</td><td>exdecimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fqaquantity
+			(U872)
+			</strong></td><td class="descriptioncell">检验合格数量&nbsp;</td><td>exdecimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>finvoiceqty
+			(U861)
+			</strong></td><td class="descriptioncell">累计开票数量&nbsp;</td><td>exdecimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iexpiratdatecalcu
+			(U872)
+			</strong></td><td class="descriptioncell">有效期推算方式&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cpacksize
+			(U861)
+			</strong></td><td class="descriptioncell">尺寸&nbsp;</td><td>nvarchar</td><td>100&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>kl
+			(U861)
+			</strong></td><td class="descriptioncell">扣率1（％）&nbsp;</td><td>exdecimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fbacktaxrate
+			(U8110)
+			</strong></td><td class="descriptioncell">退税税率&nbsp;</td><td>exdecimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cmaterialsize
+			(U861)
+			</strong></td><td class="descriptioncell">材积&nbsp;</td><td>nvarchar</td><td>100&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>funoutnum
+			(U870)
+			</strong></td><td class="descriptioncell">累计红子出库件数&nbsp;</td><td>exdecimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cvmivencode
+			(U8100)
+			</strong></td><td class="descriptioncell">代管仓编码&nbsp;</td><td>nvarchar</td><td>40&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>flength
+			(U870)
+			</strong></td><td class="descriptioncell">长&nbsp;</td><td>exdecimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fnatmoney
+			(U861)
+			</strong></td><td class="descriptioncell">本币无税金额&nbsp;</td><td>exmoney</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bdrawbackflag
+			(U861)
+			</strong></td><td class="descriptioncell">是否被退货单参照&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>icomcriterionid
+			(U861)
+			</strong></td><td class="descriptioncell">佣金计提标准id&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bqachecked
+			(U872)
+			</strong></td><td class="descriptioncell">报检标志&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fnatuninvoicemoney
+			(U870)
+			</strong></td><td class="descriptioncell">累计本币退票金额&nbsp;</td><td>exdecimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cordercode
+			(U861)
+			</strong></td><td class="descriptioncell">订单号&nbsp;</td><td>excode</td><td>40&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>funsalenum
+			(U870)
+			</strong></td><td class="descriptioncell">累计退货件数&nbsp;</td><td>exdecimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cdefine33
+			(U870)
+			</strong></td><td class="descriptioncell">表体自定义项12&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cdefine27
+			(U870)
+			</strong></td><td class="descriptioncell">表体自定义项6&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bcreditflag
+			(U861)
+			</strong></td><td class="descriptioncell">是否被信用证参照&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ccontractid
+			(U8101)
+			</strong></td><td class="descriptioncell">合同号&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dexpirationdate
+			(U872)
+			</strong></td><td class="descriptioncell">有效期计算项&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>funinvoicemoney
+			(U870)
+			</strong></td><td class="descriptioncell">红字发票金额&nbsp;</td><td>exdecimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>finvoicenum
+			(U870)
+			</strong></td><td class="descriptioncell">累计开票件数&nbsp;</td><td>exdecimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dvdate
+			(U861)
+			</strong></td><td class="descriptioncell">失效日期&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>SubVariationAction
+			(U8100)
+			</strong></td><td class="descriptioncell">subvariationaction&nbsp;</td><td>tinyint</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fnatdiscount
+			(U861)
+			</strong></td><td class="descriptioncell">本币折扣额&nbsp;</td><td>exmoney</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>citemcode
+			(U861)
+			</strong></td><td class="descriptioncell">项目编码&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ccusinvcode
+			(U861)
+			</strong></td><td class="descriptioncell">客户存货编码&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>citem_cname
+			(U861)
+			</strong></td><td class="descriptioncell">项目大类名称&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>irowno
+			(U861)
+			</strong></td><td class="descriptioncell">订单行号&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cdefine22
+			(U870)
+			</strong></td><td class="descriptioncell">表体自定义项1&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fgatheringqty
+			(U861)
+			</strong></td><td class="descriptioncell">累计收款金额&nbsp;</td><td>exdecimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>foverflowrange
+			(U861)
+			</strong></td><td class="descriptioncell">溢短装&nbsp;</td><td>exdecimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fquantity
+			(U861)
+			</strong></td><td class="descriptioncell">数量&nbsp;</td><td>exdecimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fheight
+			(U870)
+			</strong></td><td class="descriptioncell">高&nbsp;</td><td>exdecimal</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ffobmoney
+			(U861)
+			</strong></td><td class="descriptioncell">FOB金额&nbsp;</td><td>exmoney</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+		</table>
+		<h4 class=dxh4>Indexes</h4>
+		<TABLE CLASS="FilteredItemListTable" CellSpacing="0">
+			<TR VALIGN="top"><TH width=30%>Index</TH><TH width=50%>Description</TH><TH>Primary</TH><TH>Unique</TH></TR>
+			<TR><TD CLASS=LinkCell WIDTH="50%"><A HREF="428680ee-3935-42f9-baa1-67d93cf685d4.html">index_1</A></TD><TD CLASS="DescriptionCell" WIDTH="50%">&nbsp;</TD><TD Class="Centered"></TD><TD Class="Centered"></TD></TR>
+			<TR><TD CLASS=LinkCell WIDTH="50%"><A HREF="5c3afe4d-03af-49da-abc6-c11beb2adda7.html">index_3</A></TD><TD CLASS="DescriptionCell" WIDTH="50%">&nbsp;</TD><TD Class="Centered"></TD><TD Class="Centered"></TD></TR>
+			<TR><TD CLASS=LinkCell WIDTH="50%"><A HREF="a7569b2a-82c4-485e-9b87-3ceb98f94bba.html">pk_ex_consignmentdetail_histor</A></TD><TD CLASS="DescriptionCell" WIDTH="50%">&nbsp;</TD><TD Class="Centered"><img src=images/tick.png></TD><TD Class="Centered"><img src=images/tick.png></TD></TR>
+			<TR><TD CLASS=LinkCell WIDTH="50%"><A HREF="d8f28be5-1903-4851-957e-be734edbb8de.html">index_4</A></TD><TD CLASS="DescriptionCell" WIDTH="50%">&nbsp;</TD><TD Class="Centered"></TD><TD Class="Centered"></TD></TR>
+			<TR><TD CLASS=LinkCell WIDTH="50%"><A HREF="ea7598d3-acec-4684-a4fa-d2943841df8d.html">index_2</A></TD><TD CLASS="DescriptionCell" WIDTH="50%">&nbsp;</TD><TD Class="Centered"></TD><TD Class="Centered"></TD></TR>
+		</TABLE>
+		<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

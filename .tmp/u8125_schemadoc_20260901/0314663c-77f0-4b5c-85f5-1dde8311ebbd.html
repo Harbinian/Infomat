@@ -1,0 +1,224 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>hr_tr_activity Table</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">hr_tr_activity Table 
+			&nbsp;(TR 培训管理)
+			&nbsp;[U861]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>培训活动</p>
+		
+		<h4 class=dxh4>Columns</h4>
+		<table class="columnlisttable" cellspacing="0">
+			<tr valign="top"><th align=middle>&nbsp;</th><th nowrap>Column Name</th><th nowrap>Description</th><th nowrap>Datatype</th><th nowrap>Length</th><th nowrap>Allow Nulls</th></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>vconnectway
+			(U861)
+			</strong></td><td class="descriptioncell">联系方式&nbsp;</td><td>nvarchar</td><td>100&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>itrainmonth
+			(U861)
+			</strong></td><td class="descriptioncell">培训月度&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dtrainstart
+			(U861)
+			</strong></td><td class="descriptioncell">培训开始日期&nbsp;</td><td>UFDate</td><td>10&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nactualcharge
+			(U861)
+			</strong></td><td class="descriptioncell">实际培训费用&nbsp;</td><td>numeric</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>rorgname
+			(U861)
+			</strong></td><td class="descriptioncell">培训机构&nbsp;</td><td>UFreference</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>rtrainlevel
+			(U861)
+			</strong></td><td class="descriptioncell">培训级别&nbsp;</td><td>UFreference</td><td>30&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>vsignupPsnrange
+			(U861)
+			</strong></td><td class="descriptioncell">通知人员范围&nbsp;</td><td>UFMedia</td><td>16&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>irecordid
+			(U861)
+			</strong></td><td class="descriptioncell">记录序号&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dsignupend
+			(U861)
+			</strong></td><td class="descriptioncell">报名截止日期&nbsp;</td><td>UFDate</td><td>10&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>itrainseason
+			(U861)
+			</strong></td><td class="descriptioncell">培训季度&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ntrainperiod
+			(U861)
+			</strong></td><td class="descriptioncell">培训学时&nbsp;</td><td>numeric</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap><img src=images/primarykey.png>&nbsp;</td><td class="linkcell">
+			<strong>PK_hr_tr_activity
+			(U861)
+			</strong></td><td class="descriptioncell">主键&nbsp;</td><td>UFUID</td><td>16&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>vdutyattach
+			(U861)
+			</strong></td><td class="descriptioncell">费用责任归属&nbsp;</td><td>nvarchar</td><td>100&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>rtrainprincipal
+			(U861)
+			</strong></td><td class="descriptioncell">培训负责人&nbsp;</td><td>UFreference</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>vMobileNotifyPsn
+			(U871)
+			</strong></td><td class="descriptioncell">已短信通知人员&nbsp;</td><td>UFMedia</td><td>16&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dtrainend
+			(U861)
+			</strong></td><td class="descriptioncell">培训结束日期&nbsp;</td><td>UFDate</td><td>10&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>hrts
+			(U861)
+			</strong></td><td class="descriptioncell">时间戳&nbsp;</td><td>timestamp</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>vchargeUnit
+			(U861)
+			</strong></td><td class="descriptioncell">主办单位&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>vsignuparrangeqpb
+			(U861)
+			</strong></td><td class="descriptioncell">通知部门范围文件后缀&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>vtrainobject
+			(U861)
+			</strong></td><td class="descriptioncell">培训对象&nbsp;</td><td>nvarchar</td><td>300&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>vtrainaddress
+			(U861)
+			</strong></td><td class="descriptioncell">培训地点&nbsp;</td><td>nvarchar</td><td>100&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>vtrainname
+			(U861)
+			</strong></td><td class="descriptioncell">培训名称&nbsp;</td><td>nvarchar</td><td>100&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>itrainyear
+			(U861)
+			</strong></td><td class="descriptioncell">培训年度&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>vtraincode
+			(U861)
+			</strong></td><td class="descriptioncell">培训编码&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bsendMessage
+			(U861)
+			</strong></td><td class="descriptioncell">已否通知&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>benvelop
+			(U861)
+			</strong></td><td class="descriptioncell">是否封存&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>rtrainitem
+			(U861)
+			</strong></td><td class="descriptioncell">培训项目&nbsp;</td><td>UFreference</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nstatus2
+			(U861)
+			</strong></td><td class="descriptioncell">status2&nbsp;</td><td>numeric</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>blastflag
+			(U861)
+			</strong></td><td class="descriptioncell">当前记录标识&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>rtraindpt
+			(U861)
+			</strong></td><td class="descriptioncell">培训部门&nbsp;</td><td>UFreference</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>vstatus1
+			(U861)
+			</strong></td><td class="descriptioncell">status1&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ntrainbudget
+			(U861)
+			</strong></td><td class="descriptioncell">培训费用预算&nbsp;</td><td>numeric</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>vremark
+			(U861)
+			</strong></td><td class="descriptioncell">备注&nbsp;</td><td>nvarchar</td><td>200&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>rtraintype
+			(U861)
+			</strong></td><td class="descriptioncell">培训类别&nbsp;</td><td>UFreference</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>rtrainmode
+			(U861)
+			</strong></td><td class="descriptioncell">培训方式&nbsp;</td><td>UFreference</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dauthorize
+			(U861)
+			</strong></td><td class="descriptioncell">编制日期&nbsp;</td><td>UFDate</td><td>10&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>vtrainaim
+			(U861)
+			</strong></td><td class="descriptioncell">培训目标&nbsp;</td><td>nvarchar</td><td>200&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>vtraincontent
+			(U861)
+			</strong></td><td class="descriptioncell">培训内容&nbsp;</td><td>nvarchar</td><td>600&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>itrainpsnnum
+			(U861)
+			</strong></td><td class="descriptioncell">培训人数&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>rorganizer
+			(U861)
+			</strong></td><td class="descriptioncell">编制人&nbsp;</td><td>UFreference</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>vEmailNotifyPsn
+			(U871)
+			</strong></td><td class="descriptioncell">已邮件通知人员&nbsp;</td><td>UFMedia</td><td>16&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>vsignupPsnrangeqpb
+			(U861)
+			</strong></td><td class="descriptioncell">通知人员范围文件后缀&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>vtrainsubject
+			(U861)
+			</strong></td><td class="descriptioncell">培训课程&nbsp;</td><td>nvarchar</td><td>300&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dsignupstart
+			(U861)
+			</strong></td><td class="descriptioncell">报名开始日期&nbsp;</td><td>UFDate</td><td>10&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>vsignuparrange
+			(U861)
+			</strong></td><td class="descriptioncell">通知部门范围&nbsp;</td><td>UFMedia</td><td>16&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+		</table>
+		<h4 class=dxh4>Indexes</h4>
+		<TABLE CLASS="FilteredItemListTable" CellSpacing="0">
+			<TR VALIGN="top"><TH width=30%>Index</TH><TH width=50%>Description</TH><TH>Primary</TH><TH>Unique</TH></TR>
+			<TR><TD CLASS=LinkCell WIDTH="50%"><A HREF="25cb4e3b-6653-4bda-a131-c4cf88abe39a.html">thr_tr_activity</A></TD><TD CLASS="DescriptionCell" WIDTH="50%">&nbsp;</TD><TD Class="Centered"></TD><TD Class="Centered"><img src=images/tick.png></TD></TR>
+			<TR><TD CLASS=LinkCell WIDTH="50%"><A HREF="ba5012ba-78d0-47fe-a609-b0e098c16c50.html">PK_HR_TR_ACTIVITY</A></TD><TD CLASS="DescriptionCell" WIDTH="50%">&nbsp;</TD><TD Class="Centered"><img src=images/tick.png></TD><TD Class="Centered"><img src=images/tick.png></TD></TR>
+		</TABLE>
+		<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

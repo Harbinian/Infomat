@@ -1,0 +1,248 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>pl_CO_InvPriceDif Table</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">pl_CO_InvPriceDif Table 
+			&nbsp;(ED 标准成本管理)
+			&nbsp;[U872]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>存货材料、人工、加工费差异表（存货维度）</p>
+		
+		<h4 class=dxh4>Columns</h4>
+		<table class="columnlisttable" cellspacing="0">
+			<tr valign="top"><th align=middle>&nbsp;</th><th nowrap>Column Name</th><th nowrap>Description</th><th nowrap>Datatype</th><th nowrap>Length</th><th nowrap>Allow Nulls</th></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fSemiLaborQuanDifE
+			(U890)
+			</strong></td><td class="descriptioncell">结存人工耗用差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fQuanDifRate
+			(U872)
+			</strong></td><td class="descriptioncell">结存材料量差率&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fLbrPriceDifE
+			(U890)
+			</strong></td><td class="descriptioncell">结存人工费率差&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fSemiOmQuanDifRate
+			(U890)
+			</strong></td><td class="descriptioncell">结存加工费耗用差异率&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fLbrQuanDifV
+			(U890)
+			</strong></td><td class="descriptioncell">预留&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fLbrQuanDifI
+			(U890)
+			</strong></td><td class="descriptioncell">本期入库人工效率差&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fSemiOmQuanDifI
+			(U890)
+			</strong></td><td class="descriptioncell">本期入库加工费耗用差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fOmCostDifE
+			(U890)
+			</strong></td><td class="descriptioncell">结存加工费差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fLbrPriceDifO
+			(U890)
+			</strong></td><td class="descriptioncell">销售以外发出人工费率差&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fLbrQuanDifRate
+			(U890)
+			</strong></td><td class="descriptioncell">结存人工效率差&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fInvQuanDifI
+			(U872)
+			</strong></td><td class="descriptioncell">本期入库材料量差&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fLbrPriceDifI
+			(U890)
+			</strong></td><td class="descriptioncell">本期入库人工费率差&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fInvQuanDifE
+			(U872)
+			</strong></td><td class="descriptioncell">结存材料量差&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fSemiLaborQuanDifRate
+			(U890)
+			</strong></td><td class="descriptioncell">结存人工耗用差异率&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fLbrQuanDifS
+			(U890)
+			</strong></td><td class="descriptioncell">销售发出人工效率差&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fOmCostDifO
+			(U890)
+			</strong></td><td class="descriptioncell">销售以外发出加工费差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fSemiLaborQuanDifI
+			(U890)
+			</strong></td><td class="descriptioncell">本期入库人工耗用差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fLbrPriceDifV
+			(U890)
+			</strong></td><td class="descriptioncell">预留&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fSemiLaborQuanDifS
+			(U890)
+			</strong></td><td class="descriptioncell">销售发出人工耗用差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fInvPriceDifV
+			(U890)
+			</strong></td><td class="descriptioncell">预留&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iPartId
+			(U8100)
+			</strong></td><td class="descriptioncell">物料ID&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fSemiOmQuanDifE
+			(U890)
+			</strong></td><td class="descriptioncell">结存加工费耗用差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fOmCostDifI
+			(U890)
+			</strong></td><td class="descriptioncell">本期入库加工费差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fOmCostDifV
+			(U890)
+			</strong></td><td class="descriptioncell">预留&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fInvPriceDifQ
+			(U890)
+			</strong></td><td class="descriptioncell">期初材料价差&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fLbrQuanDifQ
+			(U890)
+			</strong></td><td class="descriptioncell">期初人工效率差&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fSemiOmQuanDifS
+			(U890)
+			</strong></td><td class="descriptioncell">销售发出加工费耗用差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cInvCode
+			(U872)
+			</strong></td><td class="descriptioncell">废弃&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap><img src=images/primarykey.png>&nbsp;</td><td class="linkcell">
+			<strong>AutoId
+			(U872)
+			</strong></td><td class="descriptioncell">自动编号&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fOmCostDifS
+			(U890)
+			</strong></td><td class="descriptioncell">销售发出加工费差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fSemiLaborQuanDifO
+			(U890)
+			</strong></td><td class="descriptioncell">销售以外发出人工耗用差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fInvPriceDifI
+			(U890)
+			</strong></td><td class="descriptioncell">本期入库材料价差&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fSemiOmQuanDifO
+			(U890)
+			</strong></td><td class="descriptioncell">销售以外发出加工费耗用差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fLbrPriceDifS
+			(U890)
+			</strong></td><td class="descriptioncell">销售发出人工费率差&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fLbrQuanDifE
+			(U890)
+			</strong></td><td class="descriptioncell">结存人工效率差&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fInvPriceDifO
+			(U890)
+			</strong></td><td class="descriptioncell">销售以外发出材料价差&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fSemiLaborQuanDifQ
+			(U890)
+			</strong></td><td class="descriptioncell">期初人工耗用差异率&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iPeriod
+			(U872)
+			</strong></td><td class="descriptioncell">期间&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fLbrPriceDifQ
+			(U890)
+			</strong></td><td class="descriptioncell">期初人工费率差&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fLbrQuanDifO
+			(U890)
+			</strong></td><td class="descriptioncell">销售以外发出人工效率差&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fOmCostDifRate
+			(U890)
+			</strong></td><td class="descriptioncell">结存加工费差异率&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fInvQuanDifO
+			(U872)
+			</strong></td><td class="descriptioncell">销售以外发出材料量差&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fPriceDifRate
+			(U890)
+			</strong></td><td class="descriptioncell">结存材料价差率&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fInvQuanDifQ
+			(U872)
+			</strong></td><td class="descriptioncell">期初材料量差&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fInvQuanDifS
+			(U872)
+			</strong></td><td class="descriptioncell">销售发出材料量差&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fInvPriceDifS
+			(U890)
+			</strong></td><td class="descriptioncell">销售发出材料价差&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fInvQuanDifV
+			(U890)
+			</strong></td><td class="descriptioncell">预留&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fSemiOmQuanDifQ
+			(U890)
+			</strong></td><td class="descriptioncell">期初加工费耗用差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fInvPriceDifE
+			(U890)
+			</strong></td><td class="descriptioncell">结存材料价差&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fLbrPriceDifRate
+			(U890)
+			</strong></td><td class="descriptioncell">结存人工费率差率&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fOmCostDifQ
+			(U890)
+			</strong></td><td class="descriptioncell">期初加工费差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+		</table>
+		<h4 class=dxh4>Indexes</h4>
+		<TABLE CLASS="FilteredItemListTable" CellSpacing="0">
+			<TR VALIGN="top"><TH width=30%>Index</TH><TH width=50%>Description</TH><TH>Primary</TH><TH>Unique</TH></TR>
+			<TR><TD CLASS=LinkCell WIDTH="50%"><A HREF="a5af486a-b599-4727-baff-36c44cb1e3b9.html">PK_pl_CO_InvPriceDif</A></TD><TD CLASS="DescriptionCell" WIDTH="50%">&nbsp;</TD><TD Class="Centered"><img src=images/tick.png></TD><TD Class="Centered"><img src=images/tick.png></TD></TR>
+			<TR><TD CLASS=LinkCell WIDTH="50%"><A HREF="e8206724-0393-45bf-ab80-49b9b5703e5e.html">IX_pl_CO_InvPriceDif</A></TD><TD CLASS="DescriptionCell" WIDTH="50%">&nbsp;</TD><TD Class="Centered"></TD><TD Class="Centered"></TD></TR>
+		</TABLE>
+		<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

@@ -1,11 +1,27 @@
 """Generate WBS report as .docx"""
+import argparse
+from pathlib import Path
+
 from docx import Document
 from docx.shared import Pt, Inches, Cm, RGBColor, Emu
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.table import WD_TABLE_ALIGNMENT
 from docx.oxml.ns import qn, nsdecls
 from docx.oxml import parse_xml
-import os
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description='Generate the WBS optimization report.')
+    parser.add_argument(
+        '--output',
+        type=Path,
+        default=Path(__file__).resolve().parent.parent / 'artifacts' / 'pmo' / 'wbs' / '信息化项目WBS优化调整报告_V1.0.docx',
+        help='Output DOCX path. Defaults to the ignored repository artifacts directory.',
+    )
+    return parser.parse_args()
+
+
+args = parse_args()
 
 doc = Document()
 
@@ -470,6 +486,7 @@ run.font.name = 'Microsoft YaHei'
 run.element.rPr.rFonts.set(qn('w:eastAsia'), 'Microsoft YaHei')
 
 # ── save ──
-out_path = r'E:\CA001\Infomat\信息化项目WBS优化调整报告_V1.0.docx'
+out_path = args.output.resolve()
+out_path.parent.mkdir(parents=True, exist_ok=True)
 doc.save(out_path)
-print(f'Wrote {out_path} ({os.path.getsize(out_path)/1024:.1f} KB)')
+print(f'Wrote {out_path} ({out_path.stat().st_size/1024:.1f} KB)')

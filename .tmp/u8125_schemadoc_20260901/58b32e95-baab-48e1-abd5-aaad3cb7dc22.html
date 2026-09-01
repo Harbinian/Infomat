@@ -1,0 +1,362 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>hr_hi_person_view View</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">hr_hi_person_view View 
+			&nbsp;(HM 人事管理)
+			&nbsp;[U8100]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>人员信息查询</p>
+		
+		<h4 class=dxh4>Columns</h4>
+		<TABLE CLASS="FilteredItemListTable" CellSpacing="0">
+			<TR VALIGN="top"><TH width=30%>Column Name</TH><TH width=50%>Description</TH><TH width=50%>Datatype</TH><TH width=50%>Length</TH>
+			<TR>
+			<TD CLASS=DescriptionCell>dEnterUnitDate
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">到职日期&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cPsnPostAddr
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">通讯地址&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">510&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>rSex
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">性别&nbsp;</TD>
+			<TD CLASS="DescriptionCell">UFreference&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>JobNumber
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">工号&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">100&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cPsnPostCode
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">邮政编码&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">12&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>rCheckInFlag
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">审核标志&nbsp;</TD>
+			<TD CLASS="DescriptionCell">UFreference&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>vIDNo
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">证件号码&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">36&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>rWorkStatus
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">从业状况&nbsp;</TD>
+			<TD CLASS="DescriptionCell">UFreference&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDutyclass
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">班组&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>rFigure
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">职员身份&nbsp;</TD>
+			<TD CLASS="DescriptionCell">UFreference&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>dEnterDate
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">进入本行业时间&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>EmploymentForm
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">用工形式&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">80&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>rMarriStatus
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">婚姻状况&nbsp;</TD>
+			<TD CLASS="DescriptionCell">UFreference&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cPsn_Num
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">人员编码&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cPsnBankCode
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">银行&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">10&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>dBirthDate
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">出生日期&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>CpsnOSeat
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">工位&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cPsnFAddr
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">家庭住址&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">510&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>vAliaName
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">曾用名&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cPsnEmail
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">Email&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">200&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>iRecordID
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">显示序号&nbsp;</TD>
+			<TD CLASS="DescriptionCell">int&nbsp;</TD><TD CLASS="DescriptionCell">4&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>pk_hr_hi_person
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">主键&nbsp;</TD>
+			<TD CLASS="DescriptionCell">uniqueidentifier&nbsp;</TD><TD CLASS="DescriptionCell">16&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>rPersonType
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">人员类别&nbsp;</TD>
+			<TD CLASS="DescriptionCell">UFreference&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>dLeaveDate
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">离职日期&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cPsnInPhone
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">内线电话&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">200&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDept_num
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">行政部门&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>dJoinworkDate
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">参加工作时间&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cPsnOPhone
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">办公电话&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">200&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cEmployStateName
+			(U8101)
+			</TD><TD CLASS="DescriptionCell">雇佣状态名称&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">200&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cPsnQQCode
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">QQ&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>rhealthStatus
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">健康状况&nbsp;</TD>
+			<TD CLASS="DescriptionCell">UFreference&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>vCardNo
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">考勤卡号&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cPsn_Name
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">姓名&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">80&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>bTakeTM
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">是否考勤&nbsp;</TD>
+			<TD CLASS="DescriptionCell">bit&nbsp;</TD><TD CLASS="DescriptionCell">1&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>rEmployState
+			(U8101)
+			</TD><TD CLASS="DescriptionCell">雇佣状态&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>rPersonParameters
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">考勤制度&nbsp;</TD>
+			<TD CLASS="DescriptionCell">UFreference&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cPsnMobilePhone
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">手机&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">200&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>rNational
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">民族&nbsp;</TD>
+			<TD CLASS="DescriptionCell">UFreference&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>bProbation
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">是否是试用人员&nbsp;</TD>
+			<TD CLASS="DescriptionCell">bit&nbsp;</TD><TD CLASS="DescriptionCell">1&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>dRegularDate
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">转正时间&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nchar&nbsp;</TD><TD CLASS="DescriptionCell">20&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>rPerResidence
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">户籍&nbsp;</TD>
+			<TD CLASS="DescriptionCell">UFreference&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cPsnURL
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">个人网址&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">100&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cPersonTypeName
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">人员类别名称&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">200&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cPsnProperty
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">人员属性&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">40&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>rIDType
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">证件类型&nbsp;</TD>
+			<TD CLASS="DescriptionCell">UFreference&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cPsnAccount
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">账号&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">100&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cPsnFPhone
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">家庭电话&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">200&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cDepName
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">部门名称&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">510&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>vjobname
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">职位名称&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">100&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>vSSNo
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">社会保障号&nbsp;</TD>
+			<TD CLASS="DescriptionCell">nvarchar&nbsp;</TD><TD CLASS="DescriptionCell">50&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>rtbmRule
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">考勤规则&nbsp;</TD>
+			<TD CLASS="DescriptionCell">UFreference&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>rNativePlace
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">籍贯&nbsp;</TD>
+			<TD CLASS="DescriptionCell">UFreference&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>cjobcode
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">职位&nbsp;</TD>
+			<TD CLASS="DescriptionCell">UFreference&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+			<TR>
+			<TD CLASS=DescriptionCell>rCountry
+			(U8100)
+			</TD><TD CLASS="DescriptionCell">国家地区&nbsp;</TD>
+			<TD CLASS="DescriptionCell">UFreference&nbsp;</TD><TD CLASS="DescriptionCell">60&nbsp;</TD>
+			</TR>
+		</TABLE>
+			<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

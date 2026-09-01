@@ -1,0 +1,623 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>hr_tm_MonthResult Table</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">hr_tm_MonthResult Table 
+			&nbsp;(TM 考勤管理)
+			&nbsp;[U861]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>考勤月结果表</p>
+		
+		<h4 class=dxh4>Columns</h4>
+		<table class="columnlisttable" cellspacing="0">
+			<tr valign="top"><th align=middle>&nbsp;</th><th nowrap>Column Name</th><th nowrap>Description</th><th nowrap>Datatype</th><th nowrap>Length</th><th nowrap>Allow Nulls</th></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nRealDays
+			(U872)
+			</strong></td><td class="descriptioncell">实出勤（天数）&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iDayShiftTimes
+			(U8101)
+			</strong></td><td class="descriptioncell">白班次数&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nCurBalanceLackWorkHours
+			(U872)
+			</strong></td><td class="descriptioncell">本月结算欠班（小时）&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nRestOverSumTime
+			(U872)
+			</strong></td><td class="descriptioncell">休息日加班本月累计时间&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nHolidayOverHours
+			(U872)
+			</strong></td><td class="descriptioncell">节假日加班时间（小时）&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nMateDays
+			(U872)
+			</strong></td><td class="descriptioncell">产假时间（天数）&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nRestOverHoursBala
+			(U8111)
+			</strong></td><td class="descriptioncell">休息日结算加班&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nComHours
+			(U872)
+			</strong></td><td class="descriptioncell">公假时间（小时）&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nRestOverHoursRelaxOrBala
+			(U8111)
+			</strong></td><td class="descriptioncell">休息日存休或结算加班&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iLackCardTimesForOver_Voucher
+			(U8100)
+			</strong></td><td class="descriptioncell">加班单欠卡次数&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iAbsentOverTimes
+			(U872)
+			</strong></td><td class="descriptioncell">加班旷工次数&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iSignCardTimesForOver_Voucher
+			(U8100)
+			</strong></td><td class="descriptioncell">加班单签卡次数&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dPeriodStart
+			(U872)
+			</strong></td><td class="descriptioncell">期间开始日期&nbsp;</td><td>UFDate</td><td>10&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nVacHours
+			(U872)
+			</strong></td><td class="descriptioncell">年假时间（小时）&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nPreHolidayOverSumTime
+			(U872)
+			</strong></td><td class="descriptioncell">节假日加班上月累计时间&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nWorkOverSumTime
+			(U872)
+			</strong></td><td class="descriptioncell">工作日加班本月累计时间&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nWorkOverDedTime
+			(U872)
+			</strong></td><td class="descriptioncell">工作日加班本月抵扣时间&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nRestOverSumTimeRelaxOrBala
+			(U8111)
+			</strong></td><td class="descriptioncell">存休或结算休息日加班期末余额&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iLackCardTimesForOver
+			(U872)
+			</strong></td><td class="descriptioncell">加班欠卡次数&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nHolidayOverHoursBala
+			(U8111)
+			</strong></td><td class="descriptioncell">节假日结算加班&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nWorkOverSumTimeRelaxOrBala
+			(U8111)
+			</strong></td><td class="descriptioncell">存休或结算工作日加班期末余额&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nWorkOverSumTimeOnlyRelax
+			(U8111)
+			</strong></td><td class="descriptioncell">仅存休工作日加班期末余额&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bCheck
+			(U861)
+			</strong></td><td class="descriptioncell">审核状态&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nNoSalaryRestDays
+			(U872)
+			</strong></td><td class="descriptioncell">无薪假（天数）&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nComSickDays
+			(U872)
+			</strong></td><td class="descriptioncell">工伤假时间（天数）&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nWorkOverBalTime
+			(U872)
+			</strong></td><td class="descriptioncell">工作日加班本月结算时间&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iLateOverTimes
+			(U872)
+			</strong></td><td class="descriptioncell">加班迟到次数&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nRemoteErradHours
+			(U872)
+			</strong></td><td class="descriptioncell">外地出差时间（小时）&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nHolidayOverDedTime
+			(U872)
+			</strong></td><td class="descriptioncell">节假日加班本月抵扣时间&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nHuntHours
+			(U872)
+			</strong></td><td class="descriptioncell">探亲假（小时）
+探亲假（小时）
+探亲假（小时）
+探亲假（小时）&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nAbsentOverTime
+			(U872)
+			</strong></td><td class="descriptioncell">加班旷工时间&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nLoseHours
+			(U872)
+			</strong></td><td class="descriptioncell">丧假时间（小时）&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nTendHours
+			(U872)
+			</strong></td><td class="descriptioncell">护理假(小时)&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iMidShiftTimes
+			(U8100)
+			</strong></td><td class="descriptioncell">中班次数&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nPreHolidayOverSumTimeRelaxOrBala
+			(U8111)
+			</strong></td><td class="descriptioncell">存休或结算节假日加班期初余额&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nPreWorkOverSumTimeRelaxOrBala
+			(U8111)
+			</strong></td><td class="descriptioncell">存休或结算工作日加班期初余额&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nStandardDays
+			(U872)
+			</strong></td><td class="descriptioncell">标准天数&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nStandardManHour
+			(U872)
+			</strong></td><td class="descriptioncell">标准工时&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nComSickHours
+			(U872)
+			</strong></td><td class="descriptioncell">工伤假时间（小时）&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nRestOverHours
+			(U872)
+			</strong></td><td class="descriptioncell">休息日加班时间（小时）&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nComDays
+			(U872)
+			</strong></td><td class="descriptioncell">公假时间（天数）&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nHolidayOverSumTimeOnlyRelax
+			(U8111)
+			</strong></td><td class="descriptioncell">仅存休节假日加班期末余额&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nPreWorkOverSumTimeOnlyRelax
+			(U8111)
+			</strong></td><td class="descriptioncell">仅存休工作日加班期初余额&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nAllowDeductTimes
+			(U872)
+			</strong></td><td class="descriptioncell">可抵扣时间&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nHolidayOverHoursCanceled
+			(U8111)
+			</strong></td><td class="descriptioncell">节假日作废加班&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nNoSalaryRestHours
+			(U872)
+			</strong></td><td class="descriptioncell">无薪假（小时）&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>vdepcode_num
+			(U8100)
+			</strong></td><td class="descriptioncell">部门编码&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>rManHourSystem
+			(U872)
+			</strong></td><td class="descriptioncell">工时制度&nbsp;</td><td>UFreference</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nCurTotalCompLeaveHours
+			(U872)
+			</strong></td><td class="descriptioncell">本月累计调休（小时）&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nLoseDays
+			(U872)
+			</strong></td><td class="descriptioncell">丧假时间（天数）&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nLackWorkDays
+			(U872)
+			</strong></td><td class="descriptioncell">欠班时间（天数）&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nSalaryRestDays
+			(U872)
+			</strong></td><td class="descriptioncell">带薪假（天数）&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nWorkOverHoursRelaxOrBala
+			(U8111)
+			</strong></td><td class="descriptioncell">工作日存休或结算加班&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nCompTimeOffHoursAudited
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nCurDeductCompLeaveHours
+			(U872)
+			</strong></td><td class="descriptioncell">本月抵扣调休（小时）&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iSignCardTimesForOver
+			(U872)
+			</strong></td><td class="descriptioncell">加班签卡次数&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nRestOverDedTime
+			(U872)
+			</strong></td><td class="descriptioncell">休息日加班本月抵扣时间&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cJobcode
+			(U8100)
+			</strong></td><td class="descriptioncell">岗位&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nBalancedVac
+			(U872)
+			</strong></td><td class="descriptioncell">已结算年假&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nWorkOverHoursOnlyRelax
+			(U8111)
+			</strong></td><td class="descriptioncell">仅存休工作日加班&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cpsn_name
+			(U861)
+			</strong></td><td class="descriptioncell">人员姓名&nbsp;</td><td>nvarchar</td><td>40&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nCurDeductLackWorkHours
+			(U872)
+			</strong></td><td class="descriptioncell">本月抵扣欠班（小时）&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iAbsentOverTimes_Voucher
+			(U8100)
+			</strong></td><td class="descriptioncell">加班旷工次数&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nCompTimeOffHours
+			(U872)
+			</strong></td><td class="descriptioncell">调休时间（小时）&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nWorkOverHoursCanceled
+			(U8111)
+			</strong></td><td class="descriptioncell">工作日作废加班&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nHolidayOverSumTime
+			(U872)
+			</strong></td><td class="descriptioncell">节假日加班本月累计时间&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nTendDays
+			(U872)
+			</strong></td><td class="descriptioncell">护理假(天数)&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nHolidayOverHoursRelaxOrBala
+			(U8111)
+			</strong></td><td class="descriptioncell">节假日存休或结算加班&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nWorkOverHoursBala
+			(U8111)
+			</strong></td><td class="descriptioncell">工作日结算加班&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nPreTotalLackWorkHours
+			(U872)
+			</strong></td><td class="descriptioncell">上月累计欠班（小时）&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nPrivateLeaveDays
+			(U872)
+			</strong></td><td class="descriptioncell">事假时间（天数）&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nCurTotalLackWorkHours
+			(U872)
+			</strong></td><td class="descriptioncell">本月累计欠班（小时）&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iLackCardTimes
+			(U872)
+			</strong></td><td class="descriptioncell">正班欠卡次数&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nLocalErrandDays
+			(U872)
+			</strong></td><td class="descriptioncell">本地出差时间（天数）&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nPreTotalCompLeaveHours
+			(U872)
+			</strong></td><td class="descriptioncell">上月累计调休（小时）&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nRestOverHoursOnlyRelax
+			(U8111)
+			</strong></td><td class="descriptioncell">仅存休休息日加班&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nSickLeaveHours
+			(U872)
+			</strong></td><td class="descriptioncell">病假（小时）&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nMateHours
+			(U872)
+			</strong></td><td class="descriptioncell">产假时间（小时）&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dPeriodEnd
+			(U872)
+			</strong></td><td class="descriptioncell">期间截止日期&nbsp;</td><td>UFDate</td><td>10&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nHuntDays
+			(U872)
+			</strong></td><td class="descriptioncell">探亲假时间（天数）&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nHolidayOverSumTimeRelaxOrBala
+			(U8111)
+			</strong></td><td class="descriptioncell">存休或结算节假日加班期末余额&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nLocalErrandHours
+			(U872)
+			</strong></td><td class="descriptioncell">本地出差时间（小时）&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nRemoteErrandDays
+			(U872)
+			</strong></td><td class="descriptioncell">外地出差时间（天数）&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nSickLeaveDays
+			(U872)
+			</strong></td><td class="descriptioncell">病假时间（天数）&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nPreRestOverSumTimeRelaxOrBala
+			(U8111)
+			</strong></td><td class="descriptioncell">存休或结算休息日加班期初余额&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iLeaveOverTime
+			(U872)
+			</strong></td><td class="descriptioncell">加班早退时间&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nPrivateLeaveHours
+			(U872)
+			</strong></td><td class="descriptioncell">事假时间（小时）&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nAbsentOverTime_Voucher
+			(U8100)
+			</strong></td><td class="descriptioncell">加班旷工时间&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nRestOverSumTimeOnlyRelax
+			(U8111)
+			</strong></td><td class="descriptioncell">仅存休休息日加班期末余额&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cAuditBy
+			
+			</strong></td><td class="descriptioncell">审核人&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nPreRestOverSumTime
+			(U872)
+			</strong></td><td class="descriptioncell">休息日加班上月累计时间&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nPreRestOverSumTimeOnlyRelax
+			(U8111)
+			</strong></td><td class="descriptioncell">仅存休休息日加班期末余额&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iNightShiftTimes
+			(U8100)
+			</strong></td><td class="descriptioncell">夜班次数&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iLateOverTime_Voucher
+			(U8100)
+			</strong></td><td class="descriptioncell">加班是迟到时间&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iSignCardTimes
+			(U872)
+			</strong></td><td class="descriptioncell">正班签卡次数&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nRestOverHoursCanceled
+			(U8111)
+			</strong></td><td class="descriptioncell">休息日作废加班&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nPreHolidayOverSumTimeOnlyRelax
+			(U8111)
+			</strong></td><td class="descriptioncell">仅存休节假日加班期初余额&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dEnterUnitDate
+			(U8100)
+			</strong></td><td class="descriptioncell">入职日期&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iLeaveOverTimes
+			(U872)
+			</strong></td><td class="descriptioncell">加班早退次数&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nWorkOverHours
+			(U872)
+			</strong></td><td class="descriptioncell">工作日加班（小时）&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nCompLeaveDays
+			(U872)
+			</strong></td><td class="descriptioncell">调休时间（天数）&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>rPersonType
+			(U8100)
+			</strong></td><td class="descriptioncell">人员类别&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>JobNumber
+			(U8100)
+			</strong></td><td class="descriptioncell">工号&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nWedDays
+			(U872)
+			</strong></td><td class="descriptioncell">婚假（天数）&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nWedHours
+			(U872)
+			</strong></td><td class="descriptioncell">婚假（小时数）&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dLeaveDate
+			(U8100)
+			</strong></td><td class="descriptioncell">离职日期&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nHolidayOverBalTime
+			(U872)
+			</strong></td><td class="descriptioncell">节假日加班本月结算时间&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iLeaveOverTimes_Voucher
+			(U8100)
+			</strong></td><td class="descriptioncell">加班早退次数&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>rEmployState
+			(U8101)
+			</strong></td><td class="descriptioncell">雇佣状态&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nSalaryRestHours
+			(U872)
+			</strong></td><td class="descriptioncell">带薪假（小时）&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iLateOverTime
+			(U872)
+			</strong></td><td class="descriptioncell">加班迟到时间&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nWorkDays
+			(U872)
+			</strong></td><td class="descriptioncell">应出勤（天数）&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cAuditByCode
+			
+			</strong></td><td class="descriptioncell">审核人编码&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nCurBalanceCompLeaveHours
+			(U872)
+			</strong></td><td class="descriptioncell">本月结算调休（小时）&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dAuditOn
+			
+			</strong></td><td class="descriptioncell">审核时间&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iLateOverTimes_Voucher
+			(U8100)
+			</strong></td><td class="descriptioncell">加班迟到时间&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nPreWorkOverSumTime
+			(U872)
+			</strong></td><td class="descriptioncell">工作日加班上月累计时间&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nCompTimeOffHoursAuditing
+			
+			</strong></td><td class="descriptioncell">&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iLeaveOverTime_Voucher
+			(U8100)
+			</strong></td><td class="descriptioncell">加班早退时间&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nLactationDays
+			(U872)
+			</strong></td><td class="descriptioncell">哺乳假时间（天数）&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nLackWorkHours
+			(U872)
+			</strong></td><td class="descriptioncell">欠班时间（小时）&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nHolidayOverHoursOnlyRelax
+			(U8111)
+			</strong></td><td class="descriptioncell">节假日仅存休加班&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nLactationHours
+			(U872)
+			</strong></td><td class="descriptioncell">哺乳假时间（小时）&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nRestOverBalTime
+			(U872)
+			</strong></td><td class="descriptioncell">休息日加班本月结算时间&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iRecordId
+			(U861)
+			</strong></td><td class="descriptioncell">记录序号&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cYear
+			(U861)
+			</strong></td><td class="descriptioncell">年度&nbsp;</td><td>nchar</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cMonth
+			(U861)
+			</strong></td><td class="descriptioncell">考勤期间&nbsp;</td><td>nchar</td><td>2&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cPsn_Num
+			(U861)
+			</strong></td><td class="descriptioncell">人员编号&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>vDepCode
+			(U861)
+			</strong></td><td class="descriptioncell">部门&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nWorkHours
+			(U861)
+			</strong></td><td class="descriptioncell">应出勤（小时）&nbsp;</td><td>numeric</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nRealHours
+			(U861)
+			</strong></td><td class="descriptioncell">实际出勤时间&nbsp;</td><td>numeric</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nAbsentHour
+			(U861)
+			</strong></td><td class="descriptioncell">旷工时间&nbsp;</td><td>numeric</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iAbsentTimes
+			(U861)
+			</strong></td><td class="descriptioncell">旷工次数&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nEAbsentMinute
+			(U861)
+			</strong></td><td class="descriptioncell">早退时间&nbsp;</td><td>numeric</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iEAbsentTimes
+			(U861)
+			</strong></td><td class="descriptioncell">早退次数&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nLAbsentMinute
+			(U861)
+			</strong></td><td class="descriptioncell">迟到时间&nbsp;</td><td>numeric</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iLAbsentTimes
+			(U861)
+			</strong></td><td class="descriptioncell">迟到次数&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nErrandDays
+			(U861)
+			</strong></td><td class="descriptioncell">出差时间&nbsp;</td><td>numeric</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nVacDays
+			(U861)
+			</strong></td><td class="descriptioncell">休假时间&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>vRemark
+			(U861)
+			</strong></td><td class="descriptioncell">备注&nbsp;</td><td>nvarchar</td><td>255&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bLastFlag
+			(U861)
+			</strong></td><td class="descriptioncell">当前记录标识&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>vStatus1
+			(U861)
+			</strong></td><td class="descriptioncell">status1&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nStatus2
+			(U861)
+			</strong></td><td class="descriptioncell">status2&nbsp;</td><td>numeric</td><td>9&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap><img src=images/primarykey.png>&nbsp;</td><td class="linkcell">
+			<strong>pk_hr_tm_MonthResult
+			(U861)
+			</strong></td><td class="descriptioncell">主键&nbsp;</td><td>UFUID</td><td>16&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+		</table>
+		<h4 class=dxh4>Indexes</h4>
+		<TABLE CLASS="FilteredItemListTable" CellSpacing="0">
+			<TR VALIGN="top"><TH width=30%>Index</TH><TH width=50%>Description</TH><TH>Primary</TH><TH>Unique</TH></TR>
+			<TR><TD CLASS=LinkCell WIDTH="50%"><A HREF="55ad61a1-0c4f-48fb-967a-3b47a16fc41d.html">PK_HR_TM_MONTHRESULT_NEW</A></TD><TD CLASS="DescriptionCell" WIDTH="50%">&nbsp;</TD><TD Class="Centered"><img src=images/tick.png></TD><TD Class="Centered"><img src=images/tick.png></TD></TR>
+			<TR><TD CLASS=LinkCell WIDTH="50%"><A HREF="da7a471e-3e7b-488b-8fc7-c555dfecb8cf.html">IX_hr_tm_MonthResult</A></TD><TD CLASS="DescriptionCell" WIDTH="50%">&nbsp;</TD><TD Class="Centered"></TD><TD Class="Centered"></TD></TR>
+		</TABLE>
+		<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

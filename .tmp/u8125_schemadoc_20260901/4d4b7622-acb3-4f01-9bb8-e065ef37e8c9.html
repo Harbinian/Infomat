@@ -1,0 +1,406 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>mom_moallocatehistory Table</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">mom_moallocatehistory Table 
+			&nbsp;(MO 生产订单)
+			&nbsp;[U870]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>mom_moallocatehistory 生产订单子件变更历史档案</p>
+		
+		<h4 class=dxh4>Columns</h4>
+		<table class="columnlisttable" cellspacing="0">
+			<tr valign="top"><th align=middle>&nbsp;</th><th nowrap>Column Name</th><th nowrap>Description</th><th nowrap>Datatype</th><th nowrap>Length</th><th nowrap>Allow Nulls</th></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CostWIPRel
+			(U8100)
+			</strong></td><td class="descriptioncell">成本投产推算&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CostItemCode
+			(U8100)
+			</strong></td><td class="descriptioncell">项目编码&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>OpSeq
+			(U870)
+			</strong></td><td class="descriptioncell">OpSeq 工序行号
+&nbsp;</td><td>nchar</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>RequisitionQty
+			(U8100)
+			</strong></td><td class="descriptioncell">申请量&nbsp;</td><td>Udt_QTY</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Define31
+			(U870)
+			</strong></td><td class="descriptioncell">Define31 表体自定义项10&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>IssQty
+			(U870)
+			</strong></td><td class="descriptioncell">IssQty 已领量
+&nbsp;</td><td>Udt_QTY</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>DeclaredQty
+			(U870)
+			</strong></td><td class="descriptioncell">DeclaredQty 报检数量
+&nbsp;</td><td>Udt_QTY</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>MoCode
+			(U870)
+			</strong></td><td class="descriptioncell">MoCode 生产订单号码
+&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>QcFlag
+			(U870)
+			</strong></td><td class="descriptioncell">QcFlag 检验否
+&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CostItemName
+			(U8100)
+			</strong></td><td class="descriptioncell">项目名称&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>MoId
+			(U870)
+			</strong></td><td class="descriptioncell">MoId 生产订单表头ID
+&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>VariationLogId
+			(U870)
+			</strong></td><td class="descriptioncell">VariationLogId 变更日志ID&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>DetailHistoryId
+			(U870)
+			</strong></td><td class="descriptioncell">DetailHistoryId 记录母件的变更ID&nbsp;</td><td>bigint</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Free2
+			(U870)
+			</strong></td><td class="descriptioncell">Free2 自由项2
+&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>InvCode
+			(U870)
+			</strong></td><td class="descriptioncell">InvCode 存货编码
+&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Define23
+			(U870)
+			</strong></td><td class="descriptioncell">Define23 表体自定义项2&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>OrgAuxQty
+			(U872)
+			</strong></td><td class="descriptioncell">原始辅助数量&nbsp;</td><td>Udt_QTY</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>WIPType
+			(U870)
+			</strong></td><td class="descriptioncell">WIPType WIP属性(1入库/2工序/3领料/5基于BOM)&nbsp;</td><td>tinyint</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ProductType
+			(U871)
+			</strong></td><td class="descriptioncell">产出类型(1:空/2:联产品/3:副产品)&nbsp;</td><td>tinyint</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Define25
+			(U870)
+			</strong></td><td class="descriptioncell">Define25 表体自定义项4&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>VariationAction
+			(U870)
+			</strong></td><td class="descriptioncell">VariationAction 变更行为 1新增/2修改3删除/&nbsp;</td><td>tinyint</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>SoDId
+			(U872)
+			</strong></td><td class="descriptioncell">需求跟踪DId&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>BaseQtyD
+			(U870)
+			</strong></td><td class="descriptioncell">BaseQtyD 基本用量－分母
+&nbsp;</td><td>Udt_QTY</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Free10
+			(U870)
+			</strong></td><td class="descriptioncell">Free10 自由项10
+&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ReplenishQty
+			(U870)
+			</strong></td><td class="descriptioncell">ReplenishQty 补料量&nbsp;</td><td>Udt_QTY</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ComponentId
+			(U870)
+			</strong></td><td class="descriptioncell">ComponentId 子件物料ID
+&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Define33
+			(U870)
+			</strong></td><td class="descriptioncell">Define33 表体自定义项12&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>AllocateId
+			(U870)
+			</strong></td><td class="descriptioncell">AllocateId 子件档案ID&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>FVFlag
+			(U870)
+			</strong></td><td class="descriptioncell">FVFlag 固定/变动批量(0/1)
+&nbsp;</td><td>tinyint</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Free4
+			(U870)
+			</strong></td><td class="descriptioncell">Free4 自由项4
+&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap><img src=images/primarykey.png>&nbsp;</td><td class="linkcell">
+			<strong>HistoryId
+			(U870)
+			</strong></td><td class="descriptioncell">HistoryId 主键ID 自增量&nbsp;</td><td>bigint</td><td>8&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>LotNo
+			(U870)
+			</strong></td><td class="descriptioncell">LotNo 批号&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>OpComponentId
+			(U870)
+			</strong></td><td class="descriptioncell">OpComponentId BOM子件资料ID&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>EndDemDate
+			(U870)
+			</strong></td><td class="descriptioncell">EndDemDate 结束需求日
+&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>DemandCode
+			(U872)
+			</strong></td><td class="descriptioncell">需求分类单号&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CompScrap
+			(U870)
+			</strong></td><td class="descriptioncell">CompScrap 子件损耗率
+&nbsp;</td><td>Udt_Rate</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>WhCode
+			(U870)
+			</strong></td><td class="descriptioncell">WhCode 仓库代号
+&nbsp;</td><td>nvarchar</td><td>10&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>HistoryType
+			(U870)
+			</strong></td><td class="descriptioncell">HistoryType 变更生产订单类型 1生产订单/2重复计划&nbsp;</td><td>tinyint</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Define34
+			(U870)
+			</strong></td><td class="descriptioncell">Define34 表体自定义项13&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>PrintYn
+			(U870)
+			</strong></td><td class="descriptioncell">PrintYn 是否打印(1打印/0不打印)&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ParentScrap
+			(U870)
+			</strong></td><td class="descriptioncell">ParentScrap 母件损耗率
+&nbsp;</td><td>Udt_Rate</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>QmFlag
+			(U872)
+			</strong></td><td class="descriptioncell">是否返工&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>SoCode
+			(U872)
+			</strong></td><td class="descriptioncell">需求跟踪号&nbsp;</td><td>nvarchar</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Free6
+			(U870)
+			</strong></td><td class="descriptioncell">Free6 自由项6
+&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>BaseQtyN
+			(U870)
+			</strong></td><td class="descriptioncell">BaseQtyN 基本用量－分子
+&nbsp;</td><td>Udt_QTY</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Define22
+			(U870)
+			</strong></td><td class="descriptioncell">Define22 表体自定义项1&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Define37
+			(U870)
+			</strong></td><td class="descriptioncell">Define37 表体自定义项16&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Free9
+			(U870)
+			</strong></td><td class="descriptioncell">Free9 自由项9
+&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>SoType
+			(U872)
+			</strong></td><td class="descriptioncell">需求跟踪方式 0无来源 1销售订单行 3出口订单行 4需求分类 5 销售订单 6出口订单&nbsp;</td><td>tinyint</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>TransQty
+			(U871)
+			</strong></td><td class="descriptioncell">已调拨量&nbsp;</td><td>Udt_QTY</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Offset
+			(U870)
+			</strong></td><td class="descriptioncell">Offset 偏置期
+&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Define28
+			(U870)
+			</strong></td><td class="descriptioncell">Define28 表体自定义项7&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>AuxBaseQtyN
+			(U870)
+			</strong></td><td class="descriptioncell">AuxBaseQtyN 辅助基本用量&nbsp;</td><td>Udt_QTY</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>SortSeq
+			(U870)
+			</strong></td><td class="descriptioncell">SortSeq 序号&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Free3
+			(U870)
+			</strong></td><td class="descriptioncell">Free3 自由项3
+&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Define35
+			(U870)
+			</strong></td><td class="descriptioncell">Define35 表体自定义项14&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>HistorySeq
+			(U870)
+			</strong></td><td class="descriptioncell">HistorySeq 变更序号&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>DetailSortSeq
+			(U870)
+			</strong></td><td class="descriptioncell">DetailSortSeq 行号&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Define27
+			(U870)
+			</strong></td><td class="descriptioncell">Define27 表体自定义项6&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Define24
+			(U870)
+			</strong></td><td class="descriptioncell">Define24 表体自定义项3&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>AuxQty
+			(U870)
+			</strong></td><td class="descriptioncell">AuxQty 应领辅助量&nbsp;</td><td>Udt_QTY</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Qty
+			(U870)
+			</strong></td><td class="descriptioncell">Qty 数量
+&nbsp;</td><td>Udt_QTY</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Define26
+			(U870)
+			</strong></td><td class="descriptioncell">Define26 表体自定义项5&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>RequisitionIssQty
+			(U8100)
+			</strong></td><td class="descriptioncell">申请已领量&nbsp;</td><td>Udt_QTY</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>SoSeq
+			(U872)
+			</strong></td><td class="descriptioncell">需求跟踪行号&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Define36
+			(U870)
+			</strong></td><td class="descriptioncell">Define36 表体自定义项15&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>OrgQty
+			(U872)
+			</strong></td><td class="descriptioncell">原始数量&nbsp;</td><td>Udt_QTY</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Remark
+			(U871)
+			</strong></td><td class="descriptioncell">备注&nbsp;</td><td>nvarchar</td><td>255&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Free5
+			(U870)
+			</strong></td><td class="descriptioncell">Free5 自由项5
+&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Free7
+			(U870)
+			</strong></td><td class="descriptioncell">Free7 自由项7
+&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>RequisitionFlag
+			(U8100)
+			</strong></td><td class="descriptioncell">领料申请标识&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ByproductFlag
+			(U870)
+			</strong></td><td class="descriptioncell">ByproductFlag 是否联副产品
+&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>AuxUnitCode
+			(U870)
+			</strong></td><td class="descriptioncell">AuxUnitCode 辅助计量单位&nbsp;</td><td>nvarchar</td><td>35&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Define29
+			(U870)
+			</strong></td><td class="descriptioncell">Define29 表体自定义项8&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Free1
+			(U870)
+			</strong></td><td class="descriptioncell">Free1 自由项1
+&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>MoallocateSubId
+			(U8101)
+			</strong></td><td class="descriptioncell">替代料id&nbsp;</td><td>uniqueidentifier</td><td>16&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Define30
+			(U870)
+			</strong></td><td class="descriptioncell">Define30 表体自定义项9&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Free8
+			(U870)
+			</strong></td><td class="descriptioncell">Free8 自由项8
+&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Define32
+			(U870)
+			</strong></td><td class="descriptioncell">Define32 表体自定义项11&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>StartDemDate
+			(U870)
+			</strong></td><td class="descriptioncell">StartDemDate 开始需求日期
+&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>HistoryMode
+			(U870)
+			</strong></td><td class="descriptioncell">HistoryMode 变更类别：1手动/2自动&nbsp;</td><td>tinyint</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ChangeRate
+			(U870)
+			</strong></td><td class="descriptioncell">ChangeRate 换算率&nbsp;</td><td>Udt_ChangeRate</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>MoDId
+			(U870)
+			</strong></td><td class="descriptioncell">MoDId 生产订单明细ID&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+		</table>
+		<h4 class=dxh4>Indexes</h4>
+		<TABLE CLASS="FilteredItemListTable" CellSpacing="0">
+			<TR VALIGN="top"><TH width=30%>Index</TH><TH width=50%>Description</TH><TH>Primary</TH><TH>Unique</TH></TR>
+			<TR><TD CLASS=LinkCell WIDTH="50%"><A HREF="6bde2591-17e5-4c1a-b493-a26a301b3863.html">i_mom_moallocatehistory_1</A></TD><TD CLASS="DescriptionCell" WIDTH="50%">&nbsp;</TD><TD Class="Centered"></TD><TD Class="Centered"></TD></TR>
+			<TR><TD CLASS=LinkCell WIDTH="50%"><A HREF="7b6ba3a5-acd5-4bf0-915f-8e81ecb64a34.html">PK_mom_moallocatehistory</A></TD><TD CLASS="DescriptionCell" WIDTH="50%">&nbsp;</TD><TD Class="Centered"><img src=images/tick.png></TD><TD Class="Centered"><img src=images/tick.png></TD></TR>
+			<TR><TD CLASS=LinkCell WIDTH="50%"><A HREF="8c171839-87bb-40b5-881e-f966e3f68b99.html">i_mom_moallocatehistory</A></TD><TD CLASS="DescriptionCell" WIDTH="50%">&nbsp;</TD><TD Class="Centered"></TD><TD Class="Centered"></TD></TR>
+		</TABLE>
+		<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

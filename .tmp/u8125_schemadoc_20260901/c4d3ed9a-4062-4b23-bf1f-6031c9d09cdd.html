@@ -1,0 +1,365 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>pl_CO_CalResults Table</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">pl_CO_CalResults Table 
+			&nbsp;(ED 标准成本管理)
+			&nbsp;[U872]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>生产、委外订单成本材料明细表</p>
+		
+		<h4 class=dxh4>Columns</h4>
+		<table class="columnlisttable" cellspacing="0">
+			<tr valign="top"><th align=middle>&nbsp;</th><th nowrap>Column Name</th><th nowrap>Description</th><th nowrap>Datatype</th><th nowrap>Length</th><th nowrap>Allow Nulls</th></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>quanDifOmO
+			(U890)
+			</strong></td><td class="descriptioncell">本期完工本阶加工费耗用差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>stdCostO
+			(U872)
+			</strong></td><td class="descriptioncell">本期完工标准材料费&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>quanDifLaborI
+			(U890)
+			</strong></td><td class="descriptioncell">本期投入本阶人工耗用差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fRealUseStdCost
+			(U8100)
+			</strong></td><td class="descriptioncell">本期实领标准材料费&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>quanDifOmI
+			(U890)
+			</strong></td><td class="descriptioncell">本期投入本阶加工费耗用差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>stdCostLaborQ
+			(U890)
+			</strong></td><td class="descriptioncell">期初人工耗用标准成本&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fLaborPriceDifLE
+			(U890)
+			</strong></td><td class="descriptioncell">结存前阶人工费率差&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fLaborPriceDifLQ
+			(U890)
+			</strong></td><td class="descriptioncell">期初前阶人工费率差&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iRealUseQuan
+			(U890)
+			</strong></td><td class="descriptioncell">实领数量&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>stdQuanQD
+			(U872)
+			</strong></td><td class="descriptioncell">期初超用数量&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>stdCostQ
+			(U872)
+			</strong></td><td class="descriptioncell">期初标准材料费&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>quanDifOmE
+			(U890)
+			</strong></td><td class="descriptioncell">结存本阶加工费耗用差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>prcDifO
+			(U890)
+			</strong></td><td class="descriptioncell">本期完工价差&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>stdCostOmI
+			(U890)
+			</strong></td><td class="descriptioncell">本期投入加工费耗用标准成本&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>prcDifQ
+			(U890)
+			</strong></td><td class="descriptioncell">期初价差&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fSemiLaborQuanDifLO
+			(U890)
+			</strong></td><td class="descriptioncell">本期完工前阶人工耗用差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iQuanDifType
+			(U8100)
+			</strong></td><td class="descriptioncell">量差类型（0-非结构差异；1-正向结构差异；2-负向结构差异）&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>prcDifE
+			(U890)
+			</strong></td><td class="descriptioncell">结存价差&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iperiod
+			(U872)
+			</strong></td><td class="descriptioncell">期间&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>stdCostE
+			(U872)
+			</strong></td><td class="descriptioncell">结存标准材料费&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>stdCostOmE
+			(U890)
+			</strong></td><td class="descriptioncell">结存加工费耗用标准成本&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>stdQuanIS
+			(U872)
+			</strong></td><td class="descriptioncell">本期投入标准用量&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>quanDifOmQ
+			(U890)
+			</strong></td><td class="descriptioncell">期初本阶加工费耗用差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fSemiOmQuanDifLQ
+			(U890)
+			</strong></td><td class="descriptioncell">期初前阶加工费耗用差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>stdQuanID
+			(U872)
+			</strong></td><td class="descriptioncell">本期投入超用数量&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fSemiOmQuanDifLO
+			(U890)
+			</strong></td><td class="descriptioncell">本期完工前阶加工费耗用差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>stdCostOmO
+			(U890)
+			</strong></td><td class="descriptioncell">本期完工加工费耗用标准成本&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fSetNumE
+			(U8100)
+			</strong></td><td class="descriptioncell">结存套数&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>stdCostO_Accu
+			(U8100)
+			</strong></td><td class="descriptioncell">累计完工标准材料费&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>stdCostLaborO
+			(U890)
+			</strong></td><td class="descriptioncell">本期完工人工耗用标准成本&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>stdCostOmO_Accu
+			(U8100)
+			</strong></td><td class="descriptioncell">累计完工加工费耗用标准成本&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>stdCostV
+			(U872)
+			</strong></td><td class="descriptioncell">预留&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap><img src=images/primarykey.png>&nbsp;</td><td class="linkcell">
+			<strong>autoid
+			(U872)
+			</strong></td><td class="descriptioncell">自动编号&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cInvCode
+			(U872)
+			</strong></td><td class="descriptioncell">已废弃&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ID
+			(U872)
+			</strong></td><td class="descriptioncell">同pl_co_calresult.ID&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fSemiOmQuanDifLI
+			(U890)
+			</strong></td><td class="descriptioncell">本期投入前阶加工费耗用差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>quanDifE
+			(U872)
+			</strong></td><td class="descriptioncell">结存本阶量差&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CoVersion
+			(U872)
+			</strong></td><td class="descriptioncell">版本编码&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>quanDifLaborQ
+			(U890)
+			</strong></td><td class="descriptioncell">期初本阶人工耗用差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fSetNumQ
+			(U8100)
+			</strong></td><td class="descriptioncell">期初套数&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>quanDifL
+			(U872)
+			</strong></td><td class="descriptioncell">本期完工前阶量差&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fLaborPriceDifLO
+			(U890)
+			</strong></td><td class="descriptioncell">本期完工前阶人工费率差&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>stdQuanOD
+			(U872)
+			</strong></td><td class="descriptioncell">本期完工超用数量&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fOmCostDifLO
+			(U890)
+			</strong></td><td class="descriptioncell">本期完工前阶加工费差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>quanDifLaborE
+			(U890)
+			</strong></td><td class="descriptioncell">结存本阶人工耗用差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>stdCostLaborO_Accu
+			(U8100)
+			</strong></td><td class="descriptioncell">累计完工人工耗用标准成本&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fSemiLaborQuanDifLE
+			(U890)
+			</strong></td><td class="descriptioncell">结存前阶人工耗用差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fOmCostDifLE
+			(U890)
+			</strong></td><td class="descriptioncell">结存前阶加工费差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fLaborQuanDifLQ
+			(U890)
+			</strong></td><td class="descriptioncell">期初前阶人工效率差&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>prcDifI
+			(U890)
+			</strong></td><td class="descriptioncell">本期投入价差&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>quanDifI
+			(U872)
+			</strong></td><td class="descriptioncell">本期投入本阶量差&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>stdQuanOS_Accu
+			(U8100)
+			</strong></td><td class="descriptioncell">累计完工标准用量&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>quanDifLI
+			(U890)
+			</strong></td><td class="descriptioncell">本期投入前阶量差&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>quanDifQ
+			(U872)
+			</strong></td><td class="descriptioncell">期初本阶量差&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fOmCostDifLI
+			(U890)
+			</strong></td><td class="descriptioncell">本期投入前阶加工费差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fSetNumI
+			(U8100)
+			</strong></td><td class="descriptioncell">本期投入套数&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fLaborQuanDifLE
+			(U890)
+			</strong></td><td class="descriptioncell">结存前阶人工效率差&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fLaborQuanDifLI
+			(U890)
+			</strong></td><td class="descriptioncell">本期投入前阶人工效率差&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>stdCostLaborI
+			(U890)
+			</strong></td><td class="descriptioncell">本期投入人工耗用标准成本&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fRealUseOmStdCost
+			(U8100)
+			</strong></td><td class="descriptioncell">本期实领标准加工费&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>quanDifO
+			(U872)
+			</strong></td><td class="descriptioncell">本期完工本阶量差&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fRealUseLbrStdCost
+			(U8100)
+			</strong></td><td class="descriptioncell">本期实领标准人工费&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fLaborPriceDifLI
+			(U890)
+			</strong></td><td class="descriptioncell">本期投入前阶人工费率差&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ByProductFlag
+			(U8100)
+			</strong></td><td class="descriptioncell">产出品标记&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>stdQuanQS
+			(U872)
+			</strong></td><td class="descriptioncell">期初标准用量&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>quanDifLQ
+			(U890)
+			</strong></td><td class="descriptioncell">期初前阶量差&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iMatId
+			(U8100)
+			</strong></td><td class="descriptioncell">物料ID&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fOmCostDifLQ
+			(U890)
+			</strong></td><td class="descriptioncell">期初前阶加工费差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>stdQuanED
+			(U872)
+			</strong></td><td class="descriptioncell">结存超用数量&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fSemiOmQuanDifLE
+			(U890)
+			</strong></td><td class="descriptioncell">结存前阶加工费耗用差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fLaborQuanDifLO
+			(U890)
+			</strong></td><td class="descriptioncell">本期完工前阶人工效率差&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>stdQuanOS
+			(U872)
+			</strong></td><td class="descriptioncell">本期完工标准用量&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fSemiLaborQuanDifLQ
+			(U890)
+			</strong></td><td class="descriptioncell">期初前阶人工耗用差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fSemiLaborQuanDifLI
+			(U890)
+			</strong></td><td class="descriptioncell">本期投入前阶人工耗用差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>quanDifLaborO
+			(U890)
+			</strong></td><td class="descriptioncell">本期完工本阶人工耗用差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>stdCostOmQ
+			(U890)
+			</strong></td><td class="descriptioncell">期初加工费耗用标准成本&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>stdCostLaborE
+			(U890)
+			</strong></td><td class="descriptioncell">结存人工耗用标准成本&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>quanDifLE
+			(U890)
+			</strong></td><td class="descriptioncell">结存前阶量差&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>stdCostI
+			(U872)
+			</strong></td><td class="descriptioncell">本期投入标准材料费&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>stdQuanES
+			(U872)
+			</strong></td><td class="descriptioncell">结存标准用量&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+		</table>
+		<h4 class=dxh4>Indexes</h4>
+		<TABLE CLASS="FilteredItemListTable" CellSpacing="0">
+			<TR VALIGN="top"><TH width=30%>Index</TH><TH width=50%>Description</TH><TH>Primary</TH><TH>Unique</TH></TR>
+			<TR><TD CLASS=LinkCell WIDTH="50%"><A HREF="3e1b533d-f6ba-4047-a245-26d73d8c42f8.html">PK_PL_CO_CALRESULTS</A></TD><TD CLASS="DescriptionCell" WIDTH="50%">&nbsp;</TD><TD Class="Centered"><img src=images/tick.png></TD><TD Class="Centered"><img src=images/tick.png></TD></TR>
+			<TR><TD CLASS=LinkCell WIDTH="50%"><A HREF="acc28728-7430-4c88-b2b4-8c53968b574a.html">IX_pl_CO_CalResults</A></TD><TD CLASS="DescriptionCell" WIDTH="50%">&nbsp;</TD><TD Class="Centered"></TD><TD Class="Centered"></TD></TR>
+			<TR><TD CLASS=LinkCell WIDTH="50%"><A HREF="bd41ba16-2b7e-4e4b-a03b-4eec48488fe4.html">IX_pl_CO_CalResults_ID</A></TD><TD CLASS="DescriptionCell" WIDTH="50%">&nbsp;</TD><TD Class="Centered"></TD><TD Class="Centered"><img src=images/tick.png></TD></TR>
+		</TABLE>
+		<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

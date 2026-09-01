@@ -237,8 +237,8 @@ cd apps/mdm-platform
 npm start              # Express，端口 3000
 npm run dev            # 开发模式（nodemon 自动重启）
 
-# 数据库初始化
-npm run init-db        # 重建数据库
+# MySQL结构初始化
+npm run init:mysql     # 初始化或升级MySQL结构
 
 # 冒烟测试
 npm run smoke          # 基础冒烟
@@ -251,6 +251,8 @@ npm test:conflicts npm test:terms
 npm test:export npm test:import
 npm test:frontend
 ```
+
+正式运行和流程治理同步使用MySQL。`npm run legacy-sqlite:init-db`只用于遗留迁移或隔离测试，不得作为正式初始化命令。
 
 ---
 

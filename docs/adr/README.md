@@ -2,9 +2,9 @@
 
 > 状态：架构决策记录目录  
 > 生效日期：2026-06-10  
-> 范围：已经接受、需要长期追溯的仓库结构和架构决策。
+> 范围：处于明确评审状态、需要长期追溯的仓库结构和架构决策。
 
-本目录保存 ADR（Architecture Decision Record）。ADR 用于记录已经接受的长期决策、背景和影响，不用于记录临时计划、普通审计结果或待讨论草案。
+本目录保存 ADR（Architecture Decision Record）。ADR 可以处于 `Proposed`、`Accepted`、`Rejected`、`Superseded` 等明确状态。`Proposed` 只表示正式提议，不能写成已经接受；普通执行计划、审计结果和没有责任边界的随手草案不进入本目录。
 
 ## 1. 当前记录
 
@@ -13,6 +13,7 @@
 | `0001-repo-structure-and-artifacts.md` | 仓库结构与生成物策略 | Accepted |
 | `0002-codex-collaboration-and-doc-sync.md` | Codex 协作入口与代码文档同步 | Accepted |
 | `0003-work-role-governance-and-process-binding.md` | 工作角色治理、岗位映射与流程绑定 | Accepted |
+| `0004-controlled-derived-consumer-files.md` | 受控派生消费文件例外 | Proposed |
 
 ## 2. 何时新增 ADR
 
@@ -37,4 +38,4 @@ ADR 文件使用递增编号：
 0002-topic.md
 ```
 
-正文至少包含：状态、背景、决策、影响。
+正文至少包含：状态、背景、提议或决策、影响。状态变化必须由架构评审结论支持，不得由实施任务擅自把 `Proposed` 改为 `Accepted`。

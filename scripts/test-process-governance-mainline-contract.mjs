@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
@@ -7,6 +7,19 @@ const data = JSON.parse(readFileSync(resolve(root, 'docs', 'company-sankey-data.
 const pkg = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8'));
 const dashboardCheckSource = readFileSync(resolve(root, 'scripts', 'check-dashboard-data.mjs'), 'utf8');
 const mainlineTestSource = readFileSync(resolve(root, 'scripts', 'test-process-governance-mainline.mjs'), 'utf8');
+const derivedFileAdr = readFileSync(resolve(root, 'docs', 'adr', '0004-controlled-derived-consumer-files.md'), 'utf8');
+const codexConfig = readFileSync(resolve(root, '.codex', 'config.toml'), 'utf8');
+
+assert.match(derivedFileAdr, /^## 状态\s+Proposed$/m, 'controlled derived consumer file ADR must remain Proposed');
+assert.doesNotMatch(derivedFileAdr, /^## 状态\s+Accepted$/m, 'the task must not mark the new ADR Accepted');
+for (const localAgentPath of [
+  'docs/organization/AGENTS.md',
+  'docs/contracts/AGENTS.md',
+  'pmo/organization-dynamics/AGENTS.md',
+]) {
+  assert.ok(existsSync(resolve(root, localAgentPath)), `local instructions must exist: ${localAgentPath}`);
+}
+assert.doesNotMatch(codexConfig, /password|secret|token|api[_-]?key|private[_-]?key/i, '.codex/config.toml must not contain secrets');
 
 assert.ok(Array.isArray(data.nodes), 'company snapshot should keep nodes');
 assert.ok(Array.isArray(data.links), 'company snapshot should keep links');
@@ -42,6 +55,19 @@ assert.ok(Array.isArray(data.mdmRequirements), 'mdmRequirements should exist');
 assert.ok(
   data.mdmRequirements.some(item => item.masterDataObject && item.sourceFile && item.sourceFile.endsWith('能力层与MDM建设要求.md')),
   'mdmRequirements should include master data review items from department MDM documents'
+);
+const discoveredMdmRequirementPaths = readdirSync(resolve(root, 'docs', 'norms'), { withFileTypes: true })
+  .filter(entry => entry.isFile() && entry.name.endsWith('能力层与MDM建设要求.md'))
+  .map(entry => `docs/norms/${entry.name}`)
+  .sort();
+const manifestedMdmRequirementPaths = data.sourceManifest.files
+  .filter(file => file.status === '纳入' && file.path.endsWith('能力层与MDM建设要求.md'))
+  .map(file => file.path)
+  .sort();
+assert.deepStrictEqual(
+  manifestedMdmRequirementPaths,
+  discoveredMdmRequirementPaths,
+  'source manifest must include every MDM requirement file discovered by the parser naming rule'
 );
 
 assert.ok(Array.isArray(data.evidenceRefs), 'evidenceRefs should exist');

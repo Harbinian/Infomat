@@ -1,0 +1,168 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>pl_CO_OnpVerChgDif Table</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">pl_CO_OnpVerChgDif Table 
+			&nbsp;(ED 标准成本管理)
+			&nbsp;[U8101]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>在产更新差异表</p>
+		
+		<h4 class=dxh4>Columns</h4>
+		<table class="columnlisttable" cellspacing="0">
+			<tr valign="top"><th align=middle>&nbsp;</th><th nowrap>Column Name</th><th nowrap>Description</th><th nowrap>Datatype</th><th nowrap>Length</th><th nowrap>Allow Nulls</th></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fOmStdCostChg
+			(U8101)
+			</strong></td><td class="descriptioncell">加工费标准成本更新差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fManuFixPriceDifChg
+			(U8101)
+			</strong></td><td class="descriptioncell">固定制造人工费率差更新差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fInvStdCostChg
+			(U8101)
+			</strong></td><td class="descriptioncell">材料标准成本更新差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fSemiLaborQuanDifChg
+			(U8101)
+			</strong></td><td class="descriptioncell">耗用半成品人工差异更新差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>OldVersion
+			(U8101)
+			</strong></td><td class="descriptioncell">变更前版本&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fQuanQ_mat
+			(U8101)
+			</strong></td><td class="descriptioncell">期初在产数量_材料约当&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fSemiManuFixQuanDifChg
+			(U8101)
+			</strong></td><td class="descriptioncell">耗用半成品固定制造差异更新差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fInvPriceDifChg
+			(U8101)
+			</strong></td><td class="descriptioncell">材料价差更新差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fQuanQ_lbr
+			(U8101)
+			</strong></td><td class="descriptioncell">期初在产数量_人工约当&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cChgMan
+			(U8101)
+			</strong></td><td class="descriptioncell">变更人&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fManuVarPriceDifChg
+			(U8101)
+			</strong></td><td class="descriptioncell">变动制造人工费率差更新差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fSemiManuVarQuanDifChg
+			(U8101)
+			</strong></td><td class="descriptioncell">耗用半成品变动制造差异更新差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fManuFixStdCostChg
+			(U8101)
+			</strong></td><td class="descriptioncell">固定制造标准成本更新差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fInvQuanDifChg
+			(U8101)
+			</strong></td><td class="descriptioncell">材料量差更新差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fLaborPriceDifChg
+			(U8101)
+			</strong></td><td class="descriptioncell">人工费率差更新差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iRealCoId
+			(U8101)
+			</strong></td><td class="descriptioncell">成本对象id&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>LastID
+			(U8101)
+			</strong></td><td class="descriptioncell">上月id&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fQuanQ
+			(U8101)
+			</strong></td><td class="descriptioncell">期初在产数量&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fLaborQuanDifChg
+			(U8101)
+			</strong></td><td class="descriptioncell">人工效率差更新差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>NewVersion
+			(U8101)
+			</strong></td><td class="descriptioncell">变更后版本&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fManuVarStdCostChg
+			(U8101)
+			</strong></td><td class="descriptioncell">变动制造标准成本更新差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fOmQuanDifChg
+			(U8101)
+			</strong></td><td class="descriptioncell">加工费差异更新差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fQuanQ_mau
+			(U8101)
+			</strong></td><td class="descriptioncell">期初在产数量_制造约当&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iVouchType
+			(U8101)
+			</strong></td><td class="descriptioncell">订单类型。0-生产；1-委外&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fLaborStdCostChg
+			(U8101)
+			</strong></td><td class="descriptioncell">人工标准成本更新差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dDate
+			(U8101)
+			</strong></td><td class="descriptioncell">变更日期&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>autoid
+			(U8101)
+			</strong></td><td class="descriptioncell">自增长&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fSemiOmQuanDifChg
+			(U8101)
+			</strong></td><td class="descriptioncell">耗用半成品加工费差异更新差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iPeriod
+			(U8101)
+			</strong></td><td class="descriptioncell">变更期间&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fManuFixQuanDifChg
+			(U8101)
+			</strong></td><td class="descriptioncell">固定制造效率差更新差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fManuVarQuanDifChg
+			(U8101)
+			</strong></td><td class="descriptioncell">变动制造效率差更新差异&nbsp;</td><td>ia_decimal</td><td>17&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+		</table>
+		<h4 class=dxh4>Indexes</h4>
+		<TABLE CLASS="FilteredItemListTable" CellSpacing="0">
+			<TR VALIGN="top"><TH width=30%>Index</TH><TH width=50%>Description</TH><TH>Primary</TH><TH>Unique</TH></TR>
+			<TR><TD CLASS=LinkCell WIDTH="50%"><A HREF="173a05c3-41c7-49c5-a290-0b4392a91b4d.html">IX_pl_CO_OnpVerChgDif</A></TD><TD CLASS="DescriptionCell" WIDTH="50%">&nbsp;</TD><TD Class="Centered"></TD><TD Class="Centered"></TD></TR>
+			<TR><TD CLASS=LinkCell WIDTH="50%"><A HREF="55902704-70e0-43a6-ba78-67347dc71799.html">PK_pl_CO_OnpVerChgDif</A></TD><TD CLASS="DescriptionCell" WIDTH="50%">&nbsp;</TD><TD Class="Centered"><img src=images/tick.png></TD><TD Class="Centered"><img src=images/tick.png></TD></TR>
+		</TABLE>
+		<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

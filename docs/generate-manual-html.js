@@ -409,7 +409,7 @@ code{background:#f1f5f9;padding:1px 5px;border-radius:3px;font-size:12px;font-fa
 npm install              # 安装依赖
 npm start                # 启动服务（Express，端口 3000）
 npm run dev              # 开发模式（nodemon 自动重启）
-npm run init-db          # 初始化/重建数据库</code></pre>
+npm run init:mysql       # 初始化或升级MySQL结构</code></pre>
   </div>
 
   <div class="card">
@@ -430,18 +430,15 @@ npm test:frontend     # 前端静态资源测试</code></pre>
 
   <div class="card">
     <h3>数据操作</h3>
-    <pre><code># 数据库文件位置
-apps/mdm-platform/data/platform.db
+    <pre><code># 正式运行使用MySQL；连接参数通过环境变量或固定启动配置提供
+npm run init:mysql
 
-# 使用 sqlite3 命令行直接查询
-sqlite3 data/platform.db "SELECT * FROM users;"
-
-# 重置演示数据
-node scripts/init-db.js && node scripts/seed-demo-data.js</code></pre>
+# 遗留SQLite只允许隔离迁移或测试
+npm run legacy-sqlite:init-db</code></pre>
   </div>
 
   <div class="info">
-    <strong>注意</strong>：SQLite 是本地文件数据库，不适用于多进程并发部署。生产环境建议迁移至 PostgreSQL。
+    <strong>注意</strong>：正式运行和流程治理同步使用MySQL。遗留SQLite命令不得作为正式入口。
   </div>
 </section>
 

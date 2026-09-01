@@ -13,14 +13,14 @@
 | `check-dept-domain-mapping.mjs` | 校验 DCM/BBM 规则文件与组织真源一致，并确认 parser 从组织真源读取部门到域映射 | `docs/organization/组织架构和部门职责.md`、`docs/contracts/dcm-bbm-contract.json`、`scripts/parse-sankey-data.mjs` | 只读校验 |
 | `check-engineering-source-manifest.mjs` | 校验工程技术部源文件清单中的 canonical 缺口和外部待确认索引仍与仓库现状一致 | `docs/reports/2026-06-11-engineering-source-manifest.md`、外部参考待确认目录 | 只读校验 |
 | `check-norms-source-manifest.mjs` | 校验部门流程输入基线清单与规则文件中的部门、`docs/norms`标准三件套一致 | `docs/contracts/dcm-bbm-contract.json`、`docs/norms/`、两份 source manifest 报告 | 只读校验 |
-| `check-pmo-task-data.mjs` | 校验计划真源、WBS真源、两份任务JSON和两份source manifest同源，并检查516条任务的43字段逐行契约、真源摘要、两份README、项目周期和关键排期节点 | PMO 计划/WBS真源、两份`tasks.json`、两份PMO source manifest、两份README | 只读校验 |
+| `check-pmo-task-data.mjs` | 校验七份PMO Markdown真源、两份任务JSON和两份source manifest同源，并检查真源摘要、SHA-256短摘要、516条任务的43字段逐行规则、两份README、项目周期和关键排期节点 | 七份PMO真源、两份`tasks.json`、两份PMO source manifest、两份README | 只读校验 |
 | `check-pmo-execution-standards.mjs` | 校验 PMO 执行标准真源、WBS 1.2 执行级样板、WBS 3 标准绑定和H5诊断规则 | `pmo/信息化项目_执行标准真源.md`、WBS/计划管控真源、PMO 前端源码 | 只读校验 |
 | `check-pmo-standard-gap-operations.mjs` | 校验 PMO 执行标准缺口分桶、优先级队列、建议动作和标准治理 H5 入口 | PMO 任务数据、source manifest、执行标准真源、PMO 前端源码 | 只读校验 |
 | `check-pmo-wbs-semantic-depth.mjs` | 校验 PMO WBS 语义补组后不再保留二级叶子任务，并确认父级日期覆盖子任务 | `pmo/tasks.json` | 只读校验 |
 | `check-source-manifest-hashes.mjs` | 校验公司级快照里的 sourceManifest 文件大小和 SHA256 仍匹配磁盘源文件 | `docs/company-sankey-data.json`、`sourceManifest.files` 中登记的源文件 | 只读校验 |
 | `build-project-governance-report.mjs` | 生成双部门项目治理周报，并输出 PMO 周会页可读取的 JSON 快照 | 输入基线问题待办、DCM/BBM 质量报告、可选角色工作台快照 | 写入 `docs/reports/project-governance-weekly-report.md` 和 `pmo/gantt-react/public/project-governance-weekly-report.json` |
 | `test-project-governance-report.mjs` | 校验项目治理周报 Markdown、JSON快照和PMO读取规则 | 周报脚本、PMO 周会页源码、临时角色工作台夹具 | 只读校验，临时输出写入系统临时目录 |
-| `sync-process-governance-mainline.mjs` | 串起流程治理主线同步、检查和 MDM 快照导入 | 流程输入基线、PMO 驾驶舱、MDM 平台脚本；迁移过渡期的遗留本地库必须显式隔离 | 会运行 parser，并调用 MDM 平台同步 / 导入脚本 |
+| `sync-process-governance-mainline.mjs` | 串起流程治理主线生成、检查和MDM MySQL快照导入 | 流程输入基线、PMO驾驶舱、`docs/company-sankey-data.json`、显式MySQL环境变量 | 会运行parser并调用`apps/mdm-platform`现有MySQL导入器；不调用SQLite组织同步、导入或检查脚本 |
 | `test-process-governance-mainline.mjs` | 聚合仓库级流程治理主线只读校验 | 根级主线检查脚本 | 依次运行合约、项目治理升级、PMO 数据、部门域、source manifest 和 PMO 任务数据校验 |
 | `test-process-governance-mainline-contract.mjs` | 仓库级流程治理主线一致性测试 | `package.json`、`docs/company-sankey-data.json`、仓库级脚本 | 只读校验 |
 | `test-parse-sankey-structure-block.mjs` | 校验流程治理结构块 v1 的 parser 优先读取、hybrid 合并、系统枚举、证据状态和 A1→L3 引用约束 | 内置临时夹具 | 只读校验 |
@@ -82,8 +82,10 @@ npm run test:process-input-baseline-review
 npm run test:ocr-source
 npm run generate:weekly-action-personnel -- --generated-by "<name>"
 npm run test:weekly-action-personnel
-$env:MDM_DB_PATH='apps/mdm-platform/data/<target>.db'; npm run sync:process-governance
+$env:MYSQL_HOST='<host>'; $env:MYSQL_PORT='<port>'; $env:MYSQL_USER='<user>'; $env:MYSQL_PASSWORD='<password>'; $env:MYSQL_DATABASE='<database>'; npm run sync:process-governance
 ```
+
+`npm run sync:process-governance -- --check-env`只核对五个MySQL环境变量是否存在并输出脱敏状态，不连接数据库、不显示变量值。正式同步会写MySQL流程治理读模型，执行前必须确认目标实例、权限、备份和恢复路径。SQLite兼容脚本只通过`apps/mdm-platform`中以`legacy-sqlite:`开头的命令用于遗留迁移或隔离测试。
 
 `parse-sankey-data.mjs` 支持部门渐进迁移：单个部门文件存在 `meta.parser_schema_version: 1` 且提供 `l3_catalog` 时优先解析结构块；若正文仍有旧 Markdown DCM/A1 表格，则同一 L3/A1 由结构块覆盖，legacy 中未覆盖的剩余项继续进入快照，部门记录为 `source: hybrid` 并输出覆盖 warning。未提供结构块的部门继续走旧 Markdown 表格/标题解析，并在 stderr 打印 `[WARN] {部门} 未提供结构块(schema v1)，回退旧 Markdown 解析，存在漂移风险。`。生成的 `docs/company-sankey-data.json` 保留既有 `nodes`、`links`、`stats`、`processMappings`、`evidenceRefs` 等字段，并新增 `meta.departments[]` 记录各部门 `source: structured|hybrid|legacy`。
 
@@ -220,7 +222,8 @@ npm run review:mysql:serve
 | `test-ocr-source.mjs` | 校验 OCR 包装脚本的输出边界、复核登记和非结论化规则 | 一个扫描 PDF 样例 | 写入被忽略的 `artifacts/ocr/test-ocr-source/` |
 | `.agents/skills/process-evidence-mapping/scripts/run-process-input-baseline-review-workflow.mjs` | 串联 OCR 判断、evidence chunks、embedding/降级、输入基线解读、角色抽取、对象链、差异报告和待确认待办 Markdown | 单个制度文件、部门名、当前部门映射 | 写入 `artifacts/process-input-baseline-review/<run-id>/`；更新 `docs/norms/流程治理/输入基线问题待办.md` |
 | `.agents/skills/process-evidence-mapping/scripts/update-input-baseline-review-todo-md.mjs` | 将未解决待确认问题写入人工待办面板，按稳定键去重，并过滤当前已确认流程映射已覆盖项 | `mapping_diff_items.json`、当前部门映射 | 写入待确认待办 Markdown；只保留未解决项 |
-| `build-reviewItem-sankey-preview.mjs` | 为问题识别批次生成部门待确认预览页 | `artifacts/process-input-baseline-review/<run-id>/mapping_diff_items.json` | 默认写入同一问题识别批次目录的 `preview.html`；只有显式 `--out` 才会写指定路径 |
+| `build-input-baseline-review-sankey-preview.mjs` | 为问题识别批次生成部门待确认预览页 | `artifacts/process-input-baseline-review/<run-id>/mapping_diff_items.json` | 默认写入同一问题识别批次目录的 `preview.html`；只有显式 `--out` 才会写指定路径 |
+| `test-input-baseline-review-sankey-preview.mjs`、`test-sankey-preview-status.mjs` | 校验预览页生成和旧状态标记脚本的安全边界 | 预览生成器、兼容入口和临时夹具 | 只读校验；夹具写入系统临时目录 |
 | `mark-sankey-preview-status.mjs` | 旧批量预览标记脚本的安全兼容入口 | 无 | 不再批量修改正式部门桑基图，只输出 deprecated/no-op 提示 |
 | `rebuild-department-sankey-page.mjs` | 从部门已确认流程映射 Markdown 重建单个部门桑基图 HTML | `docs/norms/{部门}部门-能力-流程-系统映射关系.md` | 写 `docs/norms/{部门}部门能力流程系统桑基图.html`，不读取待确认产物 |
 | `init-input-baseline-review-mysql.mjs` | 初始化输入基线问题复核 MySQL 表结构 | MySQL 连接环境变量 | 写入 MySQL schema，不写仓库真源 |
@@ -243,6 +246,11 @@ npm run review:mysql:serve
 | `generate_digital_project_gantt_8k.py` | 从 Markdown 渲染 8K 甘特图 PNG，可用 `--source`、`--output`、`--font` 或 `GANTT_FONT_PATHS` 指定输入输出和字体 | 偏 PMO 渲染工具，默认写入 `output/` |
 | `render_gantt_h5_png.mjs` | 用 Chrome DevTools 把 H5 甘特图渲染成 PNG，可用 `--input`、`--output`、`--chrome` 或 `CHROME_PATH` 指定路径 | 偏 PMO 渲染工具，默认写入 `output/` 和临时 Chrome profile |
 | `merge_norms.py` | 合并 norms-formatter 产物，可用 `--src` 和 `--out` 指定目录 | 默认读取 `docs/norms/` 并写入 `docs/norms/merged/` |
+| `gen_wbs_report.js`、`gen_wbs_report.py` | 生成历史WBS优化调整报告；都支持`--output <path>` | 未传`--output`时写入被忽略的`artifacts/pmo/wbs/`；不得恢复本机绝对路径，不自动覆盖根目录历史DOCX |
+| `audit-customer-file-acceptance.mjs`、`test-customer-file-acceptance-audit.mjs`、`test-customer-file-boundary.mjs`、`test-customer-file-sankey-labels.mjs` | 客供文件接收边界、标签和审计专项工具 | 按脚本显式输入工作；不作为流程治理主线真源 |
+| `convert-u8softhelp-chm-to-md.mjs` | 将U8帮助CHM转换为Markdown参考材料 | 专项转换工具；运行前确认输入、输出和版权边界 |
+| `harden-a1-cross-transfer-fields.mjs`、`normalize-norms-sankey-h5.mjs` | A1跨部门字段和部门桑基H5专项整改工具 | 写入必须使用脚本声明的显式开关；运行前确认目标文件并先执行只读检查 |
+| `source-boundary-rules.mjs` | 为源文件边界检查提供共享规则 | 内部模块，不作为独立业务命令 |
 
 ## 修改规则
 

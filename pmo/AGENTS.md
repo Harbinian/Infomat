@@ -18,6 +18,9 @@ pmo/
 │   ├── README.md
 │   ├── src/
 │   └── package.json
+├── organization-dynamics/             # 组织数字化参与度模型
+│   ├── AGENTS.md                      # 模型和可视资产维护规则
+│   └── README.md
 ├── deliverables/                      # PMO 交付物正本
 ├── tasks.json                         # 由 Markdown 真源生成
 ├── pmo-source-manifest.json           # PMO 服务读取的真源清单
@@ -76,6 +79,12 @@ npm run test:pmo-task-data
 - “周会事项”页签只作 PMO 周会模板试运行，数据保存在浏览器本地，不回写 PMO Markdown 真源。
 - 独立 3002 周会行动项服务位于 `apps/weekly-action-service/`，用于服务端本机运行台账；PMO 真源仍以 Markdown 为准，3002 不回写 `tasks.json`。
 - 交付物状态正本在 `pmo/deliverables/DLV-XXX-*.md`，dev 模式运行产物默认写入被忽略的 `artifacts/pmo/deliverables/`。
+
+## 组织数字化参与度模型
+
+- 模型内容真源和可视资产在 `organization-dynamics/`。
+- 修改前先读 `organization-dynamics/AGENTS.md`；该模型不替代组织事实、PMO 计划真源或正式 DLV 交付物。
+- PNG 只输出到被忽略的 `artifacts/pmo/organization-dynamics/`。
 
 ## 文档同步
 

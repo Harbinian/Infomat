@@ -1,0 +1,248 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>mom_parameter Table</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">mom_parameter Table 
+			&nbsp;(MO 生产订单)
+			&nbsp;[U861]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>mom_parameter 生产订单参数</p>
+		<h4 class=dxh4>Remark</h4><p>生产订单参数
+</p>
+		<h4 class=dxh4>Columns</h4>
+		<table class="columnlisttable" cellspacing="0">
+			<tr valign="top"><th align=middle>&nbsp;</th><th nowrap>Column Name</th><th nowrap>Description</th><th nowrap>Datatype</th><th nowrap>Length</th><th nowrap>Allow Nulls</th></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>MoLogStatus
+			(U870)
+			</strong></td><td class="descriptioncell">MoLogStatus 生产订单变更记录&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>OpSeqIncrement
+			(U861)
+			</strong></td><td class="descriptioncell">OpSeqIncrement 子件/工序行号增加值&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ChgBenchmark
+			(U861)
+			</strong></td><td class="descriptioncell">ChgBenchmark 浮动换算率计算基准(1:数量 2:辅助数量)&nbsp;</td><td>tinyint</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>MoUseBomStatus
+			(U870)
+			</strong></td><td class="descriptioncell">MoUseBomStatus 生产订单允许物料清单状态&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>MoCollSyncFlag
+			
+			</strong></td><td class="descriptioncell">集合订单同步入库&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>LRPFlag
+			(U8111)
+			</strong></td><td class="descriptioncell">LRP标记&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>OverPercent
+			(U870)
+			</strong></td><td class="descriptioncell">OverPercent 允超百分比&nbsp;</td><td>decimal</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>OpReportFlag
+			(U871)
+			</strong></td><td class="descriptioncell">工序转移跨报告点控制&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>SNPrintType
+			(U8110)
+			</strong></td><td class="descriptioncell">序列号打印方式&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>OverQty
+			(U870)
+			</strong></td><td class="descriptioncell">OverQty 允超数量&nbsp;</td><td>decimal</td><td>13&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>DefaultVersionDate
+			(U861)
+			</strong></td><td class="descriptioncell">DefaultVersionDate 清单/工艺路线版本日期默认值&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>DeclaredSource
+			(U871)
+			</strong></td><td class="descriptioncell">返工报检依据&nbsp;</td><td>tinyint</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>BomDefaultStatus
+			(U870)
+			</strong></td><td class="descriptioncell">BomDefaultStatus 新增物料清单默认状态&nbsp;</td><td>tinyint</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ReferenceChkFlag
+			(U871)
+			</strong></td><td class="descriptioncell">一致性检查&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>MoCloseType
+			
+			</strong></td><td class="descriptioncell">生产订单关闭时机0不自动关闭 1入库单保存自动关闭 2入库单审核自动关闭&nbsp;</td><td>tinyint</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ATPId
+			(U870)
+			</strong></td><td class="descriptioncell">ATPId ATPId&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>BFAllocate
+			
+			</strong></td><td class="descriptioncell">入库倒冲数量控制方式&nbsp;</td><td>tinyint</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>MoWarnStatus
+			(U870)
+			</strong></td><td class="descriptioncell">MoWarnStatus 预警生产订单状态&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>OpIssFlag
+			(U872)
+			</strong></td><td class="descriptioncell">工序转移领料控制&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>InspOnhFlag
+			(U872)
+			</strong></td><td class="descriptioncell">现存量Flag&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>EBomFlag
+			(U890)
+			</strong></td><td class="descriptioncell">工程物料清单标记&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>MoUseProutingStatus
+			(U870)
+			</strong></td><td class="descriptioncell">MoUseProutingStatus 生产订单允许工艺路线状态&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>OpControl
+			
+			</strong></td><td class="descriptioncell">工序管控模式1:报工 2:转移单 4:流转卡&nbsp;</td><td>tinyint</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>PRoutingDefaultStatus
+			(U870)
+			</strong></td><td class="descriptioncell">PRoutingDefaultStatus 新增工艺路线默认状态&nbsp;</td><td>tinyint</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>AutoSFCFlag
+			
+			</strong></td><td class="descriptioncell">审核自动生成工序计划&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>VersionIncrement
+			(U861)
+			</strong></td><td class="descriptioncell">VersionIncrement 清单/工艺路线版本增加值&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>MoClosePeriod
+			
+			</strong></td><td class="descriptioncell">未关闭生产订单允许拖期天数：999（可改，大于/等于365且小于/等于9999，正整数）&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>BoLogStatus
+			(U871)
+			</strong></td><td class="descriptioncell">物料清单变更记录&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>StartLeadDays
+			(U870)
+			</strong></td><td class="descriptioncell">StartLeadDays 开工提前天数&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>MoSysClosedFlag
+			(U861)
+			</strong></td><td class="descriptioncell">生产订单自动关闭&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>AutoSubFlag
+			(U8110)
+			</strong></td><td class="descriptioncell">自动生成考虑计划替代&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>BarCodeFlag
+			(U8110)
+			</strong></td><td class="descriptioncell">单据启用条码扫描功能&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>SNPrintFlag
+			(U8110)
+			</strong></td><td class="descriptioncell">序列号随单打印&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ERoutingFlag
+			(U890)
+			</strong></td><td class="descriptioncell">工程工艺路线标记&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>DueLeadDays
+			(U870)
+			</strong></td><td class="descriptioncell">DueLeadDays 完工提前天数&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>OverDueDays
+			(U870)
+			</strong></td><td class="descriptioncell">OverDueDays 逾期天数&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>WIPReportFlag
+			(U8110)
+			</strong></td><td class="descriptioncell">工序转移跨报告点控制&nbsp;</td><td>tinyint</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>WIPFlag
+			(U8100)
+			</strong></td><td class="descriptioncell">生产订单虚拟件无子件是否出错&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>LevelNo
+			(U861)
+			</strong></td><td class="descriptioncell">LevelNo 物料清单展开层数&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>IssApplyOnhFlag
+			
+			</strong></td><td class="descriptioncell">是否考虑在手量&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>RlsOverPlanFlag
+			
+			</strong></td><td class="descriptioncell">计划下达允超数量&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ResponsesSoFlag
+			(U870)
+			</strong></td><td class="descriptioncell">ResponsesSoFlag 回应销售订单修改&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap><img src=images/primarykey.png>&nbsp;</td><td class="linkcell">
+			<strong>Id
+			(U861)
+			</strong></td><td class="descriptioncell">Id ID&nbsp;</td><td>tinyint</td><td>1&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>MoDefaultStatus
+			(U861)
+			</strong></td><td class="descriptioncell">MoDefaultStatus 手动输入生产订单默认状态（1－录入，2－锁定）
+&nbsp;</td><td>tinyint</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>OpScheduleFlag
+			(U861)
+			</strong></td><td class="descriptioncell">OpScheduleFlag 生产订单转车间时是/否计划工序日期(1/0)
+&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>OpScheduleType
+			(U861)
+			</strong></td><td class="descriptioncell">OpScheduleType 生产订单工序计划方式（1－顺推，2－逆推3--不排程）&nbsp;</td><td>tinyint</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>UpdMoDateFlag
+			(U861)
+			</strong></td><td class="descriptioncell">UpdMoDateFlag 生产订单工序日期修改时是/否更新生产订单（1/0）
+&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>OverDrawFlag
+			(U861)
+			</strong></td><td class="descriptioncell">OverDrawFlag 允许超生产订单领料(1:是/否:0)&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>OverInFlag
+			(U861)
+			</strong></td><td class="descriptioncell">OverInFlag 允许超生产订单入库
+(1:是/否:0)&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>Ufts
+			(U861)
+			</strong></td><td class="descriptioncell">Ufts 时间梭&nbsp;</td><td>timestamp</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+		</table>
+		<h4 class=dxh4>Indexes</h4>
+		<TABLE CLASS="FilteredItemListTable" CellSpacing="0">
+			<TR VALIGN="top"><TH width=30%>Index</TH><TH width=50%>Description</TH><TH>Primary</TH><TH>Unique</TH></TR>
+			<TR><TD CLASS=LinkCell WIDTH="50%"><A HREF="87361033-79ef-4137-b2a3-ca43d009437c.html">PK_mom_parameter</A></TD><TD CLASS="DescriptionCell" WIDTH="50%">&nbsp;</TD><TD Class="Centered"><img src=images/tick.png></TD><TD Class="Centered"><img src=images/tick.png></TD></TR>
+		</TABLE>
+		<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

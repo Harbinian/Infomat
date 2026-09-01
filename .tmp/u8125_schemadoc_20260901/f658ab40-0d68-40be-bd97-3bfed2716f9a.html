@@ -1,0 +1,278 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>dd_object Table</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">dd_object Table 
+			&nbsp;(CC 系统配置)
+			&nbsp;[U8110]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>业务对象定义表</p>
+		<h4 class=dxh4>Remark</h4><p>业务对象定义表</p>
+		<h4 class=dxh4>Columns</h4>
+		<table class="columnlisttable" cellspacing="0">
+			<tr valign="top"><th align=middle>&nbsp;</th><th nowrap>Column Name</th><th nowrap>Description</th><th nowrap>Datatype</th><th nowrap>Length</th><th nowrap>Allow Nulls</th></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>xattr_dec_num
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展自定义属性表中数值型自定义属性的个数&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>key_attr_fld
+			(U8110)
+			</strong></td><td class="descriptioncell">对象的KEY属性对应的字段名&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>main_date_num
+			(U8110)
+			</strong></td><td class="descriptioncell">主表中日期时间型自定义属性的个数&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>main_img_num
+			(U8110)
+			</strong></td><td class="descriptioncell">主表中图片型自定义属性的个数&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>obj_new_img_id
+			(U8110)
+			</strong></td><td class="descriptioncell">对象新建时图标ID&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>obj_plural
+			(U8110)
+			</strong></td><td class="descriptioncell">对象的复数标识&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>BD_EntitiesName
+			(U8111)
+			</strong></td><td class="descriptioncell">实体名称&nbsp;</td><td>nvarchar</td><td>100&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>user_define_table
+			(U8110)
+			</strong></td><td class="descriptioncell">对象的自定义属性表名&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>xattr_ref_num
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展自定义属性表中图片型自定义属性的个数&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>main_ref_num
+			(U8110)
+			</strong></td><td class="descriptioncell">主表中图片型自定义属性的个数&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>BD_EntitiesMetaID
+			(U8111)
+			</strong></td><td class="descriptioncell">数据引擎实体&nbsp;</td><td>nvarchar</td><td>100&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>BD_BusinessObjectsName
+			(U8111)
+			</strong></td><td class="descriptioncell">数据引擎业务对象&nbsp;</td><td>nvarchar</td><td>100&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>disp_order
+			(U8110)
+			</strong></td><td class="descriptioncell">显示顺序&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>main_char_num
+			(U8110)
+			</strong></td><td class="descriptioncell">主表中短字符型自定义属性的个数&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>u8_tbl_name
+			(U8110)
+			</strong></td><td class="descriptioncell">对应的U8的表，适用公共对象的配置&nbsp;</td><td>varchar</td><td>50&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>name_attr_name
+			(U8110)
+			</strong></td><td class="descriptioncell">对象的主属性名&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>xattr_date_num
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展自定义属性表中日期时间型自定义属性的个数&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>is_u8_obj
+			(U8110)
+			</strong></td><td class="descriptioncell">是否是公共对象，1是公共对象且自己有model,2是公共对象但是没有自己的modul&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>xattr_multi_num
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展自定义属性表中多选枚举自定义属性的个数&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>attr_int_num
+			(U8110)
+			</strong></td><td class="descriptioncell">自定义属性表中单选枚举自定义属性的个数&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>main_dec_num
+			(U8110)
+			</strong></td><td class="descriptioncell">主表中数值型自定义属性的个数&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>has_type
+			(U8110)
+			</strong></td><td class="descriptioncell">是否具有分类标识&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>main_int_num
+			(U8110)
+			</strong></td><td class="descriptioncell">主表中单选枚举自定义属性的个数&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>attr_img_num
+			(U8110)
+			</strong></td><td class="descriptioncell">自定义属性表中图片型自定义属性的个数&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>xattr_table
+			(U8110)
+			</strong></td><td class="descriptioncell">对象的扩展自定义属性表名&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>has_last_view
+			(U8110)
+			</strong></td><td class="descriptioncell">是否记录最近查看对象&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>attr_dec_num
+			(U8110)
+			</strong></td><td class="descriptioncell">自定义属性表中数值型自定义属性的个数&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ma_image
+			
+			</strong></td><td class="descriptioncell">移动图标&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>attr_ref_num
+			(U8110)
+			</strong></td><td class="descriptioncell">自定义属性表中图片型自定义属性的个数&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>server_flag
+			(U8110)
+			</strong></td><td class="descriptioncell">数据标识(保留未用)&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>attr_prefix
+			(U8110)
+			</strong></td><td class="descriptioncell">对象的自定义属性字段的前缀&nbsp;</td><td>nvarchar</td><td>16&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>xattr_int_num
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展自定义属性表中短字符型自定义属性的个数&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dtl_obj_name
+			(U8110)
+			</strong></td><td class="descriptioncell">子对象名&nbsp;</td><td>nvarchar</td><td>128&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>key_attr_name
+			(U8110)
+			</strong></td><td class="descriptioncell">对象的KEY属性名&nbsp;</td><td>nvarchar</td><td>128&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>his_table
+			(U8110)
+			</strong></td><td class="descriptioncell">属性变动历史表&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>obj_name
+			(U8110)
+			</strong></td><td class="descriptioncell">对象名&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>attr_date_num
+			(U8110)
+			</strong></td><td class="descriptioncell">自定义属性表中日期时间型自定义属性的个数&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>is_scope_control
+			(U8110)
+			</strong></td><td class="descriptioncell">是否需要数据权限控制&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>crm_timestamp
+			(U8110)
+			</strong></td><td class="descriptioncell">记录变动系统时间戳&nbsp;</td><td>timestamp</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>BD_BusinessObjectsMetaID
+			(U8111)
+			</strong></td><td class="descriptioncell">移动数据引擎&nbsp;</td><td>nvarchar</td><td>100&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>attr_multi_num
+			(U8110)
+			</strong></td><td class="descriptioncell">自定义属性表中多选枚举自定义属性的个数&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>main_table
+			(U8110)
+			</strong></td><td class="descriptioncell">对象的主表名&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>is_recyclable
+			(U8110)
+			</strong></td><td class="descriptioncell">对象可回收标识&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>is_ref_obj
+			(U8110)
+			</strong></td><td class="descriptioncell">是否为可引用的对象&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>is_define_obj
+			(U8110)
+			</strong></td><td class="descriptioncell">是否为可引用的对象&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>attr_txt_num
+			(U8110)
+			</strong></td><td class="descriptioncell">自定义属性表中长文本自定义属性的个数&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>main_txt_num
+			(U8110)
+			</strong></td><td class="descriptioncell">主表中长文本自定义属性的个数&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>attr_table
+			(U8110)
+			</strong></td><td class="descriptioncell">对象的自定义属性表名&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>xattr_char_num
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展自定义属性表中短字符型自定义属性的个数&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>xattr_txt_num
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展自定义属性表中长文本自定义属性的个数&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>xattr_img_num
+			(U8110)
+			</strong></td><td class="descriptioncell">扩展自定义属性表中图片型自定义属性的个数&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>multi_lang_table
+			(U8110)
+			</strong></td><td class="descriptioncell">对应多语表&nbsp;</td><td>nvarchar</td><td>512&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ma_dtl
+			
+			</strong></td><td class="descriptioncell">移动明细&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>attr_char_num
+			(U8110)
+			</strong></td><td class="descriptioncell">自定义属性表中短字符型自定义属性的个数&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>obj_img_id
+			(U8110)
+			</strong></td><td class="descriptioncell">对象图标ID&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>mattr_table
+			(U8110)
+			</strong></td><td class="descriptioncell">对象的多选枚举值表&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>ma_apps
+			
+			</strong></td><td class="descriptioncell">移动app&nbsp;</td><td>nvarchar</td><td>64&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>obj_type
+			(U8110)
+			</strong></td><td class="descriptioncell">对象类型&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>obj_large_img_id
+			(U8110)
+			</strong></td><td class="descriptioncell">对象大图标ID&nbsp;</td><td>numeric</td><td>13&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>main_multi_num
+			(U8110)
+			</strong></td><td class="descriptioncell">主表中多选枚举自定义属性的个数&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+		</table>
+		<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

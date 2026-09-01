@@ -1,0 +1,36 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>TCProc_UserToPerson_Upgrade Stored Procedure</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">TCProc_UserToPerson_Upgrade Stored Procedure 
+			&nbsp;(MK 营销管理)
+			
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>升级前其所有者、负责人等字段选择过的人员不是“业务员”的，升级时在其人员档案处自动勾上“业务员”选项。</p>
+		<h4 class=dxh4>Remark</h4><p>    升级前其所有者、负责人等字段选择过的人员不是“业务员”的，升级时在其人员档案处自动勾上“业务员”选项。
+	（1）人员档案“业务或费用部门”字段带此人的行政部门，如果行政部门不是末级部门的，默认带该部门下的第一个末级部门为“业务或费用部门”。
+	（2）人员档案“生效日期”字段取CRM“营销管理”“服务管理”系统中启用日期最早的那个日期。</p>
+		<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

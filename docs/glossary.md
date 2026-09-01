@@ -1,7 +1,7 @@
 # Infomat 项目术语表
 
-> 版本：V1.17
-> 更新日期：2026-08-24
+> 版本：V1.18
+> 更新日期：2026-08-31
 > 用途：为 AI 辅助开发提供统一的术语参考。按域分章，每章一张三列表。
 
 ## 使用约定
@@ -426,6 +426,7 @@
 | 冲突检测 | Conflict Detection | field_conflicts 和 term_conflicts 表，比对不同部门的字段定义/术语定义，标记差异 |
 | 导入导出 | Import/Export | 业务字段台账仍可按权限导入导出；RBAC批量导入和批量开户已经停用，普通账号只能由管理员手工创建 |
 | 主线体检 | Mainline Stability Check | `npm run test:mainline` 执行的稳定性检查，验证流程治理、字段台账、主数据对象、权限和导入导出链路是否保持可运行 |
+| 受控派生消费文件 | Controlled Derived Consumer File | 由明确真源和固定命令生成、被仓库主线直接读取，并具有稳定路径和一致性检查的版本控制文件；临时输出、缓存、日志、截图和一次性预览不属于此类。当前范围见状态为`Proposed`的ADR-0004，不表示该ADR已经接受 |
 | 结构块混合解析 | Hybrid Structure Parsing | `parse-sankey-data.mjs` 的流程输入基线解析模式。结构块 v1 优先，同一 L3/A1 覆盖正文旧表项，正文未覆盖项继续进入快照，部门来源记录为 `source: hybrid` |
 | 结构完整性 | Structure Completeness | 3001当前`structure-learning-score-v5`的六项结构维度得分之和，满分100分；动作节点名称检查主体、动作和对象，生命周期普通评分只检查是否适用、业务使用状态、保管方式和确实适用的匿名处理状态。它只反映当前JSON展示出的结构化学习成果，不代表业务事实或流程设计已经确认 |
 | 展示分 | Presentation Score | 3001将结构完整性乘以有效行为链系数后得到的试行展示分；技术阻断时最高为59分 |

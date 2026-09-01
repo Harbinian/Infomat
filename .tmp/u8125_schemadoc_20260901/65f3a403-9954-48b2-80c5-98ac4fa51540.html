@@ -1,0 +1,258 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>hr_tm_PreDutyPeriodResult Table</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">hr_tm_PreDutyPeriodResult Table 
+			&nbsp;(TM 考勤管理)
+			&nbsp;[U8100]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>归档班段结果</p>
+		
+		<h4 class=dxh4>Columns</h4>
+		<table class="columnlisttable" cellspacing="0">
+			<tr valign="top"><th align=middle>&nbsp;</th><th nowrap>Column Name</th><th nowrap>Description</th><th nowrap>Datatype</th><th nowrap>Length</th><th nowrap>Allow Nulls</th></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cPsn_Num
+			(U8100)
+			</strong></td><td class="descriptioncell">人员编码&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dDutyTime
+			(U8100)
+			</strong></td><td class="descriptioncell">应上班&nbsp;</td><td>UFDatetime</td><td>19&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>rSignCardReason1
+			(U8100)
+			</strong></td><td class="descriptioncell">签卡原因1&nbsp;</td><td>UFreference</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>DP_bBadResultForOverPeriod
+			(U8100)
+			</strong></td><td class="descriptioncell">计算用字段&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iEAbsentMinute
+			(U8100)
+			</strong></td><td class="descriptioncell">早退&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>vVacPeriod2
+			(U8100)
+			</strong></td><td class="descriptioncell">请假期间2&nbsp;</td><td>nvarchar</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iOrder
+			(U8100)
+			</strong></td><td class="descriptioncell">班段序号&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bLastFlag
+			(U8100)
+			</strong></td><td class="descriptioncell">当前记录标识&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dLeaveEnd1
+			(U8100)
+			</strong></td><td class="descriptioncell">请假1结束&nbsp;</td><td>UFDatetime</td><td>19&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDutyCode
+			(U8100)
+			</strong></td><td class="descriptioncell">班次&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>DP_bOverTimeForEarlySign
+			(U8100)
+			</strong></td><td class="descriptioncell">计算用字段&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>rOverTimeType1
+			(U8100)
+			</strong></td><td class="descriptioncell">加班1&nbsp;</td><td>UFreference</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dLeaveStart1_Original
+			(U8111)
+			</strong></td><td class="descriptioncell">请假1开始时间（原始）&nbsp;</td><td>UFDatetime</td><td>19&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nWorkMinute
+			(U8100)
+			</strong></td><td class="descriptioncell">应出勤&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>DP_bOverDate2
+			(U8100)
+			</strong></td><td class="descriptioncell">计算用字段&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dNextPeriodSignStart
+			(U8100)
+			</strong></td><td class="descriptioncell">下段开始刷卡时间&nbsp;</td><td>UFDatetime</td><td>19&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iRecordId
+			(U8100)
+			</strong></td><td class="descriptioncell">记录序号&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iLAbsentMinute
+			(U8100)
+			</strong></td><td class="descriptioncell">迟到&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dLeaveStart1
+			(U8100)
+			</strong></td><td class="descriptioncell">请假1开始&nbsp;</td><td>UFDatetime</td><td>19&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>DP_bSignStart
+			(U8100)
+			</strong></td><td class="descriptioncell">计算用字段&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dEndTime
+			(U8100)
+			</strong></td><td class="descriptioncell">截止刷卡时间&nbsp;</td><td>UFDatetime</td><td>19&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>rOverTimeDateType1
+			(U8111)
+			</strong></td><td class="descriptioncell">加班1时间类型&nbsp;</td><td>nchar</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fk_pk_hr_tm_DayResult
+			(U8100)
+			</strong></td><td class="descriptioncell">日结果主键&nbsp;</td><td>uniqueidentifier</td><td>16&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dActualDutyTime
+			(U8100)
+			</strong></td><td class="descriptioncell">实上班&nbsp;</td><td>UFDatetime</td><td>19&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iOverTimeMinute1
+			(U8100)
+			</strong></td><td class="descriptioncell">加班1时间&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dPrePeriodSignEnd
+			(U8100)
+			</strong></td><td class="descriptioncell">上段截止刷卡时间&nbsp;</td><td>UFDatetime</td><td>19&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>DP_iReduseRest
+			(U8100)
+			</strong></td><td class="descriptioncell">计算用字段&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dPrePeriodOff
+			(U8100)
+			</strong></td><td class="descriptioncell">上段下班时间&nbsp;</td><td>UFDatetime</td><td>19&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>DP_bOverTimeForLateSign
+			(U8100)
+			</strong></td><td class="descriptioncell">计算用字段&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>rSignCardReason2
+			(U8100)
+			</strong></td><td class="descriptioncell">签卡原因2&nbsp;</td><td>UFreference</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dBeginTime
+			(U8100)
+			</strong></td><td class="descriptioncell">开始刷卡时间&nbsp;</td><td>UFDatetime</td><td>19&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>vStatus1
+			(U8100)
+			</strong></td><td class="descriptioncell">status1&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>rOverTimeDateType2
+			(U8111)
+			</strong></td><td class="descriptioncell">加班2时间类型&nbsp;</td><td>nchar</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>rOverTimeType2
+			(U8100)
+			</strong></td><td class="descriptioncell">加班2&nbsp;</td><td>UFreference</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dOffTime
+			(U8100)
+			</strong></td><td class="descriptioncell">应下班&nbsp;</td><td>UFDatetime</td><td>19&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iDutyPeriodType
+			(U8100)
+			</strong></td><td class="descriptioncell">班段类型&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iLeaveMinute2
+			(U8100)
+			</strong></td><td class="descriptioncell">请假2时间&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bOverTimePeriod
+			(U8100)
+			</strong></td><td class="descriptioncell">加班段&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dLeaveStart2_Original
+			(U8111)
+			</strong></td><td class="descriptioncell">请假2开始时间（原始）&nbsp;</td><td>UFDatetime</td><td>19&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dLeaveEnd2
+			(U8100)
+			</strong></td><td class="descriptioncell">请假2结束&nbsp;</td><td>UFDatetime</td><td>19&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>vVacPeriod1
+			(U8100)
+			</strong></td><td class="descriptioncell">请假期间1&nbsp;</td><td>nvarchar</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dLeaveStart2
+			(U8100)
+			</strong></td><td class="descriptioncell">请假2开始&nbsp;</td><td>UFDatetime</td><td>19&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>nStatus2
+			(U8100)
+			</strong></td><td class="descriptioncell">status2&nbsp;</td><td>numeric</td><td>5&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iAbsentMinute
+			(U8100)
+			</strong></td><td class="descriptioncell">旷工&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iLeaveMinute1
+			(U8100)
+			</strong></td><td class="descriptioncell">请假1时间&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dNextPeriodDuty
+			(U8100)
+			</strong></td><td class="descriptioncell">下段上班时间&nbsp;</td><td>UFDatetime</td><td>19&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>rLeaveType1
+			(U8100)
+			</strong></td><td class="descriptioncell">请假1&nbsp;</td><td>UFreference</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iOverTimeMinute2
+			(U8100)
+			</strong></td><td class="descriptioncell">加班2时间&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>DP_bSignOff
+			(U8100)
+			</strong></td><td class="descriptioncell">计算用字段&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>DP_bOverTimePeriod
+			(U8100)
+			</strong></td><td class="descriptioncell">计算用字段&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>rLeaveType2
+			(U8100)
+			</strong></td><td class="descriptioncell">请假2&nbsp;</td><td>UFreference</td><td>30&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bBadResultForOverPeriod
+			(U8100)
+			</strong></td><td class="descriptioncell">计算用字段&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>DP_bOverDate
+			(U8100)
+			</strong></td><td class="descriptioncell">计算用字段&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>pk_hr_tm_DutyPeriodResult
+			(U8100)
+			</strong></td><td class="descriptioncell">主键&nbsp;</td><td>UFUID</td><td>16&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dActualOffTime
+			(U8100)
+			</strong></td><td class="descriptioncell">实下班&nbsp;</td><td>UFDatetime</td><td>19&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+		</table>
+		<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

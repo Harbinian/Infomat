@@ -4,15 +4,26 @@ import { resolve } from 'node:path';
 const repoRoot = resolve(import.meta.dirname, '..');
 const appRoot = resolve(repoRoot, 'apps', 'mdm-platform');
 const snapshotPath = resolve(repoRoot, 'docs', 'company-sankey-data.json');
-const mdmDbPath = process.env.MDM_DB_PATH;
+const requiredMysqlEnvNames = [
+  'MYSQL_HOST',
+  'MYSQL_PORT',
+  'MYSQL_USER',
+  'MYSQL_PASSWORD',
+  'MYSQL_DATABASE',
+];
+const missingMysqlEnvNames = requiredMysqlEnvNames.filter((name) => !process.env[name]);
 
-if (!mdmDbPath) {
-  console.error('MDM_DB_PATH is required. Point it at the intended MDM SQLite database before running process-governance sync.');
+if (missingMysqlEnvNames.length > 0) {
+  console.error(`Missing required MySQL environment variables: ${missingMysqlEnvNames.join(', ')}`);
   process.exit(1);
 }
 
 if (process.argv.includes('--check-env')) {
-  console.log(JSON.stringify({ ok: true, mdmDbPath }));
+  console.log(JSON.stringify({
+    ok: true,
+    target: 'mysql',
+    configured: Object.fromEntries(requiredMysqlEnvNames.map((name) => [name, true])),
+  }));
   process.exit(0);
 }
 
@@ -65,9 +76,7 @@ const steps = [
     args: ['scripts/check-dcm-bbm.mjs', '--no-fail'],
     cwd: repoRoot,
   },
-  npmStep('sync process governance org', 'sync:process-org', ['--', '--write']),
-  npmStep('import MDM process governance snapshot', 'import:process-governance', ['--', '--snapshot', snapshotPath]),
-  npmStep('check MDM process governance snapshot', 'check:process-governance'),
+  npmStep('import MDM process governance snapshot into MySQL', 'import:process-governance-mysql', ['--', '--snapshot', snapshotPath]),
 ];
 
 for (const step of steps) {
@@ -77,7 +86,7 @@ for (const step of steps) {
     cwd: step.cwd,
     stdio,
     encoding: step.quietOnSuccess ? 'utf8' : undefined,
-    env: { ...process.env, MDM_DB_PATH: mdmDbPath },
+    env: process.env,
   });
   if (result.error) {
     console.error(result.error.message);

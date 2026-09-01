@@ -1,0 +1,322 @@
+body
+{
+	margin: 0px 0px 0px 0px;
+	padding: 0px 0px 0px 0px;
+	background-color: #ffffff; 
+	color: #000000;
+	font-family: Verdana, Arial, Helvetica, sans-serif;
+	font-size: 70%;
+	width: 100%;
+}
+p
+	{
+	margin: .5em 0em .5em 0em;
+	}
+dl
+	{
+	margin-top: 0em; 
+	padding-left: 1px; /* Prevents italic-letter descenders from being cut off */
+	}
+dd
+	{
+	margin-bottom: 0em;  
+	margin-left: 1.5em; 
+	}
+dt
+	{
+	margin-top: .5em; 
+	}
+ol, ul
+	{
+	margin: .5em 0em 0em 2em; 
+	}
+li
+	{
+	margin-bottom: .5em;
+	}
+ul p, ol p, dl p
+	{
+	margin-left: 0em;
+	}
+blockquote.dxOverload
+	{
+	margin: .5em 1.5em .5em 1.5em;
+	}
+h1, h2, h3, h4
+	{
+	font-family: Verdana, Arial, Helvetica, sans-serif;
+	margin-bottom: .4em; 
+	margin-top: 1em;
+	font-weight: bold;
+	}
+h1
+	{
+	font-size: 120%;
+	margin-top: 0em;
+	}
+h2
+	{
+	font-size: 130%;
+	}
+h3
+	{
+	font-size: 115%;
+	}
+h4
+	{
+	font-size: 100%;
+	}
+.dxH1, .dxH2, .dxH3, .dxH4
+	{
+	margin-left: -18px;	
+	}
+A
+{
+    COLOR : #0000FF
+}
+A:link
+{
+    COLOR : #0000FF
+}
+A:active
+{
+    COLOR : #000080
+}
+A:visited
+{
+    COLOR : #800080
+}
+A:hover
+{
+    COLOR : #FF0000
+}
+
+CODE
+{
+    FONT-FAMILY: Courier
+    font-size: 9pt;
+}
+div#pagetop
+	{
+	position: relative;
+	left: 0px;
+	padding: 0px 0px 0px 0px;
+	border-bottom: 1px solid #999999;
+	}
+div#projectnamebanner
+	{
+	background-color: #ccccff;
+	}
+div#pagebody
+	{
+	padding: 5px 10px 0px 22px; 
+	}
+div#pagetitlebanner
+	{
+	width: 100%; 
+	padding: 0px 10px 0px 22px; 
+	background-color: #ccccff;        
+	}	
+table.projectnametable
+	{
+	position: relative;
+	left: 0px;
+	top: 0px;
+	padding: 0px 0px 0px 0px;
+	margin: 0px 0px 0px 0px;
+	width: 100%;
+	height: 21px; 
+	border-collapse: collapse;
+	border-style: solid;
+	border-width: 0px;
+	background-color: #ccccff; 
+	font-size: 100%;
+	}
+table.projectnametable td 
+	{
+	align: left;
+	margin: 0px 0px 0px 0px;
+	padding: 2px 0px 0px 4px;
+	vertical-align: middle;
+	border-width: 0px
+	border-style: solid;
+	border-color: #999999;
+	background-color: transparent; 
+	font-style: italic;
+	font-weight: normal;
+	}
+table.projectnametable td.button
+	{
+	width: 14px;
+	cursor: hand;
+	}
+div.popupbubble
+	{
+	left: 4px;
+	position: absolute;
+	padding: 0px 8px 5px 26px;
+	z-index: 1;
+	width: 50%;
+	visibility: hidden;
+	border: 1px solid #999999;
+	background-color: #ffffcc;
+	}	
+table.filtereditemlisttable, table.xmldoctable
+	{
+	width: 95%; 
+	margin-top: .6em;
+	margin-bottom: .3em;
+	border-width: 1px 1px 0px 0px;
+	border-style: solid;
+	border-color: #999999;
+	background-color: #999999; 
+	font-size: 100%;
+	}
+table.filtereditemlisttable_product, table.xmldoctable
+	{
+	width: 50%; 
+	margin-top: .6em;
+	margin-bottom: .3em;
+	border-width: 1px 1px 0px 0px;
+	border-style: solid;
+	border-color: #999999;
+	background-color: #999999; 
+	font-size: 100%;
+	}
+table.filtereditemlisttable_product th, table.filtereditemlisttable_product td 
+	{ 
+	border-style: solid; 
+	border-width: 0px 0px 1px 1px;
+	border-style: solid;
+	border-color: #999999;
+	padding: 4px 6px;
+	text-align: center;
+	vertical-align: top;
+	}
+	
+table.filtereditemlisttable_product th
+	{ 
+	background-color: #cccccc; 
+	vertical-align: bottom;
+	}
+table.filtereditemlisttable_product td
+	{
+	background-color: #ffffff;
+	vertical-align: top;
+	}
+table.filtereditemlisttable_product td.Centered, th.Centered
+	{
+	text-align: center;
+	vertical-align: middle;
+	}
+table.columnlisttable, table.xmldoctable
+	{
+	margin-top: .6em;
+	margin-bottom: .3em;
+	border-width: 1px 1px 0px 0px;
+	border-style: solid;
+	border-color: #999999;
+	background-color: #999999; 
+	font-size: 100%;
+	}
+table.filtereditemlisttable th, table.filtereditemlisttable td, table.xmldoctable th, table.xmldoctable td, table.columnlisttable th, table.columnlisttable td
+	{ 
+	border-style: solid; 
+	border-width: 0px 0px 1px 1px;
+	border-style: solid;
+	border-color: #999999;
+	padding: 4px 6px;
+	text-align: left;
+	vertical-align: top;
+	}
+table.filtereditemlisttable th, table.xmldoctable th, table.columnlisttable th
+	{ 
+	background-color: #cccccc; 
+	vertical-align: bottom;
+	}
+table.filtereditemlisttable td, table.xmldoctable td, table.columnlisttable td
+	{
+	background-color: #ffffff;
+	vertical-align: top;
+	}
+table.filtereditemlisttable td.Centered, td.newCentered, table.xmldoctable td.Centered, table.columnlisttable td.Centered	
+	{
+	text-align: center;
+	vertical-align: middle;
+	}
+td.newlinkcell, td.newCentered, div.newTopic	
+{
+	background-repeat: no-repeat; background-position: left top ; background-image:url('../images/isnew.gif')
+}		
+table.syntaxtable
+	{
+	width: 70%; 
+	margin-top: .6em;
+	margin-bottom: .3em;
+	border-width: 1px 1px 0px 0px;
+	border-style: solid;
+	border-color: #999999;
+	background-color: #999999; 
+	font-size: 100%;
+	}
+table.syntaxtable th, table.syntaxtable td
+	{ 
+	border-style: solid; 
+	border-width: 0px 0px 1px 1px;
+	border-style: solid;
+	border-color: #999999;
+	padding: 4px 6px;
+	text-align: left;
+	}
+table.syntaxtable th	
+	{ 
+	background-color: #cccccc; 
+	vertical-align: bottom;
+	}
+table.syntaxtable td	
+	{
+	background-color: #ffffff;
+	vertical-align: top;
+	}	
+pre.syntax
+	{
+	background-color: #cccccc;
+	padding: 4px 8px;
+	cursor: text;
+	margin-top: 1em;
+	margin-bottom: 1em; 
+	color: #000000;
+	border-width: 1px;
+	border-style: solid;
+	border-color: #999999;
+	}
+	
+/* SQL Code Colorization values */
+
+.generic {
+	color: Navy;
+}
+
+.comment {
+	color: Green;
+}
+
+.string {
+	color: Gray;
+}
+
+.function {
+	color: #cc0099;
+}
+
+.operator {
+	color: Gray;
+}
+
+.variable {
+	color: #cc0099;
+}
+
+.nativetype {
+	color: Navy;
+}

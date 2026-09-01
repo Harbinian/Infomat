@@ -16,7 +16,7 @@ Infomat 是一个信息化治理工作仓库，不是单一源码仓库。它允
 | 可运行系统 | MDM 平台、文档结构化输出辅助服务、MDM-AI助手、PMO 周会行动项服务、信息表收集服务及其测试和维护脚本 | `apps/` |
 | PMO / 项目管理展示工具 | 流程地图驾驶舱、甘特图、项目管理页面、交付物工作台 | `pmo/` |
 | 仓库级脚本工具 | 跨资料、跨页面、跨 app 的解析、注入、生成、校验脚本 | `scripts/` |
-| AI 协作工作区 | Codex 入口规则、长期项目上下文、Agent 技能和历史计划 | `AGENTS.md`、`CODEX.md`、`MEMORY.md`、`.agents/`、`docs/superpowers/` |
+| AI 协作工作区 | Codex 入口规则、长期项目上下文、仓库偏好、Agent 技能和历史计划 | `AGENTS.md`、`CODEX.md`、`MEMORY.md`、`.codex/config.toml`、`.agents/`、`docs/superpowers/` |
 | 历史方案归档 | 旧设计、旧计划、历史输出物、阶段性审查记录 | `docs/superpowers/`、`docs/archives/` |
 
 ## 2. 放入规则
@@ -28,6 +28,7 @@ Infomat 是一个信息化治理工作仓库，不是单一源码仓库。它允
 - 由组织真源、流程输入基线或 PMO 计划入口生成展示页面所需的仓库级脚本。
 - 经过确认需要长期追溯的审计报告、设计记录、ADR 和迁移方案。
 - 用于复现格式和校验规则的最小样例。
+- 主线直接消费、具有固定生成命令和一致性检查，并列入 ADR-0004 拟纳管清单的受控派生消费文件。
 
 ### 不应放入
 
@@ -36,6 +37,12 @@ Infomat 是一个信息化治理工作仓库，不是单一源码仓库。它允
 - 运行态数据库、Cookie、日志和临时服务输出。
 - 同一份项目数据的多轮试错导出，除非已被标记为样例或历史归档。
 - 个人临时草稿、未脱敏数据和一次性中间文件。
+
+### 受控派生消费文件例外
+
+`docs/adr/0004-controlled-derived-consumer-files.md` 以 `Proposed` 状态提出窄范围例外：主线直接读取的派生文件只有同时具备明确真源、固定生成命令、稳定路径、直接消费方和一致性检查时，才可以继续进入版本控制。维护人员必须在同一项变更中提交并审查真源、生成器和受控消费文件。
+
+该 ADR 尚未 `Accepted`。它不授权把临时输出、缓存、日志、截图、运行状态或一次性预览纳入版本控制，也不授权删除、移动或取消跟踪历史文件。
 
 ## 3. 当前边界规则
 
@@ -92,9 +99,11 @@ Infomat 是一个信息化治理工作仓库，不是单一源码仓库。它允
 
 1. `AGENTS.md`
 2. `CODEX.md`
-3. `REPOSITORY_BOUNDARY.md`
-4. `DIRECTORY_OWNERSHIP.md`
-5. `MAINLINE_MAP.md`
-6. 与任务相关目录下的 `README.md` / `AGENTS.md`
+3. `MEMORY.md` 的 `Current Runtime Baseline`；历史和长期条目只按任务关键词检索
+4. `REPOSITORY_BOUNDARY.md`
+5. `DIRECTORY_OWNERSHIP.md`
+6. `MAINLINE_MAP.md`
+7. 数据治理、3001、3000、流程地图或数据地图任务继续读取 `docs/architecture/data-governance-operating-rules.md`
+8. 与任务相关目录下的 `README.md` / `AGENTS.md`
 
 若任务描述跨越多个资产类型，先确认主责资产，再执行。不要因为一个脚本能访问多个目录，就把这些目录视为同一类资产。

@@ -156,6 +156,21 @@ assert(
   manifest?.standardGovernance?.generatedBy === activePmoBuildScript,
   `manifest standardGovernance.generatedBy must be ${activePmoBuildScript}, got ${manifest?.standardGovernance?.generatedBy}`
 );
+assert(Array.isArray(manifest.sourceDocuments), 'manifest sourceDocuments must be an array');
+assert(
+  manifest.sourceDocuments.some((source) => source.role === '执行标准真源' && source.path === '信息化项目_执行标准真源.md'),
+  'manifest sourceDocuments must include the execution standard truth source'
+);
+for (const source of manifest.sourceDocuments) {
+  const sourcePath = resolve(root, 'pmo', source.path);
+  assert(existsSync(sourcePath), `PMO source document is missing: pmo/${source.path}`);
+  const sourceDigest = sha256(readFileSync(sourcePath));
+  assert(source.exists === true, `PMO source document must be marked exists: pmo/${source.path}`);
+  assert(
+    source.sha256_16 === sourceDigest.slice(0, 16),
+    `PMO source digest mismatch: pmo/${source.path}`
+  );
+}
 assert(
   Array.isArray(manifest.serviceOutputs) &&
     manifest.serviceOutputs.includes('tasks.json') &&

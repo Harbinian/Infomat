@@ -1,0 +1,37 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>TCProc_ResPoolTimer Stored Procedure</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">TCProc_ResPoolTimer Stored Procedure 
+			&nbsp;(MK 营销管理)
+			
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>实现资源池自动回收规则的定时任务</p>
+		<h4 class=dxh4>Remark</h4><p>1. owner_id is not null && dept_id is null 回收到公共资源池，此时看owner_id下面有没有选择规则，如果有选择规则的话，则按选择的规则回收；如果没有选择规则的话则按默认规则回收
+2. owner_id is not null && dept_id is not null 回收到部门资源池，此时看owner_id下面有没有选择规则如果有选择规则的话，则按选择的规则回收；如果没有选择规则的话则按默认规则回收
+3. owner_id is null && dept_id is not null 回收到公共资源池---用回收到公共资源池默认规则
+4. owner_id is null && dept_id is null 不需要回收</p>
+		<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

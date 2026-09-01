@@ -1,0 +1,482 @@
+<html>
+<head>
+	<META http-equiv=Content-Type content="text/html; charset=gb2312">
+	<title>Customer_Log Table</title>
+	<link rel="stylesheet" type="text/css" href="stylesheets/dbstylesheet.css">
+	<script src="scripts/dxdb.js"></script>
+</head>
+<body id="dxBody" topmargin="0" onLoad="bodyLoad()">
+	<div id="pagetop">
+		<div id="projectnamebanner">
+			<table CLASS="projectnametable" CELLSPACING=0>
+				<tr>
+					<td class="button"></td>
+					<td>UFDATA</td>
+					<td align="right"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="pagetitlebanner">
+			<H1 class="dxH1">Customer_Log Table 
+			&nbsp;(AS 公用目录设置)
+			&nbsp;[U871]
+			</h1>
+		</div>
+	</div>
+	<div id="pagebody" valign="bottom">
+		<h4 class=dxh4>Summary</h4><p>客户档案日志表</p>
+		<h4 class=dxh4>Remark</h4><p>该表所有字段含义同Customer表</p>
+		<h4 class=dxh4>Columns</h4>
+		<table class="columnlisttable" cellspacing="0">
+			<tr valign="top"><th align=middle>&nbsp;</th><th nowrap>Column Name</th><th nowrap>Description</th><th nowrap>Datatype</th><th nowrap>Length</th><th nowrap>Allow Nulls</th></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>VariationLogId
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dBusinessEDate
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bOnGPinStore
+			(U8100)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusPerson
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dLicenceEDate
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cInvoiceCompany
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iCusDisRate
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusAddress
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>255&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cBranchPhone
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>100&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusDefine16
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusFax
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>100&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fAdvancePaymentRatio
+			(U8100)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cBranchPerson
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusPortCode
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>10&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusPhone
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>100&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusBP
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bDeletedRst
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bShop
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusAbbName
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dLastDate
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iFrequency
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusEnAddr4
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iCostGrade
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>smallint</td><td>2&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusDefine1
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bCredit
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusDefine11
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dBusinessSDate
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusWhCode
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>10&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusPayCond
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusBankCode
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusEnAddr3
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bLimitSale
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusTradeCCode
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>12&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iCusCreDate
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusDefine5
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusOtherProtocol
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusBank
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>100&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cPrimaryVen
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dLRDate
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fCusDiscountRate
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bCusDomestic
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dEndDate
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusDefine3
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cDCCode
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>12&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusEnAddr1
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCreatePerson
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusSSCode
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusEmail
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>100&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusDefine10
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iLRMoney
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusRegCode
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusDefine15
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusSAProtocol
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bCusState
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cMemo
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>240&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusMnemCode
+			(U8100)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>98&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bCreditDate
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dLogTime
+			(U890)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dCusDevDate
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusCountryCode
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>10&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bHomeBranch
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusDefine14
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusOAddress
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>255&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cRelVendor
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bServiceAttribute
+			(U8100)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cBranchAddr
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>255&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusCreGrade
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>6&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusEnAddr2
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusDefine7
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iLastMoney
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iId
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusDefine12
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fInsueRate
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dProxySDate
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusPPerson
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iBusinessADays
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iProxyADays
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusCreditCompany
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusExch_name
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cModifyPerson
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>HistoryId
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>bigint</td><td>8&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusDepart
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>12&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dModifyDate
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusDefine6
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusEnName
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>100&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusOType
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>10&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCCCode
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>12&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusLPerson
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>100&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dLicenceSDate
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusHand
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>VariationAction
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>fCommisionRate
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusDefine4
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>60&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iCusCreLine
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusDefine9
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusDefine13
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iARMoney
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>float</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusPostCode
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>6&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusHeadCode
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>dProxyEDate
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>datetime</td><td>8&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>CustomerKCode
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bRequestSign
+			(U8101)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusDefine8
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>120&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusName
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>98&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusDefine2
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusCode
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>bCusOverseas
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>bit</td><td>1&nbsp;</td><td class="centered">False&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>iLicenceADays
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>int</td><td>4&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusAccount
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cTrade
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>50&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+			<tr><td class=centered nowrap>&nbsp;</td><td class="linkcell">
+			<strong>cCusExProtocol
+			(U871)
+			</strong></td><td class="descriptioncell">（该表所有字段含义同Customer表）&nbsp;</td><td>nvarchar</td><td>20&nbsp;</td><td class="centered">True&nbsp;</td></tr>
+		</table>
+		<hr style="float: aligncenter;height: 1px;width: 100%;" align=center	size=1 width=100%>
+	<p style="font-style: italic;"><a href="mailto:syq@ufsoft.com.cn?subject=Database Schema">Send feedback</a></p>
+	<p style="font-style: italic;">Copyright 2014 yonyou up Inc.</p>
+	<p style="font-style: italic;">&nbsp;</p>	</div>
+</body>
+</html>

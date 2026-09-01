@@ -18,6 +18,7 @@
 | 展示副本 | 由真源或脚本生成给人看的页面和 JSON | `pmo/procedure-management/dashboard.html`、`docs/company-sankey-data.json`、`pmo/tasks.json` |
 | 历史追溯 | 历史方案、历史计划、审计记录 | `docs/superpowers/`、`docs/reports/`、`docs/archives/` |
 | Codex 技能 | 辅助 Agent 理解项目任务的技能和提示材料 | `.agents/` |
+| 仓库 AI 偏好 | 只配置本仓库 Codex 的展示与推理偏好 | `.codex/config.toml` |
 
 ## 2. 默认读取顺序
 
@@ -77,7 +78,10 @@
 - `pmo/procedure-management/`
 - `pmo/gantt-react/`
 - `pmo/deliverables/`
+- `pmo/organization-dynamics/`
 - `docs/norms/`
+- `docs/organization/`
+- `docs/contracts/`
 - `docs/Demo/`
 - `scripts/`
 
@@ -85,8 +89,18 @@
 
 `apps/structured-output-service/AGENTS.md`还负责3001页面内编辑状态卡口：文档和实现必须区分未应用修改、未下载修改和已下载基线；任何切换、替换或下载入口不得绕过统一保护。该规则不改变3001无状态边界。
 
-## 6. 历史材料使用
+`docs/organization/AGENTS.md`负责组织真源、工作角色和人员参考资料的本地边界；`docs/contracts/AGENTS.md`负责已发布结构规则和旧数据兼容门槛；`pmo/organization-dynamics/AGENTS.md`负责模型真源、可视资产和本地 PNG 输出边界。
+
+## 6. 受控派生消费文件
+
+主线直接读取的派生文件只有在具备固定真源、生成命令、稳定路径、直接消费方和一致性检查时，才可以按 `docs/adr/0004-controlled-derived-consumer-files.md` 的 `Proposed` 方案进入版本控制。真源和消费文件必须在同一项变更中重新生成并检查。临时输出、缓存、日志、截图和一次性预览仍写入被忽略的 `artifacts/` 或工具临时目录。
+
+该 ADR 目前不是 `Accepted`。它不授权自动删除、移动或取消跟踪历史文件。
+
+## 7. 历史材料使用
 
 `docs/superpowers/`、`docs/reports/` 和 `docs/archives/` 中可能保留旧路径、旧命令或旧工具名称。使用时只取可追溯事实，不把历史文件当当前执行入口。
 
 历史材料中的旧 AI 入口说明仅代表当时状态。当前入口统一为 `AGENTS.md`、`CODEX.md` 和 `.agents/`。
+
+`.codex/config.toml` 只保存仓库内 Codex 展示与推理偏好；不得在其中保存凭据、主机配置、业务事实或运行态信息。

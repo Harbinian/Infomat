@@ -44,7 +44,7 @@ Codex 在本项目协作时的根入口规则。
 - 不是每个文件夹都需要 `AGENTS.md`; 目录级 `AGENTS.md` 只放在有独立真源、生成副作用、运行命令、验证口径或禁止事项的关键目录。
 - 关键目录必须有目录级 `AGENTS.md`:可运行应用、PMO 展示/插件、流程输入基线、仓库级脚本、受控交付物、AI 工作区样例。
 - 纯报告、归档、样例、说明性架构目录默认使用 README; 只有当它们开始承载可执行命令、写回真源或独立验证规则时,再新增 `AGENTS.md`。
-- 当前目录级入口包括 `apps/mdm-platform/AGENTS.md`、`apps/structured-output-service/AGENTS.md`、`apps/structure-assistant/AGENTS.md`、`apps/weekly-action-service/AGENTS.md`、`apps/information-collection-service/AGENTS.md`、`pmo/AGENTS.md`、`pmo/procedure-management/AGENTS.md`、`pmo/gantt-react/AGENTS.md`、`pmo/deliverables/AGENTS.md`、`docs/norms/AGENTS.md`、`docs/Demo/AGENTS.md` 和 `scripts/AGENTS.md`。
+- 当前目录级入口包括 `apps/mdm-platform/AGENTS.md`、`apps/structured-output-service/AGENTS.md`、`apps/structure-assistant/AGENTS.md`、`apps/weekly-action-service/AGENTS.md`、`apps/information-collection-service/AGENTS.md`、`pmo/AGENTS.md`、`pmo/procedure-management/AGENTS.md`、`pmo/gantt-react/AGENTS.md`、`pmo/deliverables/AGENTS.md`、`pmo/organization-dynamics/AGENTS.md`、`docs/norms/AGENTS.md`、`docs/organization/AGENTS.md`、`docs/contracts/AGENTS.md`、`docs/Demo/AGENTS.md` 和 `scripts/AGENTS.md`。
 - 新增、删除或调整目录级 `AGENTS.md` 时,必须同步更新 `DIRECTORY_OWNERSHIP.md`、相关目录 README 和 `docs/architecture/context-management.md`; 涉及新术语时同步 `docs/glossary.md`。
 
 ## 沟通与命名约定
