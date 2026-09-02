@@ -47,6 +47,8 @@ npm run preview
 
 开发模式默认访问 `http://localhost:5174`。
 
+Vite 开发服务同时提供流程地图驾驶舱和 `/echarts.min.js`。不得为服务模式手工复制第二份驾驶舱或 ECharts 资产；静态资源关系以 Vite 插件和本目录 README 为准。
+
 ## 交付物 dev 模式
 
 `pmo/deliverables/DLV-XXX-*.md` 是交付物状态正本。dev 模式通过 Vite 插件读取和写回正本，上传原件、状态快照和运行历史默认进入仓库根目录下被忽略的 `artifacts/pmo/deliverables/`。

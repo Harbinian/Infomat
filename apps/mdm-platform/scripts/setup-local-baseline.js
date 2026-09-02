@@ -59,7 +59,7 @@ function setupLocalBaseline(env = process.env) {
   }
   assertAdminEnv(env);
 
-  runExistingScript('init-db.js', env);
+  runExistingScript('init-legacy-sqlite-db.js', env);
 
   const db = require('../server/db');
   const organization = syncOrganizationStructure({ db });

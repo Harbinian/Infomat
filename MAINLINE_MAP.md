@@ -124,7 +124,7 @@ field_identities
 
 ## 4.1 3001单流程编制主线
 
-以下为正式3001的v7主线。v7已经发布并进入使用中验证；软件发布不代表真实流程业务验收通过。
+以下只记录正式 3001 的真源、输入、输出和消费关系。产品交互、页面控件、几何参数、错误码和测试矩阵由 3001 局部 README、PRD、Tech-Spec 和结构规则承载。
 
 ```text
 空白新建 / process-governance-v1至v7 JSON / 历史多候选结构化JSON
@@ -142,19 +142,12 @@ docs/contracts/process-governance-v7.schema.json
 
 规则：
 
-- 公司局域网用户通过`http://<服务器局域网IP>:3001`直接进入3001，不经过DeepSeek、MDM-AI助手或认证网关。
-- 3001一份JSON只编制一个流程。历史v2文件含多条流程时，在当前页面拆成候选并逐一下载。
-- 3001通过本服务`/api/enums`只读仓库花名册岗位，不调用3000、数据库或会话。岗位只表示当前执行岗位，不生成正式工作角色。
-- 新建流程的`reference_materials`为空；页面不新增、展示或编辑参考材料。导入JSON中已有的历史参考材料只在内存中保留并随再次下载带回。
-- 表单与记录在独立工作区按整张纸质表单展示。v7先在`data_objects[].fields[]`定义当前单流程内的对象字段，再由`forms[].areas[].items[]`通过`data_field_ref`引用；表单项只保留主表或明细表位置、必填、填写说明、顺序和值使用方式。该引用减少同一流程多张表单重复维护同一字段，但不形成跨流程字段身份或正式黄金源结论；实际运行时自动带入由承载表单的业务系统实现。`form_design_state`继续区分现状、拟设计和历史待确认状态，不增加页面状态或图形字段。
-- 3001不保存草稿、不记录审核状态，也不通过API、数据库、队列、回调、共享会话或轮询与3000通信。
-- 3001只保存流程编制内容和单文件技术引用，不保存MDM审核意见或批准标记。
-- v7中跨部门由业务行为的固定执行部门与流程归口部门自动识别。跨部门先后和返回使用普通`flow_relations[]`，数据传递和返回使用`data_objects[].behavior_links[]`；活动结构不再包含独立交接对象。
-- v1至v4旧交接记录只在3001页面内存中转换；原记录、转换结果和无法转换原因只读保存在`migration.legacy_cross_department_records[]`，不参与当前流程计算、评分或绘图。源文件不修改，重复导入不生成重复对象。
-- 3001的`data_objects[].lifecycle`只记录当前单流程入口状态、路径事件、出口状态和分析来源；主数据提示只作前端线索，不形成正式认定。历史文件中指向控制节点的数据关系和表单处理关系可以带着技术阻断进入页面整改，但任一关系未改到实际办理业务的`action`行为时，阶段下载和最终下载均被阻止。3000已经实现原生V7受控承接技术路径，但默认关闭，只允许一个经批准的精确`process_ref`进入试点；该路径不表示V7已全量业务验收。
-- 3001后端保留确定性文档解析器用于历史迁移和回归测试，但页面不再提供参考材料解析入口。模型辅助填报能力已经移除；3001的启动、访问、新建、导入、校验和下载均不依赖DeepSeek或任何辅助服务。
-- 3001页面按“JSON基本信息、流程边界、流程骨架、动作与异常、数据与表单、跨部门核对、评审与交接”组织现有v7内容。步骤1至5只在编制人主动执行“检查本轮”后显示本轮自检项；步骤6显示业务核对项，步骤7显示交接检查事项。页面提供四轮阶段下载和最终待核对下载；每次下载按最终文件实际字节计算SHA-256，摘要用于人工交接核对，不写入JSON。
-- 3001步骤5支持从Excel或WPS复制粘贴数据对象、对象字段和数据行为关系。页面先在草稿副本中解析、预览并完整校验；任一行失败时整批不应用，成功批次形成一条撤销记录。页面不自动读取剪贴板，不上传`.xlsx`文件。
+- 公司局域网用户直接访问 3001，不经过 DeepSeek、MDM-AI助手或认证网关。
+- 3001 一份 JSON 只编制一个流程。它兼容导入当前支持的历史文件，但只在页面内存中迁移，源文件不修改。
+- 3001 可以只读使用仓库岗位和结构规则；它不调用 3000、数据库或业务会话，也不写回组织、流程输入基线或工作角色真源。
+- v7 对象字段、表单字段引用、流程关系、数据关系和生命周期只描述当前单流程，不形成跨流程字段身份、正式黄金源或主数据认定。
+- 用户下载的 v7 是未审核文件。3000 只有在当时的运行开关、精确试点、权限、部门范围、内容摘要和阻断项均通过时，才可能受控接收；3001 不自动提交或降级文件。
+- v7 已发布并进入使用中验证；软件发布、结构校验和候选测试不代表真实流程业务验收。
 
 ## 4.2 独立AI结构化填报试点主线
 
@@ -238,7 +231,7 @@ npm run test:mainline
 - 平台脚本只服务 MDM 时留在 `apps/mdm-platform/scripts/`。
 - 跨资料、跨 PMO、跨 app 的脚本进入仓库级 `scripts/`。
 - MDM现有正式流程编制继续以`docs/contracts/process-governance-v3.schema.json`为结构规则；导入v1至v3，保存和导出统一为v3。原生V7使用独立的预览核对、提升和正式版本路径，不把V7正文投影成v3，也不允许通过3000通用编辑、通用下一版草稿或旧结构化导入入口修改或降级V7正文。历史文档结构化输出字段仍以`docs/contracts/document-structured-output.schema.json`为兼容规则，各路径都不反向覆盖`docs/norms/`。
-- 正式流程治理快照同步只调用现有MySQL导入器。`server/db.js`、`init-db.js`、`sync-process-governance-org.js`、`import-process-governance.js`和`check-process-governance.js`只保留为SQLite遗留迁移或隔离测试实现，对外命令统一使用`legacy-sqlite:`前缀。
+- 正式流程治理快照同步只调用现有MySQL导入器。`server/db.js`、`init-legacy-sqlite-db.js`、`sync-process-governance-org.js`、`import-process-governance.js`和`check-process-governance.js`只保留为SQLite遗留迁移或隔离测试实现，对外命令统一使用`legacy-sqlite:`前缀。SQLite初始化必须显式开启隔离测试模式并通过`MDM_DB_PATH`指定非共享数据库；`init-db.js`是旧MySQL管理员初始化兼容脚本，不属于SQLite路径。
 - 3001继续作为独立、无状态的单流程编制工具运行。MDM不代管3001。用户在3001下载V7文件后，只有在3000预览和正式开关、唯一试点`process_ref`、权限、部门范围、摘要和阻断项全部通过时，才可人工上传并受控承接；3000不与3001通信，也不读取3001运行时草稿。
 - MDM“流程治理→流程编制”使用`apps/mdm-platform/public/process-governance-editor/`中的本地编制工作台，复用3001的字段编制、稳定排序、结构评分和跨职能流程图交互。页面通过MDM本地接口读取结构规则和目录，不访问3001服务。
 - 当前 MDM 不持久化 `work_role_bindings`；非空关系导入必须返回 `WORK_ROLE_BINDINGS_UNSUPPORTED`，避免静默丢失。行政人事目录和受控试点稳定后，再建设 MySQL 派生表和变更申请能力。
@@ -303,27 +296,9 @@ COLLECTION_FILE_ROOT（仓库外受控附件目录）
 - 表单、不可变发布版本、任务目标快照、当前答卷和历次正式提交均写入 `collection_*` 表。附件正文只写入仓库外 `COLLECTION_FILE_ROOT`，数据库只保存元数据和哈希。
 - 服务不写入 MDM 治理业务表、`docs/norms/` 或 PMO 真源。数据库迁移先执行 dry-run，再 apply 和 schema 检查。
 
-## 8. AI 协作与历史方案主线
+## 8. 上下文架构入口
 
-```text
-docs/superpowers/specs/*
-docs/superpowers/plans/*
-.planning/*
-.agents/*
-.codex/config.toml
-AGENTS.md
-CODEX.md
-```
-
-规则：
-
-- `docs/superpowers/` 用于追溯历史设计和计划，不作为当前执行真源。
-- `AGENTS.md` 和 `CODEX.md` 是 Codex 当前协作入口。
-- `.agents/` 是 Codex 可用的项目技能和提示材料，不放项目生成物。
-- `.codex/config.toml`只保存仓库内Codex展示与推理偏好，不保存Secret、主机连接、个人路径、运行状态或业务事实。
-- 主线直接消费的派生文件按`docs/adr/0004-controlled-derived-consumer-files.md`的`Proposed`清单维护；该状态不表示架构评审已经接受，也不授权处理历史输出。
-- 历史方案如与当前边界文件冲突，以 `REPOSITORY_BOUNDARY.md`、`DIRECTORY_OWNERSHIP.md` 和本文件为准。
-- 代码、脚本、接口、数据库结构、前端行为、启动命令或测试命令变化时，必须同步更新对应文档。
+Codex 自动加载入口、按需 Implementation、长期记忆和历史材料之间的职责见 `docs/architecture/context-management.md`。本文件不复制任务读取顺序或局部入口清单，只记录业务真源、生成器、受控派生文件和消费方之间的数据流。
 
 ## 9. 禁止的跨线操作
 

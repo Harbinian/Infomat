@@ -134,14 +134,11 @@ const mdmReadme = fs.readFileSync(path.join(repoRoot, 'apps', 'mdm-platform', 'R
 assert.ok(mdmReadme.includes('MDM 和 PMO 从仓库根目录使用固定入口启动'), 'MDM README should document the fixed root starter');
 assert.ok(mdmReadme.includes('$env:MYSQL_PORT = "3307"'), 'MDM README should show the fixed MySQL port for schema rebuilds');
 
-const agents = fs.readFileSync(path.join(repoRoot, 'AGENTS.md'), 'utf8');
-assert.ok(agents.includes('MDM / PMO 本地联动启动使用仓库根目录固定入口'), 'AGENTS should guide future agents to the fixed starter');
 const roleUsageGuide = fs.readFileSync(path.join(repoRoot, 'apps', 'mdm-platform', 'docs', 'role-based-usage-guide.md'), 'utf8');
 assert.equal(/裸跑|临时改 `MYSQL_PORT`|不要临时传 `MYSQL_PORT`|连到了 3306/.test([
   rootReadme,
   scriptsReadme,
   mdmReadme,
-  agents,
   roleUsageGuide
 ].join('\n')), false, 'startup docs should keep only the fixed startup path');
 

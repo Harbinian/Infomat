@@ -25,6 +25,7 @@
     "governance:weekly-report": "node scripts/build-project-governance-report.mjs",
     "test:project-governance-upgrade": "node scripts/test-project-governance-report.mjs && npm --prefix apps/mdm-platform run test:role-workbench && npm --prefix apps/mdm-platform run test:role-workbench-mysql",
     "test:infomat-services-config": "node scripts/test-infomat-services-config.mjs",
+    "test:codex-context": "node scripts/test-codex-context.mjs && node scripts/check-codex-context.mjs",
     "repair:infomat-mysql": "powershell -ExecutionPolicy Bypass -File scripts/repair-infomat-mysql-container.ps1",
     "start:infomat-services": "cmd /c start-infomat-services.cmd",
     "smoke:infomat-services": "node scripts/smoke-infomat-services.mjs",

@@ -215,6 +215,7 @@ npm run review:mysql:serve
 
 | 脚本 | 作用 | 输入 | 输出 / 副作用 |
 |---|---|---|---|
+| `check-codex-context.mjs`、`test-codex-context.mjs` | 校验 Codex 根入口、局部入口注册、UTF-8 字节预算、指令链、应用细节泄漏和重复提示 | 根 `AGENTS.md`、`DIRECTORY_OWNERSHIP.md` 注册块和各局部 `AGENTS.md`；夹具测试使用系统临时目录 | `npm run test:codex-context` 只输出检查结果；不写仓库文件、不连接数据库、不启动服务 |
 | `check-dcm-bbm.mjs` | 校验DCM/BBM规则、部门映射、跨部门证据和驾驶舱数据；已识别流程治理结构块v1的L3/A1计数 | `docs/contracts/dcm-bbm-contract.json`、`docs/norms/`、PMO驾驶舱 | 默认写 `docs/reports/dcm-bbm-quality-report.md`；`--report=...` 可覆盖，`--no-fail` 可用于主线容错 |
 | `verify-norms-source-mapping.mjs` | 只读盘点 `docs/norms` 源文件和部门映射表，核验 DCM/BBM 证据字段能否回到源文件编号、制度或表单名称、条款/表格/摘录位置 | `docs/contracts/dcm-bbm-contract.json`、`docs/norms/` | 写 `docs/reports/{日期}-norms-source-mapping-verification.md` 和 `artifacts/norms-source-mapping-verify/<run-id>/`，不写数据库，不修改映射基线 |
 | `audit-a1-transfer-evidence.mjs` | 审计 A1 跨部门输入 / 输出证据 | `docs/contracts/dcm-bbm-contract.json`、`docs/norms/` | 默认写 `docs/reports/{日期}-a1-transfer-evidence-audit.md`；`--no-write` 可只读运行 |

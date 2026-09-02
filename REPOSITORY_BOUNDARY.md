@@ -16,7 +16,7 @@ Infomat 是一个信息化治理工作仓库，不是单一源码仓库。它允
 | 可运行系统 | MDM 平台、文档结构化输出辅助服务、MDM-AI助手、PMO 周会行动项服务、信息表收集服务及其测试和维护脚本 | `apps/` |
 | PMO / 项目管理展示工具 | 流程地图驾驶舱、甘特图、项目管理页面、交付物工作台 | `pmo/` |
 | 仓库级脚本工具 | 跨资料、跨页面、跨 app 的解析、注入、生成、校验脚本 | `scripts/` |
-| AI 协作工作区 | Codex 入口规则、长期项目上下文、仓库偏好、Agent 技能和历史计划 | `AGENTS.md`、`CODEX.md`、`MEMORY.md`、`.codex/config.toml`、`.agents/`、`docs/superpowers/` |
+| AI 协作工作区 | Codex 自动加载入口、按需执行手册、上下文架构、长期项目上下文、仓库偏好、Agent 技能和计划 | `AGENTS.md`、`CODEX.md`、`docs/architecture/context-management.md`、`MEMORY.md`、`.codex/config.toml`、`.agents/`、`docs/plans/`、`docs/superpowers/` |
 | 历史方案归档 | 旧设计、旧计划、历史输出物、阶段性审查记录 | `docs/superpowers/`、`docs/archives/` |
 
 ## 2. 放入规则
@@ -95,15 +95,6 @@ Infomat 是一个信息化治理工作仓库，不是单一源码仓库。它允
 
 ## 6. AI 协作入口
 
-后续 Codex 开始任务前，应先读：
+根 `AGENTS.md` 是自动加载的任务路由 Interface；`CODEX.md` 是仓库变更任务按需读取的执行 Implementation。具体读取内容由根任务路由和主责目录入口决定，不在本文件复制固定全量顺序或局部入口清单。
 
-1. `AGENTS.md`
-2. `CODEX.md`
-3. `MEMORY.md` 的 `Current Runtime Baseline`；历史和长期条目只按任务关键词检索
-4. `REPOSITORY_BOUNDARY.md`
-5. `DIRECTORY_OWNERSHIP.md`
-6. `MAINLINE_MAP.md`
-7. 数据治理、3001、3000、流程地图或数据地图任务继续读取 `docs/architecture/data-governance-operating-rules.md`
-8. 与任务相关目录下的 `README.md` / `AGENTS.md`
-
-若任务描述跨越多个资产类型，先确认主责资产，再执行。不要因为一个脚本能访问多个目录，就把这些目录视为同一类资产。
+本文件只判断仓库收纳、生成物和历史资产边界。若任务描述跨越多个资产类型，先确认主责资产，再执行；不要因为一个脚本能访问多个目录，就把这些目录视为同一类资产。上下文分层、预算和检查方法见 `docs/architecture/context-management.md`。

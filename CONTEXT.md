@@ -9,6 +9,8 @@
 - 样例（Sample）：用于对齐格式或复现的最小输入输出，放在 `docs/samples/`
 - 生成物（Artifact）：可再生成的输出（截图、抓取、导出、临时文件、浏览器 profile），不得提交到仓库
 - Codex 协作入口：根目录 `AGENTS.md`、`CODEX.md` 与相关目录 `AGENTS.md` 共同构成的当前 AI 协作上下文
+- 上下文 Module Interface：Codex 自动加载的小型根或目录入口，只包含开始任务必须知道的硬规则和按需路由
+- 上下文 Implementation：由 Module Interface 按任务路由读取的详细真源文档，包括执行手册、README、PRD、Tech-Spec、接口和测试说明
 - 项目长期记忆：`MEMORY.md`前部记录当前运行基线，后部条目只用于按需追溯；它不是执行规则
 - 代码文档同步：代码、脚本、接口、数据库结构、前端行为、启动命令或测试命令变化时，同步更新对应文档的项目规则
 

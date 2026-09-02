@@ -38,7 +38,7 @@ function assertSourceContract() {
   assert.match(mainlineSync, /--snapshot/, '主线同步导入 MDM 快照时必须显式传入 snapshot');
 
   assert.equal(appPackage.scripts['import:process-governance-mysql'], 'node scripts/import-process-governance-mysql.js');
-  assert.equal(appPackage.scripts['legacy-sqlite:init-db'], 'node scripts/init-db.js');
+  assert.equal(appPackage.scripts['legacy-sqlite:init-db'], 'node scripts/init-legacy-sqlite-db.js');
   assert.equal(appPackage.scripts['legacy-sqlite:sync-process-org'], 'node scripts/sync-process-governance-org.js');
   assert.equal(appPackage.scripts['legacy-sqlite:import-process-governance'], 'node scripts/import-process-governance.js');
   assert.equal(appPackage.scripts['legacy-sqlite:check-process-governance'], 'node scripts/check-process-governance.js');
@@ -120,6 +120,7 @@ function assertMainlineSyncRequiresExplicitMysqlConfig() {
 }
 
 const checks = [
+  ['Codex 上下文', ['npm', 'run', 'test:codex-context']],
   ['禁用术语', 'apps/mdm-platform/scripts/test-no-banned-terminology.js'],
   ['脚本边界合约', assertSourceContract],
   ['流程治理结构块解析', 'scripts/test-parse-sankey-structure-block.mjs'],

@@ -9,7 +9,8 @@
 | 路径 | 责任 | 可修改规则 | 禁止事项 |
 |---|---|---|---|
 | `README.md` | 仓库入口说明 | 只放导航、当前基线/真源入口、常用命令入口 | 不写长篇方案，不放生成数据 |
-| `AGENTS.md` / `CODEX.md` | Codex 协作规则 | 写跨仓库执行约定、术语约定、阶段边界、文档同步规则和目录级 AGENTS 设置规则 | 不写具体业务交付内容 |
+| `AGENTS.md` | Codex 自动加载根 Interface | 只写当前阶段、全仓硬规则、任务路由和状态表述底线 | 不写应用详细规格、端口配置、静态资源路径或完整目录清单 |
+| `CODEX.md` | 仓库变更任务的按需 Implementation | 写基线检查、脏工作区保护、实施、迁移、文档同步、验证和交付方法 | 不作为普通只读问答的强制前置，不写应用业务规格或完整目录清单 |
 | `MEMORY.md` | 长期项目上下文 | 文件前部维护当前运行基线；历史和长期条目按关键词检索 | 不作为执行规则，不让历史条目覆盖当前运行基线或边界文件 |
 | `CONTEXT.md` | 仓库术语和目录规范 | 新增长期有效的仓库域语言 | 不记录临时计划 |
 | `REPOSITORY_BOUNDARY.md` | 仓库职责边界 | 定义仓库放什么、不放什么 | 不替代目录级 README |
@@ -19,7 +20,27 @@
 
 根目录不应继续新增临时 YAML、截图、压缩包、解包目录或一次性调查文本。历史散放的根目录 PMO YAML 已归档到 `pmo/archive/page-snapshots/2026-06-05-playwright-yaml/`。原根目录 `temp_survey.txt` 已登记后迁入 `docs/HardwareResearch/06B厂房接入民机非密园区网需求调查表_抽取文本.txt`，后续同类基础设施调查材料应直接进入对应资料目录。
 
-目录级 `AGENTS.md` 只放在有独立真源、生成副作用、运行命令、验证口径或禁止事项的关键目录。当前目录级入口为 `apps/mdm-platform/`、`apps/structured-output-service/`、`apps/structure-assistant/`、`apps/weekly-action-service/`、`apps/information-collection-service/`、`pmo/`、`pmo/procedure-management/`、`pmo/gantt-react/`、`pmo/deliverables/`、`pmo/organization-dynamics/`、`docs/norms/`、`docs/organization/`、`docs/contracts/`、`docs/Demo/` 和 `scripts/`。纯报告、归档、样例和说明性架构目录默认使用 README。
+目录级 `AGENTS.md` 只放在有独立真源、生成副作用、运行命令、验证口径或禁止事项的关键目录。纯报告、归档、样例和说明性架构目录默认使用 README。以下机器可读注册块是全部局部入口的唯一清单；检查脚本、根入口和其他说明文档不得另建清单。
+
+<!-- codex-context-registry:start -->
+```text
+apps/mdm-platform/AGENTS.md
+apps/structured-output-service/AGENTS.md
+apps/structure-assistant/AGENTS.md
+apps/weekly-action-service/AGENTS.md
+apps/information-collection-service/AGENTS.md
+pmo/AGENTS.md
+pmo/procedure-management/AGENTS.md
+pmo/gantt-react/AGENTS.md
+pmo/deliverables/AGENTS.md
+pmo/organization-dynamics/AGENTS.md
+docs/norms/AGENTS.md
+docs/organization/AGENTS.md
+docs/contracts/AGENTS.md
+docs/Demo/AGENTS.md
+scripts/AGENTS.md
+```
+<!-- codex-context-registry:end -->
 
 ## 2. 可运行系统
 

@@ -34,3 +34,5 @@ node scripts/check-dashboard-data.mjs
 2. 流程输入基线回到 `docs/norms/` 修改；制度、表单等证据来源应定位到对应源文件和条款/页码/表格位置。
 3. PMO 项目计划和甘特任务数据回到 `pmo/` 根目录 Markdown 真源维护。
 4. 修改页面前先读 `AGENTS.md`。
+5. 驾驶舱支持全公司和单域两种只读视图，不提供 CSV 导出；关键发现只陈述数据事实，不对应用系统作评价。
+6. 页面视觉延续米色暖宣纸色系，样式修改复用 `dashboard.html` 的现有 CSS 变量。
