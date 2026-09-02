@@ -81,7 +81,8 @@
 | `smoke-process-governance-mysql.js` | 可选真实 MySQL 端到端 smoke：初始化、导入、读回 Sankey | 缺少 `MYSQL_HOST`、`MYSQL_USER`、`MYSQL_DATABASE` 时跳过；不读取 `MDM_DB_PATH` |
 | `smoke-data-map-mysql.js` | 可选真实 MySQL 端到端 smoke：初始化、写入 Data Map context、字段、黄金源并读回 | 缺少 `MYSQL_HOST`、`MYSQL_USER`、`MYSQL_DATABASE` 时跳过；不读取 `MDM_DB_PATH` |
 | `import-process-input-baseline-review-mysql.js` | 将 `artifacts/process-input-baseline-review/<run-id>` 导入 MDM 输入基线问题复核表 | 写 MySQL `process_input_baseline_review_*` 表 |
-| `init-db.js` | 历史本地库初始化实现，只通过`npm run legacy-sqlite:init-db`服务遗留测试链 | 写 `data/platform.db` 或 `MDM_DB_PATH` 指定库 |
+| `init-legacy-sqlite-db.js` | 历史本地库初始化实现，只通过`npm run legacy-sqlite:init-db`服务遗留测试链 | 必须设置`MDM_ALLOW_LEGACY_TEST_MODE=1`并通过`MDM_DB_PATH`指定隔离库；拒绝写共享`data/platform.db` |
+| `init-db.js` | 旧MySQL管理员初始化兼容脚本 | 不作为SQLite入口；正式空身份库初始化使用`npm run bootstrap:admin` |
 | `setup-local-baseline.js` | 历史本地库测试基线入口，不是正式账号初始化入口 | 只允许隔离遗留测试；不得用于正式开户 |
 | `seed-demo-data.js` | 历史演示数据入口；账号写入已拒绝 | 不得用于正式开户 |
 | `setup-mdm-project-users.js` | 已退休的项目角色批量开户入口 | 执行即拒绝，不写账号 |

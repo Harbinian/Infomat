@@ -1,106 +1,89 @@
-# Infomat 上下文管理说明
+# Infomat Codex 上下文管理说明
 
 > 状态：执行说明
-> 生效日期：2026-06-30
-> 范围：项目资料、PMO 展示、MDM 承接、脚本工具、历史方案和 Codex 协作上下文。
+> 生效日期：2026-09-01
+> 范围：仓库自动加载指令、按需文档、长期上下文和历史材料。
 
-## 1. 上下文分层
+## 1. 目标
 
-| 层级 | 作用 | 当前入口 |
-|---|---|---|
-| 执行规则 | 规定 Codex 怎么开始任务、怎么判断边界、怎么交付 | `AGENTS.md`、`CODEX.md` |
-| 长期项目上下文 | 记录当前运行基线和长期有效的项目事实，不承担执行规则 | `MEMORY.md` |
-| 仓库边界 | 规定仓库放什么、不放什么、各目录怎么改 | `REPOSITORY_BOUNDARY.md`、`DIRECTORY_OWNERSHIP.md` |
-| 主线关系 | 规定组织真源、流程输入基线、PMO、MDM、脚本之间的数据流 | `MAINLINE_MAP.md` |
-| 数据治理工作规则 | 规定治理责任、3001/3000边界、待定状态、对象识别和信息分层 | `docs/architecture/data-governance-operating-rules.md` |
-| 机器可读校验规则 | 规定脚本、模型输出和平台承接必须遵守的数据结构 | `docs/contracts/` |
-| 资料真源 | 当前可维护的业务资料入口 | `docs/organization/`、`docs/norms/`、`pmo/*.md` |
-| 展示副本 | 由真源或脚本生成给人看的页面和 JSON | `pmo/procedure-management/dashboard.html`、`docs/company-sankey-data.json`、`pmo/tasks.json` |
-| 历史追溯 | 历史方案、历史计划、审计记录 | `docs/superpowers/`、`docs/reports/`、`docs/archives/` |
-| Codex 技能 | 辅助 Agent 理解项目任务的技能和提示材料 | `.agents/` |
-| 仓库 AI 偏好 | 只配置本仓库 Codex 的展示与推理偏好 | `.codex/config.toml` |
+Codex 在开始任务时应先获得少量、稳定且不能违反的规则，再根据任务类型读取主责文档。上下文架构同时满足：
 
-## 2. 默认读取顺序
+- 自动加载的项目指令链在默认预算内完整进入模型输入；
+- 每类规则只有一个权威正文，其他位置使用链接或短路由；
+- 普通只读任务不承担无关应用的详细规格；
+- 局部任务仍能取得完整的产品、技术、数据和验证规则；
+- 历史计划、记忆和运行快照不能覆盖当前真源或实时状态。
 
-跨目录任务按以下顺序读取上下文：
+## 2. Module 分层
 
-1. `AGENTS.md`
-2. `CODEX.md`
-3. `MEMORY.md`的`Current Runtime Baseline`；历史和长期条目只按任务关键词检索
-4. `REPOSITORY_BOUNDARY.md`
-5. `DIRECTORY_OWNERSHIP.md`
-6. `MAINLINE_MAP.md`
-7. 涉及数据治理、3001、3000、流程地图或数据地图时，读取 `docs/architecture/data-governance-operating-rules.md`
-8. 任务相关目录的 `README.md` / `AGENTS.md`
-9. 具体真源、脚本或页面文件
+| Module | Interface 或 Implementation 职责 |
+|---|---|
+| 根 `AGENTS.md` | 自动加载的根 Interface：当前阶段、全仓硬规则、任务路由和状态表述底线 |
+| 目录 `AGENTS.md` | 自动加载的局部 Interface：目录禁止事项、不可违反的局部边界和专题路由 |
+| `CODEX.md` | 仓库变更任务按需读取的 Implementation：基线检查、脏工作区保护、实施、文档同步、验证和交付 |
+| `REPOSITORY_BOUNDARY.md` | 仓库收纳、生成物、受控派生消费文件和历史资产规则 |
+| `DIRECTORY_OWNERSHIP.md` | 目录责任和全部局部 `AGENTS.md` 的唯一注册来源 |
+| `MAINLINE_MAP.md` | 真源、生成器、受控派生文件和消费方之间的数据流 |
+| 数据治理运行规则 | 治理责任、事实分层、3000/3001 边界、待定状态和升级条件 |
+| README、PRD、Tech-Spec、接口和测试说明 | 应用产品、技术、运行和验证 Implementation，由局部 Interface 按任务读取 |
+| `MEMORY.md` | 当前运行基线和长期事实；不承担执行规则或常用命令 |
+| `CONTEXT.md` | 稳定领域语言和仓库结构概念；不记录易变化命令、版本和运行状态 |
+| 历史 plans/specs/reports | 只用于追溯；明确的当前入口优先 |
 
-`MEMORY.md`的历史和长期条目、历史报告及历史plans/specs只在需要相关事实时检索读取。历史材料与当前运行基线或执行规则冲突时，以当前运行基线、根目录执行规则和边界文件为准。
+Interface 是调用者开始任务前必须知道的最小表面。Implementation 是完成具体任务时才读取的详细规则和实现知识。小型 Interface 提供任务路由，详细 Implementation 提供局部深度；维护者可以在唯一位置修改规则，提高 Locality，任务可以用较少上下文取得所需能力，提高 Leverage。
 
-## 3. 真源优先规则
+## 3. Codex 发现和预算
 
-- 部门到域映射以 `docs/organization/组织架构和部门职责.md` 为准。
-- 流程输入基线以 `docs/norms/{部门}部门-能力-流程-系统映射关系.md` 为准。
-- 流程地图驾驶舱是展示副本，不手工维护内嵌 JSON。
-- `docs/contracts/` 只定义机器可读的校验规则，例如文档结构化输出结构规则；这些规则不替代流程输入基线或组织真源。
-- PMO 任务数据以 `pmo/信息化项目_计划管控真源.md`、`pmo/信息化项目_WBS结构真源.md` 和配套 PMO 真源为准。
-- MDM 平台当前是后续承接应用，不反向覆盖 `docs/norms/` 或 PMO 真源。
+Codex 从项目根目录向当前工作目录逐层查找项目指令。每个目录最多加入一个项目指令文件，靠近当前目录的规则后出现并覆盖更一般的规则。Codex 跳过空文件，并在项目指令累计达到 `project_doc_max_bytes` 时停止继续加入；默认上限为 32 KiB。官方说明见 [Custom instructions with AGENTS.md](https://learn.chatgpt.com/docs/agent-configuration/agents-md) 和 [Configuration Reference](https://learn.chatgpt.com/docs/config-file/config-reference)。
 
-## 4. 代码文档同步
+本仓库使用更严格的持续检查预算，不提高用户级或仓库级 `project_doc_max_bytes`：
 
-代码、脚本、接口、数据库结构、前端行为、启动命令或测试命令变化时，必须同步检查文档。
+| 检查对象 | 上限 |
+|---|---:|
+| 根 `AGENTS.md` | 6,144 UTF-8 字节 |
+| `apps/structured-output-service/AGENTS.md` | 8,192 UTF-8 字节 |
+| 任一已登记“根 → 当前目录”项目指令链 | 16,384 UTF-8 字节 |
 
-优先更新：
+16 KiB 门槛为 Codex 默认 32 KiB 上限保留至少一半余量，用于未来少量硬规则和产品侧上下文变化。不得通过调高默认上限掩盖重复、职责混合或局部入口过大。
 
-- 所在目录 `README.md`
-- 所在目录 `AGENTS.md`
-- 根目录 `AGENTS.md` / `CODEX.md`
-- `docs/glossary.md`
-- 使用手册、运行说明、接口说明或 PMO 真源说明
+## 4. 路由和注册的唯一来源
 
-无需更新文档时，交付说明必须写明原因。
+- 根 `AGENTS.md` 的“任务路由”是当前任务类型到按需文档的唯一权威正文。其他文档说明职责或链接该路由，不复制固定全量读取顺序。
+- `DIRECTORY_OWNERSHIP.md` 中的 `codex-context-registry` 块是全部局部 `AGENTS.md` 的唯一注册清单。根入口、`CODEX.md`、README 和本文件不得复制完整清单。
+- 应用局部入口把任务路由到当前 README、PRD、Tech-Spec、接口说明和测试。历史章节必须明确标为历史，不能作为当前执行入口。
+- 运行状态、版本、端口、服务、数据库和 Git 状态由任务当时的只读检查提供，不写入自动加载入口。
 
-## 5. 目录级 AGENTS.md 管理
+## 5. 维护方法
 
-目录级 `AGENTS.md` 用于补充某个关键目录的本地规则，不替代根目录规则。设置标准如下：
+新增或调整根、局部入口和路由时，维护人员按以下顺序处理：
 
-- 目录有独立真源、生成副作用、运行命令、验证口径或禁止事项时，应设置目录级 `AGENTS.md`。
-- 目录只承载报告、归档、样例或说明性架构文档时，优先使用 README。
-- 新增或调整目录级 `AGENTS.md` 时，同步更新 `DIRECTORY_OWNERSHIP.md`、相关目录 README 和本文件。
+1. 确认规则的责任主体、适用条件、对象、时序、输入输出、异常处理和验证要求。
+2. 选择唯一权威正文。全仓硬规则进入根 Interface；局部不可违反的规则进入局部 Interface；详细产品和技术内容进入按需 Implementation。
+3. 只有语义完全一致时才删除重复正文。疑似相似但责任或条件不同的规则继续保留并人工判断。
+4. 新增或删除局部入口时，只更新 `DIRECTORY_OWNERSHIP.md` 的注册块，再同步相关目录 README 和本文件的职责说明；不要创建第二份清单。
+5. 运行 `npm run test:codex-context`，检查字节预算、链路、注册完整性、根入口应用细节泄漏和重复提示。
+6. 使用 `codex debug prompt-input` 在代表目录检查模型可见输入，确认局部文件末尾可见且没有 Unicode 截断字符。
+7. 对代表任务执行同模型、同推理强度、同仓库状态的 A/B；模型或 CLI 不满足固定条件时，明确记录未完成，不替换模型掩盖结果。
 
-当前目录级 `AGENTS.md` 覆盖：
+## 6. 检查器 Interface
 
-- `apps/mdm-platform/`
-- `apps/structured-output-service/`
-- `apps/structure-assistant/`
-- `apps/weekly-action-service/`
-- `apps/information-collection-service/`
-- `pmo/`
-- `pmo/procedure-management/`
-- `pmo/gantt-react/`
-- `pmo/deliverables/`
-- `pmo/organization-dynamics/`
-- `docs/norms/`
-- `docs/organization/`
-- `docs/contracts/`
-- `docs/Demo/`
-- `scripts/`
+固定入口：
 
-`docs/norms/AGENTS.md` 还负责已确认工作角色绑定的局部卡口：候选不得写入基线，旧 Markdown 绑定必须同时维护受控证据表，任一无效 `confirmed` 关系会阻断公司快照生成。
+```powershell
+npm run test:codex-context
+```
 
-`apps/structured-output-service/AGENTS.md`还负责3001页面内编辑状态卡口：文档和实现必须区分未应用修改、未下载修改和已下载基线；任何切换、替换或下载入口不得绕过统一保护。该规则不改变3001无状态边界。
+检查器只读取仓库文件，不写文件、不连接数据库、不启动服务。它输出每条已登记项目链的组成、UTF-8 字节数和 16 KiB 剩余预算；以下情况阻断：
 
-`docs/organization/AGENTS.md`负责组织真源、工作角色和人员参考资料的本地边界；`docs/contracts/AGENTS.md`负责已发布结构规则和旧数据兼容门槛；`pmo/organization-dynamics/AGENTS.md`负责模型真源、可视资产和本地 PNG 输出边界。
+- 根入口、3001 局部入口或任一项目链超过预算；
+- 实际局部入口未登记，或登记路径不存在；
+- 根入口重新出现应用详细章节或固定实现标识；
+- 权威路由或局部入口注册标记重复或缺失。
 
-## 6. 受控派生消费文件
+长段完全重复和模糊相似内容只报告提示，首版不自动删除或阻断。维护人员必须依据语义判断是否属于重复规则。
 
-主线直接读取的派生文件只有在具备固定真源、生成命令、稳定路径、直接消费方和一致性检查时，才可以按 `docs/adr/0004-controlled-derived-consumer-files.md` 的 `Proposed` 方案进入版本控制。真源和消费文件必须在同一项变更中重新生成并检查。临时输出、缓存、日志、截图和一次性预览仍写入被忽略的 `artifacts/` 或工具临时目录。
+## 7. 历史和长期上下文
 
-该 ADR 目前不是 `Accepted`。它不授权自动删除、移动或取消跟踪历史文件。
+`MEMORY.md` 前部的当前运行基线可以帮助定位需要实时核对的对象，但它不提供执行顺序、常用命令或当前健康结论。历史条目、`docs/plans/`、`docs/superpowers/`、`docs/reports/` 和 `docs/archives/` 只在任务需要追溯时按关键词读取。
 
-## 7. 历史材料使用
-
-`docs/superpowers/`、`docs/reports/` 和 `docs/archives/` 中可能保留旧路径、旧命令或旧工具名称。使用时只取可追溯事实，不把历史文件当当前执行入口。
-
-历史材料中的旧 AI 入口说明仅代表当时状态。当前入口统一为 `AGENTS.md`、`CODEX.md` 和 `.agents/`。
-
-`.codex/config.toml` 只保存仓库内 Codex 展示与推理偏好；不得在其中保存凭据、主机配置、业务事实或运行态信息。
+历史材料与根任务路由、职责文件、主线文件、局部当前规格或实时状态冲突时，采用当前入口和实时证据。不得为了减少字节删除安全、迁移、责任、异常或验收边界；如果一条硬规则找不到唯一承载位置，先保留该规则。

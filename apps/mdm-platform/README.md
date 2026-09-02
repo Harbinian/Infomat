@@ -216,7 +216,9 @@ npm run smoke:data-map-mysql
 npm run import:process-input-baseline-review -- --review-run artifacts/process-input-baseline-review/<run-id>
 ```
 
-正式运行和正式流程治理同步使用MySQL。`legacy-sqlite:init-db`、`legacy-sqlite:sync-process-org`、`legacy-sqlite:import-process-governance`和`legacy-sqlite:check-process-governance`只服务遗留迁移或隔离测试，不是当前正式入口。
+仓库级流程治理主线会调用 `node scripts/test-no-banned-terminology.js`。该检查只读取受控术语入口：用户页面 `apps/mdm-platform/public/index.html`，以及问题卡编制指引 `AGENTS.md`、`.agents/skills/process-evidence-mapping/SKILL.md`、`apps/mdm-platform/docs/role-based-usage-guide.md`；两类入口分别应用各自的禁止用语清单。检查不会启动服务、连接数据库或修改文件。
+
+正式运行和正式流程治理同步使用MySQL。`legacy-sqlite:init-db`、`legacy-sqlite:sync-process-org`、`legacy-sqlite:import-process-governance`和`legacy-sqlite:check-process-governance`只服务遗留迁移或隔离测试，不是当前正式入口。执行`legacy-sqlite:init-db`时必须显式设置`MDM_ALLOW_LEGACY_TEST_MODE=1`，并通过`MDM_DB_PATH`指定非共享隔离库；脚本拒绝写入默认共享`data/platform.db`。
 
 历史批量开户脚本已改为拒绝执行。新账号只能通过管理员接口创建为待启用状态；管理员明确启用时系统生成一次性临时密码，并要求首次登录改密。
 

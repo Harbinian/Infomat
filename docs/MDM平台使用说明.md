@@ -252,7 +252,7 @@ npm test:export npm test:import
 npm test:frontend
 ```
 
-正式运行和流程治理同步使用MySQL。`npm run legacy-sqlite:init-db`只用于遗留迁移或隔离测试，不得作为正式初始化命令。
+正式运行和流程治理同步使用MySQL。`npm run legacy-sqlite:init-db`只用于遗留迁移或隔离测试，不得作为正式初始化命令。执行前必须设置`MDM_ALLOW_LEGACY_TEST_MODE=1`，并通过`MDM_DB_PATH`指定非共享隔离库；脚本拒绝写入默认共享`data/platform.db`。
 
 ---
 

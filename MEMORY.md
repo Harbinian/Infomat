@@ -39,43 +39,6 @@ MDM platform development is currently paused unless the user explicitly asks for
 - The root process-governance sync uses the existing MySQL importer. SQLite initialization, organization sync, snapshot import, and snapshot checks remain available only under explicit `legacy-sqlite:` command names for migration or isolated tests.
 - The information collection service uses one Express process for ports 4000 and 4001. Only never-published form drafts with no versions or tasks may be permanently deleted; forms with history can only be archived.
 
-## Operating Rules
-
-- Start cross-directory work by reading `AGENTS.md`, `CODEX.md`, the `Current Runtime Baseline` in this file, `REPOSITORY_BOUNDARY.md`, `DIRECTORY_OWNERSHIP.md`, and `MAINLINE_MAP.md`. Data-governance work then reads `docs/architecture/data-governance-operating-rules.md`, followed by task-related directory `AGENTS.md` or `README.md`.
-- Keep changes scoped to the responsible asset. Do not adjust `docs/norms/`, PMO dashboards, or MDM source while fixing `apps/structured-output-service/` unless the user explicitly asks.
-- Code, script, interface, database, frontend behavior, startup command, or test command changes require a documentation sync check.
-- The project uses local ignored environment files for secrets. This file must record only where configuration lives, never secret values.
-
-## Common Commands
-
-- Root service startup: `npm run start:infomat-services`
-- Root service smoke: `npm run smoke:infomat-services`
-- MDM selected checks:
-  - `npm --prefix apps/mdm-platform run test:frontend`
-  - `npm --prefix apps/mdm-platform run test:process-governance`
-  - `npm --prefix apps/mdm-platform run test:mainline`
-- Structured output service:
-  - `npm --prefix apps/structured-output-service start`
-  - `npm --prefix apps/structured-output-service test`
-- Information collection service:
-  - `npm run migrate:information-collection:dry-run`
-  - `npm run migrate:information-collection:apply`
-  - `npm run check:information-collection-schema`
-  - `npm run test:information-collection`
-  - `npm run start:information-collection`
-  - `npm run smoke:information-collection`
-- Structure pilot:
-  - `npm run verify:structure-pilot`
-  - `npm run start:structure-pilot`
-  - `npm run smoke:structure-pilot`
-- Document structured-output schema:
-  - `npm run test:document-structured-output-schema`
-  - `npm run build:work-role-data`
-  - `npm run test:work-role-contract`
-- PMO/process map:
-  - `node scripts/parse-sankey-data.mjs`
-  - `node scripts/check-dashboard-data.mjs`
-
 ## Historical and Durable Notes
 
 The entries below record point-in-time decisions and durable implementation details. Read them by task keyword; version-specific statements describe their date unless the current runtime baseline explicitly carries them forward.

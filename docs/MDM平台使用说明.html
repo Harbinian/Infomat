@@ -429,12 +429,13 @@ npm test:frontend     # 前端静态资源测试</code></pre>
     <pre><code># 正式运行使用MySQL；连接参数通过环境变量或固定启动配置提供
 npm run init:mysql
 
-# 遗留SQLite只允许隔离迁移或测试
+# 遗留SQLite只允许隔离迁移或测试；必须设置MDM_ALLOW_LEGACY_TEST_MODE=1
+# 并通过MDM_DB_PATH指定非共享隔离库
 npm run legacy-sqlite:init-db</code></pre>
   </div>
 
   <div class="info">
-    <strong>注意</strong>：正式运行和流程治理同步使用MySQL。遗留SQLite命令不得作为正式入口。
+    <strong>注意</strong>：正式运行和流程治理同步使用MySQL。遗留SQLite命令不得作为正式入口，且初始化脚本拒绝写入默认共享data/platform.db。
   </div>
 </section>
 

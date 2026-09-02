@@ -27,6 +27,12 @@
 
 以下命令默认从仓库根目录运行；进入子项目运行的命令会单独说明。
 
+Codex 项目指令、按需路由或局部入口变化：
+
+```powershell
+npm run test:codex-context
+```
+
 流程地图解析或注入变化：
 
 ```powershell

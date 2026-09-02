@@ -99,6 +99,15 @@ assert.strictEqual(
   'root package should expose the aggregated process governance mainline test'
 );
 assert.strictEqual(
+  pkg.scripts && pkg.scripts['test:codex-context'],
+  'node scripts/test-codex-context.mjs && node scripts/check-codex-context.mjs',
+  'root package should expose the Codex context test'
+);
+assert.ok(
+  mainlineTestSource.includes("['Codex 上下文', ['npm', 'run', 'test:codex-context']]"),
+  'aggregated process governance mainline test should include the Codex context test'
+);
+assert.strictEqual(
   pkg.scripts && pkg.scripts['build:pmo-task-data'],
   'python pmo/build_pmo_task_data.py',
   'root package should expose the PMO Markdown truth-source data builder'

@@ -5,7 +5,7 @@
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
-    "legacy-sqlite:init-db": "node scripts/init-db.js",
+    "legacy-sqlite:init-db": "node scripts/init-legacy-sqlite-db.js",
     "bootstrap:admin": "node scripts/bootstrap-admin.js",
     "smoke": "node scripts/smoke-test.js",
     "test:org": "node scripts/test-org-route.js",

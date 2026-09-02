@@ -14,6 +14,7 @@
 | `0002-codex-collaboration-and-doc-sync.md` | Codex 协作入口与代码文档同步 | Accepted |
 | `0003-work-role-governance-and-process-binding.md` | 工作角色治理、岗位映射与流程绑定 | Accepted |
 | `0004-controlled-derived-consumer-files.md` | 受控派生消费文件例外 | Proposed |
+| `0005-codex-context-interface-and-budget.md` | Codex 小入口、按需路由与上下文预算门禁 | Proposed |
 
 ## 2. 何时新增 ADR
 

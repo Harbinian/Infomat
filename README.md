@@ -53,6 +53,16 @@ Infomat 是航空复材制造领域的信息化资料与工具仓库，包含：
 
 如果确认无需文档更新,提交或交付说明中必须写明原因。
 
+## Codex 上下文入口
+
+Codex 自动加载根目录和当前目录的 `AGENTS.md`。根入口只保留全仓硬规则和任务路由；实施细节按任务读取 `CODEX.md`、职责文件、主线文件、应用 README/PRD/Tech-Spec 和测试说明。设计原则、预算、注册来源与维护方法见 [docs/architecture/context-management.md](docs/architecture/context-management.md)。
+
+修改项目指令或路由后，从仓库根目录运行：
+
+```powershell
+npm run test:codex-context
+```
+
 ## 派生文件与样例规则
 
 - 主线直接消费、具有固定生成命令和一致性检查的文件，可以按 [ADR-0004](docs/adr/0004-controlled-derived-consumer-files.md) 的 `Proposed` 方案继续进入版本控制；该 ADR 尚未 `Accepted`

@@ -1,7 +1,7 @@
 # Infomat 项目术语表
 
-> 版本：V1.18
-> 更新日期：2026-08-31
+> 版本：V1.19
+> 更新日期：2026-09-01
 > 用途：为 AI 辅助开发提供统一的术语参考。按域分章，每章一张三列表。
 
 ## 使用约定
@@ -438,6 +438,8 @@
 | 表单实例 | Report Case / RcId | 勤哲系统中一次具体表单填报或业务记录实例，对应`ES_RepCase.RcId` |
 | 流程实例 | Workflow Case / PiId | 勤哲系统中一次流程运行实例，对应`ES_WfCase.PiId`，包含一个或多个工作项 |
 | WorkItem 配套数据表 | `_wi` table | 与勤哲业务表同结构、包含`ExcelServerWIID`的工作项配套数据表；具体保存时点和生命周期需通过实时数据抽样确认 |
+| 上下文 Module Interface | Context Module Interface | Codex 开始任务前自动加载的最小项目指令表面，只承载全仓或当前目录不可违反的边界、禁止事项和按需路由，不复制应用详细规格。 |
+| 上下文 Implementation | Context Implementation | Codex 根据任务路由按需读取的详细执行规则、产品规格、技术说明、接口、运行方式和验证方法，不作为所有任务的固定自动加载内容。 |
 
 ---
 
