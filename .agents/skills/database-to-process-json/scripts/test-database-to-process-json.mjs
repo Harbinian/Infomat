@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import {
   assertExplicitDecisionRouting,
@@ -194,6 +195,14 @@ editedBase.process.capability_domain = '制造工艺设计';
 editedBase.process.business_capability = '零件制造工艺文件管控';
 editedBase.process.classification_status = 'confirmed';
 editedBase.behaviors.find(item => item.behavior_ref === 'b_review').behavior_description = '旧说明把审核结果和退回路线写进业务行为。';
+editedBase.terms.push({ term_ref: 'manual_term', term_name: '人工术语', definition: '人工确认的定义。' });
+editedBase.forms[0].areas[0].items[0].instructions = '业务编号由已批准的台账取得。';
+const manualData = structuredClone(editedBase.data_objects[0]);
+manualData.data_ref = 'manual_data';
+manualData.data_name = '人工补充台账';
+manualData.fields.forEach((field, index) => { field.field_ref = `manual_field_${index}`; });
+manualData.behavior_links = [];
+editedBase.data_objects.push(manualData);
 const editedBasePath = path.join(tempRoot, 'edited-base.json');
 fs.writeFileSync(editedBasePath, JSON.stringify(editedBase, null, 2), 'utf8');
 const preservedOutputDir = path.join(tempRoot, 'preserved-output');
@@ -211,9 +220,94 @@ assert.equal(preservedResult.document.process.business_capability, '零件制造
 assert.equal(preservedResult.document.process.classification_status, 'confirmed');
 assert.equal(
   preservedResult.document.behaviors.find(item => item.behavior_ref === 'b_review').behavior_description,
-  snapshot.workflows[0].nodes.find(item => item.behavior_ref === 'b_review').business_description,
-  'workflow descriptions follow the corrected snapshot while manual process classification stays preserved'
+  editedBase.behaviors.find(item => item.behavior_ref === 'b_review').behavior_description,
+  'manual descriptions survive topology corrections'
 );
+assert.deepEqual(preservedResult.document.data_objects.find(item => item.data_ref === 'manual_data'), manualData);
+assert.deepEqual(preservedResult.document.terms, editedBase.terms);
+assert.equal(preservedResult.document.forms[0].areas[0].items[0].instructions, editedBase.forms[0].areas[0].items[0].instructions);
+assert.ok(preservedResult.pendingIssues.some(item => item.includes('快照未匹配')));
+assert.equal(fs.readFileSync(editedBasePath, 'utf8'), JSON.stringify(editedBase, null, 2), 'base file must remain byte-for-byte unchanged');
+const repeated = generateProcessPackage({
+  snapshotPath, rootTable: '测试业务_主表',
+  baseJsonPath: path.join(preservedOutputDir, preservedResult.outputJsonFile),
+  outputDir: path.join(tempRoot, 'repeated-output')
+});
+const repeatedContent = structuredClone(repeated.document);
+const preservedContent = structuredClone(preservedResult.document);
+delete repeatedContent.export_meta.exported_at;
+delete preservedContent.export_meta.exported_at;
+assert.deepEqual(repeatedContent, preservedContent, 'repeated generation must retain content and stable references without duplicates');
+
+for (const [name, change] of [
+  ['data-operation', data => { data.data_objects[0].behavior_links[0].operation = 'use'; }],
+  ['field-source', data => {
+    data.forms[0].areas[1].items.find(item => item.item_name === '明细内容').source_links[0].source_data_ref = 'data_detail';
+  }],
+]) {
+  const conflicting = structuredClone(result.document);
+  change(conflicting);
+  const conflictPath = path.join(tempRoot, `${name}-conflict.json`);
+  fs.writeFileSync(conflictPath, JSON.stringify(conflicting));
+  const conflictOut = path.join(tempRoot, `${name}-conflict-output`);
+  assert.throws(() => generateProcessPackage({ snapshotPath, rootTable: '测试业务_主表', baseJsonPath: conflictPath, outputDir: conflictOut }), /冲突|引用错误/);
+  assert.equal(fs.existsSync(conflictOut), false);
+  assert.equal(fs.readFileSync(conflictPath, 'utf8'), JSON.stringify(conflicting));
+}
+
+const unmatchedBase = structuredClone(result.document);
+unmatchedBase.behaviors.push({ ...unmatchedBase.behaviors[0], behavior_ref: 'manual_behavior' });
+const unmatchedPath = path.join(tempRoot, 'unmatched-base.json');
+fs.writeFileSync(unmatchedPath, JSON.stringify(unmatchedBase));
+const unmatchedOut = path.join(tempRoot, 'unmatched-output');
+assert.throws(() => generateProcessPackage({ snapshotPath, rootTable: '测试业务_主表', baseJsonPath: unmatchedPath, outputDir: unmatchedOut }), /快照未匹配标识/);
+assert.equal(fs.existsSync(unmatchedOut), false, 'conflicts must fail before writing a package');
+
+const evidenceSnapshot = testSnapshot();
+evidenceSnapshot.forms[0].tables[0].fields[0].physical_name = 'business_id';
+const evidenceSnapshotPath = path.join(tempRoot, 'physical-names.json');
+fs.writeFileSync(evidenceSnapshotPath, JSON.stringify(evidenceSnapshot));
+const evidenceResult = generateProcessPackage({ snapshotPath: evidenceSnapshotPath, rootTable: '测试业务_主表', outputDir: path.join(tempRoot, 'physical-names-output') });
+assert.equal(evidenceResult.evidence.find(item => item.target_json_path === '$.data_objects[0].fields[0]').source_field, 'business_id');
+const resolvedFields = JSON.parse(fs.readFileSync(path.join(tempRoot, 'physical-names-output/schema-snapshot.json'), 'utf8')).forms[0].tables[0].resolved_business_fields;
+assert.equal(resolvedFields[0].physical_name, 'business_id');
+assert.equal(resolvedFields[0].business_name, '业务编号');
+
+const verification = {
+  schema_version: 'cxsysys-read-only-verification-v1', read_only_verified: true,
+  database: 'CXSYSYS', schema: 'dbo', root_table: '测试业务_主表', workflow_id: 'workflow_test',
+  verified_at: new Date().toISOString(), snapshot_sha256: crypto.createHash('sha256').update(fs.readFileSync(snapshotPath)).digest('hex'),
+  application_intent: 'ReadOnly', maximum_rows_per_target: 20, raw_values_included: false, database_write_operations: 0,
+  permission_summary: { sysadmin: false, db_owner: false, forbidden_permissions: [] },
+  results: [{ table: '测试业务_主表', column: '批准', sampled_rows: 3, non_null_rows: 2 }]
+};
+const verificationPath = path.join(tempRoot, 'verification.json');
+fs.writeFileSync(verificationPath, JSON.stringify(verification));
+const verified = generateProcessPackage({ snapshotPath, rootTable: '测试业务_主表', verificationPath, outputDir: path.join(tempRoot, 'verified-output') });
+const liveEntries = verified.evidence.filter(item => item.status === '实时已核验');
+assert.equal(liveEntries.length, 1, 'partial column verification must not promote unrelated fields, objects or operations');
+assert.equal(liveEntries[0].source_field, '批准');
+assert.equal(liveEntries[0].evidence_time, verification.verified_at);
+assert.ok(verified.pendingIssues.some(item => item.includes('实际写入时点') && item.includes('仍待')));
+assert.equal(verified.summary.read_only_verification_scope, 'sampled_columns_only');
+for (const [label, mutate] of [
+  ['empty-results', item => { item.results = []; }],
+  ['missing-time', item => { delete item.verified_at; }],
+  ['old-unbound-file', item => { delete item.snapshot_sha256; }],
+  ['wrong-snapshot', item => { item.snapshot_sha256 = '0'.repeat(64); }],
+  ['permission-gap', item => { delete item.permission_summary; }],
+  ['unknown-column', item => { item.results[0].column = '未授权字段'; }],
+  ['invalid-count', item => { item.results[0].non_null_rows = 4; }],
+  ['duplicate-column', item => { item.results.push({ ...item.results[0] }); }],
+]) {
+  const invalid = structuredClone(verification);
+  mutate(invalid);
+  const file = path.join(tempRoot, `${label}.json`);
+  fs.writeFileSync(file, JSON.stringify(invalid));
+  const invalidOut = path.join(tempRoot, `${label}-output`);
+  assert.throws(() => generateProcessPackage({ snapshotPath, rootTable: '测试业务_主表', verificationPath: file, outputDir: invalidOut }), /实时核验/);
+  assert.equal(fs.existsSync(invalidOut), false);
+}
 
 for (const fileName of [
   result.outputJsonFile, 'source-manifest.json', 'schema-snapshot.json', 'evidence-map.jsonl',

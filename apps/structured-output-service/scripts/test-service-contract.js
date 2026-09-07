@@ -1845,15 +1845,19 @@ async function testFrontendContract() {
   const sourceClassificationPosition = importJsonSource.indexOf('classifyPostMigrationValidation(sourceValidation)');
   const targetValidationPosition = importJsonSource.indexOf('const targetValidations = await Promise.all');
   const targetClassificationPosition = importJsonSource.indexOf('classifyPostMigrationBatch(targetValidations)');
+  const normalizationComparisonPosition = importJsonSource.indexOf('summarizeNormalization(parsed, data)');
   const candidateReplacementPosition = importJsonSource.indexOf('candidates = nextCandidates');
   assert.ok(sourceValidationPosition >= 0 && targetValidationPosition > sourceValidationPosition);
   assert.ok(sourceClassificationPosition > sourceValidationPosition);
   assert.ok(targetClassificationPosition > targetValidationPosition);
+  assert.ok(normalizationComparisonPosition > targetClassificationPosition);
   assert.ok(
     candidateReplacementPosition > targetValidationPosition,
     'source and migrated candidates must both pass validation before the current draft is replaced'
   );
   assert.ok(importJsonSource.includes('当前草稿、图状态和撤销记录保持不变。'));
+  assert.ok(importJsonSource.includes('normalizationChangeCount > 0'));
+  assert.ok(importJsonSource.includes('forceDirty: entry.forceDirty'));
   const exportCurrentSource = html.slice(
     html.indexOf('async function exportCurrent(options = {})'),
     html.indexOf('function protect(action)')
@@ -1904,6 +1908,7 @@ async function testFrontendContract() {
     'scripts/test-authoring-selection-context.js',
     'scripts/test-governance-review-queue.js'
   ].forEach(testScript => assert.ok(packageJson.scripts.test.includes(testScript), `${testScript} must be in npm test`));
+  assert.ok(packageJson.scripts['test:browser-import-normalization'].includes('test-import-normalization-browser.ps1'));
   assert.ok(html.includes('<script src="data-relation-diagram.js"></script>'));
   assert.ok(html.includes('<script src="lifecycle-analyzer.js"></script>'));
   assert.ok(html.includes('data-action="switch-data-mode"'));
@@ -2301,6 +2306,12 @@ async function testFrontendContract() {
   assert.ok(html.includes('有未下载修改'));
   assert.ok(html.includes('当前内容与导入文件一致'));
   assert.ok(html.includes('尚未下载'));
+  assert.ok(html.includes('导入规范化差异（共'));
+  assert.ok(html.includes('动态责任原值已保留在迁移归档；'));
+  assert.ok(html.includes('当前内容尚未下载。'));
+  assert.ok(html.includes('当前内容已下载。'));
+  assert.ok(html.includes('变化编码：'));
+  assert.ok(html.includes('迁移归档标识：'));
   assert.ok(html.includes('function candidateFileState'));
   assert.ok(html.includes('if (entry.lastDownload)'));
   assert.ok(html.includes('返回数据流编辑对象信息'));

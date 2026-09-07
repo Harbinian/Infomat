@@ -364,13 +364,20 @@ function main() {
     )) || steps.find((step, index) => text(behaviorCandidates[index]?.source_file) === source) || steps[0];
   }
 
+  function issueTarget(step, preferredType = 'step', processRef = defaultProcessRef) {
+    if (!step) return { objectType: 'process', objectKey: processRef };
+    const detail = preferredType === 'behavior_detail' && behaviorDetails.find(item => item.step_ref === step.step_ref);
+    return detail
+      ? { objectType: 'behavior_detail', objectKey: detail.detail_ref }
+      : { objectType: 'step', objectKey: step.step_ref };
+  }
+
   for (const item of documentCandidates.approval_chain_reviews || []) {
     const step = targetStep(item);
     addIssue(issueMap, issueRecord({
       department,
       documentName: documentTitle,
-      objectType: 'behavior_detail',
-      objectKey: step?.step_ref || defaultProcessRef,
+      ...issueTarget(step, 'behavior_detail'),
       targetBlock: 'behavior_details',
       targetField: 'approval_note',
       issueType: '原文定义不足',
@@ -387,8 +394,7 @@ function main() {
     addIssue(issueMap, issueRecord({
       department,
       documentName: documentTitle,
-      objectType: 'handoff',
-      objectKey: step?.step_ref || defaultProcessRef,
+      ...issueTarget(step),
       targetBlock: 'cross_dept_handoffs',
       targetField: 'target_department',
       issueType: '跨部门承接待确认',
@@ -406,8 +412,7 @@ function main() {
     addIssue(issueMap, issueRecord({
       department,
       documentName: documentTitle,
-      objectType: 'form',
-      objectKey: step?.step_ref || defaultProcessRef,
+      ...issueTarget(step),
       targetBlock: 'forms',
       targetField: 'archive_location,retention_period,responsible_department_name,responsible_role',
       issueType: '原文定义不足',
@@ -426,8 +431,7 @@ function main() {
     addIssue(issueMap, issueRecord({
       department,
       documentName: documentTitle,
-      objectType: 'step',
-      objectKey: step?.step_ref || defaultProcessRef,
+      ...issueTarget(step),
       targetBlock: 'work_role_bindings',
       targetField: 'work_role_code',
       issueType: '角色责任待确认',
@@ -445,14 +449,13 @@ function main() {
     if (!mapping) continue;
     const process = processes.find((record, index) => text(processCandidates[index]?.source_file) === text(item.source_file));
     const step = steps.find((record, index) => text(behaviorCandidates[index]?.source_file) === text(item.source_file));
-    const objectKey = mapping.objectType === 'process'
-      ? process?.process_ref || defaultProcessRef
-      : step?.step_ref || defaultProcessRef;
+    const target = mapping.objectType === 'process'
+      ? { objectType: 'process', objectKey: process?.process_ref || defaultProcessRef }
+      : issueTarget(step, mapping.objectType, process?.process_ref || defaultProcessRef);
     addIssue(issueMap, issueRecord({
       department,
       documentName: documentTitle,
-      objectType: mapping.objectType,
-      objectKey,
+      ...target,
       targetBlock: mapping.targetBlock,
       targetField: mapping.targetField,
       issueType: mapping.issueType,

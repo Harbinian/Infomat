@@ -2,6 +2,8 @@ function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+const Migration = require('../public/process-governance-migration.js');
+
 function exportMeta(version) {
   return {
     package_ref: `package_fixture_${version.slice(-2)}`,
@@ -147,6 +149,26 @@ function createV6Fixture() {
   };
 }
 
+function createNativeV7NormalizationFixture() {
+  const source = Migration.migrateDocument(createV6Fixture())[0];
+  Object.assign(source.behaviors[0], {
+    behavior_name: '按申请数据确定责任部门',
+    current_actor_role: '申请数据中的责任部门与经办岗位',
+    actor_assignment_mode: 'dynamic_from_data',
+    actor_department_data_ref: 'data_fixture_application',
+    actor_position_rule: '按申请数据中的责任部门匹配经办岗位'
+  });
+  source.behaviors.push({
+    ...clone(source.behaviors[0]),
+    behavior_ref: 'behavior_fixture_dynamic_without_data',
+    behavior_name: '按运行条件确定责任部门',
+    current_actor_role: '运行时确定的责任部门与办理岗位',
+    actor_department_data_ref: null,
+    actor_position_rule: '按运行时条件匹配办理岗位'
+  });
+  return source;
+}
+
 function createProcessVersionFixture(version) {
   if (['process-governance-v1', 'process-governance-v2', 'process-governance-v3'].includes(version)) {
     return clone(createLegacyFixture(version));
@@ -158,4 +180,4 @@ function createProcessVersionFixture(version) {
   throw new Error(`不支持的测试夹具版本：${version}`);
 }
 
-module.exports = { createProcessVersionFixture };
+module.exports = { createProcessVersionFixture, createNativeV7NormalizationFixture };

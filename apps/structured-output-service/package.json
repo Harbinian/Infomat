@@ -16,7 +16,8 @@
     "test:authoring-selection-context": "node scripts/test-authoring-selection-context.js",
     "test:governance-review-queue": "node scripts/test-governance-review-queue.js",
     "test:browser-performance": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-v7-performance-browser.ps1",
-    "test:browser-import-atomic": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-multi-candidate-atomic-browser.ps1"
+    "test:browser-import-atomic": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-multi-candidate-atomic-browser.ps1",
+    "test:browser-import-normalization": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-import-normalization-browser.ps1"
   },
   "dependencies": {
     "ajv": "^8.20.0",

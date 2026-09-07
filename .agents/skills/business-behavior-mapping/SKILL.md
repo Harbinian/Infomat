@@ -5,28 +5,11 @@ description: Compatibility alias for Infomat BBM/A1 work. When older prompts men
 
 # Business Behavior Mapping
 
-This skill is retained only as a compatibility entry point for older prompts and trigger phrases.
+本技能只保留旧名称兼容入口，不提供独立执行流程。
 
-For any Infomat `docs/norms` work, use the canonical merged skill:
+调用后读取并遵守 [process-evidence-mapping](../process-evidence-mapping/SKILL.md)。
+源文件、证据、草稿、待确认问题及人工发布边界均以该主技能为准。
+本入口不授权写回流程输入基线、更新正式桑基图或 H5、写数据库或触发发布。
 
-`E:\CA001\Infomat\.agents\skills\process-evidence-mapping\SKILL.md`
-
-Do not run a BBM-only workflow. The current project standard requires business behavior（A1）work to be controlled together with:
-
-- source document inventory and coverage
-- DCM L3 ownership and evidence
-- A1-to-L3 attachment checks
-- required A1 field completeness
-- flowchart and flow-description extraction
-- process-relevant forms, ledgers, and table extraction
-- cross-department input/output checking
-- canonical Sankey/H5 update with visible original/inferred basis and separate colors for inferred items
-- validation and unresolved issue reporting
-
-The legacy BBM entry point must also follow the controlled-transfer evidence rule from `process-evidence-mapping`: never fill `输入来源部门` or `输出目标部门` from business logic, basis documents, attachment lists, execution subjects, collaboration participants, approval actors, archive recipients, or external action owners unless the source proves a concrete output object is handed off through a controlled transfer.
-
-It must also follow the abstract-A1 evidence rule from `process-evidence-mapping`: an abstracted behavior name such as `汇总核算`, `确认`, `处理`, `跟踪`, or `形成结果` does not prove the output object, approval type, execution role, or target department. If `证据类型` is `分析拆分` or `上下文推断`, the row must show the concrete source object/action or workflow node it was abstracted from, and any non-empty approval conclusion must show approval-chain evidence.
-
-It must also follow the H5 evidence-display rule from `process-evidence-mapping`: Sankey nodes, links, tooltips, and detail rows must show original text or inference basis, and `上下文推断` / `分析拆分` items must use a visibly different color from source-backed items.
-
-If this compatibility skill is invoked, stop here, open `process-evidence-mapping`, and follow its quality gates end to end.
+`references/prompts.md` 仅保留历史提示词供追溯，不属于当前执行指令；
+只有用户要求追溯历史做法时才读取，不据此执行旧工作流。

@@ -175,6 +175,7 @@ FROM (SELECT TOP (@maxRows) $quotedColumn FROM [dbo].$quotedTable ORDER BY (SELE
         schema_version = 'cxsysys-read-only-verification-v1'
         read_only_verified = $true
         verified_at = [DateTimeOffset]::Now.ToString('o')
+        snapshot_sha256 = (Get-FileHash -LiteralPath $snapshotPath -Algorithm SHA256).Hash.ToLowerInvariant()
         database = 'CXSYSYS'
         schema = 'dbo'
         root_table = $formMatches[0].root_table
