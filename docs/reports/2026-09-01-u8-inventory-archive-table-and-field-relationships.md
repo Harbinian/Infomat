@@ -24,6 +24,8 @@
 | 用户提供的 `U8125 SchemaDoc.chm` | `Inventory Table`、`InventoryClass Table`、`Ca_Inventory_Buffer Table` 页面及索引说明 | 识别 U8 标准对象、字段名称、字段用途和历史结构 | CHM 是结构说明资料，不替代当前账套的实时元数据 |
 | `UFDATA_333_2025` SQL Server | `sys.objects`、`sys.columns`、`sys.indexes`、`sys.foreign_keys`、`sys.sql_expression_dependencies` 和受限统计查询 | 核对对象类型、字段类型、约束、索引、记录数量和匹配结果 | 本次只读；未修改数据、结构、权限或视图定义 |
 
+资料保全说明（2026-09-07）：上述 U8 帮助文档的解包副本已按首批仓库减重范围外置归档，查找和恢复入口见 [归档索引](../archives/README.md)。本说明仅更新参考资料位置，不改变本报告的历史数据、字段含义或核查结论。
+
 ### 2.2 关系判定口径
 
 | 关系类别 | 本报告的判定标准 | 可得结论 |

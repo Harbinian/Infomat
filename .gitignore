@@ -14,6 +14,9 @@ tmp/
 temp/
 .claude/worktrees/
 
+# Archived U8 SchemaDoc extraction (see docs/archives/README.md)
+/.tmp/u8125_schemadoc_20260901/
+
 # Logs
 *.log
 *.local.env
