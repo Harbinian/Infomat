@@ -106,6 +106,7 @@ scripts/AGENTS.md
 | `artifacts/` | 临时生成物和本地验证输出目录 | 默认不提交 |
 | `output/` | 历史渲染输出 | 后续迁移到 `artifacts/` 或保留为样例前先审计 |
 | `_tmp/` | PPTX 解包和临时脚本 | 不应作为仓库真源 |
+| `.tmp/` | 历史调查、解包和预览中间文件 | 新生成物写入 `artifacts/`；已外置的 U8 帮助文档解包资料从 [归档索引](docs/archives/README.md) 查找，其余已跟踪资产仍需逐项确认后处理 |
 | `snapshots/` | norms 快照 | 需确认是否作为历史快照保留；若保留，应补 README |
 | `ai_materials/` | AI 处理输入材料 | 需确认是否为长期资料源；若是，应说明与 `docs/norms/` 的关系 |
 | `.agents/` | Codex 可用的项目技能和提示材料 | 可保留，但不放生成物 |
