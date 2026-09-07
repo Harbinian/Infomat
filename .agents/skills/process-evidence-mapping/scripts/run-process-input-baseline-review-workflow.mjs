@@ -18,7 +18,6 @@ import {
 const SCRIPT_DIR = path.dirname(new URL(import.meta.url).pathname).replace(/^\/([A-Za-z]:)/, '$1');
 const REPO_ROOT = path.resolve(SCRIPT_DIR, '../../../..');
 const EMBEDDING_CONFIG = path.join(REPO_ROOT, '.agents', 'skills', 'process-evidence-mapping', 'references', 'ollama-embedding-config.json');
-const IMAGE_EXTS = new Set(['.png', '.jpg', '.jpeg', '.tif', '.tiff', '.bmp', '.gif', '.webp']);
 
 function repoResolve(value) {
   return path.resolve(REPO_ROOT, value);
@@ -127,9 +126,6 @@ function main() {
   assertArtifactPath(outDir, 'workflow output');
   assertArtifactPath(todoPath, 'pending issue markdown');
   ensureDir(outDir);
-  if (IMAGE_EXTS.has(path.extname(inputPath).toLowerCase())) {
-    throw new Error('图片来源不进入本技能。请提供可直接读取的源文件或经资料责任人确认的文字版。');
-  }
 
   const sourceManifestPath = path.join(outDir, 'source_manifest.jsonl');
   const chunksPath = path.join(outDir, 'chunks.jsonl');

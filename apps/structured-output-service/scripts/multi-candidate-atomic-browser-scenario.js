@@ -220,6 +220,12 @@ async page => {
   const addGraphNode = async expectedUndoCount => {
     await page.locator('#workspace [data-action="add-graph-node"]').click();
     await page.waitForFunction(count => graphHistoryState().undoCount === count, expectedUndoCount, { timeout: 10000 });
+    const editor = page.locator('#graphEditModal');
+    if (await editor.isVisible()) {
+      await editor.locator('[data-action="close-flow-editor"]').first().click();
+      await editor.waitFor({ state: 'detached', timeout: 5000 });
+    }
+    await page.waitForFunction(() => Boolean(diagramView?.cy), null, { timeout: 10000 });
   };
 
   const prepareGraphScenario = async () => {
@@ -235,6 +241,7 @@ async page => {
       return state.undoCount === 1 && state.redoCount === 1;
     }, null, { timeout: 10000 });
     assert(await shaCurrentDocument() === afterFirstAddSha, '一次撤销没有恢复第一次新增节点后的JSON');
+    await page.waitForFunction(() => Boolean(diagramView?.cy?.nodes('.behavior-node').length), null, { timeout: 10000 });
 
     await page.evaluate(() => {
       const selectedRef = currentDocument()?.behaviors?.[0]?.behavior_ref;
@@ -476,9 +483,14 @@ async page => {
   };
 
   const verifyGraphHistoryContents = async expected => {
+    const editor = page.locator('#graphEditModal');
+    if (await editor.isVisible()) {
+      await editor.locator('[data-action="close-flow-editor"]').first().click();
+      await page.locator('#pendingEditModal').waitFor({ state: 'visible', timeout: 5000 });
+      await page.locator('#discardPendingEditButton').click();
+      await editor.waitFor({ state: 'detached', timeout: 5000 });
+    }
     await page.locator('#workspace [data-action="redo-graph"]').click();
-    await page.locator('#pendingEditModal').waitFor({ state: 'visible', timeout: 5000 });
-    await page.locator('#discardPendingEditButton').click();
     await page.waitForFunction(() => {
       const state = graphHistoryState();
       return state.undoCount === 2 && state.redoCount === 0;

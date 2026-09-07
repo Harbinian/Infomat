@@ -15,7 +15,7 @@ const TECHNICAL_FIELD_PATTERN = /(?:Operator|ITEM|FONO)$/i;
 const DECISION_VERB_PATTERN = /(?:校对|复核|审核|核查|审批|批准|验收|确认)/;
 
 function readJson(filePath) {
-  return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  return JSON.parse(fs.readFileSync(filePath, 'utf8').replace(/^\uFEFF/, ''));
 }
 
 function digest(value) {
@@ -274,90 +274,75 @@ function buildFromSnapshot(snapshot, form, workflow) {
   return documentValue;
 }
 
-function simpleInstruction(original) {
-  const value = String(original || '');
-  const parts = [];
-  if (value.includes('截图确认必填')) parts.push('页面中标记为必填。');
-  else if (value.includes('截图确认非必填')) parts.push('页面中未标记为必填，业务上是否允许为空待确认。');
-  if (value.includes('当前用户姓名')) parts.push('页面按当前办理人员姓名自动填写。');
-  if (value.includes('当前日期')) parts.push('页面按办理日期自动填写。');
-  if (value.includes('表编号') && !value.includes('当前用户姓名')) parts.push('编号的具体形成规则待业务确认。');
-  return parts.join('') || '字段用途、必填要求和取值方式待业务确认。';
+function mergeByRef(existing, incoming, refKey) {
+  for (const records of [existing || [], incoming]) {
+    if (new Set(records.map(item => item[refKey])).size !== records.length) {
+      throw new Error(`合并时发现重复的${refKey}，停止生成，请先确认稳定标识。`);
+    }
+  }
+  const merged = new Map((existing || []).map(item => [item[refKey], item]));
+  for (const item of incoming) {
+    if (!merged.has(item[refKey])) merged.set(item[refKey], item);
+  }
+  return [...merged.values()];
 }
 
-function sanitizeMigratedDocument(documentValue, form, workflow) {
+function sanitizeMigratedDocument(documentValue, snapshot, form, workflow) {
+  const fresh = buildFromSnapshot(snapshot, form, workflow);
+  // Topology corrections are explicit; unmatched old nodes/edges need a human mapping.
+  for (const [key, ref] of [['behaviors', 'behavior_ref'], ['flow_relations', 'relation_ref']]) {
+    const refs = new Set(fresh[key].map(item => item[ref]));
+    const unmatched = (documentValue[key] || []).filter(item => !refs.has(item[ref]));
+    if (unmatched.length) {
+      throw new Error(`旧草稿的${key}存在快照未匹配标识，停止生成并保留原文件：${unmatched.map(item => item[ref]).join('、')}。请先确认对应关系。`);
+    }
+  }
   documentValue.process.process_name = workflow.process_name || documentValue.process.process_name;
-  if (form.business_content?.purpose) documentValue.process.purpose = form.business_content.purpose;
-  if (form.business_content?.scope) documentValue.process.scope = form.business_content.scope;
+  if (!documentValue.process.purpose) documentValue.process.purpose = form.business_content?.purpose || '';
+  if (!documentValue.process.scope) documentValue.process.scope = form.business_content?.scope || '';
   const oldBehaviors = new Map((documentValue.behaviors || []).map(item => [item.behavior_ref, item]));
-  documentValue.behaviors = (workflow.nodes || []).map(node => {
+  documentValue.behaviors = fresh.behaviors.map(node => {
     const previous = oldBehaviors.get(node.behavior_ref);
     return {
-      ...behaviorTemplate(node),
+      ...node,
       ...(previous || {}),
-      behavior_ref: node.behavior_ref || previous?.behavior_ref || stableRef('behavior', node.node_key || node.business_name),
-      node_type: node.node_type || previous?.node_type || 'action',
-      behavior_name: node.business_name || previous?.behavior_name || '',
-      behavior_description: node.business_description || previous?.behavior_description || '',
-      trigger: node.trigger || previous?.trigger || '',
-      completion_standard: node.completion_standard || previous?.completion_standard || ''
+      behavior_ref: node.behavior_ref,
+      node_type: node.node_type,
+      behavior_name: node.behavior_name
     };
   });
-  documentValue.flow_relations = (workflow.edges || []).map(edge => ({
-    relation_ref: edge.relation_ref || stableRef('relation', `${workflow.workflow_id}:${edge.edge_key}`),
-    relation_type: edge.relation_type,
-    from_behavior_ref: edge.from_behavior_ref,
-    to_behavior_ref: edge.to_behavior_ref,
-    condition: edge.condition || ''
-  }));
-  const tableByDataRef = new Map((form.tables || []).map(table => [table.data_ref, table]));
-  documentValue.data_objects = (documentValue.data_objects || []).filter(dataObject => tableByDataRef.has(dataObject.data_ref));
+  documentValue.flow_relations = fresh.flow_relations;
+  const freshData = new Map(fresh.data_objects.map(item => [item.data_ref, item]));
+  documentValue.data_objects = mergeByRef(documentValue.data_objects, fresh.data_objects, 'data_ref');
   documentValue.data_objects.forEach(dataObject => {
-    const table = tableByDataRef.get(dataObject.data_ref);
-    dataObject.data_name = table.business_name || dataObject.data_name;
-    dataObject.description = table.business_description || `记录${dataObject.data_name}的业务内容；字段责任和权威来源待业务确认。`;
-    const excluded = new Set(table.excluded_fields || []);
-    dataObject.fields = (dataObject.fields || []).filter(field =>
-      !excluded.has(field.field_name) && !TECHNICAL_FIELD_PATTERN.test(field.field_name)
-    );
-    dataObject.behavior_links = [];
-    dataObject.source_relations = [];
+    const additions = freshData.get(dataObject.data_ref)?.fields || [];
+    dataObject.fields = mergeByRef(dataObject.fields, additions.filter(field =>
+      !dataObject.fields.some(previous => previous.field_name === field.field_name)
+    ), 'field_ref');
   });
-  const formNames = new Map((form.tables || []).map(table => [table.form_ref, table.form_name]));
-  documentValue.forms = (documentValue.forms || []).filter(item => formNames.has(item.form_ref));
+  const freshForms = new Map(fresh.forms.map(item => [item.form_ref, item]));
+  for (const formItem of fresh.forms) {
+    for (const item of formItem.areas.flatMap(area => area.items)) {
+      const dataObject = documentValue.data_objects.find(data => data.data_ref === item.business_data_ref);
+      const field = dataObject?.fields.find(field => field.field_ref === item.data_field_ref)
+        || dataObject?.fields.find(field => field.field_name === item.item_name);
+      if (field) item.data_field_ref = field.field_ref;
+    }
+  }
+  documentValue.forms = mergeByRef(documentValue.forms, fresh.forms, 'form_ref');
   documentValue.forms.forEach(formItem => {
-    formItem.form_name = formNames.get(formItem.form_ref) || formItem.form_name;
-    formItem.behavior_links = (formItem.behavior_links || []).map(link => ({
-      ...link,
-      notes: '业务处理关系来自现有流程配置，具体处理范围待业务确认。'
-    }));
+    const freshAreas = freshForms.get(formItem.form_ref)?.areas || [];
+    formItem.areas = mergeByRef(formItem.areas, freshAreas, 'area_ref');
     formItem.areas.forEach(area => {
-      area.area_title = `${formItem.form_name}${area.area_type === '明细清单' ? '明细' : '基本信息'}`;
-      area.items = area.items.filter(item => {
-        if (TECHNICAL_FIELD_PATTERN.test(item.item_name)) return false;
-        const dataObject = documentValue.data_objects.find(data => data.data_ref === item.business_data_ref);
-        return !item.data_field_ref || dataObject?.fields.some(field => field.field_ref === item.data_field_ref);
-      });
-      area.items.forEach(item => {
-        item.instructions = simpleInstruction(item.instructions);
-        if ((item.source_links || []).some(link => link.source_type === 'external_system')) {
-          item.source_links = [];
-          item.value_usage_mode = 'pending_confirmation';
-          item.value_origin_mode = 'pending_confirmation';
-        }
-      });
+      const additions = freshAreas.find(item => item.area_ref === area.area_ref)?.items || [];
+      area.items = mergeByRef(area.items, additions.filter(item => !area.items.some(previous =>
+        previous.business_data_ref === item.business_data_ref && previous.item_name === item.item_name
+      )), 'item_ref');
     });
   });
-  documentValue.terms = (form.term_candidates || []).map(term => ({
-    term_ref: term.term_ref || stableRef('term', term.term_name),
-    term_name: term.term_name,
-    definition: term.definition || ''
-  }));
-  documentValue.migration.reference_materials = [];
-  documentValue.migration.internal_process_calls = [];
-  documentValue.migration.work_roles = [];
-  documentValue.migration.unresolved_actor_roles = [];
-  documentValue.migration.unresolved_join_modes = [];
+  documentValue.terms = mergeByRef(documentValue.terms, fresh.terms.filter(term =>
+    !documentValue.terms.some(previous => previous.term_name === term.term_name)
+  ), 'term_ref');
   return documentValue;
 }
 
@@ -370,9 +355,14 @@ function expandDataOperations(workflow, dataRefs) {
   });
 }
 
-function applyDataOperations(documentValue, workflow) {
+function applyDataOperations(documentValue, workflow, form) {
   const dataByRef = new Map(documentValue.data_objects.map(item => [item.data_ref, item]));
-  expandDataOperations(workflow, [...dataByRef.keys()]).forEach((operation, index) => {
+  const snapshotDataRefs = (form.tables || []).map(table => table.data_ref || stableRef('data', table.physical_name));
+  const configuredPairs = new Set();
+  expandDataOperations(workflow, snapshotDataRefs).forEach((operation, index) => {
+    const pair = `${operation.data_ref}\0${operation.behavior_ref}`;
+    if (configuredPairs.has(pair)) throw new Error('快照中同一行为与数据对象存在重复数据关系，停止生成。');
+    configuredPairs.add(pair);
     const dataObject = dataByRef.get(operation.data_ref);
     if (!dataObject) throw new Error(`数据操作引用不存在的数据对象：${operation.data_ref}`);
     const behavior = documentValue.behaviors.find(item => item.behavior_ref === operation.behavior_ref);
@@ -388,8 +378,11 @@ function applyDataOperations(documentValue, workflow) {
     if (operation.operation === 'update' && !updatedFieldRefs.length) {
       throw new Error(`${behavior.behavior_name}的更新操作必须列出实际更新字段`);
     }
-    if (dataObject.behavior_links.some(link => link.behavior_ref === operation.behavior_ref)) {
-      throw new Error(`${behavior.behavior_name}与${dataObject.data_name}存在重复数据关系`);
+    const previous = dataObject.behavior_links.find(link => link.behavior_ref === operation.behavior_ref);
+    if (previous) {
+      if (previous.operation === operation.operation
+        && JSON.stringify([...(previous.updated_field_refs || [])].sort()) === JSON.stringify([...updatedFieldRefs].sort())) return;
+      throw new Error(`旧草稿与快照的数据关系冲突：${behavior.behavior_name} / ${dataObject.data_name}。停止生成，请先确认操作类型和更新字段。`);
     }
     dataObject.behavior_links.push({
       link_ref: operation.link_ref || stableRef('datalink', `${workflow.workflow_id}:${operation.behavior_ref}:${operation.data_ref}:${index}`),
@@ -407,16 +400,23 @@ function applyFormulaMappings(documentValue, form) {
       .find(item => item.business_data_ref === formula.target_data_ref && item.item_name === formula.target_field_name);
     const sourceData = documentValue.data_objects.find(item => item.data_ref === formula.source_data_ref);
     if (!targetItem || !sourceData) return;
-    targetItem.value_usage_mode = formula.value_usage_mode || 'reuse_existing';
-    targetItem.value_origin_mode = 'depends_on_data';
-    targetItem.source_links = [{
+    const sourceLink = {
       source_link_ref: formula.source_link_ref || stableRef('source', `${formula.target_data_ref}:${formula.target_field_name}:${index}`),
       source_type: 'process_data',
       source_data_ref: sourceData.data_ref,
       source_system_name: '',
       source_data_name: formula.source_business_name || `${sourceData.data_name}中的${formula.source_field_name}`,
       source_role: formula.source_role || 'provides_value'
-    }];
+    };
+    if (targetItem.source_links.length) {
+      const same = targetItem.source_links.length === 1 && ['source_type', 'source_data_ref', 'source_role']
+        .every(key => targetItem.source_links[0][key] === sourceLink[key]);
+      if (!same) throw new Error(`旧草稿与快照的字段来源冲突：${targetItem.item_name}。停止生成，请先确认来源关系。`);
+      return;
+    }
+    targetItem.value_usage_mode = formula.value_usage_mode || 'reuse_existing';
+    targetItem.value_origin_mode = 'depends_on_data';
+    targetItem.source_links = [sourceLink];
   });
 }
 
@@ -471,25 +471,53 @@ function evidenceEntry({ sourceObject, sourceField = '', relation = '', targetPa
   };
 }
 
-function buildEvidence(documentValue, snapshot, form, workflow, liveVerified) {
+function sourceFieldFor(table, field) {
+  const dataRef = table?.data_ref || stableRef('data', table?.physical_name || '');
+  const fields = (table?.fields || []).filter(item => item.classification !== 'technical');
+  const exact = fields.filter(item => (item.field_ref || stableRef('data_field', `${dataRef}:${item.physical_name || item.business_name}`)) === field.field_ref);
+  const matches = exact.length ? exact : fields.filter(item => (item.business_name || item.physical_name) === field.field_name);
+  if (matches.length > 1) throw new Error(`字段来源不唯一，停止生成：${field.field_name}`);
+  return matches[0] || null;
+}
+
+function snapshotEvidenceStatus(status, fallback) {
+  if (status === '实时已核验') throw new Error('结构快照不得自行声明实时已核验；请提供本轮只读核验文件。');
+  return status || fallback;
+}
+
+function buildEvidence(documentValue, snapshot, form, workflow, verification) {
   const entries = [];
-  const tableByDataRef = new Map((form.tables || []).map(table => [table.data_ref, table]));
+  const tableByDataRef = new Map((form.tables || []).map(table => [table.data_ref || stableRef('data', table.physical_name), table]));
+  const configuredOperations = expandDataOperations(workflow, [...tableByDataRef.keys()]);
   documentValue.data_objects.forEach((dataObject, dataIndex) => {
     const table = tableByDataRef.get(dataObject.data_ref);
     entries.push(evidenceEntry({
       sourceObject: table?.physical_name || '', targetPath: `$.data_objects[${dataIndex}]`, capturedAt: snapshot.captured_at,
-      summary: `业务对象“${dataObject.data_name}”及其表单区域来自表结构对应关系。`, status: liveVerified ? '实时已核验' : '结构已确认'
+      summary: table ? `业务对象“${dataObject.data_name}”及其表单区域来自表结构对应关系。` : `保留旧草稿中的业务对象“${dataObject.data_name}”，快照未提供对应来源。`,
+      status: table ? '结构已确认' : '待业务确认'
     }));
-    dataObject.fields.forEach((field, fieldIndex) => entries.push(evidenceEntry({
-      sourceObject: table?.physical_name || '', sourceField: field.field_name,
-      targetPath: `$.data_objects[${dataIndex}].fields[${fieldIndex}]`, capturedAt: snapshot.captured_at,
-      summary: `业务字段“${field.field_name}”来自当前表单字段结构。`, status: liveVerified ? '实时已核验' : '结构已确认'
-    })));
+    dataObject.fields.forEach((field, fieldIndex) => {
+      const sourceField = sourceFieldFor(table, field);
+      const targetPath = `$.data_objects[${dataIndex}].fields[${fieldIndex}]`;
+      entries.push(evidenceEntry({
+        sourceObject: table?.physical_name || '', sourceField: sourceField?.physical_name || '',
+        targetPath, capturedAt: snapshot.captured_at,
+        summary: sourceField ? `业务字段“${field.field_name}”来自当前表单字段结构。` : `保留旧草稿中的字段“${field.field_name}”，快照未提供对应来源。`,
+        status: sourceField ? '结构已确认' : '待业务确认'
+      }));
+      const sample = verification?.results.find(item => item.table === table?.physical_name && item.column === sourceField?.physical_name);
+      if (sample) entries.push(evidenceEntry({
+        sourceObject: sample.table, sourceField: sample.column, targetPath, capturedAt: verification.verified_at,
+        summary: `该列已抽样${sample.sampled_rows}行，其中${sample.non_null_rows}行非空；只证明列可查询和本次计数，不证明业务含义、流程配置或实际写入时点。`,
+        status: '实时已核验'
+      }));
+    });
     dataObject.behavior_links.forEach((link, linkIndex) => entries.push(evidenceEntry({
       sourceObject: table?.physical_name || '', relation: `${link.behavior_ref}:${link.operation}`,
       targetPath: `$.data_objects[${dataIndex}].behavior_links[${linkIndex}]`, capturedAt: snapshot.captured_at,
       summary: link.operation === 'update' ? `配置和字段结构表明该节点填写${link.updated_field_refs.length}个字段；实际写入时点仍待实时核验。` : `当前关系按${link.operation}处理。`,
-      status: link.operation === 'update' && !liveVerified ? '分析候选' : liveVerified ? '实时已核验' : '配置已确认'
+      status: configuredOperations.some(item => item.data_ref === dataObject.data_ref && item.behavior_ref === link.behavior_ref)
+        ? (link.operation === 'update' ? '分析候选' : '配置已确认') : '待业务确认'
     })));
   });
   (workflow.nodes || []).forEach((node, index) => entries.push(evidenceEntry({
@@ -498,17 +526,17 @@ function buildEvidence(documentValue, snapshot, form, workflow, liveVerified) {
     summary: node.evidence_summary || (node.node_type === 'action'
       ? `工作流配置形成业务行为“${node.business_name}”；正式岗位仍待业务确认。`
       : `为明确表达流程分支，从工作流节点和连线条件拆分出控制节点“${node.business_name}”；该节点不是业务行为。`),
-    status: node.evidence_status || (node.node_type === 'action' ? '配置已确认' : '分析候选')
+    status: snapshotEvidenceStatus(node.evidence_status, node.node_type === 'action' ? '配置已确认' : '分析候选')
   })));
   (workflow.edges || []).forEach((edge, index) => entries.push(evidenceEntry({
     sourceObject: workflow.workflow_id, relation: `${edge.from_behavior_ref}->${edge.to_behavior_ref}`,
     targetPath: `$.flow_relations[${index}]`, capturedAt: snapshot.captured_at,
     summary: edge.evidence_summary || (edge.condition ? `流程关系条件为“${edge.condition}”。` : '当前流程结构形成顺序关系。'),
-    status: edge.evidence_status || '分析候选'
+    status: snapshotEvidenceStatus(edge.evidence_status, '分析候选')
   })));
-  (form.term_candidates || []).forEach((term, index) => entries.push(evidenceEntry({
+  (form.term_candidates || []).forEach(term => entries.push(evidenceEntry({
     sourceObject: term.source_object || form.root_table, sourceField: term.source_field || term.term_name,
-    targetPath: `$.terms[${index}]`, capturedAt: snapshot.captured_at,
+    targetPath: `$.terms[${documentValue.terms.findIndex(item => item.term_ref === (term.term_ref || stableRef('term', term.term_name)) || item.term_name === term.term_name)}]`, capturedAt: snapshot.captured_at,
     summary: `“${term.term_name}”由业务字段或列表规范形成术语候选。`, status: term.definition ? '配置已确认' : '分析候选'
   })));
   (workflow.role_candidates || []).forEach(candidate => entries.push(evidenceEntry({
@@ -522,12 +550,12 @@ function buildEvidence(documentValue, snapshot, form, workflow, liveVerified) {
 function resolvedSnapshot(snapshot, form, documentValue) {
   const output = clone(snapshot);
   const dataByRef = new Map(documentValue.data_objects.map(item => [item.data_ref, item]));
-  output.forms = output.forms.map(item => item === form ? {
+  output.forms = output.forms.map(item => item.root_table === form.root_table && item.form_ref === form.form_ref ? {
     ...item,
     tables: (item.tables || []).map(table => ({
       ...table,
-      resolved_business_fields: (dataByRef.get(table.data_ref)?.fields || []).map(field => ({
-        physical_name: field.field_name,
+      resolved_business_fields: (dataByRef.get(table.data_ref || stableRef('data', table.physical_name))?.fields || []).map(field => ({
+        physical_name: sourceFieldFor(table, field)?.physical_name || null,
         business_name: field.field_name,
         field_type: field.field_type
       }))
@@ -536,7 +564,7 @@ function resolvedSnapshot(snapshot, form, documentValue) {
   return output;
 }
 
-function verifyReadOnlyFile(filePath, snapshot, form, workflow) {
+function verifyReadOnlyFile(filePath, snapshot, form, workflow, snapshotDigest) {
   if (!filePath) return null;
   const verification = readJson(filePath);
   if (verification.read_only_verified !== true || verification.database !== 'CXSYSYS' || verification.schema !== 'dbo') {
@@ -546,6 +574,34 @@ function verifyReadOnlyFile(filePath, snapshot, form, workflow) {
     throw new Error('实时核验文件与本次主表或工作流不一致');
   }
   walkKeys(verification);
+  const permissions = verification.permission_summary;
+  if (verification.schema_version !== 'cxsysys-read-only-verification-v1'
+    || verification.application_intent !== 'ReadOnly'
+    || verification.raw_values_included !== false || verification.database_write_operations !== 0
+    || verification.maximum_rows_per_target !== 20
+    || permissions?.sysadmin !== false || permissions?.db_owner !== false
+    || !Array.isArray(permissions?.forbidden_permissions) || permissions.forbidden_permissions.length
+    || !Number.isFinite(Date.parse(verification.verified_at))
+    || Date.parse(verification.verified_at) < Date.parse(snapshot.captured_at)
+    || verification.snapshot_sha256 !== snapshotDigest
+    || !Array.isArray(verification.results) || !verification.results.length) {
+    throw new Error('实时核验文件不完整或未绑定当前快照，请使用当前只读导出脚本重新核验；旧文件不能升级为实时证据。');
+  }
+  const allowed = new Map((form.verification_targets || []).flatMap(target =>
+    (target.columns || []).map(column => [`${target.table}\0${column}`, target.max_rows || 20])
+  ));
+  const seen = new Set();
+  for (const item of verification.results) {
+    const key = `${item.table}\0${item.column}`;
+    const limit = allowed.get(key);
+    if (!limit || seen.has(key) || !Number.isInteger(item.sampled_rows) || !Number.isInteger(item.non_null_rows)
+      || item.sampled_rows < 0 || item.sampled_rows > Math.min(limit, 20)
+      || item.non_null_rows < 0 || item.non_null_rows > item.sampled_rows
+      || Object.keys(item).some(field => !['table', 'column', 'sampled_rows', 'non_null_rows'].includes(field))) {
+      throw new Error('实时核验结果超出允许的表、字段、行数范围，或包含重复、非法摘要。');
+    }
+    seen.add(key);
+  }
   return verification;
 }
 
@@ -562,6 +618,7 @@ function buildPendingIssues(snapshot, form, workflow, liveVerified) {
     issues.push(`请确认“${candidate.business_node_name || candidate.behavior_ref}”的正式执行岗位；现有角色配置“${candidate.role_name}”只作为候选。`);
   });
   if (!liveVerified) issues.push('本轮未连接实时数据库：工作流节点、审批字段实际写入时点和退回条件仍需使用专用只读账号核验。');
+  else issues.push('本轮只核验了指定列的抽样非空计数；工作流节点、审批字段实际写入时点和退回条件仍待专项核验。');
   return [...new Set(issues)];
 }
 
@@ -577,29 +634,37 @@ export function generateProcessPackage(options) {
   const snapshot = assertSafeSnapshot(readJson(snapshotPath));
   const { form, workflow } = selectWorkflow(snapshot, options.rootTable, options.workflowId);
   assertExplicitDecisionRouting(workflow);
-  const verification = verifyReadOnlyFile(options.verificationPath, snapshot, form, workflow);
+  const verification = verifyReadOnlyFile(options.verificationPath, snapshot, form, workflow, digest(fs.readFileSync(snapshotPath)));
   let documentValue;
   let baseDigest = '';
   if (options.baseJsonPath) {
     const baseBytes = fs.readFileSync(path.resolve(options.baseJsonPath));
     baseDigest = digest(baseBytes);
-    documentValue = migration.migrateProcessDocument(JSON.parse(baseBytes.toString('utf8')));
-    documentValue = sanitizeMigratedDocument(documentValue, form, workflow);
+    const baseDocument = JSON.parse(baseBytes.toString('utf8').replace(/^\uFEFF/, ''));
+    documentValue = baseDocument.schema_version === 'process-governance-v7'
+      ? baseDocument : migration.migrateProcessDocument(baseDocument);
+    const baseValidation = service.processGovernanceValidationResult(documentValue);
+    if (!baseValidation.valid) throw new Error(`旧草稿迁移后存在结构或引用错误，停止生成并保留原文件：${baseValidation.errors.slice(0, 5).map(item => `${item.path} ${item.message}`).join('；')}`);
+    documentValue = sanitizeMigratedDocument(documentValue, snapshot, form, workflow);
   } else {
     documentValue = buildFromSnapshot(snapshot, form, workflow);
   }
   documentValue.export_meta.exported_at = new Date().toISOString();
-  applyDataOperations(documentValue, workflow);
+  applyDataOperations(documentValue, workflow, form);
   applyFormulaMappings(documentValue, form);
-  applyAnonymizationEvidence(documentValue, form);
+  if (!options.baseJsonPath) applyAnonymizationEvidence(documentValue, form);
   assertBusinessTextClean(documentValue);
   const validation = service.processGovernanceValidationResult(documentValue);
   if (!validation.valid) {
     throw new Error(`生成的V7未通过结构校验：${validation.errors.slice(0, 5).map(item => `${item.path || item.instancePath || '/'} ${item.message}${item.params?.additionalProperty ? `（${item.params.additionalProperty}）` : ''}`).join('；')}`);
   }
   assertOutputDirectory(outputDir);
-  const evidence = buildEvidence(documentValue, snapshot, form, workflow, Boolean(verification));
+  const evidence = buildEvidence(documentValue, snapshot, form, workflow, verification);
   const pendingIssues = buildPendingIssues(snapshot, form, workflow, Boolean(verification));
+  if (options.baseJsonPath) {
+    pendingIssues.push('已保留旧草稿的人工内容；行为标识匹配后按快照更新节点类型、名称和流程关系，请核对这些结构修正。');
+    if (evidence.some(item => item.status === '待业务确认')) pendingIssues.push('旧草稿中存在快照未匹配的数据对象、字段或数据关系，已保留；请确认其来源及适用范围。');
+  }
   const schemaSnapshot = resolvedSnapshot(snapshot, form, documentValue);
   const outputJsonFile = businessProcessJsonFileName(documentValue);
   const sourceManifest = {
@@ -624,6 +689,8 @@ export function generateProcessPackage(options) {
     root_table: form.root_table,
     workflow_id: workflow.workflow_id,
     read_only_verification: verification ? 'verified' : 'not_provided',
+    read_only_verification_scope: verification ? 'sampled_columns_only' : null,
+    verified_columns: verification?.results.length || 0,
     counts: {
       behaviors: documentValue.behaviors.length,
       relations: documentValue.flow_relations.length,

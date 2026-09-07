@@ -221,8 +221,8 @@ npm run review:mysql:serve
 | `audit-a1-transfer-evidence.mjs` | 审计 A1 跨部门输入 / 输出证据 | `docs/contracts/dcm-bbm-contract.json`、`docs/norms/` | 默认写 `docs/reports/{日期}-a1-transfer-evidence-audit.md`；`--no-write` 可只读运行 |
 | `ocr-source.mjs` | 对扫描 PDF 和图片源文件生成 OCR 待确认证据中间件；PaddleOCR 不可用时登记待复核 | `docs/norms/` 或指定文件/目录下的 PDF/图片 | 默认写 `artifacts/ocr/<run-id>/`；可显式写 `build/ocr/`，但不生成流程结论 |
 | `test-ocr-source.mjs` | 校验 OCR 包装脚本的输出边界、复核登记和非结论化规则 | 一个扫描 PDF 样例 | 写入被忽略的 `artifacts/ocr/test-ocr-source/` |
-| `.agents/skills/process-evidence-mapping/scripts/run-process-input-baseline-review-workflow.mjs` | 串联 OCR 判断、evidence chunks、embedding/降级、输入基线解读、角色抽取、对象链、差异报告和待确认待办 Markdown | 单个制度文件、部门名、当前部门映射 | 写入 `artifacts/process-input-baseline-review/<run-id>/`；更新 `docs/norms/流程治理/输入基线问题待办.md` |
-| `.agents/skills/process-evidence-mapping/scripts/update-input-baseline-review-todo-md.mjs` | 将未解决待确认问题写入人工待办面板，按稳定键去重，并过滤当前已确认流程映射已覆盖项 | `mapping_diff_items.json`、当前部门映射 | 写入待确认待办 Markdown；只保留未解决项 |
+| `.agents/skills/process-evidence-mapping/scripts/run-process-input-baseline-review-workflow.mjs` | 串联来源可读性门、证据切块、可选向量检索及降级、候选抽取、v2 编译、引用校验和人工问题视图；图片等不可读来源先登记再阻断 | 制度文件或目录、部门名、当前部门映射 | 只写 `artifacts/process-input-baseline-review/<run-id>/`，不写回 `docs/norms/` |
+| `.agents/skills/process-evidence-mapping/scripts/update-input-baseline-review-todo-md.mjs` | 从 v2 生成未解决问题视图；只有“不是问题”且有理由时移除，同名匹配或派生 Markdown 状态不能关闭问题 | v2 JSON；兼容旧问题数组，保留 `--mapping` 命令参数但不据此关闭问题 | 写指定的人工待办 Markdown，不修改输入 JSON |
 | `build-input-baseline-review-sankey-preview.mjs` | 为问题识别批次生成部门待确认预览页 | `artifacts/process-input-baseline-review/<run-id>/mapping_diff_items.json` | 默认写入同一问题识别批次目录的 `preview.html`；只有显式 `--out` 才会写指定路径 |
 | `test-input-baseline-review-sankey-preview.mjs`、`test-sankey-preview-status.mjs` | 校验预览页生成和旧状态标记脚本的安全边界 | 预览生成器、兼容入口和临时夹具 | 只读校验；夹具写入系统临时目录 |
 | `mark-sankey-preview-status.mjs` | 旧批量预览标记脚本的安全兼容入口 | 无 | 不再批量修改正式部门桑基图，只输出 deprecated/no-op 提示 |
@@ -231,10 +231,10 @@ npm run review:mysql:serve
 | `import-input-baseline-review-mysql.mjs` | 将问题识别批次产物、原文摘录导入 MySQL | `artifacts/process-input-baseline-review/<run-id>/` | 写入 MySQL 待确认问题库和原文摘录 |
 | `input-baseline-review-service.mjs` | 启动输入基线问题复核网页服务 | MySQL 待确认问题库 | 页面从接口读取题目和原文高亮，选择结果直接写 MySQL |
 | `input-baseline-review-core.mjs` | 输入基线问题复核 MySQL schema、原文匹配、高亮和仓库方法 | 待确认 JSON、`chunks.jsonl`、MySQL pool | 供导入脚本、服务和测试复用 |
-| `test-process-evidence-skill.mjs` | 校验 process-evidence-mapping 技能是否按固定执行顺序重写，且包含 OCR、embedding、待确认待办边界 | `.agents/skills/process-evidence-mapping/SKILL.md` | 只读校验 |
-| `.agents/skills/process-evidence-mapping/scripts/test-input-baseline-review-workflow.mjs` | 用 GLTX-CW-01 回归输入基线解读、角色簿、对象链、差异报告和待确认待办 Markdown | 财务部 GLTX-CW-01 制度和当前财务部映射 | 写入被忽略的 `artifacts/process-input-baseline-review/test-gltx-cw-01/` |
-| `.agents/skills/database-to-process-json/scripts/run-database-to-process-json.mjs` | 从指定的 CXSYSYS.dbo 结构快照生成一个未审核 V7 JSON 和逐项证据包；主交付 JSON 使用“审核状态-部门-流程-核对阶段-日期”的业务名称；实际办理行为后另设判断节点，条件分叉只能从判断节点发出；多工作流或隐藏判断存在时停止，不接受 SQL | 明确主表或表单模板、`database-process-evidence-v1`快照、可选旧版3001 JSON | 只写新的 `artifacts/database-process-json/<run-id>/`，不连接数据库、不写数据库；`npm run test:database-to-process-json`验证 |
-| `.agents/skills/database-to-process-json/scripts/export-cxsysys-readonly-snapshot.ps1` | 在明确授权后，用专用只读账号对快照允许的表和字段做限列、限行、无原值摘要核验 | 结构快照、主表、工作流、进程级只读连接环境变量和`-ConfirmReadOnly` | 只写指定的本地核验JSON；权限门发现写权限即停止，不执行数据库写操作 |
+| `test-process-evidence-skill.mjs` | 校验流程证据技能的执行顺序、不可读来源阻断、候选证据和人工发布边界 | `.agents/skills/process-evidence-mapping/SKILL.md` | 只读校验 |
+| `.agents/skills/process-evidence-mapping/scripts/test-input-baseline-review-workflow.mjs` | 用合成制度回归 v2 生成、错误引用拦截、问题关闭规则及图片来源阻断记录 | 合成制度、映射和 JSON 反例；不连接向量服务 | 每次写新的 `artifacts/process-input-baseline-review/test-v2-<随机值>/`，不清理旧批次 |
+| `.agents/skills/database-to-process-json/scripts/run-database-to-process-json.mjs` | 从指定的 CXSYSYS.dbo 结构快照生成一个未审核 V7 JSON 和逐项证据包；按业务名称交付，判断分叉从独立判断节点发出；旧稿人工内容保留，未匹配结构或冲突关系明确阻断；字段证据保留真实物理列名，只读摘要不升级为流程核验结论 | 明确主表或表单模板、`database-process-evidence-v1`快照、可选旧版3001 JSON及绑定快照的只读核验文件 | 只写新的 `artifacts/database-process-json/<run-id>/`，不连接数据库、不写数据库；`npm run test:database-to-process-json`覆盖人工内容保留、冲突阻断、物理列名及核验文件反例 |
+| `.agents/skills/database-to-process-json/scripts/export-cxsysys-readonly-snapshot.ps1` | 在明确授权后，用专用只读账号对快照允许的表和字段做限列、限行、无原值摘要核验 | 结构快照、主表、工作流、进程级只读连接环境变量和`-ConfirmReadOnly` | 只写指定的本地核验JSON，记录快照文件SHA-256、核验时间、权限摘要及逐列计数；旧核验文件缺少必填信息时须重新导出，不执行数据库写操作 |
 | `test-input-baseline-review-mysql.mjs` | 校验MySQL表结构、原文高亮、对比色按钮和服务页面约定 | 测试问题识别批次夹具 | 写入被忽略的 `artifacts/process-input-baseline-review/test-input-baseline-review-mysql/` |
 | `glossary.mjs` | 查询仓库术语表 | `docs/glossary.md` | 只读查询 |
 

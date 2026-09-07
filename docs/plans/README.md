@@ -10,6 +10,8 @@
 
 | 文件 | 作用 | 口径 |
 |---|---|---|
+| `2026-09-07-business-development-value-chain-input.md` | 经营发展部主价值链活动截图转录及交付覆盖依据 | 4个环节、15项活动、9项标为上系统、8项列有负责人；尚未逐项对照JSON |
+| `2026-09-07-3000-offline-process-map-rehearsal.md` | 多流程JSON线下整合、三类待办模拟与3000基本功能验收 | 用户已确认上线前先线下测试；接收目录已明确，9月7日检查JSON为0，实际演练尚未开始 |
 | `2026-05-17-changxing-network-plan.md` | 网络规划材料 | 历史方案 |
 | `2026-05-17-changxing-requirements-questionnaire.md` | 需求调研问题清单 | 调研材料 |
 | `2026-06-29-mdm-governance-input-baseline-landing-plan.md` | MDM 治理落地计划 | 执行计划 |

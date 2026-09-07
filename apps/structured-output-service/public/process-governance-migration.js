@@ -280,6 +280,31 @@
     return migration;
   }
 
+  function archiveUnresolvedActorRole(context, record) {
+    const archives = context.migration.unresolved_actor_roles;
+    const duplicate = archives.find(item => (
+      item.behavior_ref === record.behavior_ref
+      && item.raw_actor_role === record.raw_actor_role
+      && item.original_actor_assignment_mode === record.original_actor_assignment_mode
+      && item.source_schema_version === record.source_schema_version
+      && item.reason === record.reason
+    ));
+    if (duplicate) return duplicate.record_ref;
+    let recordRef = record.record_ref;
+    if (archives.some(item => item.record_ref === recordRef)) {
+      recordRef = stableRef(
+        'unresolved_actor_role',
+        record.behavior_ref,
+        record.original_actor_assignment_mode,
+        record.raw_actor_role,
+        record.source_schema_version,
+        record.reason
+      );
+    }
+    archives.push({ ...record, record_ref: recordRef });
+    return recordRef;
+  }
+
   function actorMode(item) {
     if (ACTOR_MODES.has(item?.actor_assignment_mode)) return item.actor_assignment_mode;
     if (text(item?.current_actor_role).trim() === '全公司') return 'company_wide';
@@ -292,10 +317,22 @@
     const mode = actorMode(item);
     const rawActor = text(item?.current_actor_role);
     let currentActorRole = mode === 'company_wide' ? '全公司' : mode === 'dynamic_from_data' ? '' : rawActor;
+    if (mode === 'dynamic_from_data' && rawActor.trim()) {
+      const originalMode = text(item?.actor_assignment_mode) || 'dynamic_from_data';
+      const reason = '动态责任由数据或运行条件确定，current_actor_role不适用于活动结构；当前字段已清空，原值保存在迁移归档。';
+      archiveUnresolvedActorRole(context, {
+        record_ref: stableRef('unresolved_actor_role', behaviorRef, originalMode, rawActor),
+        behavior_ref: behaviorRef,
+        raw_actor_role: rawActor,
+        original_actor_assignment_mode: originalMode,
+        source_schema_version: context.sourceVersion,
+        reason
+      });
+    }
     if (mode === 'fixed_department' && rawActor.trim()) {
       const matchedDepartment = context.departments.find(department => rawActor.trim().startsWith(department));
       if (!matchedDepartment) {
-        context.migration.unresolved_actor_roles.push({
+        archiveUnresolvedActorRole(context, {
           record_ref: stableRef('unresolved_actor_role', behaviorRef, rawActor),
           behavior_ref: behaviorRef,
           raw_actor_role: rawActor,

@@ -9,7 +9,6 @@ import path from 'node:path';
 import {
   TODO_TYPES,
   escapeMarkdownCell,
-  mappingCovers,
   parseArgs,
   readJson,
   requireArg,
@@ -60,12 +59,13 @@ function parseExistingRows(markdown) {
   return rows;
 }
 
-function unresolvedItems(items, mappingText) {
+function unresolvedItems(items) {
   const byKey = new Map();
   for (const sourceItem of items) {
     if (!sourceItem || !TODO_TYPES.includes(sourceItem.issue_type)) continue;
+    // A matching name is not a decision about the missing role, condition or field.
+    if (sourceItem.user_decision === '不是问题' && String(sourceItem.user_reason || '').trim()) continue;
     const item = normalizeItem(sourceItem);
-    if (mappingCovers(mappingText, item.content)) continue;
     byKey.set(item.stable_key || item.id, item);
   }
   return [...byKey.values()]
@@ -157,10 +157,10 @@ function main() {
   const payload = readJson(args.reviewItems);
   const reviewItems = Array.isArray(payload) ? payload : payload.pending_issues;
   if (!Array.isArray(reviewItems)) throw new Error('--review-items must point to an array or a document-structured-output-v2 object');
-  const mappingText = fs.existsSync(args.mapping) ? fs.readFileSync(args.mapping, 'utf8') : '';
   const oldMarkdown = fs.existsSync(args.todo) ? fs.readFileSync(args.todo, 'utf8') : '';
-  const existingRows = parseExistingRows(oldMarkdown);
-  const items = unresolvedItems(reviewItems, mappingText);
+  // Old array inputs retain display annotations; v2 is the sole state source for its view.
+  const existingRows = Array.isArray(payload) ? parseExistingRows(oldMarkdown) : new Map();
+  const items = unresolvedItems(reviewItems);
   fs.mkdirSync(path.dirname(args.todo), { recursive: true });
   fs.writeFileSync(args.todo, buildMarkdown(items, existingRows), 'utf8');
   console.error(`todo_items=${items.length} out=${args.todo}`);

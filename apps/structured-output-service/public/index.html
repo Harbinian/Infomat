@@ -1205,6 +1205,28 @@
       line-height: 1.6;
     }
 
+    .import-normalization-details {
+      margin-top: 14px;
+      border: 1px solid #d3b2aa;
+      border-radius: 10px;
+      background: #fffaf7;
+      overflow: hidden;
+    }
+    .import-normalization-details > summary {
+      padding: 11px 13px;
+      color: #7b2f27;
+      background: #fff3ee;
+      cursor: pointer;
+      font-weight: 700;
+    }
+    .import-normalization-body { padding: 0 13px 13px; min-width: 0; }
+    .import-normalization-list { display: grid; gap: 10px; margin: 12px 0 0; padding-left: 22px; }
+    .import-normalization-item { min-width: 0; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+    .import-normalization-meta { display: flex; flex-wrap: wrap; gap: 5px 12px; margin-bottom: 7px; }
+    .import-normalization-meta code,
+    .import-normalization-value code { overflow-wrap: anywhere; word-break: break-word; white-space: pre-wrap; }
+    .import-normalization-value { min-width: 0; margin-top: 5px; overflow-wrap: anywhere; word-break: break-word; }
+
     .record-workbench,
     .form-workbench {
       display: grid;
@@ -5279,6 +5301,53 @@
       `).join('')}</div>`;
     }
 
+    function normalizationDisplayValue(present, value) {
+      if (!present) return '（不存在）';
+      if (value === '') return '（空字符串）';
+      if (value === null) return 'null';
+      if (typeof value === 'string') return value;
+      if (typeof value === 'undefined') return 'undefined';
+      try {
+        return JSON.stringify(value);
+      } catch (_error) {
+        return String(value);
+      }
+    }
+
+    function renderImportNormalizationDifferences(entry) {
+      const summary = entry?.importInfo?.normalization;
+      if (!summary?.changed || !summary.totalChanges) return '';
+      const changes = Array.isArray(summary.changes) ? summary.changes : [];
+      const hasDynamicArchive = changes.some(change => change.code === 'DYNAMIC_ACTOR_ROLE_ARCHIVED');
+      const stateCopy = entry.lastDownload ? '当前内容已下载。' : '当前内容尚未下载。';
+      const preservationCopy = hasDynamicArchive
+        ? '动态责任原值已保留在迁移归档；'
+        : '页面已逐项列出规范化前后的值；';
+      const items = changes.map(change => `
+        <li class="import-normalization-item">
+          <div class="import-normalization-meta">
+            <span><strong>变化编码：</strong><code>${escapeHtml(change.code || 'NORMALIZATION_CHANGE')}</code></span>
+            <span><strong>位置：</strong><code>${escapeHtml(change.path || '')}</code></span>
+            ${change.stable_object_ref ? `<span><strong>稳定标识：</strong><code>${escapeHtml(change.stable_object_ref)}</code></span>` : ''}
+            ${change.object_name ? `<span><strong>对象名称：</strong>${escapeHtml(change.object_name)}</span>` : ''}
+            ${change.migration_archive_ref ? `<span><strong>迁移归档标识：</strong><code>${escapeHtml(change.migration_archive_ref)}</code></span>` : ''}
+          </div>
+          <div class="import-normalization-value"><strong>原值：</strong><code>${escapeHtml(normalizationDisplayValue(change.before_present, change.before_value))}</code></div>
+          <div class="import-normalization-value"><strong>当前值：</strong><code>${escapeHtml(normalizationDisplayValue(change.after_present, change.after_value))}</code></div>
+        </li>`).join('');
+      const truncation = summary.truncated
+        ? `<div class="inline-warning"><strong>差异较多：</strong>共${Number(summary.totalChanges)}项，当前仅显示前${Number(summary.shownChanges)}项。</div>`
+        : '';
+      return `<details class="import-normalization-details">
+        <summary>导入规范化差异（共${Number(summary.totalChanges)}项）</summary>
+        <div class="import-normalization-body">
+          <div class="inline-warning"><strong>文件状态：</strong>${preservationCopy}${stateCopy}</div>
+          <ol class="import-normalization-list">${items}</ol>
+          ${truncation}
+        </div>
+      </details>`;
+    }
+
     function renderStartStep() {
       const data = currentDocument();
       if (activeStepView === 'version') return `${renderStepIntro('start')}${renderVersionHistoryPanel()}`;
@@ -5360,13 +5429,14 @@
       const importInfo = entry?.importInfo;
       return `${renderStepIntro('start')}${section(
         '当前文件基本信息',
-        '源文件名、来源版本、源文件SHA-256和候选数量只在当前页面显示，不写入下载的v7内容。',
+        '源文件名、来源版本、源文件SHA-256、候选数量和导入规范化差异只在当前页面显示，不写入下载的v7内容。',
         `<div class="grid">
           <div class="inline-note"><strong>源文件：</strong>${escapeHtml(importInfo?.fileName || (entry?.origin === 'new' ? '空白模板新建' : '本次页面来源未记录'))}</div>
           <div class="inline-note"><strong>来源版本：</strong>${escapeHtml(importInfo?.sourceVersion || entry?.origin || '未知')}</div>
           <div class="inline-note"><strong>源文件SHA-256：</strong><code>${escapeHtml(importInfo?.sha256 || '空白新建不适用')}</code></div>
           <div class="inline-note"><strong>候选数量：</strong>${candidates.length}</div>
         </div>
+        ${renderImportNormalizationDifferences(entry)}
         <div class="item-actions"><button class="button primary" data-action="switch-governance-step" data-step="boundary">进入流程边界</button></div>`
       )}`;
     }
@@ -13026,7 +13096,7 @@
         updateCandidateList();
         governanceHeader.innerHTML = renderGovernanceHeader(currentDocument());
         workspaceViewSwitch.innerHTML = renderGovernanceSteps();
-        if (activeGovernanceStep === 'handoff') render();
+        if (activeGovernanceStep === 'start' || activeGovernanceStep === 'handoff') render();
         return true;
       } catch (error) {
         showStatus(`下载失败：${error.message}`, 'error');
@@ -13121,19 +13191,33 @@
         }
         if (!targetBatch.allowed) throw new Error('迁移没有生成可安装的流程候选');
         const repairableRelationshipErrorCount = targetBatch.repairableErrorCount;
+        const normalizationSummaries = parsed.schema_version === EXPECTED_EXPORT_SCHEMA_VERSION
+          ? migratedDocuments.map(data => globalThis.ImportCompatibility.summarizeNormalization(parsed, data))
+          : migratedDocuments.map(() => null);
+        const normalizationChangeCount = normalizationSummaries.reduce(
+          (sum, summary) => sum + Number(summary?.totalChanges || 0),
+          0
+        );
+        const normalizationArchiveCount = normalizationSummaries.reduce(
+          (sum, summary) => sum + (summary?.changes || [])
+            .filter(change => change.code === 'DYNAMIC_ACTOR_ROLE_ARCHIVED').length,
+          0
+        );
         const migrated = parsed.schema_version !== EXPECTED_EXPORT_SCHEMA_VERSION
           || needsCandidateFieldUpgrade
-          || repairableRelationshipErrorCount > 0;
-        const nextCandidates = migratedDocuments.map(data => ({
+          || repairableRelationshipErrorCount > 0
+          || normalizationChangeCount > 0;
+        const nextCandidates = migratedDocuments.map((data, index) => ({
           data: clone(data),
-          dirty: migrated,
-          forceDirty: migrated,
+          dirty: migrated || Boolean(normalizationSummaries[index]?.changed),
+          forceDirty: migrated || Boolean(normalizationSummaries[index]?.changed),
           origin: parsed.schema_version,
           importInfo: {
             fileName: file.name,
             sourceVersion: parsed.schema_version,
             sha256: fileSha256,
-            candidateCount: migratedDocuments.length
+            candidateCount: migratedDocuments.length,
+            normalization: normalizationSummaries[index]
           },
           governanceStep: migrated || migratedDocuments.length > 1 ? 'start' : 'boundary',
           stepView: migrated || migratedDocuments.length > 1 ? 'overview' : 'basic'
@@ -13150,7 +13234,7 @@
         activeGridWorkspace = 'data';
         advancedLifecycleMode = false;
         candidates = nextCandidates;
-        candidates.forEach(entry => registerCandidateState(entry, { forceDirty: migrated }));
+        candidates.forEach(entry => registerCandidateState(entry, { forceDirty: entry.forceDirty }));
         currentIndex = 0;
         selectInitialTabAfterImport();
         render();
@@ -13159,6 +13243,10 @@
             ? `文件已导入当前页面，保留${repairableRelationshipErrorCount}项历史控制节点关系。请逐项改到实际办理业务的行为；全部处理前不能下载。`
             : candidates.length > 1
             ? `历史文件包含 ${candidates.length} 条流程，已在当前页面显示为候选。每条流程必须单独下载。`
+            : normalizationChangeCount > 0
+              ? normalizationArchiveCount > 0
+                ? `v7文件已导入并发现${normalizationChangeCount}项规范化差异。动态责任原值已保留在迁移归档；当前内容尚未下载。`
+                : `v7文件已导入并发现${normalizationChangeCount}项规范化差异。请展开逐项核对；当前内容尚未下载。`
             : migrated
               ? '历史结构化文件已导入当前页面，当前内容标记为未下载。'
               : 'v7结构化文件已导入当前页面。',

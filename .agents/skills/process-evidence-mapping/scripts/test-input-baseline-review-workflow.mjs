@@ -6,9 +6,9 @@ import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
 import {
   existsSync,
+  mkdtempSync,
   mkdirSync,
   readFileSync,
-  rmSync,
   writeFileSync,
 } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -16,16 +16,16 @@ import { join, resolve } from 'node:path';
 const root = resolve(import.meta.dirname, '../../../..');
 const workflow = join(root, '.agents', 'skills', 'process-evidence-mapping', 'scripts', 'run-process-input-baseline-review-workflow.mjs');
 const validator = join(root, '.agents', 'skills', 'process-evidence-mapping', 'scripts', 'validate-document-structured-output-v2.mjs');
-const sourceDir = join(root, 'artifacts', 'process-input-baseline-review', 'test-v2-source');
-const runDir = join(root, 'artifacts', 'process-input-baseline-review', 'test-v2-basic');
-const blockedRunDir = join(root, 'artifacts', 'process-input-baseline-review', 'test-v2-blocked');
-const mixedBlockedRunDir = join(root, 'artifacts', 'process-input-baseline-review', 'test-v2-mixed-blocked');
+const fixtureParent = join(root, 'artifacts', 'process-input-baseline-review');
+mkdirSync(fixtureParent, { recursive: true });
+const fixtureRoot = mkdtempSync(join(fixtureParent, 'test-v2-'));
+const sourceDir = join(fixtureRoot, 'source');
+const runDir = join(fixtureRoot, 'basic');
+const blockedRunDir = join(fixtureRoot, 'blocked');
+const mixedBlockedRunDir = join(fixtureRoot, 'mixed-blocked');
 const sourcePath = join(sourceDir, 'GLTX-GC-01-A产品设计需求管理程序.md');
 const mappingPath = join(sourceDir, '工程技术部流程映射.md');
 
-for (const target of [sourceDir, runDir, blockedRunDir, mixedBlockedRunDir]) {
-  rmSync(target, { recursive: true, force: true });
-}
 mkdirSync(sourceDir, { recursive: true });
 
 writeFileSync(sourcePath, [
@@ -127,6 +127,44 @@ execFileSync(process.execPath, [validator, '--input', outputPath], {
   encoding: 'utf8',
 });
 
+for (const [name, mutate] of [
+  ['missing-process-evidence', data => { data.processes[0].evidence_refs = ['missing_evidence']; }],
+  ['missing-evidence-object', data => { data.evidence_catalog[0].object_type = 'step'; data.evidence_catalog[0].object_ref = 'missing_step'; }],
+  ['wrong-evidence-type', data => { data.evidence_catalog[0].object_type = 'form'; data.evidence_catalog[0].object_ref = data.steps[0].step_ref; }],
+  ['missing-issue-object', data => { data.pending_issues[0].structured_object_type = 'step'; data.pending_issues[0].structured_object_key = 'missing_step'; }],
+  ['missing-form-parent', data => { data.forms = [{ form_ref: 'test_form', form_name: '测试表单', form_code: 'TEST-01', main_table_name: 'test_form', step_ref: 'missing_step' }]; }],
+  ['duplicate-issue-key', data => { data.pending_issues.push({ ...data.pending_issues[0] }); }],
+  ['wrong-process-transition', data => {
+    data.processes.push({ ...data.processes[0], process_ref: 'another_process' });
+    data.step_transitions = [{ transition_ref: 'test_transition', process_ref: 'another_process', from_step_ref: data.steps[0].step_ref, to_step_ref: null, condition: '结束', evidence_refs: [] }];
+  }],
+]) {
+  const invalid = structuredClone(output);
+  mutate(invalid);
+  const invalidPath = join(runDir, `${name}.json`);
+  writeFileSync(invalidPath, JSON.stringify(invalid));
+  const result = spawnSync(process.execPath, [validator, '--input', invalidPath], { cwd: root, encoding: 'utf8' });
+  assert.notEqual(result.status, 0, `${name} must fail validation`);
+  assert.match(`${result.stdout}\n${result.stderr}`, /missing|duplicate|another process/, `${name} must fail the reference check`);
+}
+
+const todoGenerator = join(root, '.agents/skills/process-evidence-mapping/scripts/update-input-baseline-review-todo-md.mjs');
+const issueInput = join(runDir, 'view-input.json');
+const issueView = join(runDir, 'view-output.md');
+const openIssue = output.pending_issues.find(item => item.issue_type === 'A1 行为待确认' && item.current_value);
+writeFileSync(mappingPath, `# 已有名称\n\n${openIssue.current_value}\n`);
+function renderIssue(issue) {
+  writeFileSync(issueInput, JSON.stringify({ pending_issues: [issue] }));
+  execFileSync(process.execPath, [todoGenerator, '--review-items', issueInput, '--mapping', mappingPath, '--todo', issueView], { cwd: root, stdio: 'pipe' });
+  return readFileSync(issueView, 'utf8');
+}
+assert.equal((renderIssue(openIssue).match(/^\| DSO-/gm) || []).length, 1, 'same-name mappings cannot close an unresolved issue');
+assert.equal((renderIssue({ ...openIssue, user_decision: '不是问题', user_reason: null }).match(/^\| DSO-/gm) || []).length, 1, 'a decision without its reason cannot close an issue');
+assert.equal((renderIssue({ ...openIssue, user_decision: '修改源文件后重新导入', user_reason: '计划修改' }).match(/^\| DSO-/gm) || []).length, 1, 'a planned correction is not a resolved issue');
+assert.equal((renderIssue({ ...openIssue, user_decision: '不是问题', user_reason: '经核对，该字段不适用于本行为。' }).match(/^\| DSO-/gm) || []).length, 0);
+writeFileSync(issueView, renderIssue(openIssue).replace('| 待处理 |', '| 已处理 |'));
+assert.match(renderIssue(openIssue), /\| 待处理 \|/, 'a derived markdown annotation cannot override v2 state');
+
 const forbiddenOutputPath = join(runDir, 'forbidden-image-text-status.json');
 const forbiddenOutput = structuredClone(output);
 forbiddenOutput.evidence_catalog[0].status = `${['o', 'c', 'r'].join('')}_extracted_not_confirmed`;
@@ -157,7 +195,11 @@ const blockedResult = spawnSync(process.execPath, [
   encoding: 'utf8',
 });
 assert.notEqual(blockedResult.status, 0, 'image input must block the workflow');
-assert.match(`${blockedResult.stdout}\n${blockedResult.stderr}`, /图片来源不进入本技能/);
+assert.match(`${blockedResult.stdout}\n${blockedResult.stderr}`, /存在不可直接读取的来源/);
+const blockedSources = readFileSync(join(blockedRunDir, 'source_manifest.jsonl'), 'utf8').trim().split(/\r?\n/).map(line => JSON.parse(line));
+assert.equal(blockedSources.length, 1);
+assert.equal(blockedSources[0].extraction_status, 'blocked_unreadable');
+assert.ok(blockedSources[0].source_file.endsWith('blocked-image.png'));
 assert.equal(existsSync(join(blockedRunDir, 'document-structured-output-v2.json')), false, 'blocked source must not produce v2 output');
 
 const mixedBlockedResult = spawnSync(process.execPath, [

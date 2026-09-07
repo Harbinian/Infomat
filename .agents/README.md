@@ -25,3 +25,5 @@
 4. 新增技能时，写清适用场景、输入、输出和不适用边界。
 5. `process-evidence-mapping` 的唯一机器主产物是 `document-structured-output-v2.json`；中间候选和 Markdown 视图不得替代标准合同或流程输入基线。
 6. 中文正式交付物先使用 `technical-chinese-writer` 锁定事实和责任；`humanizer-zh` 只在用户点名时进行受限文风清理。
+7. BBM/DCM 兼容入口只转向主技能，其 `references/prompts.md` 属于历史材料，不授权执行旧写回或页面发布步骤。
+8. 数据库转流程技能保留旧草稿人工内容；无法匹配的流程结构和冲突关系明确阻断。只读核验须绑定本次快照，实时证据只覆盖实际查询的列摘要，不扩展为流程或业务结论。

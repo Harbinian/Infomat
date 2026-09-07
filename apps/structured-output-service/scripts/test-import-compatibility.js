@@ -6,10 +6,17 @@ const appRoot = path.join(__dirname, '..');
 const repoRoot = path.join(appRoot, '..', '..');
 const Migration = require(path.join(appRoot, 'public', 'process-governance-migration.js'));
 const ImportCompatibility = require(path.join(appRoot, 'public', 'import-compatibility.js'));
+const { createNativeV7NormalizationFixture } = require('./process-version-fixtures');
 const { app } = require(path.join(appRoot, 'server.js'));
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
+}
+
+function reverseObjectKeys(value) {
+  if (Array.isArray(value)) return value.map(reverseObjectKeys);
+  if (!value || typeof value !== 'object') return value;
+  return Object.fromEntries(Object.keys(value).reverse().map(key => [key, reverseObjectKeys(value[key])]));
 }
 
 async function validate(baseUrl, data) {
@@ -136,6 +143,112 @@ async function testExplicitTechnicalRepairCanDownloadAndReimport(baseUrl) {
   );
 }
 
+async function testNativeV7DynamicActorNormalizationIsArchivedAndVisible(baseUrl) {
+  const source = createNativeV7NormalizationFixture();
+  const sourceSnapshot = clone(source);
+  const sourceValidation = await validate(baseUrl, source);
+  assert.equal(sourceValidation.valid, true, JSON.stringify(sourceValidation.errors));
+
+  const normalized = Migration.migrateDocument(source)[0];
+  assert.deepEqual(source, sourceSnapshot, 'native v7 normalization must not modify its source object');
+  assert.deepEqual(
+    normalized.behaviors.map(item => item.current_actor_role),
+    ['', ''],
+    'dynamic actor roles must be cleared from the active structure'
+  );
+  assert.equal(normalized.migration.unresolved_actor_roles.length, 2);
+  normalized.migration.unresolved_actor_roles.forEach((archive, index) => {
+    const original = source.behaviors[index];
+    assert.equal(archive.behavior_ref, original.behavior_ref);
+    assert.equal(archive.raw_actor_role, original.current_actor_role);
+    assert.equal(archive.original_actor_assignment_mode, 'dynamic_from_data');
+    assert.equal(archive.source_schema_version, 'process-governance-v7');
+    assert.match(archive.record_ref, /^unresolved_actor_role_[0-9a-f]{8}$/);
+    assert.match(archive.reason, /动态责任.*原值保存在迁移归档/);
+  });
+  assert.notEqual(
+    normalized.migration.unresolved_actor_roles[0].record_ref,
+    normalized.migration.unresolved_actor_roles[1].record_ref,
+    'each business behavior must receive its own stable archive identifier'
+  );
+
+  const targetValidation = await validate(baseUrl, normalized);
+  assert.equal(targetValidation.valid, true, JSON.stringify(targetValidation.errors));
+  const rerun = Migration.migrateDocument(clone(normalized))[0];
+  assert.deepEqual(rerun, normalized, 're-importing normalized v7 must be idempotent');
+  assert.equal(rerun.migration.unresolved_actor_roles.length, 2, 're-import must not duplicate archives');
+  const alreadyArchivedSource = clone(normalized);
+  alreadyArchivedSource.behaviors[0].current_actor_role = source.behaviors[0].current_actor_role;
+  assert.deepEqual(
+    Migration.migrateDocument(alreadyArchivedSource)[0],
+    normalized,
+    'an existing semantic archive must be reused when the same native v7 value is normalized again'
+  );
+
+  const summary = ImportCompatibility.summarizeNormalization(source, normalized);
+  assert.equal(summary.changed, true);
+  assert.equal(summary.totalChanges, 2, 'dynamic responsibility changes must be grouped by business behavior');
+  assert.equal(summary.shownChanges, 2);
+  assert.equal(summary.truncated, false);
+  assert.deepEqual(summary.changes.map(change => change.code), [
+    'DYNAMIC_ACTOR_ROLE_ARCHIVED',
+    'DYNAMIC_ACTOR_ROLE_ARCHIVED'
+  ]);
+  summary.changes.forEach((change, index) => {
+    const original = source.behaviors[index];
+    const archive = normalized.migration.unresolved_actor_roles[index];
+    assert.equal(change.path, `/behaviors/${index}/current_actor_role`);
+    assert.equal(change.stable_object_ref, original.behavior_ref);
+    assert.equal(change.object_name, original.behavior_name);
+    assert.equal(change.before_present, true);
+    assert.equal(change.before_value, original.current_actor_role);
+    assert.equal(change.after_present, true);
+    assert.equal(change.after_value, '');
+    assert.equal(change.migration_archive_ref, archive.record_ref);
+  });
+}
+
+function testNormalizationComparisonIgnoresObjectKeyOrderButPreservesUnknownDifferences() {
+  const normalized = Migration.migrateDocument(createNativeV7NormalizationFixture())[0];
+  const reordered = reverseObjectKeys(normalized);
+  assert.deepEqual(
+    ImportCompatibility.summarizeNormalization(reordered, normalized),
+    { changed: false, totalChanges: 0, shownChanges: 0, truncated: false, changes: [] },
+    'object key order alone must not create an import normalization difference'
+  );
+  const arrayReordered = clone(normalized);
+  arrayReordered.behaviors.reverse();
+  assert.equal(
+    ImportCompatibility.summarizeNormalization(normalized, arrayReordered).changed,
+    true,
+    'array order changes must remain visible'
+  );
+
+  const changed = clone(normalized);
+  changed.process.purpose = '规范化后的未知差异';
+  const unknown = ImportCompatibility.summarizeNormalization(normalized, changed);
+  assert.equal(unknown.changed, true);
+  assert.equal(unknown.totalChanges, 1);
+  assert.equal(unknown.changes[0].code, 'NORMALIZATION_VALUE_CHANGED');
+  assert.equal(unknown.changes[0].path, '/process/purpose');
+  assert.equal(unknown.changes[0].stable_object_ref, normalized.process.process_ref);
+  assert.equal(unknown.changes[0].object_name, normalized.process.process_name);
+  assert.equal(unknown.changes[0].before_value, normalized.process.purpose);
+  assert.equal(unknown.changes[0].after_value, changed.process.purpose);
+}
+
+function testNormalizationSummaryUsesExactTotalAndTwoHundredItemLimit() {
+  const before = { values: Array.from({ length: 205 }, (_item, index) => `before-${index}`) };
+  const after = { values: Array.from({ length: 205 }, (_item, index) => `after-${index}`) };
+  const summary = ImportCompatibility.summarizeNormalization(before, after);
+  assert.equal(summary.changed, true);
+  assert.equal(summary.totalChanges, 205);
+  assert.equal(summary.shownChanges, 200);
+  assert.equal(summary.truncated, true);
+  assert.equal(summary.changes.length, 200);
+  assert.equal(summary.changes[199].path, '/values/199');
+}
+
 async function run() {
   const server = await new Promise(resolve => {
     const instance = app.listen(0, '127.0.0.1', () => resolve(instance));
@@ -148,6 +261,9 @@ async function run() {
     testStrictlyValidTargetNeedsNoRepair();
     testOneBrokenCandidateRejectsTheWholeBatch();
     await testExplicitTechnicalRepairCanDownloadAndReimport(baseUrl);
+    await testNativeV7DynamicActorNormalizationIsArchivedAndVisible(baseUrl);
+    testNormalizationComparisonIgnoresObjectKeyOrderButPreservesUnknownDifferences();
+    testNormalizationSummaryUsesExactTotalAndTwoHundredItemLimit();
   } finally {
     await new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
   }
