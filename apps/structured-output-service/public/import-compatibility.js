@@ -212,10 +212,54 @@
     };
   }
 
+  function lifecycleStateErrorPath(error, errors) {
+    const path = String(error?.path || error?.instancePath || '');
+    const statePattern = /^\/data_objects\/\d+\/lifecycle\/(?:entry_state|routes\/\d+\/(?:exit_state|events\/\d+\/result_state))$/;
+    const statePath = path.replace(/\/identifiability$/, '');
+    if (!statePattern.test(statePath)) return '';
+    if (path.endsWith('/identifiability')) {
+      if (error.keyword === 'const' && error.params?.allowedValue === 'not_applicable') return statePath;
+      const allowed = error.params?.allowedValues;
+      if (error.keyword === 'enum' && Array.isArray(allowed) && allowed.length === 3
+        && ['identifiable', 'irreversibly_anonymized', 'pending_confirmation'].every(value => allowed.includes(value))) return statePath;
+    }
+    if (error.keyword === 'if' && error.params?.failingKeyword === 'then'
+      && errors.some(item => (item.path || item.instancePath) === `${statePath}/identifiability` && lifecycleStateErrorPath(item, []) === statePath)) return statePath;
+    return '';
+  }
+
+  function allowsPreservedLifecycleErrors(before, after, validation) {
+    if (validation?.valid === true) return true;
+    const errors = Array.isArray(validation?.errors) ? validation.errors : [];
+    return errors.length > 0 && errors.every(error => {
+      const path = lifecycleStateErrorPath(error, errors);
+      if (!path) return false;
+      const parts = pointerSegments(path);
+      const nextObject = after?.data_objects?.[Number(parts[1])];
+      const oldObjects = (before?.data_objects || []).filter(item => item.data_ref === nextObject?.data_ref);
+      if (oldObjects.length !== 1 || !nextObject?.data_ref) return false;
+      const oldLifecycle = oldObjects[0].lifecycle, nextLifecycle = nextObject.lifecycle;
+      let previous = oldLifecycle?.entry_state, next = nextLifecycle?.entry_state;
+      if (parts[3] === 'routes') {
+        const route = nextLifecycle?.routes?.[Number(parts[4])];
+        const oldRoutes = (oldLifecycle?.routes || []).filter(item => item.route_ref === route?.route_ref);
+        if (!route?.route_ref || oldRoutes.length !== 1) return false;
+        previous = oldRoutes[0].exit_state; next = route.exit_state;
+        if (parts[5] === 'events') {
+          const event = route.events?.[Number(parts[6])];
+          const oldEvents = (oldRoutes[0].events || []).filter(item => item.event_ref === event?.event_ref);
+          if (!event?.event_ref || oldEvents.length !== 1) return false;
+          previous = oldEvents[0].result_state; next = event.result_state;
+        }
+      }
+      return Boolean(previous && next) && collectDifferences(previous, next).length === 0;
+    });
+  }
+
   function classifyPostMigrationValidation(validation) {
     if (validation?.valid === true) return { allowed: true, repairableErrors: [] };
     const errors = Array.isArray(validation?.errors) ? validation.errors : [];
-    if (!errors.length || !errors.every(error => repairableRuleCodes.has(error?.rule_code))) {
+    if (!errors.length || !errors.every(error => repairableRuleCodes.has(error?.rule_code) || lifecycleStateErrorPath(error, errors))) {
       return { allowed: false, repairableErrors: [] };
     }
     return { allowed: true, repairableErrors: errors };
@@ -249,6 +293,8 @@
     NORMALIZATION_DETAIL_LIMIT,
     classifyPostMigrationValidation,
     classifyPostMigrationBatch,
-    summarizeNormalization
+    summarizeNormalization,
+    lifecycleStateErrorPath,
+    allowsPreservedLifecycleErrors
   };
 }));
