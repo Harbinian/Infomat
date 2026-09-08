@@ -59,7 +59,7 @@ assert.match(html, /grid-template-columns: minmax\(0, 1fr\); gap: 12px; \}/);
 assert.doesNotMatch(html, /第4步维护的条件/);
 assert.doesNotMatch(html, /diagramExpanded = next === 'skeleton' && activeStepView === 'diagram'/);
 assert.match(html, /data-action="toggle-diagram-expanded"/);
-assert.match(html, /清晰检查（100%）/);
+assert.match(html, /data-action="reset-flow-diagram">清晰检查/);
 assert.match(html, /查看全图/);
 
 [
@@ -70,7 +70,7 @@ assert.match(html, /查看全图/);
   'const BADGE_FONT_SIZE = 36;',
   'const EDGE_FONT_SIZE = 39;'
 ].forEach(source => assert.ok(diagram.includes(source), `missing three-times diagram style: ${source}`));
-assert.match(diagram, /cy\.zoom\(1\);/);
+assert.match(diagram, /Math\.min\(1, \(cy\.width\(\) - 48\) \/ bounds\.w/);
 assert.match(diagram, /mode: 'clear'/);
 assert.match(diagram, /options\.selectedFocus/);
 

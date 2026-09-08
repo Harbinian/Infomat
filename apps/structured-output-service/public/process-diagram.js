@@ -574,7 +574,7 @@
     return laneReserves;
   }
 
-  function adjustPositionedRelationRoutes(validRelations, behaviorRecordById, routeTrackGap) {
+  function adjustPositionedRelationRoutes(validRelations, behaviorRecordById, routeTrackGap, bundleByRelationIndex) {
     const trackStateByBucket = new Map();
     validRelations
       .slice()
@@ -588,8 +588,9 @@
         const sourceHalfHeight = (sourceNode.data.nodeHeight || 90) / 2;
         const targetHalfHeight = (targetNode.data.nodeHeight || 90) / 2;
         const targetDelta = targetNode.position.y - sourceNode.position.y;
+        const bundleClearance = bundleByRelationIndex.get(item.index)?.approach === 'bottom' ? BUNDLE_TRUNK_LENGTH : 0;
         const endpointClearance = route.placement === 'lower'
-          ? Math.max(sourceHalfHeight, targetDelta + targetHalfHeight)
+          ? Math.max(sourceHalfHeight, targetDelta + targetHalfHeight + bundleClearance)
           : Math.max(sourceHalfHeight, -targetDelta + targetHalfHeight);
         const labelHalfHeight = route.labelDisplay.labelHeight / 2;
         const state = trackStateByBucket.get(route.bucket) || { nextOffset: 0 };
@@ -712,6 +713,16 @@
     const sourcePosition = sourceNode.position;
     const targetPosition = destinationNode.position;
     const deltaX = targetPosition.x - sourcePosition.x;
+    const deltaY = targetPosition.y - sourcePosition.y;
+    const distanceSquared = deltaX * deltaX + deltaY * deltaY;
+    const plannedPoints = route.placement !== 'direct' && distanceSquared > 0
+      ? routeSegmentsFor(item, sourceNode, destinationNode).slice(0, -1).map(segment => segment.to)
+      : [];
+    // Project the planned bends onto Cytoscape's node-position coordinate basis.
+    const segmentWeights = plannedPoints.map(point =>
+      ((point.x - sourcePosition.x) * deltaX + (point.y - sourcePosition.y) * deltaY) / distanceSquared);
+    const segmentDistances = plannedPoints.map(point =>
+      (deltaX * (point.y - sourcePosition.y) - deltaY * (point.x - sourcePosition.x)) / Math.sqrt(distanceSquared));
     const labelCenter = route.placement !== 'direct'
       ? {
           x: (sourcePosition.x + targetPosition.x) / 2,
@@ -740,6 +751,8 @@
           : '',
         route.forwardBranch ? 'route-forward-branch' : '',
         route.placement !== 'direct' ? `route-${route.placement}` : '',
+        plannedPoints.length ? 'planned-route' : '',
+        item.sourceId === destinationNode.data.id ? 'self-route' : '',
         bundle ? 'relation-bundle-member' : 'relation-terminal-segment',
         reviewRelationIndexes.has(item.index) ? 'relation-review' : ''
       ].filter(Boolean).join(' '),
@@ -760,6 +773,8 @@
         routeOffset: route.offset,
         taxiTurn: route.offset || Math.max(24, Math.round(Math.abs(deltaX) / 2)),
         taxiDirection: route.placement === 'upper' ? 'upward' : 'downward',
+        segmentWeights: segmentWeights.join(' '),
+        segmentDistances: segmentDistances.join(' '),
         routeTrackKey: route.trackKey,
         targetEndpoint: item.relation.relation_type === 'loop' ? '50% 100%' : '',
         bundleId: bundle?.bundleId || '',
@@ -1232,12 +1247,11 @@
       laneTop += laneHeight;
     });
 
-    adjustPositionedRelationRoutes(validRelations, behaviorRecordById, routeTrackGap);
-
     const { bundles, bundleByRelationIndex } = buildRelationBundles(
       validRelations,
       behaviorRecordById
     );
+    adjustPositionedRelationRoutes(validRelations, behaviorRecordById, routeTrackGap, bundleByRelationIndex);
     const bundleVisuals = bundleElements(bundles, behaviorRecordById);
     nodes.push(...bundleVisuals.nodes);
     const localRelationEdges = validRelations.map(item =>
@@ -1754,6 +1768,24 @@
         }
       },
       {
+        selector: '.self-route',
+        style: {
+          'curve-style': 'bezier',
+          'loop-direction': '180deg',
+          'loop-sweep': '60deg',
+          'control-point-step-size': 180 * DIAGRAM_SCALE
+        }
+      },
+      {
+        selector: '.planned-route',
+        style: {
+          'curve-style': 'segments',
+          'edge-distances': 'node-position',
+          'segment-weights': 'data(segmentWeights)',
+          'segment-distances': 'data(segmentDistances)'
+        }
+      },
+      {
         selector: '.internal-call-edge',
         style: {
           width: 9,
@@ -1794,14 +1826,34 @@
     ];
   }
 
-  function showInitialViewport(cy, model) {
+  function fitViewport(cy) {
     cy.resize();
+    const bounds = cy.elements().boundingBox();
+    const fitZoom = Math.min((cy.width() - 48) / bounds.w, (cy.height() - 48) / bounds.h);
+    if (Number.isFinite(fitZoom) && fitZoom > 0) cy.minZoom(Math.min(0.03, fitZoom));
     cy.fit(undefined, 24);
-    const fullFitZoom = cy.zoom();
-    cy.zoom(1);
-    cy.pan({ x: 24, y: 24 });
+    return cy.zoom();
+  }
+
+  function showInitialViewport(cy, model) {
+    const fullFitZoom = fitViewport(cy);
+    const selected = cy.$(':selected');
+    const selectedNode = selected.nodes().filter(node => node.data('focusKind') === 'behavior')[0]
+      || selected.edges()[0]?.source();
+    const firstNode = model.nodes
+      .filter(node => node.data.focusKind === 'behavior')
+      .sort((left, right) => (left.data.layoutRank || 0) - (right.data.layoutRank || 0)
+        || left.position.x - right.position.x || left.position.y - right.position.y)[0];
+    const anchor = selectedNode || (firstNode && cy.getElementById(firstNode.data.id));
+    const bounds = anchor?.length ? anchor.boundingBox({ includeLabels: true }) : null;
+    const zoom = bounds
+      ? Math.max(cy.minZoom(), Math.min(1, (cy.width() - 48) / bounds.w, (cy.height() - 48) / bounds.h))
+      : 1;
+    cy.zoom(zoom);
+    cy.pan(bounds ? { x: 24 - bounds.x1 * zoom, y: 24 - bounds.y1 * zoom } : { x: 24, y: 24 });
     return {
       mode: 'clear',
+      zoom,
       fullFitZoom
     };
   }
@@ -1867,8 +1919,7 @@
       cy,
       model,
       fit() {
-        cy.resize();
-        cy.fit(undefined, 24);
+        fitViewport(cy);
         const viewport = {
           mode: 'full',
           fullFitZoom: cy.zoom()

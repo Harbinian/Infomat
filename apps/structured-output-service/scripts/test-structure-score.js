@@ -724,6 +724,28 @@ assert.ok(dataFlowDetails.issues[0].message.includes('后续行为'));
 assert.ok(content(futureDataDocument).issues.some(item => item.category === '数据时序'));
 
 const selfDataDocument = createDocument(2);
+for (const version of [4, 5, 6, 7]) {
+  const pendingDataDocument = createDocument(3);
+  pendingDataDocument.schema_version = `process-governance-v${version}`;
+  const pendingData = pendingDataDocument.data_objects[0];
+  delete pendingData.produced_by_behavior_ref;
+  pendingData.behavior_links = [
+    { behavior_ref: 'behavior-3', operation: 'pending_confirmation' },
+    { behavior_ref: 'behavior-1', operation: 'use' }
+  ];
+  const unchanged = JSON.stringify(pendingDataDocument);
+  assert.equal(dataFlowConsistencyDetails(pendingDataDocument).issues.length, 0,
+    'An unconfirmed operation must not imply creation or recommend removing earlier uses');
+  assert.equal(JSON.stringify(pendingDataDocument), unchanged, 'Review must preserve unconfirmed facts');
+  pendingData.behavior_links[0].operation = 'create';
+  assert.equal(dataFlowConsistencyDetails(pendingDataDocument).issues[0].reason, 'future_data',
+    'An explicit later creation must still warn about earlier use');
+  pendingData.behavior_links.unshift({ behavior_ref: 'behavior-2', operation: 'create' });
+  const multiple = dataFlowConsistencyDetails(pendingDataDocument).issues;
+  assert.ok(multiple.some(issue => issue.reason === 'multiple_legacy_producers'));
+  assert.equal(multiple.some(issue => issue.reason === 'future_data'), false,
+    'Multiple declared creators must not silently select one creator');
+}
 selfDataDocument.data_objects[0].consumed_by_behavior_refs = ['behavior-1'];
 assert.equal(dataFlowConsistencyDetails(selfDataDocument).issues[0].reason, 'self_consumption');
 
