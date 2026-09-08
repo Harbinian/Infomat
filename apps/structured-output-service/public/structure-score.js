@@ -982,21 +982,18 @@
         .filter(link => link?.operation === 'create')
         .map(link => text(link.behavior_ref))
         .filter(ref => behaviorRefs.has(ref));
-      const v4PendingRefs = v4Links
-        .filter(link => link?.operation === 'pending_confirmation')
-        .map(link => text(link.behavior_ref))
-        .filter(ref => behaviorRefs.has(ref));
+      const modernDataModel = ['process-governance-v4', 'process-governance-v5', 'process-governance-v6', 'process-governance-v7'].includes(data.schema_version);
       const canonicalProducerRef = v4CreateRefs.length === 1
         ? v4CreateRefs[0]
-        : text(item.produced_by_behavior_ref);
-      const modernDataModel = ['process-governance-v4', 'process-governance-v5', 'process-governance-v6', 'process-governance-v7'].includes(data.schema_version);
+        : modernDataModel ? '' : text(item.produced_by_behavior_ref);
       const legacyProducerRefs = modernDataModel
-        ? v4PendingRefs
+        ? []
         : behaviors
           .filter(behavior => Array.isArray(behavior.output_data_refs) && behavior.output_data_refs.includes(dataRef))
           .map(behavior => text(behavior.behavior_ref))
           .filter(ref => behaviorRefs.has(ref));
       const producerRefs = [...new Set([
+        ...v4CreateRefs,
         ...(behaviorRefs.has(canonicalProducerRef) ? [canonicalProducerRef] : []),
         ...legacyProducerRefs
       ])];

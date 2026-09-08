@@ -6510,7 +6510,7 @@
     function renderGraphViewActions(kind) {
       if (kind === 'flow') {
         return `
-          <button class="button primary small" data-action="reset-flow-diagram">清晰检查（100%）</button>
+          <button class="button primary small" data-action="reset-flow-diagram">清晰检查</button>
           <button class="button secondary small" data-action="fit-flow-diagram">查看全图</button>`;
       }
       return `
@@ -6735,7 +6735,7 @@
             ${compactTaskUiEnabled() ? `<details><summary class="button small">查看流程图图例</summary>${renderDiagramLegend()}</details>` : renderDiagramLegend()}
             ${collisionNotice}
             <div class="diagram-notice" id="diagramViewportNotice" role="status" hidden>
-              当前按100%字号从流程开头清晰检查；需要总览时点击“查看全图”
+              清晰检查定位选中节点或流程起点，并按画布适配；需要总览时点击“查看全图”。
             </div>
             <div class="graph-editor-layout flow-graph-editor-layout">
               <div>
@@ -7479,7 +7479,12 @@
           onFocus: handleFlowDiagramFocus,
           onViewportModeChange(viewport) {
             const notice = document.getElementById('diagramViewportNotice');
-            if (notice) notice.hidden = viewport?.mode !== 'clear';
+            if (notice) {
+              notice.hidden = viewport?.mode !== 'clear';
+              if (viewport?.mode === 'clear') {
+                notice.textContent = `已定位选中节点或流程起点，当前缩放${Math.round(viewport.zoom * 100)}%；需要总览时点击“查看全图”。`;
+              }
+            }
           }
         });
         if (compactTaskUiEnabled() && !reviewContext().diagramInitialized) {
@@ -8027,9 +8032,9 @@
         }
         if (text(target.formItemRef)) activeFormItemRef = text(target.formItemRef);
         const itemPath = focusPaths
-          .map(path => path.match(/^forms\.(\d+)\.areas\.(\d+)\.items\.(\d+)\.(?:business_data_ref|value_origin_mode|source_links)/))
+          .map(path => path.match(/^forms\.(\d+)\.areas\.(\d+)\.items\.(\d+)\.(?:business_data_ref|data_field_ref|value_usage_mode|value_origin_mode|source_links)(?:\.|$)/))
           .find(Boolean);
-        if (itemPath) {
+        if (itemPath && !text(target.formItemRef)) {
           activeFormItemRef = currentDocument()?.forms?.[Number(itemPath[1])]
             ?.areas?.[Number(itemPath[2])]?.items?.[Number(itemPath[3])]?.item_ref || '';
         }

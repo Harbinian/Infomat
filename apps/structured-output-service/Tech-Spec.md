@@ -4,6 +4,16 @@
 
 ## 当前v7技术补充（2026-09-08）
 
+### 流程图真实路径、清晰视图与字段提示定位
+
+`ProcessDiagram.relationEdge()`将`routeSegmentsFor()`规划的外侧折点投影为Cytoscape的`segment-weights`和`segment-distances`，以`edge-distances=node-position`绘制`planned-route`。真实折点、条件文字中心与规划通道一致；节点身份、关系选择及合流公共入线保持。公共退回连接点先生成，再将其长度计入轨道净空，避免折点落在连接点内部而产生无效端点；直接返回自身的关系使用Cytoscape原生Bezier自环。验证应读取真实`segmentPoints()`、`midpoint()`和端点并检查节点穿越，不能仅以模型`collisions=[]`作为渲染正确的证据。
+
+清晰视图优先定位选中业务节点，选中关系时定位其起点，没有选择时按布局顺序定位流程起点。缩放不超过1；画布放不下节点时缩小至完整可见，页面显示实际比例。全图适配根据实际边界降低最小缩放限制，避免长流程受0.03下限裁切。本项覆盖下文历史“固定100%”要求；不会自动全屏或保存图坐标。
+
+`focusEditorTarget()`识别字段的`data_field_ref`和`value_usage_mode`路径，与既有取值方式及来源路径共同打开字段数据关系。已有`formItemRef`优先于数组索引定位；导航继续受统一未应用修改保护约束。
+
+`dataFlowConsistencyDetails()`对v4至v7仅以明确`create`关系推导创建行为，`pending_confirmation`不再成为历史产生行为；多创建关系保持冲突，不选择其中一条推导时序。v1至v3历史产生字段兼容仍保留。以上变更不修改Schema、字段、枚举、API或导入导出格式。浏览器回归入口为`scripts/process-diagram-rendering-browser-scenario.js`，调用方式见README。
+
 ### 生命周期编辑与草稿下载修复
 
 `LifecycleAnalyzer.changeIdentifiability()`仅响应用户显式选择，成对更新`identifiability_applicability`与`identifiability`：不适用时写入`not_applicable`；由不适用改回适用或待确认时，结果退回`pending_confirmation`。入口状态、路径退出状态与事件结果状态复用同一逻辑；读取和重绘不修正原文件。已选“不会”的选择框仍可操作，历史不一致值提供显式确认修正按钮。未选对象的生命周期页面提供实际选择框。
