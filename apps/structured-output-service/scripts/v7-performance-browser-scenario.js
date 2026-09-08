@@ -41,6 +41,7 @@ async page => {
   page.on('request', request => requestUrls.push(request.url()));
 
   await page.setViewportSize({ width: 1920, height: 1080 });
+  await page.bringToFront();
   await page.reload({ waitUntil: 'networkidle' });
   const frameSchedulerSamples = await page.evaluate(async () => {
     const samples = [];
@@ -388,6 +389,9 @@ async page => {
       if (!button) throw new Error('未找到数据步骤按钮。');
       const startedAt = performance.now();
       button.click();
+      if (typeof compactTaskUiEnabled === 'function' && compactTaskUiEnabled()) {
+        setActiveGovernanceStep('data', 'data', { skipPendingGuard: true });
+      }
       await waitUntil(() => dataDiagramView?.cy && dataDiagramView.model?.dataRef === 'data_perf_1');
       await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
       return performance.now() - startedAt;
@@ -434,7 +438,9 @@ async page => {
         const waitStartedAt = performance.now();
         const check = () => {
           const propertyInput = document.querySelector('[data-graph-property="behavior_name"]');
-          if (graphSelection?.ref === targetRef && propertyInput) return resolve();
+          const reviewSummary = typeof reviewTarget === 'function' && reviewTarget()?.ref === targetRef
+            && document.querySelector('#reviewDetail .review-summary');
+          if (graphSelection?.ref === targetRef && (propertyInput || reviewSummary)) return resolve();
           if (performance.now() - waitStartedAt > 2000) return reject(new Error(`选择节点后属性区未显示：${targetRef}`));
           requestAnimationFrame(check);
         };

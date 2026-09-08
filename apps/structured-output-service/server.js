@@ -115,7 +115,8 @@ const APP_COMMIT = repositoryCommit();
 
 function structuredOutputUiConfig(env = process.env) {
   return {
-    compact_task_ui_enabled: String(env && env.STRUCTURED_OUTPUT_COMPACT_TASK_UI_ENABLED || '') === '1',
+    compact_task_ui_enabled: env?.STRUCTURED_OUTPUT_COMPACT_TASK_UI_ENABLED == null
+      || String(env.STRUCTURED_OUTPUT_COMPACT_TASK_UI_ENABLED) === '1',
     compact_task_ui_status: 'candidate',
     internal_workflow_step_count: 7,
     visible_task_count: 4

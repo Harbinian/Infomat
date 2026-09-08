@@ -2568,6 +2568,7 @@ async function testFrontendContract() {
   let touchCount = 0;
   const sortContext = {
     text: value => value == null ? '' : String(value),
+    compactTaskUiEnabled: () => false,
     currentDocument: () => sortDocument,
     activeBehaviorRef: '', activeRelationRef: '', activeDataRef: '', activeTermRef: '',
     workspace: {
