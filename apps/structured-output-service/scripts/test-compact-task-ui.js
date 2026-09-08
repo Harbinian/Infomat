@@ -4,20 +4,21 @@ const path = require('path');
 const { structuredOutputUiConfig } = require('../server');
 
 assert.deepStrictEqual(structuredOutputUiConfig({}), {
-  compact_task_ui_enabled: false,
+  compact_task_ui_enabled: true,
   compact_task_ui_status: 'candidate',
   internal_workflow_step_count: 7,
   visible_task_count: 4
 });
 assert.strictEqual(structuredOutputUiConfig({ STRUCTURED_OUTPUT_COMPACT_TASK_UI_ENABLED: '1' }).compact_task_ui_enabled, true);
+assert.strictEqual(structuredOutputUiConfig({ STRUCTURED_OUTPUT_COMPACT_TASK_UI_ENABLED: '0' }).compact_task_ui_enabled, false);
 assert.strictEqual(structuredOutputUiConfig({ STRUCTURED_OUTPUT_COMPACT_TASK_UI_ENABLED: 'true' }).compact_task_ui_enabled, false);
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
 [
-  "label: '文件与边界', steps: Object.freeze(['start', 'boundary'])",
-  "label: '流程、执行人、动作与异常', steps: Object.freeze(['skeleton', 'action'])",
-  "label: '数据与表单', steps: Object.freeze(['data'])",
-  "label: '检查与保存', steps: Object.freeze(['cross-department', 'handoff'])"
+  "label: '流程信息', steps: Object.freeze(['start', 'boundary'])",
+  "label: '流程图', steps: Object.freeze(['skeleton', 'action'])",
+  "label: '全流程数据与表单', steps: Object.freeze(['data'])",
+  "label: '检查与下载', steps: Object.freeze(['cross-department', 'handoff'])"
 ].forEach(fragment => assert.ok(html.includes(fragment), `missing compact-task mapping: ${fragment}`));
 assert.match(html, /let uiConfig = \{ compact_task_ui_enabled: false/);
 assert.match(html, /fetch\('\/api\/ui-config', \{ cache: 'no-store' \}\)/);
@@ -39,4 +40,4 @@ const serverSource = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'u
 assert.match(serverSource, /app\.get\('\/api\/ui-config'/);
 assert.match(serverSource, /STRUCTURED_OUTPUT_COMPACT_TASK_UI_ENABLED/);
 
-console.log('Compact four-task candidate UI contract tests passed');
+console.log('Four-task UI default and explicit fallback contract tests passed');

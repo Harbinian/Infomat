@@ -7,6 +7,7 @@ const repoRoot = path.join(appRoot, '..', '..');
 const Migration = require(path.join(appRoot, 'public', 'process-governance-migration.js'));
 const ImportCompatibility = require(path.join(appRoot, 'public', 'import-compatibility.js'));
 const { createNativeV7NormalizationFixture } = require('./process-version-fixtures');
+const { createReviewLayoutFixture } = require('./review-layout-fixture');
 const { app } = require(path.join(appRoot, 'server.js'));
 
 function clone(value) {
@@ -28,6 +29,38 @@ async function validate(baseUrl, data) {
   const body = await response.json();
   assert.equal(response.status, 200, JSON.stringify(body));
   return body;
+}
+
+async function testNativeDraftRecoveryPreservesSemanticErrors(baseUrl) {
+  for (const damage of [
+    data => data.data_objects[0].fields.push({...clone(data.data_objects[0].fields[0]),field_ref:'field_duplicate_name'}),
+    data => { data.forms[0].areas[0].items[0].data_field_ref = 'field_missing'; },
+    data => { data.flow_relations[0].to_behavior_ref = data.flow_relations[0].from_behavior_ref; }
+  ]) {
+    const data = createReviewLayoutFixture();
+    damage(data);
+    const bytes = JSON.stringify(data);
+    const validation = await validate(baseUrl,data);
+    assert.equal(validation.valid,false,'Strict validation must still report the original error');
+    assert.equal(ImportCompatibility.classifyNativeDraftValidation(data,validation).allowed,true);
+    assert.equal(JSON.stringify(data),bytes,'Recovery classification cannot normalize, merge or delete values');
+    assert.equal(ImportCompatibility.classifyPostMigrationBatch([validation]).allowed,false,'Historical migration must retain its atomic rejection boundary');
+    assert.equal(ImportCompatibility.classifyNativeDraftValidation({...data,schema_version:'process-governance-v6'},validation).allowed,false);
+  }
+  for (const damage of [
+    data => { data.data_objects = null; },
+    data => { data.behaviors[0].node_type = 'unknown'; },
+    data => { data.process.unexpected = 'preserve the current candidate instead'; },
+    data => { data.behaviors[1].behavior_ref = data.behaviors[0].behavior_ref; },
+    data => { data.forms[0].form_ref = data.data_objects[0].data_ref; },
+    data => { data.data_objects[0].fields.push(clone(data.data_objects[0].fields[0])); },
+    data => { data.forms[0].areas[0].items.push(clone(data.forms[0].areas[0].items[0])); }
+  ]) {
+    const data = createReviewLayoutFixture();
+    damage(data);
+    const validation = await validate(baseUrl,data);
+    assert.equal(ImportCompatibility.classifyNativeDraftValidation(data,validation).allowed,false,'Malformed shapes or ambiguous identities must not enter the editor');
+  }
 }
 
 async function testOfficialV3SampleEntersOnlyAsRepairableImport(baseUrl) {
@@ -256,6 +289,7 @@ async function run() {
   const { port } = server.address();
   const baseUrl = `http://127.0.0.1:${port}`;
   try {
+    await testNativeDraftRecoveryPreservesSemanticErrors(baseUrl);
     await testOfficialV3SampleEntersOnlyAsRepairableImport(baseUrl);
     testMixedTargetErrorsRemainRejected();
     testStrictlyValidTargetNeedsNoRepair();

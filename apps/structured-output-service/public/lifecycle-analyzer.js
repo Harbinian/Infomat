@@ -400,8 +400,18 @@
     return array(document?.data_objects).map(dataObject => analyzeDataObject(document, dataObject.data_ref));
   }
 
+  function changeIdentifiability(state, key, value) {
+    const next = { ...state, [key]: value };
+    if (key === 'identifiability_applicability') {
+      if (value === 'not_applicable') next.identifiability = 'not_applicable';
+      else if (next.identifiability === 'not_applicable') next.identifiability = 'pending_confirmation';
+    }
+    return next;
+  }
+
   return {
     ANALYZER_VERSION,
+    changeIdentifiability,
     ACTION_LABELS: { ...ACTION_LABELS },
     fingerprint,
     pendingState,

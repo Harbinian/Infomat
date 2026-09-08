@@ -1,0 +1,45 @@
+/* Layout only: colors, typography and control appearance come from the existing UI. */
+.compact-task-ui .governance-current { flex-wrap: wrap; }
+.compact-task-ui .governance-current label { white-space: nowrap; }
+.compact-task-ui .governance-current select { flex: 1 1 240px; min-width: 180px; }
+.compact-task-ui .governance-context { flex: 1 1 260px; flex-wrap: wrap; overflow: visible; }
+.compact-task-ui .governance-header-actions { position: relative; }
+.compact-task-ui .governance-header-actions .header-menu { position: static; }
+.compact-task-ui .authoring-guide { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
+.compact-task-ui .authoring-guide-copy { flex: 1 1 320px; min-width: 0; }
+.compact-task-ui .authoring-guide-copy p { margin: 4px 0 0; overflow-wrap: anywhere; }
+.compact-task-ui .authoring-guide-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.compact-task-ui .review-layout { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(340px, 0.9fr); gap: 12px; align-items: start; }
+.compact-task-ui .review-layout > * { min-width: 0; }
+.compact-task-ui .review-detail { position: sticky; top: 12px; max-height: calc(100vh - 160px); overflow: auto; overscroll-behavior: contain; }
+.compact-task-ui .review-detail .section-body { display: grid; gap: 12px; }
+.compact-task-ui .review-trail, .compact-task-ui .review-links { display: flex; flex-wrap: wrap; gap: 8px; }
+.compact-task-ui .review-links { flex-direction: column; align-items: stretch; }
+.compact-task-ui .review-links .button { white-space: normal; text-align: left; overflow-wrap: anywhere; }
+.compact-task-ui .review-summary { margin: 0; }
+.compact-task-ui .review-summary dt { margin-top: 8px; }
+.compact-task-ui .review-summary dd { margin: 4px 0 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.compact-task-ui .review-layout[data-size="detail"] { grid-template-columns: minmax(0, 1fr); }
+.compact-task-ui .review-layout[data-size="detail"] > .review-diagram { display: none; }
+.compact-task-ui .review-layout[data-size="detail"] .review-detail { position: static; max-height: none; }
+.compact-task-ui .review-layout .diagram-canvas { min-height: 460px; height: min(64vh, 720px); }
+.compact-task-ui .review-layout .diagram-toolbar { flex-wrap: wrap; }
+.compact-task-ui .review-layout .diagram-controls { flex-wrap: wrap; }
+.compact-task-ui .review-catalog { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.compact-task-ui .review-detail .graph-property-panel { grid-template-columns: minmax(0, 1fr); }
+.compact-task-ui .review-detail [data-review-field-group] { display: contents; }
+.compact-task-ui .review-detail[data-edit-group="people"] [data-review-field-group="conditions"],
+.compact-task-ui .review-detail[data-edit-group="conditions"] [data-review-field-group="people"] { display: none; }
+.compact-task-ui .review-detail .graph-property-wide { grid-column: 1 / -1; }
+.compact-task-ui .review-editor-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.compact-task-ui .review-detail textarea { min-height: 96px; }
+.compact-task-ui .review-detail[data-edit-group="people"] label:has([data-graph-property="trigger"], [data-graph-property="timing"]),
+.compact-task-ui .review-detail[data-edit-group="people"] details:has([data-graph-property="precondition"]) { display: none; }
+.compact-task-ui .review-detail[data-edit-group="conditions"] label:has([data-graph-property="node_type"], [data-graph-property="behavior_name"], [data-graph-property="actor_assignment_mode"], [data-graph-actor-department], [data-graph-actor-position], [data-graph-property="actor_department_data_ref"], [data-graph-property="actor_position_rule"], [data-graph-property="behavior_description"], [data-graph-property="completion_standard"]) { display: none; }
+@media (max-width: 1050px) {
+  .compact-task-ui .review-layout { grid-template-columns: minmax(0, 1fr); }
+  .compact-task-ui .review-detail { position: static; max-height: none; }
+}
+@media (max-width: 640px) {
+  .compact-task-ui .review-catalog { grid-template-columns: minmax(0, 1fr); }
+}

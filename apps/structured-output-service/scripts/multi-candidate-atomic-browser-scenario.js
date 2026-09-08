@@ -252,6 +252,8 @@ async page => {
       node.emit('tap');
     });
     await page.waitForFunction(() => graphSelection?.kind === 'behavior', null, { timeout: 5000 });
+    const editPeople = page.locator('[data-action="review-edit"][data-group="people"]');
+    if (await editPeople.isVisible()) await editPeople.click();
     const behaviorName = page.locator('[data-graph-property="behavior_name"]');
     await behaviorName.waitFor({ state: 'visible', timeout: 5000 });
     await behaviorName.fill('GRAPH-UNAPPLIED-CANARY-20260826');
@@ -483,6 +485,12 @@ async page => {
   };
 
   const verifyGraphHistoryContents = async expected => {
+    const finishReview = page.locator('[data-action="review-finish"]');
+    if (await finishReview.isVisible()) {
+      await finishReview.click();
+      await page.locator('#pendingEditModal').waitFor({ state: 'visible', timeout: 5000 });
+      await page.locator('#discardPendingEditButton').click();
+    }
     const editor = page.locator('#graphEditModal');
     if (await editor.isVisible()) {
       await editor.locator('[data-action="close-flow-editor"]').first().click();

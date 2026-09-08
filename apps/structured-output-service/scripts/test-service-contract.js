@@ -5,6 +5,7 @@ const http = require('node:http');
 const net = require('node:net');
 const path = require('node:path');
 const vm = require('node:vm');
+const { createRequire } = require('node:module');
 const Ajv2020 = require('ajv/dist/2020');
 const {
   app,
@@ -1579,6 +1580,15 @@ function testProcessDiagramModel() {
   ));
 
   const cycleDraft = JSON.parse(JSON.stringify(readabilityDraft));
+  const selfLoopDraft = JSON.parse(JSON.stringify(readabilityDraft));
+  selfLoopDraft.flow_relations[0].to_behavior_ref = selfLoopDraft.flow_relations[0].from_behavior_ref;
+  const selfLoopBefore = JSON.stringify(selfLoopDraft);
+  const selfLoopModel = buildGraphModel(selfLoopDraft, { departmentOrder });
+  assert.equal(JSON.stringify(selfLoopDraft), selfLoopBefore, 'invalid endpoints must remain intact for explicit repair');
+  assert.ok(!selfLoopModel.edges.some(edge => edge.data.source === edge.data.target));
+  assert.ok(selfLoopModel.unresolvedItems.some(item => item.focusKind === 'relation'
+    && item.focusRef === selfLoopDraft.flow_relations[0].relation_ref
+    && item.message.includes('起点和终点不能相同')));
   cycleDraft.flow_relations[2].relation_type = 'condition';
   cycleDraft.flow_relations[3].relation_type = 'condition';
   const cycleBefore = JSON.stringify(cycleDraft);
@@ -1843,12 +1853,16 @@ async function testFrontendContract() {
   );
   const sourceValidationPosition = importJsonSource.indexOf('const sourceValidation = await validateGraphDocument');
   const sourceClassificationPosition = importJsonSource.indexOf('classifyPostMigrationValidation(sourceValidation)');
-  const targetValidationPosition = importJsonSource.indexOf('const targetValidations = await Promise.all');
+  const targetValidationPosition = importJsonSource.indexOf('const targetValidations =');
   const targetClassificationPosition = importJsonSource.indexOf('classifyPostMigrationBatch(targetValidations)');
   const normalizationComparisonPosition = importJsonSource.indexOf('summarizeNormalization(parsed, data)');
   const candidateReplacementPosition = importJsonSource.indexOf('candidates = nextCandidates');
   assert.ok(sourceValidationPosition >= 0 && targetValidationPosition > sourceValidationPosition);
   assert.ok(sourceClassificationPosition > sourceValidationPosition);
+  assert.ok(importJsonSource.includes('classifyNativeDraftValidation(parsed, sourceValidation)'));
+  assert.ok(importJsonSource.includes('!needsCandidateFieldUpgrade && nativeDraftClassification.allowed'));
+  assert.ok(importJsonSource.includes('? [clone(parsed)]'));
+  assert.ok(importJsonSource.includes('? [sourceValidation]'));
   assert.ok(targetClassificationPosition > targetValidationPosition);
   assert.ok(normalizationComparisonPosition > targetClassificationPosition);
   assert.ok(
@@ -2568,6 +2582,7 @@ async function testFrontendContract() {
   let touchCount = 0;
   const sortContext = {
     text: value => value == null ? '' : String(value),
+    compactTaskUiEnabled: () => false,
     currentDocument: () => sortDocument,
     activeBehaviorRef: '', activeRelationRef: '', activeDataRef: '', activeTermRef: '',
     workspace: {
@@ -2629,7 +2644,22 @@ async function testFrontendContract() {
   assert.equal(touchCount, 4, 'unchanged reorder must not mark the draft changed');
 }
 
+function testQueryStringDependencyGuards() {
+  for (const consumer of ['express', 'body-parser']) {
+    const qs = createRequire(require.resolve(consumer))('qs');
+    const untrusted = qs.parse('x[constructor][isBuffer]=untrusted', { plainObjects: true });
+    assert.doesNotThrow(() => qs.stringify(untrusted), `${consumer} must not load the vulnerable isBuffer implementation`);
+    assert.throws(() => qs.parse('items[]=1,2,3,4', {
+      comma: true, arrayLimit: 3, throwOnLimitExceeded: true
+    }), RangeError, `${consumer} must enforce the array limit for bracket keys`);
+    assert.deepEqual(qs.parse('version=process-governance-v7&filter[name]=example'), {
+      version: 'process-governance-v7', filter: { name: 'example' }
+    });
+  }
+}
+
 async function main() {
+  testQueryStringDependencyGuards();
   await testSchemas();
   await testDeterministicParser();
   await testApi();
