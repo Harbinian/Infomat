@@ -53,6 +53,8 @@ async page => {
     }, JSON.stringify(documentValue));
     await waitForImport();
     await page.locator('[data-action="switch-governance-step"][data-step="data"]').click();
+    const organize = page.locator('[data-action="review-manage-all"][data-view="data"]');
+    if (await organize.isVisible()) await organize.click();
     await page.locator('[data-action="undo-graph"]').waitFor({ state: 'visible' });
   };
 
@@ -220,7 +222,9 @@ async page => {
   await page.locator('[data-action="switch-data-editing-mode"][data-mode="grid"]').click();
   await page.locator('[data-action="switch-grid-workspace"][data-workspace="forms"]').click();
   await page.locator('[data-grid-panel="forms"] [data-grid-row-selector]').nth(1).click();
+  await page.locator('[data-action="switch-grid-table"][data-table-id="form_areas"]').click();
   await page.locator('[data-grid-panel="form_areas"] [data-grid-row-selector]').first().click();
+  await page.locator('[data-action="switch-grid-table"][data-table-id="form_items"]').click();
   const gridFieldReference = page.locator('[data-grid-panel="form_items"] [data-grid-column="data_field_ref"][data-grid-cell]');
   await gridFieldReference.selectOption('data_field_referenced');
   await page.locator('[data-action="apply-web-grid"]').click();

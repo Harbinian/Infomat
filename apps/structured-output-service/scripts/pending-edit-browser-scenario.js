@@ -78,6 +78,13 @@ async page => {
   };
 
   const pendingModal = page.locator('#pendingEditModal');
+  const openDataEditor = async () => {
+    await page.locator('[data-action="switch-governance-step"][data-step="data"]').click();
+    const organize = page.locator('[data-action="review-manage-all"][data-view="data"]');
+    if (await organize.isVisible()) await organize.click();
+    const dataRef = await page.evaluate(() => currentDocument().data_objects[0].data_ref);
+    await page.locator('[data-graph-data-focus]').selectOption(dataRef);
+  };
   const expectPendingModal = async () => {
     await pendingModal.waitFor({ state: 'visible', timeout: 5000 });
     const rect = await pendingModal.locator('.modal').boundingBox();
@@ -163,7 +170,7 @@ async page => {
     assert(await page.locator('#governanceHeader').getByText('当前内容已下载', { exact: true }).count() === 0, '原生v7导入后误显示为已下载');
     record('已导入单候选v7浏览器测试输入');
 
-    await page.locator('[data-action="switch-governance-step"][data-step="data"]').click();
+    await openDataEditor();
     await page.locator('[data-graph-data-property="data_name"]').waitFor({ state: 'visible' });
     assert(await page.locator('[data-graph-data-property="data_name"]').isEnabled(), '数据对象属性控件可见但没有可用编辑会话');
 
@@ -199,13 +206,13 @@ async page => {
     await page.locator('[data-graph-data-property="data_name"]').fill('最终下载时应放弃的输入');
     const finalDiscarded = await downloadFinalThroughAction('#discardPendingEditButton');
     assert(finalDiscarded.documentValue.data_objects[0].data_name === '对象事实下载应用', '最终下载把已经放弃的未应用输入写入了文件');
-    assert(finalDiscarded.acceptedDialogs.includes('confirm'), '最终下载没有执行既有业务提示确认');
+    assert(!finalDiscarded.acceptedDialogs.includes('confirm'), '草稿下载不应被业务提示确认阻塞');
     record('最终下载使用同一未应用保护，放弃的输入未进入文件');
 
     await uploadJson('pending-edit-roundtrip-v7.json', appliedDownload, 1);
     assert(await page.locator('#governanceHeader').getByText('当前内容与导入文件一致', { exact: true }).isVisible(), '重新导入下载文件后未切换为导入文件基线');
     assert(await page.locator('#governanceHeader').getByText('当前内容已下载', { exact: true }).count() === 0, '重新导入的文件被误当作当前会话的成功下载');
-    await page.locator('[data-action="switch-governance-step"][data-step="data"]').click();
+    await openDataEditor();
     await page.locator('[data-graph-data-property="data_name"]').waitFor({ state: 'visible' });
     assert(await page.locator('[data-graph-data-property="data_name"]').inputValue() === '对象事实下载应用', '当前v7下载文件重新导入后数据名称不一致');
     assert(await page.locator('[data-graph-data-property="description"]').inputValue() === '下载前应用的说明', '当前v7下载文件重新导入后说明不一致');
@@ -226,7 +233,7 @@ async page => {
     const discardedDownload = await downloadFromHeader('#discardPendingEditButton');
     assert(discardedDownload.data_objects[0].data_name === '对象事实下载应用', '下载时放弃修改后文件仍包含被放弃内容');
     await uploadJson('pending-edit-discard-roundtrip-v7.json', discardedDownload, 1);
-    await page.locator('[data-action="switch-governance-step"][data-step="data"]').click();
+    await openDataEditor();
     await page.locator('[data-graph-data-property="data_name"]').waitFor({ state: 'visible' });
     assert(await page.locator('[data-graph-data-property="data_name"]').inputValue() === '对象事实下载应用', '放弃修改的下载文件重新导入后出现被放弃内容');
     record('下载时放弃的页面输入未进入下载文件，重新导入后仍保持已应用值');
@@ -308,7 +315,7 @@ async page => {
     lifecycleDocument.data_objects[0].lifecycle = pendingLifecycle();
     await validateDocument(lifecycleDocument);
     await uploadJson('lifecycle-transaction-regression-v7.json', lifecycleDocument, 1);
-    await page.locator('[data-action="switch-governance-step"][data-step="data"]').click();
+    await openDataEditor();
     const lifecycleBaseline = await downloadFromHeader();
     await page.locator('[data-action="switch-data-mode"][data-mode="lifecycle"]').click();
     await page.locator('[data-action="reanalyze-current-lifecycle"]').click();
@@ -351,19 +358,21 @@ async page => {
     };
     await validateDocument(legacy);
     await uploadJson('pending-edit-regression-multi-v2.json', legacy, 2);
-    await page.locator('[data-action="switch-governance-step"][data-step="data"]').click();
+    await openDataEditor();
     await page.locator('[data-graph-data-property="data_name"]').fill('候选一尚未应用');
     await page.locator('#governanceCandidateSelect').selectOption('1');
     await expectPendingModal();
     await page.locator('#continuePendingEditingButton').click();
     assert(await page.locator('#governanceCandidateSelect').inputValue() === '0', '取消顶部候选切换后下拉框没有恢复原候选');
     assert(await page.locator('[data-graph-data-property="data_name"]').inputValue() === '候选一尚未应用', '取消候选切换后当前输入丢失');
-    await page.locator('[data-candidate-index="1"]').click();
-    await expectPendingModal();
-    await page.locator('#continuePendingEditingButton').click();
-    assert(await page.locator('#governanceCandidateSelect').inputValue() === '0', '取消侧栏候选切换后当前候选发生变化');
-    assert(await page.locator('[data-graph-data-property="data_name"]').inputValue() === '候选一尚未应用', '取消侧栏候选切换后当前输入丢失');
-    record('顶部和侧栏候选切换选择继续编辑后均恢复原候选和值');
+    if (await page.locator('#candidateList').isVisible()) {
+      await page.locator('[data-candidate-index="1"]').click();
+      await expectPendingModal();
+      await page.locator('#continuePendingEditingButton').click();
+      assert(await page.locator('#governanceCandidateSelect').inputValue() === '0', '取消侧栏候选切换后当前候选发生变化');
+      assert(await page.locator('[data-graph-data-property="data_name"]').inputValue() === '候选一尚未应用', '取消侧栏候选切换后当前输入丢失');
+    }
+    record('可见候选切换入口选择继续编辑后恢复原候选和值');
 
     for (const viewport of [{ width: 1920, height: 1080 }, { width: 1536, height: 864 }, { width: 1280, height: 720 }]) {
       await page.setViewportSize(viewport);

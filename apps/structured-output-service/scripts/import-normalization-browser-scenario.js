@@ -162,6 +162,12 @@ async page => {
   assert(importedState.archives.length === 2, '动态责任原值没有完整进入迁移归档');
   assert(importedState.importInfoInDocument === false, '页面导入摘要进入了当前JSON');
 
+  const fileMenu = page.locator('#governanceHeader details.header-menu').filter({ hasText: '文件' });
+  if (await fileMenu.isVisible()) {
+    if (!(await fileMenu.getAttribute('open'))) await fileMenu.locator('summary').click();
+    const fileInfo = fileMenu.locator('[data-action="switch-governance-step"][data-step="start"]');
+    if (await fileInfo.isVisible()) await fileInfo.click();
+  }
   const details = page.locator('.import-normalization-details');
   await details.waitFor({ state: 'visible', timeout: 5000 });
   await details.locator('summary').click();

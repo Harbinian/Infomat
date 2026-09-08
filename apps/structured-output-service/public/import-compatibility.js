@@ -212,13 +212,78 @@
     };
   }
 
+  function lifecycleStateErrorPath(error, errors) {
+    const path = String(error?.path || error?.instancePath || '');
+    const statePattern = /^\/data_objects\/\d+\/lifecycle\/(?:entry_state|routes\/\d+\/(?:exit_state|events\/\d+\/result_state))$/;
+    const statePath = path.replace(/\/identifiability$/, '');
+    if (!statePattern.test(statePath)) return '';
+    if (path.endsWith('/identifiability')) {
+      if (error.keyword === 'const' && error.params?.allowedValue === 'not_applicable') return statePath;
+      const allowed = error.params?.allowedValues;
+      if (error.keyword === 'enum' && Array.isArray(allowed) && allowed.length === 3
+        && ['identifiable', 'irreversibly_anonymized', 'pending_confirmation'].every(value => allowed.includes(value))) return statePath;
+    }
+    if (error.keyword === 'if' && error.params?.failingKeyword === 'then'
+      && errors.some(item => (item.path || item.instancePath) === `${statePath}/identifiability` && lifecycleStateErrorPath(item, []) === statePath)) return statePath;
+    return '';
+  }
+
+  function allowsPreservedLifecycleErrors(before, after, validation) {
+    if (validation?.valid === true) return true;
+    const errors = Array.isArray(validation?.errors) ? validation.errors : [];
+    return errors.length > 0 && errors.every(error => {
+      const path = lifecycleStateErrorPath(error, errors);
+      if (!path) return false;
+      const parts = pointerSegments(path);
+      const nextObject = after?.data_objects?.[Number(parts[1])];
+      const oldObjects = (before?.data_objects || []).filter(item => item.data_ref === nextObject?.data_ref);
+      if (oldObjects.length !== 1 || !nextObject?.data_ref) return false;
+      const oldLifecycle = oldObjects[0].lifecycle, nextLifecycle = nextObject.lifecycle;
+      let previous = oldLifecycle?.entry_state, next = nextLifecycle?.entry_state;
+      if (parts[3] === 'routes') {
+        const route = nextLifecycle?.routes?.[Number(parts[4])];
+        const oldRoutes = (oldLifecycle?.routes || []).filter(item => item.route_ref === route?.route_ref);
+        if (!route?.route_ref || oldRoutes.length !== 1) return false;
+        previous = oldRoutes[0].exit_state; next = route.exit_state;
+        if (parts[5] === 'events') {
+          const event = route.events?.[Number(parts[6])];
+          const oldEvents = (oldRoutes[0].events || []).filter(item => item.event_ref === event?.event_ref);
+          if (!event?.event_ref || oldEvents.length !== 1) return false;
+          previous = oldEvents[0].result_state; next = event.result_state;
+        }
+      }
+      return Boolean(previous && next) && collectDifferences(previous, next).length === 0;
+    });
+  }
+
   function classifyPostMigrationValidation(validation) {
     if (validation?.valid === true) return { allowed: true, repairableErrors: [] };
     const errors = Array.isArray(validation?.errors) ? validation.errors : [];
-    if (!errors.length || !errors.every(error => repairableRuleCodes.has(error?.rule_code))) {
+    if (!errors.length || !errors.every(error => repairableRuleCodes.has(error?.rule_code) || lifecycleStateErrorPath(error, errors))) {
       return { allowed: false, repairableErrors: [] };
     }
     return { allowed: true, repairableErrors: errors };
+  }
+
+  // Native drafts already use the editor's shape. Restore semantic errors without
+  // running migration, which could merge duplicate fields or rewrite references.
+  // Identity definitions must still be unique: the editors address objects by ref.
+  function isIdentityDefinitionError(error) {
+    const path = String(error?.path || error?.instancePath || '');
+    return /^\/(?:export_meta|process)\/0\/(?:package_ref|process_ref)$/.test(path)
+      || /^\/(?:behaviors|flow_relations|data_objects|forms|terms)\/\d+\/(?:behavior_ref|relation_ref|data_ref|form_ref|term_ref)$/.test(path)
+      || /\/(?:field_ref|link_ref|source_ref|route_ref|event_ref|area_ref|item_ref|source_link_ref)$/.test(path)
+      || /^\/migration\/[^/]+\/\d+\/(?:material_ref|call_ref|archive_ref|record_ref)$/.test(path);
+  }
+
+  // Schema/type errors and ambiguous identities cannot enter the editor.
+  function classifyNativeDraftValidation(documentValue, validation) {
+    const errors = Array.isArray(validation?.errors) ? validation.errors : [];
+    const allowed = documentValue?.schema_version === 'process-governance-v7'
+      && (validation?.valid === true || (errors.length > 0 && errors.every(error =>
+        (error?.keyword === 'localReference' && !isIdentityDefinitionError(error))
+          || lifecycleStateErrorPath(error, errors))));
+    return { allowed: Boolean(allowed), repairableErrors: allowed ? errors : [] };
   }
 
   function classifyPostMigrationBatch(validations) {
@@ -249,6 +314,9 @@
     NORMALIZATION_DETAIL_LIMIT,
     classifyPostMigrationValidation,
     classifyPostMigrationBatch,
-    summarizeNormalization
+    classifyNativeDraftValidation,
+    summarizeNormalization,
+    lifecycleStateErrorPath,
+    allowsPreservedLifecycleErrors
   };
 }));

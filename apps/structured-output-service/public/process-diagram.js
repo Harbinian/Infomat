@@ -975,6 +975,14 @@
         });
         return;
       }
+      if (fromRef === toRef) {
+        unresolvedItems.push({
+          focusKind: 'relation',
+          focusRef: relationRef,
+          message: `流程关系${index + 1}未显示：起点和终点不能相同，请核对并修改关系端点。`
+        });
+        return;
+      }
       const sourceId = behaviorNodeByRef.get(fromRef);
       const targetId = behaviorNodeByRef.get(toRef);
       validRelations.push({ relation, index, relationRef, fromRef, toRef, sourceId, targetId });
