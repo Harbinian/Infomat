@@ -21,21 +21,6 @@
 
 ## 运行与验证
 
-```powershell
-npm test
-npm run migrate:dry-run
-npm run migrate:apply
-npm run bootstrap:admin
-npm start
-npm run smoke
-```
+本目录 `npm test`（根目录 `npm run test:information-collection`）是应用测试入口，按行为改动范围选用。纯说明或协作入口修改只检查相关文档和路由。
 
-从仓库根目录运行固定入口：
-
-```powershell
-npm run test:information-collection
-npm run migrate:information-collection:dry-run
-npm run migrate:information-collection:apply
-npm run start:information-collection
-npm run smoke:information-collection
-```
+迁移、初始化和启动属于独立运行操作，不是测试步骤。仅在用户授权对应目标时按 README 执行 `migrate:dry-run`、`migrate:apply`、`bootstrap:admin`、`start` 或 `smoke`。迁移仍先 dry-run，再 apply 和结构核对；账号初始化不得作为验证自动运行。根目录对应入口以 `package.json` 和 `scripts/README.md` 为准。

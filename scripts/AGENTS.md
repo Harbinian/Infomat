@@ -21,11 +21,11 @@
 - 在脚本头部或 `scripts/README.md` 写清命令、输入、输出/副作用、是否写文件、是否写数据库和验证命令。
 - 修改解析器或生成器前，先确认真源文件、派生文件和下游消费页面。
 - 本机密码只放 `scripts/infomat-services.local.env`；固定非敏感配置放 `scripts/infomat-services.config.json`。
-- 命令、输出文件或运行前置条件变化时，同步更新 `scripts/README.md`、相关目录 README/AGENTS，以及必要的根目录规则。
+- 命令、输出文件或运行前置条件变化时，同步承载该信息的 `scripts/README.md` 或目录说明；目录职责、硬规则改变时才同步入口。
 
 ## 验证口径
 
-以下命令默认从仓库根目录运行；进入子项目运行的命令会单独说明。
+以下入口按变更类型选择，默认从仓库根目录运行。已经通过且未受新改动影响的检查不重复执行。解析、生成和运行命令有副作用，只在对应任务授权范围内执行。
 
 Codex 项目指令、按需路由或局部入口变化：
 
@@ -48,12 +48,7 @@ npm run build:pmo-task-data
 npm run test:pmo-task-data
 ```
 
-固定启动配置变化：
-
-```powershell
-npm run test:infomat-services-config
-npm run smoke:infomat-services
-```
+固定启动配置变化时运行 `npm run test:infomat-services-config`。只有任务包含实际服务运行验证时才运行 `npm run smoke:infomat-services`；用户指定单一服务时采用该服务的健康与内容检查，不扩大到其他服务。
 
 MDM 导入、流程治理或数据库写入链路变化时，在 `apps/mdm-platform/` 下补充对应测试；涉及流程治理主线时至少覆盖：
 

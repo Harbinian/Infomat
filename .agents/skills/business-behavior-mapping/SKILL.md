@@ -1,6 +1,6 @@
 ---
 name: business-behavior-mapping
-description: Compatibility alias for Infomat BBM/A1 work. When older prompts mention business behavior mapping, BBM, A1 decomposition, approval flow, cross-department transaction mapping, or behavior-level Sankey updates under docs/norms, immediately load and follow `.agents/skills/process-evidence-mapping/SKILL.md`; do not execute this as a standalone workflow.
+description: Compatibility alias for legacy Infomat BBM/A1 mapping requests; routes to process-evidence-mapping.
 ---
 
 # Business Behavior Mapping

@@ -1,6 +1,6 @@
 ---
 name: department-capability-mapping
-description: Compatibility alias for Infomat DCM work. When older prompts mention department capability mapping, DCM, department capability-process-system mapping, MDM requirements, or Sankey deliverables under docs/norms, immediately load and follow `.agents/skills/process-evidence-mapping/SKILL.md`; do not execute this as a standalone workflow.
+description: Compatibility alias for legacy Infomat department capability mapping (DCM); routes to process-evidence-mapping.
 ---
 
 # Department Capability Mapping

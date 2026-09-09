@@ -7,7 +7,7 @@
 - 可以修改本目录的 `server.js`、`public/`、`scripts/`、`package.json` 和说明文档。
 - 不修改 `apps/mdm-platform/`、`apps/structure-assistant/`、`docs/norms/`、PMO 驾驶舱或 MDM 数据库，除非用户明确扩大范围并确认主责资产。
 - 3001 不依赖 DeepSeek、MDM-AI助手或认证网关，不停止、重绑、读取或代管 3000。3001 不判断 3000 当前是否允许承接文件。
-- 本轮只调整文档或协作入口时，不得改变 v7 Schema、接口、状态、枚举、导入导出格式或页面行为。
+- 仅调整文档或协作入口时，不得改变 v7 Schema、接口、状态、枚举、导入导出格式或页面行为。
 
 ## 不可违反的产品边界
 
@@ -57,11 +57,6 @@
 
 ## 运行与验证入口
 
-从本目录运行：
+按变化选择本目录 `package.json`、README 和 Tech-Spec 中的相关测试；需要完整应用回归时运行 `npm.cmd test`。依赖变化或安全审计任务才运行 `npm.cmd audit --json`。
 
-```powershell
-npm.cmd test
-npm.cmd audit --json
-```
-
-文档或协作入口变化还要从仓库根目录运行 `npm run test:codex-context`，并对本轮文件执行 `git diff --check`。只有应用行为实际变化时，才按 README 和 Tech-Spec 补充候选服务、真实浏览器、性能或人工输入法验证；本次没有启动或人工验证时必须明确标为未验证。
+协作入口、路由或预算变化从仓库根目录运行 `npm run test:codex-context`。纯说明文字修改只核对受影响内容和差异。应用行为变化时补充受影响的候选服务与浏览器检查，性能或人工输入法检查仅在相应行为受影响时执行；证据等级仍遵守上文边界。

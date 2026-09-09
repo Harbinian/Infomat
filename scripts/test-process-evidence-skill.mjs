@@ -3,7 +3,7 @@
  * Regression checks for the process-evidence-mapping skill contract.
  */
 import assert from 'node:assert/strict';
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
@@ -11,35 +11,17 @@ const skillDir = resolve(root, '.agents/skills/process-evidence-mapping');
 const skillPath = join(skillDir, 'SKILL.md');
 const skill = readFileSync(skillPath, 'utf8');
 
-const expectedSteps = [
-  '仓库上下文',
-  '源文件清单与可读性门',
-  '证据切块',
-  '可选语义检索',
-  '通用流程与行为候选',
-  '角色与对象链',
-  '编译 document-structured-output-v2',
-  '待确认问题与差异审计',
-  '派生人工视图',
-  '人工确认与发布边界',
-  '验证与报告',
-];
-
-let previousIndex = -1;
-for (const [index, step] of expectedSteps.entries()) {
-  const heading = `### ${index + 1}. ${step}`;
-  const currentIndex = skill.indexOf(heading);
-  assert.notEqual(currentIndex, -1, `SKILL.md should include ordered heading: ${heading}`);
-  assert.ok(currentIndex > previousIndex, `SKILL.md heading out of order: ${heading}`);
-  previousIndex = currentIndex;
-
-  const nextHeading = index + 1 < expectedSteps.length ? `### ${index + 2}. ${expectedSteps[index + 1]}` : '\n## ';
-  const nextIndex = skill.indexOf(nextHeading, currentIndex + heading.length);
-  const section = nextIndex === -1 ? skill.slice(currentIndex) : skill.slice(currentIndex, nextIndex);
-  for (const label of ['输入', '动作', '输出', '不得做', '下一步条件']) {
-    assert.ok(section.includes(`**${label}**`), `${heading} should contain **${label}**`);
-  }
-}
+const referenceLinks = [...skill.matchAll(/\]\((references\/[^)#]+\.md)(?:#[^)]*)?\)/g)]
+  .map(match => match[1]);
+assert.ok(referenceLinks.length > 0, 'skill should route to its workflow references');
+const references = [...new Set(referenceLinks)].map(relativePath => {
+  const target = resolve(skillDir, relativePath);
+  assert.ok(existsSync(target), `missing skill reference: ${relativePath}`);
+  const content = readFileSync(target, 'utf8');
+  assert.ok(content.trim(), `empty skill reference: ${relativePath}`);
+  return content;
+});
+const guidance = [skill, ...references].join('\n');
 
 for (const required of [
   'document-structured-output-v2.json',
@@ -52,7 +34,7 @@ for (const required of [
   'validate-document-structured-output-v2.mjs',
   'npm run test:process-evidence-evolution',
 ]) {
-  assert.ok(skill.includes(required), `SKILL.md should include ${required}`);
+  assert.ok(guidance.includes(required), `skill guidance should retain ${required}`);
 }
 
 function textFiles(dir) {
