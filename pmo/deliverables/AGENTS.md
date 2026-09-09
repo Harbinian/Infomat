@@ -21,7 +21,7 @@
 
 ## 验证口径
 
-交付物 frontmatter、状态机、上传或写回链路变化：
+交付物 frontmatter、状态机、上传或写回链路变化时，按受影响路径选择以下检查；跨链路修改覆盖所有相关入口：
 
 ```powershell
 cd pmo/gantt-react
@@ -39,4 +39,4 @@ npm run build:pmo-task-data
 npm run test:pmo-task-data
 ```
 
-仅修改叙述性正文时，检查版本记录、交叉引用和对应 DLV 编号即可；最终说明写明无需运行应用测试的理由。
+仅修改叙述性正文时，核对受影响的版本记录、交叉引用和 DLV 编号；不运行应用测试。

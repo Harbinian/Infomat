@@ -1,10 +1,6 @@
 ---
 name: database-to-process-json
-description: >
-  Explicit-only Infomat workflow for generating one unreviewed
-  process-governance-v7 JSON and its evidence package from a named CXSYSYS.dbo
-  form or root table. Use only when the user explicitly invokes
-  $database-to-process-json and supplies a form template or root table.
+description: 仅在显式调用 $database-to-process-json 时，从指定的 CXSYSYS.dbo 表单或主表快照生成单流程未审核 V7 JSON 和证据包。
 ---
 
 # Database to Process JSON
@@ -24,7 +20,7 @@ description: >
 
 ## 执行顺序
 
-1. 读取根 `AGENTS.md`、`CODEX.md`、`REPOSITORY_BOUNDARY.md`、`DIRECTORY_OWNERSHIP.md`、`MAINLINE_MAP.md`、`MEMORY.md` 的当前运行基线，以及 `docs/architecture/data-governance-operating-rules.md`。
+1. 按根入口读取与本次数据治理相关的规则；已有上下文足够时不重读。快照生成不需要检查无关服务或加载历史运行基线，实际连接数据库时才核对本次授权、目标和权限。
 2. 核对用户指定的主表或表单模板、目标输出批次和快照时间。数据库名称不是 `CXSYSYS`、架构不是 `dbo` 时立即停止。
 3. 检查快照中是否只有一个表单匹配项。再检查工作流：只有一个时继续；多个时停止并列出 `workflow_id` 和名称。
 4. 按 [CXSYSYS 映射规则](references/cxsysys-mapping-rules.md) 生成数据对象、表单区域、业务行为、控制节点、流程关系、数据关系、术语候选和待确认问题。生成前检查所有条件分叉的源节点；普通行为承载条件分叉时停止，保留实际办理行为并在其后增加判断节点，不把勤哲连线条件原样当作合格流程图。
@@ -48,7 +44,7 @@ description: >
    - `pending-issues.md`
    - `generation-summary.json`
    - 可选 `read-only-verification.json`
-8. 运行 `node .agents/skills/database-to-process-json/scripts/test-database-to-process-json.mjs` 和 3001 V7 校验。输出 JSON 只允许作为未审核草稿，不得自动导入 3000 或发布为正式流程。
+8. 核对生成器返回的 3001 V7 结构校验结果及本批输出；该生成器在写出前调用现有纯校验入口，不需要为此启动 3001。只有生成器、映射、旧草稿合并或实时核验逻辑变化时，才运行 `node .agents/skills/database-to-process-json/scripts/test-database-to-process-json.mjs`。输出仍为未审核草稿，不得自动导入 3000 或发布。
 
 ## 交付口径
 

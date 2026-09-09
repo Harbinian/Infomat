@@ -231,7 +231,7 @@ npm run review:mysql:serve
 | `import-input-baseline-review-mysql.mjs` | 将问题识别批次产物、原文摘录导入 MySQL | `artifacts/process-input-baseline-review/<run-id>/` | 写入 MySQL 待确认问题库和原文摘录 |
 | `input-baseline-review-service.mjs` | 启动输入基线问题复核网页服务 | MySQL 待确认问题库 | 页面从接口读取题目和原文高亮，选择结果直接写 MySQL |
 | `input-baseline-review-core.mjs` | 输入基线问题复核 MySQL schema、原文匹配、高亮和仓库方法 | 待确认 JSON、`chunks.jsonl`、MySQL pool | 供导入脚本、服务和测试复用 |
-| `test-process-evidence-skill.mjs` | 校验流程证据技能的执行顺序、不可读来源阻断、候选证据和人工发布边界 | `.agents/skills/process-evidence-mapping/SKILL.md` | 只读校验 |
+| `test-process-evidence-skill.mjs` | 校验技能参考路由可读、不可读来源阻断、候选证据和人工发布边界；不固定章节数量、顺序或段落标签 | `.agents/skills/process-evidence-mapping/SKILL.md` 及其直接链接的参考文档 | 只读静态校验，不代替抽取或编译行为验证 |
 | `.agents/skills/process-evidence-mapping/scripts/test-input-baseline-review-workflow.mjs` | 用合成制度回归 v2 生成、错误引用拦截、问题关闭规则及图片来源阻断记录 | 合成制度、映射和 JSON 反例；不连接向量服务 | 每次写新的 `artifacts/process-input-baseline-review/test-v2-<随机值>/`，不清理旧批次 |
 | `.agents/skills/database-to-process-json/scripts/run-database-to-process-json.mjs` | 从指定的 CXSYSYS.dbo 结构快照生成一个未审核 V7 JSON 和逐项证据包；按业务名称交付，判断分叉从独立判断节点发出；旧稿人工内容保留，未匹配结构或冲突关系明确阻断；字段证据保留真实物理列名，只读摘要不升级为流程核验结论 | 明确主表或表单模板、`database-process-evidence-v1`快照、可选旧版3001 JSON及绑定快照的只读核验文件 | 只写新的 `artifacts/database-process-json/<run-id>/`，不连接数据库、不写数据库；`npm run test:database-to-process-json`覆盖人工内容保留、冲突阻断、物理列名及核验文件反例 |
 | `.agents/skills/database-to-process-json/scripts/export-cxsysys-readonly-snapshot.ps1` | 在明确授权后，用专用只读账号对快照允许的表和字段做限列、限行、无原值摘要核验 | 结构快照、主表、工作流、进程级只读连接环境变量和`-ConfirmReadOnly` | 只写指定的本地核验JSON，记录快照文件SHA-256、核验时间、权限摘要及逐列计数；旧核验文件缺少必填信息时须重新导出，不执行数据库写操作 |

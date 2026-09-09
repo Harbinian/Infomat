@@ -4,38 +4,6 @@
 
 根目录 `AGENTS.md` 和 `CODEX.md` 仍然有效。本文件只补充 PMO 目录内的维护规则。
 
-## 目录结构
-
-```text
-pmo/
-├── AGENTS.md                          # 本文件 — PMO 总览
-├── README.md                          # PMO 入口说明
-├── procedure-management/              # 流程地图驾驶舱
-│   ├── AGENTS.md                      # 驾驶舱维护规则
-│   └── dashboard.html                 # 主驾驶舱
-├── gantt-react/                       # 甘特图 / PMO 看板
-│   ├── AGENTS.md                      # 应用维护规则
-│   ├── README.md
-│   ├── src/
-│   └── package.json
-├── organization-dynamics/             # 组织数字化参与度模型
-│   ├── AGENTS.md                      # 模型和可视资产维护规则
-│   └── README.md
-├── deliverables/                      # PMO 交付物正本
-├── tasks.json                         # 由 Markdown 真源生成
-├── pmo-source-manifest.json           # PMO 服务读取的真源清单
-├── 信息化项目_计划管控真源.md
-├── 信息化项目_WBS结构真源.md
-├── 信息化项目_执行标准真源.md
-├── 信息化项目_工作平衡.md
-├── 信息化项目_工作开展原则.md
-├── 信息化项目_协同工作规则.md
-├── 信息化项目_部门主备对接人名单.md
-├── 信息化项目_协同工作规则_群通知.md
-├── build_pmo_task_data.py
-└── pmo-gantt-known-issues.md
-```
-
 ## 真源边界
 
 - PMO 计划、资源、风险、阶段门和执行字段以 `信息化项目_计划管控真源.md` 为准。
@@ -63,7 +31,7 @@ npm run test:pmo-task-data
 
 4. 如任务数、字段数或里程碑数量变化，先核对 Markdown 真源是否确实发生增删。
 
-当前两份`tasks.json`中的每条任务固定输出43个顶层字段，唯一字段清单为`build_pmo_task_data.py`中的`TASK_OUTPUT_FIELD_KEYS`。新增或删除输出字段时，维护人员必须同时修改该清单、生成逻辑、计划真源摘要、两份README和`../scripts/check-pmo-task-data.mjs`；不得只修改任务样本、manifest或页面说明。
+两份 `tasks.json` 的唯一字段清单为 `build_pmo_task_data.py` 中的 `TASK_OUTPUT_FIELD_KEYS`。字段变化时同步生成逻辑、计划真源摘要、受影响的说明和 `../scripts/check-pmo-task-data.mjs`；不从任务样本的字段并集反推合同。
 
 ## 流程地图驾驶舱
 
@@ -88,4 +56,4 @@ npm run test:pmo-task-data
 
 ## 文档同步
 
-修改 PMO 代码、脚本、数据生成逻辑、前端行为、启动命令或测试命令时，必须同步更新对应 README、目录 `AGENTS.md`、PMO 真源说明或交付物说明。无需更新文档时，交付说明必须写清原因。
+只在行为、合同、命令或维护边界变化时更新承载该信息的说明，按根 `AGENTS.md` 和 `CODEX.md` 选择；不要求改写仍准确的文档。

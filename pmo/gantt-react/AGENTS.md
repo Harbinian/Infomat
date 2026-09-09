@@ -35,7 +35,7 @@ npm run test:pmo-task-data
 
 脚本会写入 `tasks.json`、`pmo-source-manifest.json`、`gantt-react/public/tasks.json` 和 `gantt-react/public/pmo-source-manifest.json`。不要手改这些生成文件。
 
-每条任务当前固定输出43个顶层字段。字段清单和逐行检查由`../build_pmo_task_data.py`维护；字段变化必须同步计划真源摘要、根目录README、本目录README和仓库级PMO任务检查，不能根据某一批任务的字段并集临时改口径。
+任务字段及生成合同由 `../build_pmo_task_data.py` 的 `TASK_OUTPUT_FIELD_KEYS` 维护，字段变化按父级 `AGENTS.md` 同步真源、生成器和检查，不另存第二份字段清单。
 
 ## 开发命令
 
@@ -59,4 +59,4 @@ Vite 开发服务同时提供流程地图驾驶舱和 `/echarts.min.js`。不得
 - PMO 周会视图依赖 `tasks.json` 中的阶段门、关键路径、风险、交付物和执行管控字段。
 - 本周交付物和 PMO 周会里的本周 A/B 交付物统一按例会周期计算：周四到下周三。
 - 周会事项台账用于 W-A03 模板试运行，登记数据只保存在浏览器本地 `localStorage`，不回写 `tasks.json`、PMO Markdown 真源或 MDM 数据库。
-- 修改接口、插件、数据字段、前端行为或测试命令时，必须同步更新 `README.md` 和本文件。
+- 只在行为、合同、命令或维护边界变化时更新承载该信息的说明，按根 `AGENTS.md` 和 `CODEX.md` 选择；不要求改写仍准确的文档。

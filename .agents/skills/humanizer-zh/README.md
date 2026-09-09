@@ -1,5 +1,7 @@
 # Humanizer-zh: AI 写作去痕工具（中文版）
 
+> Infomat 当前执行入口是 [SKILL.md](SKILL.md)，仅在用户明确点名时使用。以下保留上游来源和历史使用说明，不作为当前安装、评分或改写流程；本地精简版本不执行固定模式清单或评分门槛。
+
 > **声明：**
 > - 本项目的核心文件翻译自 [blader/humanizer](https://github.com/blader/humanizer/tree/main)
 > - 实用工具部分（核心规则、快速检查清单、质量评分）参考了 [hardikpandya/stop-slop](https://github.com/hardikpandya/stop-slop)
