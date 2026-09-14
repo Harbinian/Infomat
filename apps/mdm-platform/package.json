@@ -117,6 +117,7 @@
     "rehearse:process-v7-m0-backup-restore": "node scripts/rehearse-process-v7-m0-backup-restore.js",
     "rehearse:process-v7-migrations-isolated": "node scripts/rehearse-process-v7-migrations-isolated.js",
     "test:process-v7-preview-review": "node scripts/test-process-v7-preview-review.js && node scripts/test-process-v7-preview-migration-contract.js && node scripts/test-process-v7-formal-migration-contract.js && node scripts/test-process-v7-m0-baseline.js",
+    "test:process-v7-procedure": "node scripts/test-process-v7-procedure-markdown.js",
     "migrate:process-data-governance:dry-run": "node scripts/migrate-process-data-governance.js --dry-run",
     "migrate:process-data-governance:apply": "node scripts/migrate-process-data-governance.js --apply",
     "migrate:process-data-governance:rollback": "node scripts/migrate-process-data-governance.js --rollback",

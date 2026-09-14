@@ -18,6 +18,12 @@ const {
   validateAndProjectV7
 } = require('../server/processV7PreviewReview');
 
+function normalizedQuery(sql) {
+  // These fakes verify predicates, locks and write order; real MySQL/Edge verifies timestamps.
+  return String(sql).trim().replace(/\s+/g, ' ')
+    .replace(/, UNIX_TIMESTAMP\([a-z_.]+\) AS [a-z_]+_epoch/g, '');
+}
+
 function sampleDocument() {
   const document = structuredOutputService.createEmptyProcessGovernanceV7Document();
   document.export_meta.package_ref = 'package_v7_preview_test';
@@ -314,7 +320,7 @@ async function main() {
     async rollback() {},
     release() {},
     async execute(sql, params = []) {
-      const normalized = String(sql).trim().replace(/\s+/g, ' ');
+      const normalized = normalizedQuery(sql);
       ownerWriteQueries.push(normalized);
       if (normalized === 'SELECT * FROM process_v7_preview_cases WHERE id=? FOR UPDATE') {
         return [[{
@@ -452,7 +458,7 @@ async function main() {
     async rollback() {},
     release() {},
     async execute(sql, params = []) {
-      const normalized = String(sql).trim().replace(/\s+/g, ' ');
+      const normalized = normalizedQuery(sql);
       scopeWriteQueries.push(normalized);
       if (normalized === 'SELECT * FROM process_v7_preview_cases WHERE id=? FOR UPDATE') {
         return [[{
@@ -581,7 +587,7 @@ async function main() {
     async rollback() {},
     release() {},
     async execute(sql) {
-      const normalized = String(sql).trim().replace(/\s+/g, ' ');
+      const normalized = normalizedQuery(sql);
       if (normalized === 'SELECT * FROM process_v7_preview_cases WHERE id=? FOR UPDATE') {
         return [[{
           id: 23,
@@ -659,7 +665,7 @@ async function main() {
     async rollback() {},
     release() {},
     async execute(sql, params = []) {
-      const normalized = String(sql).trim().replace(/\s+/g, ' ');
+      const normalized = normalizedQuery(sql);
       lockedRevisionQueries.push(normalized);
       if (normalized === 'SELECT * FROM process_v7_preview_cases WHERE id=? FOR UPDATE') {
         return [[{
@@ -807,7 +813,7 @@ async function main() {
     async rollback() {},
     release() {},
     async execute(sql, params = []) {
-      const normalized = String(sql).trim().replace(/\s+/g, ' ');
+      const normalized = normalizedQuery(sql);
       decisionQueries.push(normalized);
       if (normalized === 'SELECT * FROM process_v7_preview_cases WHERE id=? FOR UPDATE') {
         return [[{
@@ -894,8 +900,8 @@ async function main() {
     async rollback() {},
     release() {},
     async execute(sql) {
-      lockedScopeQueries.push(String(sql).trim());
-      if (/^SELECT \* FROM process_v7_preview_cases WHERE id=\? FOR UPDATE$/.test(String(sql).trim())) {
+      lockedScopeQueries.push(normalizedQuery(sql));
+      if (/^SELECT \* FROM process_v7_preview_cases WHERE id=\? FOR UPDATE$/.test(normalizedQuery(sql))) {
         return [[{
           id: 1,
           process_ref: 'process_other_trial',
@@ -903,7 +909,7 @@ async function main() {
           current_content_hash: projected.contentHash
         }]];
       }
-      throw new Error(`unexpected SQL after locked scope check: ${String(sql).trim()}`);
+      throw new Error(`unexpected SQL after locked scope check: ${normalizedQuery(sql)}`);
     }
   };
   const lockedScopeRepository = makeProcessV7PreviewReviewRepository({
@@ -999,8 +1005,8 @@ async function main() {
     async rollback() {},
     release() {},
     async execute(sql) {
-      blockingPromotionQueries.push(String(sql).trim());
-      if (/^SELECT \* FROM process_v7_preview_cases WHERE id=\? FOR UPDATE$/.test(String(sql).trim())) {
+      blockingPromotionQueries.push(normalizedQuery(sql));
+      if (/^SELECT \* FROM process_v7_preview_cases WHERE id=\? FOR UPDATE$/.test(normalizedQuery(sql))) {
         return [[{
           id: 1,
           process_ref: unresolvedProjection.processRef,
@@ -1011,7 +1017,7 @@ async function main() {
           current_content_hash: unresolvedProjection.contentHash
         }]];
       }
-      if (/^SELECT \* FROM process_v7_preview_revisions/.test(String(sql).trim())) {
+      if (/^SELECT \* FROM process_v7_preview_revisions/.test(normalizedQuery(sql))) {
         return [[{
           id: 91,
           case_id: 1,
@@ -1020,10 +1026,10 @@ async function main() {
           content_json: JSON.stringify(unresolvedDocument)
         }]];
       }
-      if (/^SELECT id, name, code\s+FROM departments/.test(String(sql).trim())) {
+      if (/^SELECT id, name, code\s+FROM departments/.test(normalizedQuery(sql))) {
         return [[{ id: 1, name: '质量管理部', code: 'QUALITY' }]];
       }
-      throw new Error(`unexpected SQL after locked blocker check: ${String(sql).trim()}`);
+      throw new Error(`unexpected SQL after locked blocker check: ${normalizedQuery(sql)}`);
     }
   };
   const blockingPromotionRepository = makeProcessV7PreviewReviewRepository({

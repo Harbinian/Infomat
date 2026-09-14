@@ -57,6 +57,29 @@ async function one(executor, sql, params = []) {
   return result[0] || null;
 }
 
+const PREVIEW_TIMESTAMPS = {
+  cases: ['created_at', 'updated_at', 'scope_decided_at'],
+  revisions: ['created_at'],
+  review_items: ['created_at', 'updated_at', 'origin_decided_at', 'counterparty_decided_at'],
+  events: ['created_at']
+};
+
+function previewColumns(table, alias = '') {
+  const prefix = alias ? `${alias}.` : '';
+  return `${prefix}*, ` + PREVIEW_TIMESTAMPS[table]
+    .map(column => `UNIX_TIMESTAMP(${prefix}${column}) AS ${column}_epoch`).join(', ');
+}
+
+function previewTimestamps(row) {
+  const result = { ...row };
+  // MySQL TIMESTAMP epochs preserve the recorded instant across server/Node time zones.
+  for (const key of Object.keys(result).filter(key => key.endsWith('_at_epoch'))) {
+    result[key.slice(0, -6)] = result[key] == null ? null : new Date(Number(result[key]) * 1000).toISOString();
+    delete result[key];
+  }
+  return result;
+}
+
 async function withTransaction(pool, action) {
   const connection = await pool.getConnection();
   try {
@@ -75,7 +98,7 @@ async function withTransaction(pool, action) {
 function publicCase(row) {
   if (!row) return null;
   return {
-    ...row,
+    ...previewTimestamps(row),
     id: Number(row.id),
     owning_department_id: row.owning_department_id == null ? null : Number(row.owning_department_id),
     current_revision_no: Number(row.current_revision_no || 0),
@@ -90,7 +113,7 @@ function publicCase(row) {
 function publicRevision(row, includeDocument = false) {
   if (!row) return null;
   const result = {
-    ...row,
+    ...previewTimestamps(row),
     id: Number(row.id),
     case_id: Number(row.case_id),
     revision_no: Number(row.revision_no)
@@ -103,7 +126,7 @@ function publicRevision(row, includeDocument = false) {
 function publicItem(row) {
   if (!row) return null;
   return {
-    ...row,
+    ...previewTimestamps(row),
     id: Number(row.id),
     case_id: Number(row.case_id),
     revision_id: Number(row.revision_id),
@@ -119,7 +142,7 @@ function publicItem(row) {
 function publicEvent(row) {
   if (!row) return null;
   return {
-    ...row,
+    ...previewTimestamps(row),
     id: Number(row.id),
     case_id: Number(row.case_id),
     revision_id: row.revision_id == null ? null : Number(row.revision_id),
@@ -163,7 +186,8 @@ async function insertReviewItems(executor, caseId, revisionId, revisionNo, items
          counterparty_status, counterparty_basis, counterparty_decided_by_user_id,
          counterparty_decided_by_person_id, counterparty_decided_at,
          status, carry_state, carried_from_item_id, is_current)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+              ?, ?, ?, ?, FROM_UNIXTIME(?), ?, ?, ?, ?, FROM_UNIXTIME(?), ?, ?, ?, 1)
     `, [
       caseId,
       revisionId,
@@ -183,17 +207,17 @@ async function insertReviewItems(executor, caseId, revisionId, revisionNo, items
       item.origin_basis || null,
       item.origin_decided_by_user_id || null,
       item.origin_decided_by_person_id || null,
-      item.origin_decided_at || null,
+      item.origin_decided_at ? new Date(item.origin_decided_at).getTime() / 1000 : null,
       item.counterparty_status || 'pending',
       item.counterparty_basis || null,
       item.counterparty_decided_by_user_id || null,
       item.counterparty_decided_by_person_id || null,
-      item.counterparty_decided_at || null,
+      item.counterparty_decided_at ? new Date(item.counterparty_decided_at).getTime() / 1000 : null,
       item.status || itemStatus(item),
       item.carry_state || 'new',
       item.carried_from_item_id || null
     ]);
-    const row = await one(executor, 'SELECT * FROM process_v7_preview_review_items WHERE id=?', [result.insertId]);
+    const row = await one(executor, `SELECT ${previewColumns('review_items')} FROM process_v7_preview_review_items WHERE id=?`, [result.insertId]);
     inserted.push(publicItem(row));
     if (item.carry_state === 'carried_forward' || item.carry_state === 'reopened') {
       await insertEvent(executor, {
@@ -210,18 +234,18 @@ async function insertReviewItems(executor, caseId, revisionId, revisionNo, items
 }
 
 async function getCaseDetailFrom(executor, caseId) {
-  const caseRow = await one(executor, 'SELECT * FROM process_v7_preview_cases WHERE id=?', [caseId]);
+  const caseRow = await one(executor, `SELECT ${previewColumns('cases')} FROM process_v7_preview_cases WHERE id=?`, [caseId]);
   if (!caseRow) return null;
   const revision = caseRow.current_revision_id
-    ? await one(executor, 'SELECT * FROM process_v7_preview_revisions WHERE id=?', [caseRow.current_revision_id])
+    ? await one(executor, `SELECT ${previewColumns('revisions')} FROM process_v7_preview_revisions WHERE id=?`, [caseRow.current_revision_id])
     : null;
   const items = await rows(executor, `
-    SELECT * FROM process_v7_preview_review_items
+    SELECT ${previewColumns('review_items')} FROM process_v7_preview_review_items
     WHERE case_id=? AND is_current=1
     ORDER BY target_department_name, behavior_name, id
   `, [caseId]);
   const events = await rows(executor, `
-    SELECT * FROM process_v7_preview_events
+    SELECT ${previewColumns('events')} FROM process_v7_preview_events
     WHERE case_id=?
     ORDER BY id DESC
     LIMIT 200
@@ -276,12 +300,12 @@ function repositoryError(statusCode, code, message, extra = {}) {
 }
 
 async function lockCurrentPreviewWriteState(connection, caseId, meta = {}) {
-  const lockedCase = await one(connection, 'SELECT * FROM process_v7_preview_cases WHERE id=? FOR UPDATE', [caseId]);
+  const lockedCase = await one(connection, `SELECT ${previewColumns('cases')} FROM process_v7_preview_cases WHERE id=? FOR UPDATE`, [caseId]);
   if (!lockedCase) throw repositoryError(404, 'V7_PREVIEW_CASE_NOT_FOUND', 'V7预览核对案例不存在');
   assertPreviewWriteScope(lockedCase.process_ref);
 
   const lockedRevision = await one(connection, `
-    SELECT * FROM process_v7_preview_revisions
+    SELECT ${previewColumns('revisions')} FROM process_v7_preview_revisions
     WHERE id=? AND case_id=?
     FOR SHARE
   `, [lockedCase.current_revision_id, lockedCase.id]);
@@ -290,7 +314,7 @@ async function lockCurrentPreviewWriteState(connection, caseId, meta = {}) {
   }
 
   const currentItems = (await rows(connection, `
-    SELECT * FROM process_v7_preview_review_items
+    SELECT ${previewColumns('review_items')} FROM process_v7_preview_review_items
     WHERE case_id=? AND is_current=1
     ORDER BY id
     FOR UPDATE
@@ -450,11 +474,11 @@ function makeProcessV7PreviewReviewRepository(pool) {
     },
 
     async getCase(caseId) {
-      return publicCase(await one(pool, 'SELECT * FROM process_v7_preview_cases WHERE id=?', [caseId]));
+      return publicCase(await one(pool, `SELECT ${previewColumns('cases')} FROM process_v7_preview_cases WHERE id=?`, [caseId]));
     },
 
     async getItem(itemId) {
-      return publicItem(await one(pool, 'SELECT * FROM process_v7_preview_review_items WHERE id=?', [itemId]));
+      return publicItem(await one(pool, `SELECT ${previewColumns('review_items')} FROM process_v7_preview_review_items WHERE id=?`, [itemId]));
     },
 
     async findFormalDocumentByNumber(documentNo) {
@@ -471,7 +495,7 @@ function makeProcessV7PreviewReviewRepository(pool) {
       const departmentId = Number(actor.departmentId || 0);
       const canReadGlobal = actor.canReadGlobal ? 1 : 0;
       const result = await rows(pool, `
-        SELECT c.*,
+        SELECT ${previewColumns('cases', 'c')},
           (SELECT COUNT(*) FROM process_v7_preview_review_items i
            WHERE i.case_id=c.id AND i.is_current=1) AS review_item_count,
           (SELECT COUNT(*) FROM process_v7_preview_review_items i
@@ -520,7 +544,7 @@ function makeProcessV7PreviewReviewRepository(pool) {
         return await withTransaction(pool, async connection => {
         assertPreviewWriteScope(preview.processRef);
         const existing = await one(connection, `
-          SELECT * FROM process_v7_preview_cases
+          SELECT ${previewColumns('cases')} FROM process_v7_preview_cases
           WHERE process_ref=? AND status<>'closed'
           ORDER BY id DESC LIMIT 1 FOR UPDATE
         `, [preview.processRef]);
@@ -581,8 +605,8 @@ function makeProcessV7PreviewReviewRepository(pool) {
           payload: { source_file_name: meta.sourceFileName, content_hash: preview.contentHash, warning_count: preview.warnings.length }
         });
         return {
-          case: publicCase(await one(connection, 'SELECT * FROM process_v7_preview_cases WHERE id=?', [caseId])),
-          revision: publicRevision(await one(connection, 'SELECT * FROM process_v7_preview_revisions WHERE id=?', [revisionResult.insertId])),
+          case: publicCase(await one(connection, `SELECT ${previewColumns('cases')} FROM process_v7_preview_cases WHERE id=?`, [caseId])),
+          revision: publicRevision(await one(connection, `SELECT ${previewColumns('revisions')} FROM process_v7_preview_revisions WHERE id=?`, [revisionResult.insertId])),
           items: insertedItems,
           idempotent: false
         };
@@ -590,7 +614,7 @@ function makeProcessV7PreviewReviewRepository(pool) {
       } catch (error) {
         if (error && error.code === 'ER_DUP_ENTRY' && /uq_process_v7_preview_active_process/.test(String(error.message || ''))) {
           const existing = await one(pool, `
-            SELECT * FROM process_v7_preview_cases
+            SELECT ${previewColumns('cases')} FROM process_v7_preview_cases
             WHERE process_ref=? AND status<>'closed'
             ORDER BY id DESC LIMIT 1
           `, [preview.processRef]);
@@ -645,7 +669,7 @@ function makeProcessV7PreviewReviewRepository(pool) {
           actor,
           payload: { owning_department_id: lockedDepartment.id, owning_department_name: lockedDepartment.name }
         });
-        return publicCase(await one(connection, 'SELECT * FROM process_v7_preview_cases WHERE id=?', [locked.id]));
+        return publicCase(await one(connection, `SELECT ${previewColumns('cases')} FROM process_v7_preview_cases WHERE id=?`, [locked.id]));
       });
     },
 
@@ -712,8 +736,8 @@ function makeProcessV7PreviewReviewRepository(pool) {
           }
         });
         return {
-          case: publicCase(await one(connection, 'SELECT * FROM process_v7_preview_cases WHERE id=?', [locked.id])),
-          revision: publicRevision(await one(connection, 'SELECT * FROM process_v7_preview_revisions WHERE id=?', [revisionResult.insertId])),
+          case: publicCase(await one(connection, `SELECT ${previewColumns('cases')} FROM process_v7_preview_cases WHERE id=?`, [locked.id])),
+          revision: publicRevision(await one(connection, `SELECT ${previewColumns('revisions')} FROM process_v7_preview_revisions WHERE id=?`, [revisionResult.insertId])),
           items: insertedItems,
           idempotent: false
         };
@@ -749,7 +773,7 @@ function makeProcessV7PreviewReviewRepository(pool) {
               ${prefix}_decided_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP
           WHERE id=?
         `, [decision, basis, actor.userId || null, actor.personId || null, item.id]);
-        const updated = publicItem(await one(connection, 'SELECT * FROM process_v7_preview_review_items WHERE id=?', [item.id]));
+        const updated = publicItem(await one(connection, `SELECT ${previewColumns('review_items')} FROM process_v7_preview_review_items WHERE id=?`, [item.id]));
         updated.status = itemStatus(updated);
         await connection.execute('UPDATE process_v7_preview_review_items SET status=? WHERE id=?', [updated.status, item.id]);
         const replaced = state.currentItems.map(current => Number(current.id) === Number(updated.id) ? updated : current);
@@ -867,14 +891,14 @@ function makeProcessV7PreviewReviewRepository(pool) {
             case_status: status
           }
         });
-        return publicCase(await one(connection, 'SELECT * FROM process_v7_preview_cases WHERE id=?', [locked.id]));
+        return publicCase(await one(connection, `SELECT ${previewColumns('cases')} FROM process_v7_preview_cases WHERE id=?`, [locked.id]));
       });
     },
 
     async promoteCase(detail, preview, target, meta, actor) {
       assertPromotionFeatureEnabled();
       return await withTransaction(pool, async connection => {
-        const lockedCase = await one(connection, 'SELECT * FROM process_v7_preview_cases WHERE id=? FOR UPDATE', [detail.case.id]);
+        const lockedCase = await one(connection, `SELECT ${previewColumns('cases')} FROM process_v7_preview_cases WHERE id=? FOR UPDATE`, [detail.case.id]);
         if (!lockedCase) throw repositoryError(404, 'V7_PREVIEW_CASE_NOT_FOUND', 'V7预览核对案例不存在');
         assertPromotionWriteScope(lockedCase.process_ref);
         if (text(lockedCase.status) !== 'review_complete') {
@@ -890,7 +914,7 @@ function makeProcessV7PreviewReviewRepository(pool) {
         }
 
         const lockedRevision = await one(connection, `
-          SELECT * FROM process_v7_preview_revisions
+          SELECT ${previewColumns('revisions')} FROM process_v7_preview_revisions
           WHERE id=? AND case_id=?
           FOR SHARE
         `, [lockedCase.current_revision_id, lockedCase.id]);
