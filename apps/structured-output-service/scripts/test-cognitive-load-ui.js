@@ -70,7 +70,7 @@ assert.match(html, /查看全图/);
   'const BADGE_FONT_SIZE = 36;',
   'const EDGE_FONT_SIZE = 39;'
 ].forEach(source => assert.ok(diagram.includes(source), `missing three-times diagram style: ${source}`));
-assert.match(diagram, /Math\.min\(1, \(cy\.width\(\) - 48\) \/ bounds\.w/);
+assert.match(diagram, /Math\.min\(CLEAR_VIEW_ZOOM, \(cy\.width\(\) - 48\) \/ bounds\.w/);
 assert.match(diagram, /mode: 'clear'/);
 assert.match(diagram, /options\.selectedFocus/);
 

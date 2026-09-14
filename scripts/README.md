@@ -108,6 +108,8 @@ npm run test:work-role-contract
 
 ## MDM / PMO 固定启动配置
 
+仅操作3000时，改从`apps/mdm-platform`运行`npm run service:start`、`npm run service:stop`、`npm run service:restart`或`npm run service:check`。应用专用脚本复用本目录`infomat-services.config.json`中的MDM/MySQL/readModels非敏感值，不读取私有env、不初始化数据库、不操作PMO或3001。会话、HTTPS、就绪和恢复条件见[3000发布与恢复](../docs/plans/2026-09-09-mdm-3000-launch/03-发布与恢复.md)。下面的共同开发入口保持原有副作用，不作为3000独立发布命令。
+
 MDM 和 PMO 的仓库根目录启动入口：
 
 ```powershell
@@ -123,7 +125,7 @@ npm run smoke:infomat-services
 | PMO | 本机访问 `127.0.0.1:5173`，服务监听 `0.0.0.0:5173` |
 | MySQL | `localhost:3307` |
 | MySQL Docker 容器 | `infomat-input-baseline-review-mysql` |
-| MySQL 用户 / 库 | `mdm_user` / `infomat_mdm` |
+| MySQL 用户 / 库 | `sa` / `infomat_mdm`（`sa` 为全局管理账号，具有授权权限） |
 | MySQL 连接池 | `MYSQL_CONNECTION_LIMIT=16` |
 | 读模型 | `MDM_IDENTITY_READ_MODEL=mysql`、`PROCESS_GOVERNANCE_READ_MODEL=mysql` |
 | 管理员工号 | `ADMIN001` |

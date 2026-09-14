@@ -1,3 +1,4 @@
+const { syntheticSession, validateSyntheticSession } = require('./testHelpers/syntheticSession');
 const assert = require('assert');
 const express = require('express');
 
@@ -62,6 +63,7 @@ async function main() {
   const repo = makeFakeAuditRepository();
   activityRouter.setAuditRepositoryFactory(async () => repo);
   auth.setIdentityRepositoryFactory(async () => ({
+    validateSession: validateSyntheticSession,
     async getUserEffectivePermissions(userId) {
       assert.strictEqual(userId, 42);
       return {
@@ -77,12 +79,12 @@ async function main() {
   const app = express();
   app.use(express.json());
   app.use((req, res, next) => {
-    req.session = {
+    req.session = syntheticSession({
       personId: 42,
       userId: 42,
       userName: '数据质量审计人',
       departmentId: 9
-    };
+    });
     next();
   });
   app.use('/api/activity', activityRouter);

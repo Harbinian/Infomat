@@ -1,3 +1,4 @@
+const { sendMysqlUnavailable } = require('../mysqlRuntimeSchema');
 const express = require('express');
 const multer = require('multer');
 const ExcelJS = require('exceljs');
@@ -53,6 +54,7 @@ function handleError(res, error) {
   if (error && (String(error.code || '').startsWith('ER_') || String(error.message).includes('constraint'))) {
     return res.status(400).json({ error: '数据不符合约束' });
   }
+  if (sendMysqlUnavailable(res, error)) return;
   console.error(error);
   return res.status(400).json({ error: 'Excel 解析或导入失败' });
 }

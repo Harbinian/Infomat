@@ -1048,6 +1048,11 @@ function testDiagramModelsAndPerformance() {
 }
 
 function main() {
+  const chineseLabel = '产品制造大纲质量保证核查结果是否同意\n执行部门待明确';
+  const wrappedLabel = ProcessDiagram.wrapDisplayText(chineseLabel, 11);
+  assert.equal(wrappedLabel.label.replace(/\n/g, ''), chineseLabel.replace(/\n/g, ''), 'Wrapping must preserve every character');
+  assert.ok(!wrappedLabel.label.includes('部\n门'), 'Chinese department word must remain intact');
+  assert.ok(wrappedLabel.maxLineUnits <= 11, 'Word wrapping must respect the width budget');
   testLegacyBehaviorSideDataReferences();
   testLegacyConflictingOutputReferencesRemainPending();
   testLegacyMultipleBehaviorOutputsRemainPending();

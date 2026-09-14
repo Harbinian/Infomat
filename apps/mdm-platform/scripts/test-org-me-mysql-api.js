@@ -135,15 +135,16 @@ async function main() {
   auth.setIdentityRepositoryFactory(async () => repository);
 
   const sharedSession = {
+    save(callback) { callback(); },
     regenerate(callback) {
       for (const key of Object.keys(this)) {
-        if (!['regenerate', 'destroy'].includes(key)) delete this[key];
+        if (!['regenerate', 'destroy', 'save'].includes(key)) delete this[key];
       }
       callback();
     },
     destroy(callback) {
       for (const key of Object.keys(this)) {
-        if (!['regenerate', 'destroy'].includes(key)) delete this[key];
+        if (!['regenerate', 'destroy', 'save'].includes(key)) delete this[key];
       }
       callback();
     }

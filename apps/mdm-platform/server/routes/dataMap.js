@@ -1,3 +1,4 @@
+const { sendMysqlUnavailable } = require('../mysqlRuntimeSchema');
 const express = require('express');
 const router = express.Router();
 const { requireAuth, getUserEffectivePermissionsAsync } = require('../auth');
@@ -13,6 +14,7 @@ function handleError(res, error) {
   if (error && (String(error.code || '').startsWith('ER_') || String(error.message).includes('constraint'))) {
     return res.status(400).json({ error: '数据不符合约束' });
   }
+  if (sendMysqlUnavailable(res, error)) return;
   console.error(error);
   return res.status(500).json({ error: '服务器错误' });
 }

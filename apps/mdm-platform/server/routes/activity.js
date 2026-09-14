@@ -1,3 +1,4 @@
+const { sendMysqlUnavailable } = require('../mysqlRuntimeSchema');
 const express = require('express');
 const router = express.Router();
 const {
@@ -171,6 +172,7 @@ router.get('/heatmap', requireAuth, async (req, res) => {
     const rows = filterRows(await repo.listActivityRows({ startDate, endDate }), base.filters, base.params);
     return res.json(buildPayload({ scope, days, startDate, endDate, rows }));
   } catch (error) {
+    if (sendMysqlUnavailable(res, error)) return;
     console.error(error);
     return res.status(500).json({ error: '服务器错误' });
   }

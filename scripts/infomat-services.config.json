@@ -11,7 +11,7 @@
   "mysql": {
     "host": "localhost",
     "port": 3307,
-    "user": "mdm_user",
+    "user": "sa",
     "database": "infomat_mdm",
     "connectionLimit": 16,
     "dockerContainer": "infomat-input-baseline-review-mysql"

@@ -55,6 +55,7 @@ CREATE TABLE IF NOT EXISTS process_data_governance_work_packages (
   UNIQUE KEY uq_process_data_governance_package_version (process_version_id),
   INDEX idx_process_data_governance_package_status (status, due_at),
   INDEX idx_process_data_governance_package_department (owning_department_id, status),
+  INDEX fk_process_data_governance_package_document (source_document_id),
   CONSTRAINT chk_process_data_governance_package_risk CHECK (risk_level IN ('normal','high')),
   CONSTRAINT chk_process_data_governance_package_status CHECK (status IN ('mdm_preparing','mdm_governing','waiting_business_fact','mdm_review','completed','source_withdrawn')),
   CONSTRAINT fk_process_data_governance_package_version FOREIGN KEY (process_version_id)
@@ -117,6 +118,7 @@ CREATE TABLE IF NOT EXISTS process_data_governance_fact_requests (
   UNIQUE KEY uq_process_data_governance_fact_ref (request_ref),
   INDEX idx_process_data_governance_fact_package (work_package_id, status),
   INDEX idx_process_data_governance_fact_department (target_department_id, status),
+  INDEX fk_process_data_governance_fact_detail (detail_id),
   CONSTRAINT chk_process_data_governance_fact_status CHECK (status IN ('open','answered','closed','cancelled')),
   CONSTRAINT fk_process_data_governance_fact_package FOREIGN KEY (work_package_id)
     REFERENCES process_data_governance_work_packages(id) ON DELETE RESTRICT,
@@ -140,6 +142,7 @@ CREATE TABLE IF NOT EXISTS process_data_governance_reviews (
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_process_data_governance_review_package (work_package_id, id),
   INDEX idx_process_data_governance_review_scope (scope_department_id, review_type),
+  INDEX fk_process_data_governance_review_replaces (replaces_review_id),
   CONSTRAINT chk_process_data_governance_review_type CHECK (review_type IN ('mdm_workgroup','data_quality','decision_group')),
   CONSTRAINT chk_process_data_governance_review_decision CHECK (decision IN ('approved','needs_changes','rejected','noted')),
   CONSTRAINT fk_process_data_governance_review_package FOREIGN KEY (work_package_id)

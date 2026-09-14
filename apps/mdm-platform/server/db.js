@@ -1,3 +1,7 @@
+if (process.env.NODE_ENV === 'production' || (process.env.MDM_ALLOW_LEGACY_TEST_MODE !== '1' &&
+    (process.env.MDM_IDENTITY_READ_MODEL === 'mysql' || process.env.PROCESS_GOVERNANCE_READ_MODEL === 'mysql'))) {
+  throw new Error('LEGACY_SQLITE_RUNTIME_FORBIDDEN: SQLite is restricted to isolated legacy tests and migration tools');
+}
 const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');

@@ -1,3 +1,4 @@
+const { sendMysqlUnavailable } = require('../mysqlRuntimeSchema');
 const express = require('express');
 const router = express.Router();
 const { requireAuth, requirePermission, getDepartmentByIdAsync } = require('../auth');
@@ -9,6 +10,7 @@ const {
 } = require('../terminologyMysqlRepository');
 
 function handleDbError(res, error) {
+  if (sendMysqlUnavailable(res, error)) return;
   if (error && (error.code === 'ER_DUP_ENTRY' || String(error.message).includes('Duplicate entry'))) {
     return res.status(409).json({ error: '术语已存在' });
   }

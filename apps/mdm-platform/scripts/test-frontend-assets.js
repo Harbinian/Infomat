@@ -281,21 +281,21 @@ async function main() {
   assert.ok(html.includes('function resetSessionUi'), 'login screen should reset stale authenticated header state');
   assert.ok(html.includes("$('sessionUserName').textContent = '未登录'"), 'login screen should clear stale user identity text');
   const startupSnippetStart = html.indexOf('async function activateAuthenticatedApp');
-  const startupSnippet = html.slice(startupSnippetStart, startupSnippetStart + 1200);
+  const startupSnippet = html.slice(startupSnippetStart, html.indexOf('async function login()', startupSnippetStart));
   assert.ok(
     startupSnippet.indexOf('renderRouteFromHash();') !== -1 &&
     startupSnippet.indexOf('await loadAllSafely();') !== -1 &&
-    startupSnippet.indexOf('renderRouteFromHash();') < startupSnippet.indexOf('await loadAllSafely();'),
-    'authenticated startup should render the current hash route before loading broad dashboard data'
+    startupSnippet.indexOf('renderRouteFromHash();') > startupSnippet.indexOf('await loadAllSafely();'),
+    'authenticated startup should resolve runtime capabilities and departments before rendering the route'
   );
-  assert.ok(html.includes('function loadAllSafely'), 'broad data loading should not block hash-route rendering');
+  assert.ok(html.includes('function loadAllSafely'), 'shared directory failure should be reported without loading unrelated business modules');
   assert.ok(html.includes('function isUnauthorizedError'), 'frontend should identify unauthorized errors with a shared helper');
   assert.ok(html.includes('function handleUnauthorized'), 'frontend should centralize unauthorized session handling');
   assert.ok(html.includes('handleUnauthorized(path, silentUnauthorized);'), 'API helper should stop the authenticated app loop on 401');
   const pollingSnippetStart = html.indexOf('async function loadCurrentListData()');
   const pollingSnippet = html.slice(pollingSnippetStart, pollingSnippetStart + 900);
   assert.ok(
-    pollingSnippet.includes("if (tab === 'dashboard') { await loadMappings(); await renderDashboard(); return; }"),
+    pollingSnippet.includes("if (tab === 'dashboard') { await loadDashboardData(); return; }"),
     'polling should refresh dashboard widgets only when dashboard is the active tab'
   );
   assert.ok(

@@ -1,3 +1,6 @@
+// Run: npm run test:weekly-action-personnel. Reads the repository roster/mapping,
+// writes contract fixtures and output only under an owned temporary directory,
+// and never publishes the runtime snapshot or connects to a database.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -56,7 +59,7 @@ try {
 
   const liuChunhan = snapshot.personRoles.find(role => role.name === '刘春含' && role.projectOrganization === '信息化项目管理工作室');
   assert.equal(liuChunhan.rosterDepartment, '经营发展部');
-  assert.equal(liuChunhan.rosterPosition, '规划员');
+  assert.equal(liuChunhan.rosterPosition, '战略规划主管（副室主任级）');
 
   console.log('weekly action personnel snapshot checks passed');
 } finally {

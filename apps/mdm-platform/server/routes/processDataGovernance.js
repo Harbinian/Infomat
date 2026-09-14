@@ -11,9 +11,11 @@ const { mysqlConfigFromEnv } = require('../mysqlConfig');
 const { makeProcessDataGovernanceRepository } = require('../processDataGovernanceRepository');
 const {
   assertProcessDataGovernanceEnabled,
+  assertProcessDataGovernanceWritable,
   assertProcessVersionAllowed,
   configuredProcessVersionId,
-  featureStatus
+  featureStatus,
+  isProcessDataGovernanceReadOnly
 } = require('../processDataGovernanceScope');
 
 let repositoryFactory = null;
@@ -157,6 +159,7 @@ function expectedRevision(body) {
 
 function allowedActions(actor, detail = null) {
   const actions = ['view'];
+  if (isProcessDataGovernanceReadOnly()) return actions;
   if (actor.roleCodes.has('admin')) return actions;
   if (
     actor.roleCodes.has('mdm_lead') &&
@@ -202,6 +205,12 @@ async function assertPackageInTrialScope(repo, packageId) {
   return detail;
 }
 
+function assertRetainedPackageReadable(workPackage) {
+  if (isProcessDataGovernanceReadOnly() && workPackage.status !== 'completed') {
+    throw httpError(403, 'PROCESS_DATA_GOVERNANCE_COMPLETED_ONLY', '本批结束后的查阅仅保留已完成治理工作包');
+  }
+}
+
 async function assertFactRequestInTrialScope(repo, requestId) {
   const fact = await repo.getFactRequest(Number(requestId));
   if (!fact) throw httpError(404, 'PROCESS_DATA_GOVERNANCE_FACT_NOT_FOUND', '业务事实问题不存在');
@@ -222,6 +231,7 @@ router.use(requireAuth, (req, res, next) => {
     assertProcessDataGovernanceEnabled();
     const versionId = configuredProcessVersionId();
     assertProcessVersionAllowed(versionId);
+    if (!['GET', 'HEAD'].includes(req.method)) assertProcessDataGovernanceWritable();
     req.processDataGovernanceVersionId = versionId;
     next();
   } catch (error) {
@@ -233,11 +243,15 @@ router.get('/workbench', (req, res) => runAction(res, async () => {
   const actor = normalizeActor(await currentActor(req));
   assertCanRead(actor);
   const repo = await getProcessDataGovernanceRepository();
-  const packages = actor.canReadGlobal ? await repo.listWorkPackages(req.processDataGovernanceVersionId) : [];
+  const readOnly = isProcessDataGovernanceReadOnly();
+  const scopedPackages = actor.canReadGlobal || readOnly ? await repo.listWorkPackages(req.processDataGovernanceVersionId) : [];
+  const retainedPackages = scopedPackages.filter(item => item.status === 'completed');
+  const packages = actor.canReadGlobal ? (readOnly ? retainedPackages : scopedPackages) : [];
   const factRequests = actor.departmentId
-    ? await repo.listBusinessFactRequests(actor.departmentId, req.processDataGovernanceVersionId, { all: req.query.mode === 'all' })
+    ? (await repo.listBusinessFactRequests(actor.departmentId, req.processDataGovernanceVersionId, { all: readOnly || req.query.mode === 'all' }))
+      .filter(item => !readOnly || retainedPackages.some(workPackage => Number(workPackage.id) === Number(item.work_package_id)))
     : [];
-  const workItems = await repo.listWorkbenchItems(actor, req.processDataGovernanceVersionId);
+  const workItems = readOnly ? [] : await repo.listWorkbenchItems(actor, req.processDataGovernanceVersionId);
   res.json({
     feature: featureStatus(),
     responsibilities: responsibilities(),
@@ -272,6 +286,7 @@ router.get('/work-packages/:id', (req, res) => runAction(res, async () => {
   const detail = await repo.getWorkPackageDetail(Number(req.params.id));
   if (!detail) throw httpError(404, 'PROCESS_DATA_GOVERNANCE_PACKAGE_NOT_FOUND', '数据生命周期治理工作包不存在');
   assertProcessVersionAllowed(detail.package.process_version_id);
+  assertRetainedPackageReadable(detail.package);
   res.json({ ...detail, responsibilities: responsibilities(), allowed_actions: allowedActions(actor, detail) });
 }));
 
@@ -286,6 +301,7 @@ router.get('/fact-requests/:id', (req, res) => runAction(res, async () => {
   if (!actor.canReadGlobal && Number(actor.departmentId) !== Number(fact.target_department_id)) {
     throw httpError(403, 'PROCESS_DATA_GOVERNANCE_FACT_DEPARTMENT_DENIED', '该事实问题不是发给本人所属部门的');
   }
+  assertRetainedPackageReadable(context.package);
   res.json({
     package: context.package,
     source_version: context.source_version,

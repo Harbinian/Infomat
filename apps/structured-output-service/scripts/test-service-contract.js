@@ -1920,7 +1920,7 @@ async function testFrontendContract() {
   assert.ok(html.includes('本流程会进行匿名处理吗？'));
   assert.ok(html.includes('进行匿名处理后，还能认出原来对应的人或对象吗？'));
   assert.ok(html.includes("const showLifecycleDetails = lifecycle.applicability === 'applicable' || advancedLifecycleMode"));
-  assert.ok(html.includes('选择“会改变”后，页面再显示业务使用状态、保管方式和确实适用的匿名处理问题。'));
+  assert.ok(html.includes('查看或维护已记录的生命周期明细'));
   assert.ok(html.includes('data-action="toggle-advanced-lifecycle"'));
   assert.ok(html.includes('高级结构核对仅在当前页面临时开启'));
   assert.equal(

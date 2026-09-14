@@ -1,3 +1,4 @@
+const { syntheticSession, validateSyntheticSession } = require('./testHelpers/syntheticSession');
 const assert = require('assert');
 const express = require('express');
 
@@ -194,6 +195,7 @@ async function main() {
     'governance:submit-department'
   ]);
   auth.setIdentityRepositoryFactory(async () => ({
+    validateSession: validateSyntheticSession,
     async getUserEffectivePermissions(userId) {
       assert.strictEqual(userId, 42);
       return { permSet: effectivePermissions, fieldConstraints: {} };
@@ -209,12 +211,12 @@ async function main() {
   const app = express();
   app.use(express.json());
   app.use((req, res, next) => {
-    req.session = {
+    req.session = syntheticSession({
       personId: 42,
       userId: 42,
       userName: '映射治理人员',
       departmentId: 9
-    };
+    });
     next();
   });
   app.use('/api/mappings', mappingsRouter);

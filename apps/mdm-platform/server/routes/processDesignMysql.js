@@ -1,3 +1,4 @@
+const { checkRuntimeSchema, sendMysqlUnavailable } = require('../mysqlRuntimeSchema');
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
@@ -21,12 +22,8 @@ const {
   handoffCandidates
 } = require('../processGovernanceV2');
 const {
-  HANDOFF_STATUSES: HANDOFF_STATUS_VALUES,
-  applyCrossDeptHandoffV2
+  HANDOFF_STATUSES: HANDOFF_STATUS_VALUES
 } = require('../crossDeptHandoffV2Migration');
-const {
-  applyProcessGovernanceUnified
-} = require('../processGovernanceUnifiedMigration');
 const {
   contentHash: v7ContentHash,
   unresolvedBlockingIssues,
@@ -104,6 +101,7 @@ function runAction(res, action) {
     if (error && error.statusCode) {
       return res.status(error.statusCode).json(error.payload || { error: error.message });
     }
+    if (sendMysqlUnavailable(res, error)) return;
     console.error(error);
     return res.status(500).json({ error: '服务器错误' });
   });
@@ -1068,7 +1066,7 @@ function makeProcessDesignMysqlRepository(pool) {
       SELECT *
       FROM process_v7_preview_revisions
       WHERE id=? AND case_id=?
-      FOR UPDATE
+      FOR SHARE
     `, [previewCase.current_revision_id, previewCase.id]);
     if (!revision) throw v7PromotionEvidenceMismatch(null, '正式V7草稿关联的当前预览修订不存在');
 
@@ -1078,7 +1076,7 @@ function makeProcessDesignMysqlRepository(pool) {
       WHERE preview_case_id=? AND draft_id=?
       ORDER BY id DESC
       LIMIT 1
-      FOR UPDATE
+      FOR SHARE
     `, [previewCase.id, locator.draftId]);
     if (!promotion) throw v7PromotionEvidenceMismatch(null, '正式V7草稿缺少当前提升依据，请重新完成受控提升');
 
@@ -5413,16 +5411,16 @@ async function repository() {
   if (!repositoryPromise) {
     repositoryPromise = (async () => {
       const pool = mysql.createPool(mysqlConfigFromEnv());
-      await ensureProcessDesignEditionSchema(pool);
-      await ensureProcessDesignEvidenceStatusSchema(pool);
-      await ensureProcessDesignFormStructureSchema(pool);
-      await ensureProcessDesignStepTransitionSchema(pool);
-      await applyCrossDeptHandoffV2(pool);
-      await applyProcessGovernanceUnified(pool);
+      await checkRuntimeSchema(pool, 'processDesign');
       return makeProcessDesignMysqlRepository(pool);
     })();
   }
-  return await repositoryPromise;
+  try {
+    return await repositoryPromise;
+  } catch (error) {
+    repositoryPromise = null;
+    throw error;
+  }
 }
 
 function setProcessDesignRepositoryFactory(factory) {

@@ -20,6 +20,7 @@ function closeServer(server) {
 
 async function main() {
   const roleWorkbenchRouter = require('../server/routes/roleWorkbench');
+  require('../server/todoMysqlRepository').setTodoRepositoryFactory(() => ({ async listTodos() { return []; } }));
   const roleCodes = ['admin'];
   const permissionSet = new Set([
     'identity:read',

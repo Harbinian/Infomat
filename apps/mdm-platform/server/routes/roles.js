@@ -1,3 +1,4 @@
+const { checkRuntimeSchema, sendMysqlUnavailable } = require('../mysqlRuntimeSchema');
 const express = require('express');
 const mysql = require('mysql2/promise');
 const { requireAuth, requirePermission } = require('../auth');
@@ -14,7 +15,7 @@ async function identityRepository() {
     identityRepoPromise = (async () => {
       const pool = mysql.createPool(mysqlConfigFromEnv());
       const repo = makeIdentityMysqlRepository(pool);
-      await repo.initSchema();
+      await checkRuntimeSchema(pool, 'identity');
       return repo;
     })();
   }
@@ -27,6 +28,7 @@ async function identityRepository() {
 }
 
 function handleError(res, error) {
+  if (sendMysqlUnavailable(res, error)) return;
   console.error(error);
   return res.status(503).json({
     error: '角色模型暂不可用',

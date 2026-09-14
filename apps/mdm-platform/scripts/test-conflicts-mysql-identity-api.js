@@ -1,4 +1,5 @@
 const assert = require('assert');
+const { syntheticSession, validateSyntheticSession } = require('./testHelpers/syntheticSession');
 const express = require('express');
 
 process.env.MDM_DB_QUIET = '1';
@@ -156,6 +157,7 @@ async function main() {
   ]);
   let permissionCalls = 0;
   auth.setIdentityRepositoryFactory(async () => ({
+    validateSession: validateSyntheticSession,
     async getUserEffectivePermissions(personId) {
       permissionCalls += 1;
       return {
@@ -186,6 +188,7 @@ async function main() {
       userName: '测试人员',
       departmentId: currentDepartmentId
     };
+    req.session = syntheticSession(req.session);
     next();
   });
   app.use('/api/conflicts', conflictsRouter);

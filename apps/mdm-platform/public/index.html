@@ -65,6 +65,15 @@
     .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 14px; color: var(--header-text); letter-spacing: -0.01em; }
     .brand img { height: 40px; width: auto; }
     .session { display: flex; align-items: center; gap: 16px; font-size: 13px; color: var(--header-text-muted); }
+    .topbar { gap: 16px; }
+    .topbar .brand, .session button { flex-shrink: 0; white-space: nowrap; }
+    .session, #sessionText { min-width: 0; }
+    #sessionText { overflow-wrap: anywhere; }
+    #sessionPositionStatus { display: block; font-size: 11px; }
+    @media (max-width: 600px) {
+      .topbar { height: auto; min-height: 56px; flex-wrap: wrap; gap: 8px; padding: 8px 12px; }
+      .topbar .session { width: 100%; justify-content: space-between; gap: 8px; }
+    }
 
     .page-container {
       max-width: none;
@@ -1240,7 +1249,7 @@
     .pdg-modal-head p { margin: 3px 0 0; color: var(--text-muted); font-size: 12px; }
     .pdg-modal-body { min-height: 0; display: grid; grid-template-columns: 390px minmax(0, 1fr); }
     .pdg-detail-list { min-height: 0; overflow: auto; padding: 16px; border-right: 1px solid var(--border); background: rgba(247,241,224,0.54); }
-    .pdg-detail-content { min-height: 0; overflow: auto; padding: 20px 24px 36px; }
+    .pdg-detail-content { min-width: 0; min-height: 0; overflow: auto; overflow-wrap: anywhere; padding: 20px 24px 36px; }
     .pdg-list { display: grid; gap: 8px; }
     .pdg-list-item { width: 100%; text-align: left; padding: 12px; border: 1px solid var(--border); border-radius: 7px; background: #fffaf1; }
     .pdg-list-item.on { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(178,86,56,0.12); }
@@ -1355,7 +1364,7 @@
 <body>
   <header class="topbar">
     <div class="brand"><img src="/logo.png" alt="MDM">MDM 平台</div>
-    <div class="session"><span id="sessionText"><span id="sessionUserName">未登录</span></span><button class="btn secondary" id="logoutBtn">退出</button></div>
+    <div class="session"><span id="sessionText"><span id="sessionUserName">未登录</span><small id="sessionPositionStatus" role="status" hidden></small></span><button class="btn secondary" id="logoutBtn">退出</button></div>
   </header>
 
   <div class="page-container">
@@ -2431,6 +2440,7 @@
       <!-- Quality Panel -->
       <section class="panel compact-panel" id="quality">
         <div class="compact-head"><div class="compact-title"><h2>数据质量仪表盘</h2><p>关注主数据基础对象和黄金源确认进度。</p></div></div>
+        <div id="qualityLegacySummary">
         <div class="grid g4" style="margin-bottom:24px">
           <div class="metric"><div class="num" id="qOrgs">-</div><div class="lbl">组织单元</div></div>
           <div class="metric"><div class="num" id="qPersons">-</div><div class="lbl">人员</div></div>
@@ -2443,6 +2453,7 @@
           <div class="action-metric" data-action-metric="quality-products"><span class="value" id="qualityMetricProducts">-</span><span class="label">产品基数</span></div>
           <div class="action-metric" data-action-metric="quality-ext"><span class="value" id="qualityMetricExtIds">-</span><span class="label">外部映射</span></div>
         </div>
+        </div><div id="qualityLegacyNotice" class="notice" hidden>历史组织、产品与集成统计入口已暂停；字段身份进度继续按当前权限显示。</div>
         <h2 style="margin-top:32px">黄金源确认进度</h2>
         <div id="goldenSourceProgress" style="margin-bottom:16px"></div>
         <div id="goldenSourceChart" class="chart" style="height:300px"></div>
@@ -3130,13 +3141,173 @@
       await showHandoffConflictDetail(conflictId);
     }
 
+    // Page-memory edit sessions only. Nothing is submitted until its own save action.
+    var v7Edits = { caseId:0, ownerId:null, revision:0, hash:'', fields:{}, controls:{}, activeHash:'', busy:false, conflict:false, needsRefresh:false, message:'' };
+
+    function captureV7Edits() {
+      Object.keys(v7Edits.controls).forEach(function(key) {
+        var control = v7Edits.controls[key];
+        var el = $(control.id);
+        if (!el || !el.isConnected) return;
+        if (el.value !== control.baseline || v7Edits.fields[key]) {
+          var previous = v7Edits.fields[key];
+          if (el.value === control.baseline && !previous) return;
+          v7Edits.fields[key] = Object.assign({}, previous || control, { value:el.value });
+          if (el.value === control.baseline && !v7Edits.conflict) delete v7Edits.fields[key];
+        }
+      });
+    }
+
+    function hasV7Edits() {
+      captureV7Edits();
+      return v7Edits.busy || Object.keys(v7Edits.fields).length > 0;
+    }
+
+    function clearV7Edits() {
+      v7Edits.fields = {};
+      v7Edits.controls = {};
+      v7Edits.conflict = false;
+      v7Edits.needsRefresh = false;
+      v7Edits.message = '';
+    }
+
+    function confirmV7Leave(message) {
+      if (v7Edits.busy) { showToast('当前操作仍在等待结果，请稍后再离开。', 'error'); return false; }
+      if (!hasV7Edits()) return true;
+      return window.confirm(message + '\n\n有尚未保存的V7依据或意见。确定将放弃这些输入，取消则继续编辑。不会自动提交。');
+    }
+
+    function guardV7Route() {
+      var route = parseHash();
+      var sameCase = route.tab === 'processGovernance' && processGovernanceViewFromRoute(route) === 'v7Preview' &&
+        Number(route.v7CaseId || state.pgSelectedV7PreviewCaseId || 0) === Number(v7Edits.caseId);
+      if (sameCase || !hasV7Edits()) return true;
+      if (!confirmV7Leave('准备切换案例或工作区。')) {
+        history.replaceState(null, '', v7Edits.activeHash || '#/processGovernance?workspace=v7Preview');
+        return false;
+      }
+      clearV7Edits();
+      return true;
+    }
+
+    function renderV7EditNotice() {
+      var box = $('pgV7EditNotice');
+      if (!box) return;
+      var keys = Object.keys(v7Edits.fields);
+      box.hidden = !keys.length && !v7Edits.message && !v7Edits.busy;
+      var message = v7Edits.message || (v7Edits.busy ? '正在等待保存结果。' : '有未保存输入；保存一项不会提交其他项。');
+      box.innerHTML = '<p role="status">' + safeText(message) + '</p>' +
+        (v7Edits.conflict ? '<p>保留内容来自修订 ' + Number(v7Edits.revision) + '。请先刷新并核对当前修订、原文及已保存结果；系统不会覆盖新修订或自动重试。</p>' +
+          '<button type="button" class="btn secondary" id="pgV7ReloadConflictBtn">保留输入并读取当前修订</button> ' +
+          (!v7Edits.needsRefresh ? '<button type="button" class="btn secondary" id="pgV7AcknowledgeConflictBtn">已核对当前修订，继续编辑保留意见</button>' : '') : '') +
+        (keys.length ? '<details><summary>查看保留的未提交输入（' + keys.length + '项）</summary>' + keys.map(function(key) {
+          var field = v7Edits.fields[key];
+          return '<label style="display:block;margin-top:8px">' + safeText(field.label) + '<textarea readonly rows="2" style="width:100%">' + safeText(field.value, '') + '</textarea></label>';
+        }).join('') + '</details><button type="button" class="btn secondary" id="pgV7DiscardEditsBtn">放弃未提交输入</button>' : '');
+      if ($('pgV7ReloadConflictBtn')) $('pgV7ReloadConflictBtn').onclick = function() {
+        runPageTask(function() { return loadProcessGovernanceView('v7Preview', { route:parseHash(), force:true }); }, '当前修订读取失败，原输入仍保留');
+      };
+      if ($('pgV7AcknowledgeConflictBtn')) $('pgV7AcknowledgeConflictBtn').onclick = function() {
+        v7Edits.conflict = false;
+        v7Edits.revision = v7Edits.currentRevision;
+        v7Edits.hash = v7Edits.currentHash;
+        Object.keys(v7Edits.fields).forEach(function(key) {
+          if (v7Edits.controls[key]) v7Edits.fields[key].baseline = v7Edits.controls[key].baseline;
+        });
+        v7Edits.message = '已确认重新核对；请逐项检查保留意见，明确选择结论后再保存。';
+        renderV7EditNotice();
+      };
+      if ($('pgV7DiscardEditsBtn')) $('pgV7DiscardEditsBtn').onclick = function() {
+        if (!confirmV7Leave('准备放弃当前保留的输入。')) return;
+        clearV7Edits();
+        runPageTask(function() { return loadProcessGovernanceView('v7Preview', { route:parseHash(), force:true }); }, '读取当前修订失败');
+      };
+    }
+
+    function bindV7Editors(detail) {
+      var changed = Number(detail.case.current_revision_no) !== Number(v7Edits.revision) || detail.case.current_content_hash !== v7Edits.hash;
+      if (Object.keys(v7Edits.fields).length && changed) {
+        v7Edits.conflict = true;
+        v7Edits.message = '当前修订已经变化，原意见已保留，尚未应用到新修订。';
+      }
+      if (!Object.keys(v7Edits.fields).length) {
+        v7Edits.revision = detail.case.current_revision_no;
+        v7Edits.hash = detail.case.current_content_hash;
+      }
+      v7Edits.currentRevision = detail.case.current_revision_no;
+      v7Edits.currentHash = detail.case.current_content_hash;
+      v7Edits.caseId = Number(detail.case.id);
+      v7Edits.ownerId = String(state.user && (state.user.personId || state.user.id) || '');
+      v7Edits.activeHash = location.hash || '#/processGovernance?workspace=v7Preview&v7Case=' + v7Edits.caseId;
+      v7Edits.controls = {};
+      function bind(id, group, label) {
+        var el = $(id);
+        if (!el) return;
+        var key = group + ':' + (id.indexOf('Decision') >= 0 ? 'decision' : id.indexOf('Basis') >= 0 ? 'basis' : id);
+        var field = { id:id, group:group, label:label, baseline:el.value };
+        var previous = v7Edits.fields[key];
+        if (previous) {
+          if (previous.baseline !== el.value && !changed) { v7Edits.conflict = true; v7Edits.message = '服务器上的核对记录已变化，原输入已保留，请核对后再保存。'; }
+          if (el.tagName !== 'SELECT' || Array.from(el.options).some(function(option) { return option.value === previous.value; })) el.value = previous.value;
+        }
+        v7Edits.controls[key] = field;
+        el.dataset.v7EditKey = key;
+        el.addEventListener('input', function() { captureV7Edits(); renderV7EditNotice(); });
+        el.addEventListener('change', function() { captureV7Edits(); renderV7EditNotice(); });
+      }
+      (detail.items || []).forEach(function(item) {
+        var group = 'item:' + item.stable_item_key;
+        bind('pgV7PreviewBasis-' + item.id, group, item.behavior_name + '：本部门核对依据');
+        bind('pgV7PreviewDecision-' + item.id, group, item.behavior_name + '：本部门核对结果');
+      });
+      bind('pgV7PreviewScopeBasis', 'scope', '范围决定依据');
+      bind('pgV7PreviewScopeDecision', 'scope', '范围决定');
+      bind('pgV7PreviewOwnerDepartment', 'owner', '归口部门');
+      ['TargetMode','DocumentNo','DocumentTitle','ExistingDocumentNo'].forEach(function(name) { bind('pgV7Formal' + name, 'promotion', '正式承接：' + ({TargetMode:'承接方式',DocumentNo:'制度编号',DocumentTitle:'制度名称',ExistingDocumentNo:'已有制度编号'})[name]); });
+      bind('pgV7FormalReviewDecision', 'review', '正式审核结论');
+      bind('pgV7FormalReviewNote', 'review', '正式审核意见');
+      v7Edits.needsRefresh = false;
+      toggleV7FormalTargetFields();
+      renderV7EditNotice();
+    }
+
+    async function v7Write(path, body, group) {
+      captureV7Edits();
+      if (v7Edits.busy) throw new Error('当前操作仍在等待结果，请勿重复提交。');
+      if (v7Edits.conflict) throw new Error('请先读取并核对当前修订，再明确选择继续编辑保留意见。');
+      var submitted = JSON.parse(JSON.stringify(v7Edits.fields));
+      v7Edits.busy = true;
+      v7Edits.message = '';
+      renderV7EditNotice();
+      try {
+        var result = await api(path, { method:'POST', body:JSON.stringify(body) });
+        captureV7Edits();
+        Object.keys(submitted).forEach(function(key) {
+          if (submitted[key].group === group && v7Edits.fields[key] && v7Edits.fields[key].value === submitted[key].value) {
+            delete v7Edits.fields[key];
+            if (v7Edits.controls[key]) v7Edits.controls[key].baseline = submitted[key].value;
+          }
+        });
+        return result;
+      } catch (error) {
+        if (error && error.status === 409) { v7Edits.conflict = true; v7Edits.needsRefresh = true; }
+        v7Edits.message = error && error.status === 409 ? '修订或办理状态发生冲突，原输入已保留。' :
+          error && error.status === 401 ? '登录已失效，原输入保留在当前页面内存；请用原账号重新登录后核对。' :
+          '本次保存未确认成功，原输入已保留。请恢复连接并刷新核对已保存结果，再决定是否重试。';
+        if (!error.status) error.message = v7Edits.message;
+        throw error;
+      } finally {
+        v7Edits.busy = false;
+        renderV7EditNotice();
+      }
+    }
+
     async function loadV7PreviewReviewView(_filters, route) {
       var listPayload = await api('/api/process-v7-preview/cases?limit=100');
       var caseId = Number(route && route.v7CaseId || state.pgSelectedV7PreviewCaseId || 0);
       var detail = null;
       if (caseId) {
         detail = await api('/api/process-v7-preview/cases/' + encodeURIComponent(caseId));
-        state.pgSelectedV7PreviewCaseId = caseId;
       }
       return { list: listPayload, detail: detail };
     }
@@ -3173,7 +3344,7 @@
       var myStatus = item.my_party === 'origin' ? item.origin_status : item.my_party === 'counterparty' ? item.counterparty_status : '';
       var myBasis = item.my_party === 'origin' ? item.origin_basis : item.my_party === 'counterparty' ? item.counterparty_basis : '';
       var actions = (item.allowed_actions || []).indexOf('record_department_decision') >= 0 ? '<div class="process-design-form" style="margin-top:12px">' +
-        '<label class="wide">本部门核对依据<textarea rows="3" id="pgV7PreviewBasis-' + Number(item.id) + '" placeholder="写明查看了什么材料，以及本部门的判断依据">' + safeText(myBasis || '') + '</textarea></label>' +
+        '<label class="wide">本部门核对依据<textarea rows="3" id="pgV7PreviewBasis-' + Number(item.id) + '" placeholder="写明查看了什么材料，以及本部门的判断依据">' + safeText(myBasis || '', '') + '</textarea></label>' +
         '<label>本部门核对结果<select id="pgV7PreviewDecision-' + Number(item.id) + '"><option value="">请选择</option><option value="confirmed">已确认</option><option value="needs_changes">需要修改</option><option value="pending_evidence">待补证据</option><option value="disputed">存在分歧</option></select></label>' +
         '<div class="process-design-actions">' +
           '<button type="button" class="btn primary" data-v7-preview-save-decision data-v7-preview-item="' + Number(item.id) + '" data-v7-preview-revision="' + Number(revisionNo) + '" data-v7-preview-hash="' + safeText(contentHash || '') + '">保存本部门核对结果</button>' +
@@ -3194,11 +3365,18 @@
     function renderV7PreviewReviewDetail(detail) {
       var panel = $('pgV7PreviewDetail');
       if (!panel) return;
+      captureV7Edits();
+      var focused = document.activeElement;
+      var focusKey = focused && focused.dataset && focused.dataset.v7EditKey;
+      var selection = focused && typeof focused.selectionStart === 'number' ? [focused.selectionStart, focused.selectionEnd] : null;
+      var oldScroll = window.scrollY;
       if (!detail || !detail.case) {
         panel.innerHTML = '<div class="empty">选择一条案例后查看V7内容、部门核对进度和操作记录。</div>';
         return;
       }
       var caseRow = detail.case;
+      state.pgSelectedV7PreviewCaseId = Number(caseRow.id);
+      state.v7CurrentDetail = detail;
       var revision = detail.revision || {};
       var documentValue = revision.document || {};
       var process = documentValue.process || {};
@@ -3210,7 +3388,7 @@
         ? '<div class="process-design-actions" style="margin-top:12px"><select id="pgV7PreviewOwnerDepartment">' + v7PreviewDepartmentOptions('') + '</select><button type="button" class="btn primary" id="pgAssignV7PreviewOwnerBtn">分派归口部门</button></div>'
         : '';
       var warningHtml = warnings.length
-        ? '<div class="notice" style="margin-top:12px"><b>仍需处理：</b><ul>' + warnings.map(function(item) { return '<li>' + safeText(item.message) + '</li>'; }).join('') + '</ul></div>'
+        ? '<div class="notice" style="margin-top:12px"><b>核对提示：</b><ul>' + warnings.map(function(item) { return '<li>' + safeText(item.message) + '</li>'; }).join('') + '</ul></div>'
         : '';
       var scopeDecisionOptions = [];
       if (blockingIssues.some(function(issue) { return issue.code === 'ZERO_CROSS_DEPARTMENT_SCOPE_PENDING'; })) {
@@ -3228,7 +3406,9 @@
       }).join('');
       var itemHtml = (detail.items || []).length
         ? detail.items.map(function(item) { return renderV7PreviewReviewItem(item, revision.revision_no, caseRow.current_content_hash); }).join('')
-        : '<div class="notice" style="margin-top:12px">当前文件没有形成固定跨部门核对项。请先确认归口部门和各业务行为的固定执行部门，再从3001上传新修订；3000不会自行猜测参与部门。</div>';
+        : '<div class="notice" style="margin-top:12px">' + (caseRow.scope_decision === 'confirmed_no_cross_department'
+          ? '本修订没有固定跨部门核对项，范围决定及依据已经记录。正式办理进度请查看下方草稿、审核或版本记录。'
+          : '当前文件没有形成固定跨部门核对项。请由MDM工作组核对归口、执行部门和范围依据；如果源文件需要修改，由编制人员在3001修改后上传新修订。3000不会自行猜测参与部门。') + '</div>';
       var formalPromotion = detail.formal_promotion || null;
       var formalActions = detail.formal_allowed_actions || [];
       var formalReviewDecisions = detail.formal_allowed_decisions || [];
@@ -3258,8 +3438,8 @@
             .filter(function(decision) { return Object.prototype.hasOwnProperty.call(formalReviewDecisionLabels, decision); })
             .map(function(decision) { return '<option value="' + safeText(decision) + '">' + safeText(formalReviewDecisionLabels[decision]) + '</option>'; })
             .join('');
-          formalActionHtml += '<select id="pgV7FormalReviewDecision">' + formalReviewDecisionOptions + '</select>' +
-            '<input id="pgV7FormalReviewNote" maxlength="1000" placeholder="填写正式审核意见">' +
+          formalActionHtml += '<label>正式审核结论<select id="pgV7FormalReviewDecision"><option value="">请选择</option>' + formalReviewDecisionOptions + '</select></label>' +
+            '<label>正式审核意见<textarea id="pgV7FormalReviewNote" rows="3" maxlength="1000" placeholder="填写正式审核意见"></textarea></label>' +
             '<button type="button" class="btn primary" id="pgReviewV7FormalDraftBtn">保存正式审核结论</button>';
         }
         if (formalActions.indexOf('publish_formal_draft') >= 0) {
@@ -3273,7 +3453,7 @@
           '<div class="grid g4"><div class="metric"><div class="lbl">内容摘要</div><div style="margin-top:6px;word-break:break-all">' + safeText(formalDraft.content_hash || '') + '</div></div>' +
           '<div class="metric"><div class="lbl">审核任务</div><div style="margin-top:6px">' + safeText(formalTask.status || '尚未提交') + '</div></div>' +
           '<div class="metric"><div class="lbl">正式版本</div><div style="margin-top:6px">' + safeText(formalVersion.version_no || '尚未发布') + '</div></div>' +
-          '<div class="metric"><div class="lbl">process_version_id</div><div style="margin-top:6px">' + safeText(formalVersion.id || '尚未生成') + '</div></div></div>' +
+          '<div class="metric"><div class="lbl">不可变正式版本标识</div><div style="margin-top:6px">' + safeText(formalVersion.id || '尚未生成') + '</div></div></div>' +
           (formalActionHtml ? '<div class="process-design-actions" style="margin-top:12px">' + formalActionHtml + '</div>' : '<div class="notice" style="margin-top:12px">当前账号或当前状态没有可执行的正式动作。</div>') +
           '<div id="pgV7FormalReadbackResult" class="notice" style="margin-top:12px" hidden></div>' +
         '</article>';
@@ -3285,7 +3465,8 @@
       panel.innerHTML = '<div class="pg-section-hd"><div><h2>' + safeText(caseRow.process_name) + '</h2><p class="muted">案例 ' + safeText(caseRow.case_ref) + ' · 当前修订 ' + Number(revision.revision_no || 0) + '</p></div><div class="process-design-actions">' +
         (canUploadRevision ? '<button type="button" class="btn secondary" id="pgUploadV7PreviewRevisionBtn">上传3001新修订</button>' : '') + statusTag(caseRow.status) + '</div></div>' +
         '<div class="notice"><b>边界：</b>本区域保存的是V7预览核对记录。只有核对完成并由MDM工作组组长明确提升后，才会形成正式草稿；预览记录本身不是审核或发布结论。</div>' +
-        ownerAssignment + warningHtml + scopeDecisionEditor +
+        '<div class="notice" id="pgV7EditNotice" style="margin-top:12px" hidden></div>' +
+        renderV7HandlingSummary(detail) + ownerAssignment + warningHtml + scopeDecisionEditor +
         '<div class="process-design-form" style="margin-top:12px"><label>流程名称<input readonly value="' + safeText(process.process_name || caseRow.process_name) + '"></label><label>归口部门<input readonly value="' + safeText(caseRow.owning_department_name || '待分派') + '"></label><label class="wide">目的<textarea rows="2" readonly>' + safeText(process.purpose || '待业务确认') + '</textarea></label><label class="wide">范围<textarea rows="3" readonly>' + safeText(process.scope || '待业务确认') + '</textarea></label></div>' +
         '<details class="process-design-detail" open style="margin-top:12px"><summary><strong>V7业务行为预览</strong></summary><div class="table-container" style="margin-top:12px"><table class="data-table"><thead><tr><th>业务行为</th><th>执行角色</th><th>触发</th><th>完成标准</th></tr></thead><tbody>' + (behaviorRows || '<tr><td colspan="4" class="empty">没有业务行为</td></tr>') + '</tbody></table></div></details>' +
         '<h3 style="margin-top:18px">跨部门核对项</h3>' + itemHtml +
@@ -3324,6 +3505,50 @@
       if ($('pgReadV7FormalVersionBtn')) $('pgReadV7FormalVersionBtn').onclick = function() {
         runPageTask(function() { return readV7FormalVersion(formalPromotion.current_version.id); }, '正式版本读回失败');
       };
+      bindV7Editors(detail);
+      renderV7Sidebar(detail);
+      var restoredFocus = focusKey && Object.values(v7Edits.controls).find(function(control) { return $(control.id) && $(control.id).dataset.v7EditKey === focusKey; });
+      if (restoredFocus) {
+        var el = $(restoredFocus.id);
+        el.focus({preventScroll:true});
+        if (selection && typeof el.setSelectionRange === 'function' && el.type !== 'select-one') el.setSelectionRange(selection[0], selection[1]);
+        window.scrollTo(0, oldScroll);
+      }
+    }
+
+    function renderV7HandlingSummary(detail) {
+      var summary = detail.handling_summary || {};
+      var reasons = summary.return_reasons || [];
+      var steps = summary.prerequisites || [];
+      var published = summary.current_promotion && detail.formal_promotion && detail.formal_promotion.draft && detail.formal_promotion.draft.status === 'published';
+      return '<div class="notice" style="margin-top:12px"><b>接下来由谁办理：</b><ul>' +
+        (steps.length ? steps.map(function(message) { return '<li>' + safeText(message) + '</li>'; }).join('') :
+          '<li>' + (published ? '当前修订已发布。可在下方读取固定版本并核对完整内容。' : '当前没有待执行步骤，请结合案例状态及操作记录查看办理结果。') + '</li>') + '</ul>' +
+        (reasons.length ? '<b>退回原因：</b><ul>' + reasons.map(function(reason) {
+          return '<li>' + safeText(reason.department) + '：' + safeText(reason.reason) + '</li>';
+        }).join('') + '</ul><p>编制人员回3001修改并下载后，上传到当前案例 ' + safeText(detail.case.case_ref) + '；不要另建案例。受影响部门随后重新核对。</p>' : '') + '</div>';
+    }
+
+    function renderV7Sidebar(detail) {
+      if (processGovernanceViewFromRoute(parseHash()) !== 'v7Preview') return;
+      var shell = document.querySelector('#processGovernancePanel .workflow-shell');
+      if (!shell) return;
+      var adminReadOnly = roleCodesOfCurrentUser().includes('admin');
+      shell.querySelector('[data-workflow-actions-title]').textContent = adminReadOnly ? '当前为只读查看' : '当前案例如何办完';
+      shell.querySelector('[data-workflow-actions]').innerHTML = '<div class="workflow-context"><p>' +
+        (adminReadOnly ? '管理员维护账号与授权，可查看案例、部门依据和正式版本。业务核对、审核和发布由对应业务角色办理。' :
+          '从工作台打开本人事项，核对当前修订和来源材料；填写本人部门的依据并明确选择结论，保存后交下一责任角色办理。') + '</p></div>';
+      shell.querySelector('[data-workflow-subtitle]').textContent = '查看当前案例、部门核对进度和正式办理结果。';
+      shell.querySelector('[data-workflow-priority]').textContent = detail && detail.case ? '当前修订：' + detail.case.current_revision_no : '请选择案例';
+      shell.querySelector('[data-workflow-identity]').textContent = '当前身份：' + currentUserRoleNames();
+      shell.querySelector('[data-workflow-detail-actions]').innerHTML = '';
+    }
+
+    function currentUserRoleNames() {
+      return roleCodesOfCurrentUser().map(function(code) {
+        var role = (identityModel && identityModel.roles || []).find(function(item) { return item.code === code; });
+        return role ? role.name : code;
+      }).join(' / ') || '未识别';
     }
 
     function renderV7PreviewReviewView(payload) {
@@ -3340,11 +3565,15 @@
       document.querySelectorAll('[data-v7-preview-open]').forEach(function(button) {
         button.addEventListener('click', function() {
           state.pgViewCache = {};
-          state.pgSelectedV7PreviewCaseId = Number(button.dataset.v7PreviewOpen || 0);
-          location.hash = '#/processGovernance?workspace=v7Preview&v7Case=' + encodeURIComponent(state.pgSelectedV7PreviewCaseId);
+          location.hash = '#/processGovernance?workspace=v7Preview&v7Case=' + encodeURIComponent(Number(button.dataset.v7PreviewOpen || 0));
         });
       });
       renderV7PreviewReviewDetail(payload.detail);
+      var focusItem = parseHash().query && parseHash().query.v7Item;
+      if (focusItem && !Object.keys(v7Edits.fields).length) {
+        var field = $('pgV7PreviewBasis-' + Number(focusItem));
+        if (field) { field.scrollIntoView({block:'center'}); field.focus({preventScroll:true}); }
+      }
     }
 
     async function readV7PreviewFile(file) {
@@ -3356,7 +3585,15 @@
     }
 
     async function uploadV7PreviewFile(file, caseId) {
+      if (!file) return;
+      var discardSnapshot = {};
+      if (hasV7Edits()) {
+        if (!confirmV7Leave('上传新修订前，请先处理当前未提交意见。')) return { cancelled:true };
+        discardSnapshot = JSON.parse(JSON.stringify(v7Edits.fields));
+        // Keep the inputs until a successful upload. Cancellation/failure keeps them intact.
+      }
       var body = await readV7PreviewFile(file);
+      if (caseId && Number(v7Edits.caseId) !== Number(caseId)) throw new Error('当前案例已切换，请在目标案例重新选择修订文件。');
       var path = '/api/process-v7-preview/cases';
       if (caseId) {
         var detail = state.pgViewCache && Object.values(state.pgViewCache).map(function(item) { return item && item.detail; }).find(function(item) { return item && Number(item.case && item.case.id) === Number(caseId); });
@@ -3365,10 +3602,11 @@
         body.expected_content_hash = String(detail.case.current_content_hash || '');
         path += '/' + encodeURIComponent(caseId) + '/revisions';
         var previewResult = await api(path + '/preview', { method:'POST', body:JSON.stringify(body) });
+        if (Number(v7Edits.caseId) !== Number(caseId)) throw new Error('当前案例已切换，请在目标案例重新选择修订文件。');
         var counts = previewResult.comparison && previewResult.comparison.counts || {};
         var affectedDepartments = previewResult.comparison && previewResult.comparison.affected_departments || [];
         var confirmed = window.confirm(
-          '新修订比较结果：\n' +
+          '案例 ' + safeText(detail.case.case_ref) + ' 的新修订比较结果：\n' +
           '新增 ' + Number(counts.added || 0) + ' 项；沿用 ' + Number(counts.carried_forward || 0) + ' 项；重新核对 ' + Number(counts.reopened || 0) + ' 项；移除 ' + Number(counts.removed || 0) + ' 项。\n' +
           '受影响部门：' + (affectedDepartments.length ? affectedDepartments.join('、') : '无新增影响部门') + '。\n\n确认后才会上传新修订。'
         );
@@ -3378,7 +3616,13 @@
         }
       }
       try {
-        var result = await api(path, { method:'POST', body:JSON.stringify(body) });
+        var result = await v7Write(path, body, 'upload');
+        captureV7Edits();
+        Object.keys(discardSnapshot).forEach(function(key) {
+          if (v7Edits.fields[key] && v7Edits.fields[key].value === discardSnapshot[key].value) delete v7Edits.fields[key];
+        });
+        v7Edits.controls = {};
+        if (!Object.keys(v7Edits.fields).length) clearV7Edits();
         var resultCase = result.case || {};
         var nextCaseId = Number(resultCase.id || caseId || 0);
         state.pgViewCache = {};
@@ -3404,15 +3648,14 @@
       var basis = basisField ? basisField.value.trim() : '';
       if (!decision) throw new Error('请选择本部门核对结果');
       if (!basis) throw new Error('请先填写本部门核对依据');
-      await api('/api/process-v7-preview/items/' + encodeURIComponent(itemId) + '/decision', {
-        method:'POST',
-        body:JSON.stringify({
+      var editKey = basisField && basisField.dataset.v7EditKey;
+      var group = editKey && v7Edits.controls[editKey].group;
+      await v7Write('/api/process-v7-preview/items/' + encodeURIComponent(itemId) + '/decision', {
           decision: decision,
           basis: basis,
           expected_revision_no: Number(button.dataset.v7PreviewRevision),
           expected_content_hash: String(button.dataset.v7PreviewHash || '')
-        })
-      });
+      }, group);
       state.pgViewCache = {};
       showToast('本部门核对结果已保存');
       return await loadProcessGovernanceView('v7Preview', { route:parseHash(), force:true });
@@ -3423,15 +3666,12 @@
       var basis = $('pgV7PreviewScopeBasis') && $('pgV7PreviewScopeBasis').value.trim() || '';
       if (!decision) throw new Error('请选择范围决定');
       if (!basis) throw new Error('请填写范围决定依据');
-      await api('/api/process-v7-preview/cases/' + encodeURIComponent(caseId) + '/scope-decision', {
-        method:'POST',
-        body:JSON.stringify({
+      await v7Write('/api/process-v7-preview/cases/' + encodeURIComponent(caseId) + '/scope-decision', {
           decision:decision,
           basis:basis,
           expected_revision_no:Number(revisionNo),
           expected_content_hash:String(contentHash || '')
-        })
-      });
+      }, 'scope');
       state.pgViewCache = {};
       showToast('范围决定已保存');
       return await loadProcessGovernanceView('v7Preview', { route:parseHash(), force:true });
@@ -3443,14 +3683,11 @@
       if (!caseId || !departmentId) throw new Error('请选择归口部门');
       var detail = state.pgViewCache && Object.values(state.pgViewCache).map(function(item) { return item && item.detail; }).find(function(item) { return item && Number(item.case && item.case.id) === Number(caseId); });
       if (!detail) detail = await api('/api/process-v7-preview/cases/' + encodeURIComponent(caseId));
-      await api('/api/process-v7-preview/cases/' + encodeURIComponent(caseId) + '/assign-owner', {
-        method:'POST',
-        body:JSON.stringify({
+      await v7Write('/api/process-v7-preview/cases/' + encodeURIComponent(caseId) + '/assign-owner', {
           department_id:departmentId,
           expected_revision_no:Number(detail.revision.revision_no),
           expected_content_hash:String(detail.case.current_content_hash || '')
-        })
-      });
+      }, 'owner');
       state.pgViewCache = {};
       showToast('归口部门已分派');
       return await loadProcessGovernanceView('v7Preview', { route:parseHash(), force:true });
@@ -3481,28 +3718,21 @@
       } else {
         throw new Error('请选择新建流程主档或选择已有流程主档');
       }
-      var result = await api('/api/process-v7-preview/cases/' + encodeURIComponent(caseId) + '/promote', {
-        method:'POST',
-        body:JSON.stringify({
+      var result = await v7Write('/api/process-v7-preview/cases/' + encodeURIComponent(caseId) + '/promote', {
           expected_revision_no:Number(revisionNo),
           expected_content_hash:String(contentHash || ''),
           target:target
-        })
-      });
+      }, 'promotion');
       state.pgViewCache = {};
       showToast(result.idempotent ? '当前修订已经提升，已返回原正式草稿' : '当前修订已提升为正式V7草稿');
       return await loadProcessGovernanceView('v7Preview', { route:parseHash(), force:true });
     }
 
     async function submitV7FormalDraft(formalDraft) {
-      await api('/api/process-design/drafts/' + encodeURIComponent(formalDraft.id) + '/submit', {
-        method:'POST',
-        body:JSON.stringify({
-          note:'V7预览核对完成，提交正式审核',
+      await v7Write('/api/process-design/drafts/' + encodeURIComponent(formalDraft.id) + '/submit', {
           expected_revision_no:formalDraft.revision_no,
           expected_content_hash:formalDraft.content_hash
-        })
-      });
+      }, 'submit');
       state.pgViewCache = {};
       showToast('正式V7草稿已提交审核');
       return await loadProcessGovernanceView('v7Preview', { route:parseHash(), force:true });
@@ -3513,31 +3743,24 @@
       var note = $('pgV7FormalReviewNote') && $('pgV7FormalReviewNote').value.trim() || '';
       if (!decision) throw new Error('请选择正式审核结论');
       if (!note) throw new Error('请填写正式审核意见');
-      await api('/api/process-design/review-tasks/' + encodeURIComponent(formalTask.id) + '/decision', {
-        method:'POST',
-        body:JSON.stringify({
+      await v7Write('/api/process-design/review-tasks/' + encodeURIComponent(formalTask.id) + '/decision', {
           decision:decision,
           note:note,
           expected_revision_no:formalTask.draft_revision_no,
           expected_content_hash:formalTask.content_hash
-        })
-      });
+      }, 'review');
       state.pgViewCache = {};
       showToast('正式审核结论已保存');
       return await loadProcessGovernanceView('v7Preview', { route:parseHash(), force:true });
     }
 
     async function publishV7FormalDraft(formalDraft) {
-      var result = await api('/api/process-design/drafts/' + encodeURIComponent(formalDraft.id) + '/publish', {
-        method:'POST',
-        body:JSON.stringify({
-          note:'发布核对完成的原生V7正式版本',
+      var result = await v7Write('/api/process-design/drafts/' + encodeURIComponent(formalDraft.id) + '/publish', {
           expected_revision_no:formalDraft.revision_no,
           expected_content_hash:formalDraft.content_hash
-        })
-      });
+      }, 'publish');
       state.pgViewCache = {};
-      showToast('正式V7版本已发布，process_version_id=' + Number(result.process_version_id));
+      showToast('正式V7版本已发布，版本标识为 ' + Number(result.process_version_id));
       return await loadProcessGovernanceView('v7Preview', { route:parseHash(), force:true });
     }
 
@@ -3634,12 +3857,14 @@
       state.processDataGovernance.workbench = payload;
       if ($('pdgFeatureNotice')) {
         $('pdgFeatureNotice').textContent = feature.enabled
-          ? '试点功能已启用，仅允许处理唯一试点process_version_id=' + safeText(feature.configured_process_version_id || '未配置') + '。系统不使用AI，也不会自动确认任何治理结论。'
+          ? (feature.read_only
+            ? '本批成果仅供查阅。按原有权限保留已完成工作包及本部门定向事实记录，所有工作包办理操作均已关闭。'
+            : '试点功能已启用，仅允许处理唯一试点process_version_id=' + safeText(feature.configured_process_version_id || '未配置') + '。系统不使用AI，也不会自动确认任何治理结论。')
           : '数据生命周期治理工作包默认关闭。当前未启用、未迁移业务数据，也没有形成业务验收结论。';
       }
       if ($('pdgResponsibilitySummary')) $('pdgResponsibilitySummary').innerHTML = pdgResponsibilityHtml(payload.responsibilities || feature.responsibilities);
       if ($('pdgPackageCount')) $('pdgPackageCount').textContent = Number(payload.summary && payload.summary.work_packages || 0);
-      if ($('pdgFactCount')) $('pdgFactCount').textContent = Number(payload.summary && payload.summary.my_open_fact_requests || 0);
+      if ($('pdgFactCount')) $('pdgFactCount').textContent = feature.read_only ? (payload.fact_requests || []).length : Number(payload.summary && payload.summary.my_open_fact_requests || 0);
       if ($('pdgActionCount')) $('pdgActionCount').textContent = Number(payload.summary && payload.summary.my_action_items || 0);
       if ($('pdgTrialVersion')) $('pdgTrialVersion').textContent = feature.configured_process_version_id || '—';
       if ($('pdgReconcileBtn')) $('pdgReconcileBtn').hidden = !feature.enabled || !pdgHasAction(payload, 'reconcile');
@@ -3662,8 +3887,8 @@
         $('pdgFactRows').innerHTML = facts.map(function(item) {
           return '<tr><td>' + safeText(item.process_name || item.document_no || item.package_ref) + '</td>' +
             '<td><strong>' + safeText(item.question_text) + '</strong></td><td>' + safeText(item.request_reason) + '</td>' +
-            '<td>' + safeText(item.status === 'open' ? '待本部门答复' : item.status === 'answered' ? '已答复待MDM核对' : item.status) + '</td>' +
-            '<td><button type="button" class="btn primary" data-pdg-open-fact="' + Number(item.id) + '">' + (item.status === 'open' ? '答复问题' : '查看') + '</button></td></tr>';
+            '<td>' + safeText({ open: '待本部门答复', answered: '已答复待MDM核对', closed: '已关闭', cancelled: '已取消' }[item.status] || item.status) + '</td>' +
+            '<td><button type="button" class="btn primary" data-pdg-open-fact="' + Number(item.id) + '">' + (!feature.read_only && item.status === 'open' ? '答复问题' : '查看') + '</button></td></tr>';
         }).join('') || '<tr><td colspan="5" class="empty">当前没有发给本部门的事实问题</td></tr>';
       }
 
@@ -3752,7 +3977,7 @@
       }).join('') || '<div class="wb-empty">尚未生成治理明细。MDM工作组可以使用固定规则生成待治理明细；系统不会自动确认。</div>';
       renderPdgSelectedDetail();
       renderPdgReviewHistory(detail);
-      state.processDataGovernance.dirty = false;
+      markPdgInputsClean();
     }
 
     function renderPdgSelectedDetail() {
@@ -3772,12 +3997,17 @@
         '<div class="notice" style="margin-top:12px"><strong>固定规则生成的待核对内容</strong><br>' + safeText(pdgCandidateText(selected)) + '</div>' +
         (canDecide ? '<div class="pdg-form">' +
           '<label>处理状态<select id="pdgDecisionStatus" data-pdg-dirty><option value="pending">待MDM判断</option><option value="confirmed">已确认</option><option value="not_applicable">不适用</option><option value="terminated">已终止</option></select></label>' +
-          '<label>治理结论<input id="pdgDecisionConclusion" data-pdg-dirty value="' + safeText(governance.conclusion || '') + '" placeholder="例如：认定为主数据 / 不纳入关键字段"></label>' +
-          '<label>统一对象标识（如适用）<input id="pdgUnifiedObjectId" data-pdg-dirty value="' + safeText(governance.unified_object_id || '') + '" placeholder="不适用时留空"></label>' +
+          '<label>治理结论<input id="pdgDecisionConclusion" data-pdg-dirty value="' + safeText(governance.conclusion, '') + '" placeholder="例如：认定为主数据 / 不纳入关键字段"></label>' +
+          '<label>统一对象标识（如适用）<input id="pdgUnifiedObjectId" data-pdg-dirty value="' + safeText(governance.unified_object_id, '') + '" placeholder="不适用时留空"></label>' +
           '<label>责任部门<select id="pdgResponsibleDepartment" data-pdg-dirty><option value="">沿用归口部门</option>' + pdgDepartmentOptions(selected.responsible_department_id || detail.package.owning_department_id) + '</select></label>' +
-          '<label class="wide">判断依据<textarea id="pdgDecisionBasis" data-pdg-dirty rows="3" placeholder="写明采用的流程事实、制度或治理规则">' + safeText(governance.basis || '') + '</textarea></label></div>' +
+          '<label class="wide">判断依据<textarea id="pdgDecisionBasis" data-pdg-dirty rows="3" placeholder="写明采用的流程事实、制度或治理规则">' + safeText(governance.basis, '') + '</textarea></label></div>' +
           '<div class="pdg-actions"><button type="button" class="btn primary" id="pdgSaveDecisionBtn">保存MDM治理结论</button></div>' :
-          '<div class="notice" style="margin-top:12px">当前角色只读。业务部门不能在这里认定主数据、匹配统一对象、决定关键字段或制定生命周期规则。</div>') +
+          '<div class="pdg-source" id="pdgReadOnlyDecision" style="margin-top:12px;white-space:pre-wrap"><strong>已记录的治理结论（只读）</strong><br>' +
+          '处理状态：' + safeText(pdgDetailStatusLabel(selected.status)) + '<br>' +
+          '治理结论：' + safeText(governance.conclusion) + '<br>' +
+          '统一对象标识：' + safeText(governance.unified_object_id) + '<br>' +
+          '责任部门：' + safeText(selected.responsible_department_name || selected.responsible_department_id) + '<br>' +
+          '判断依据：' + safeText(governance.basis) + '</div>') +
         (canRequest ? '<div class="pdg-history"><h3>缺少事实时，向具体部门提一个问题</h3><div class="pdg-form">' +
           '<label>目标部门<select id="pdgFactDepartment" data-pdg-dirty><option value="">请选择</option>' + pdgDepartmentOptions(detail.package.owning_department_id) + '</select></label>' +
           '<label>需要的事实<select id="pdgFactType" data-pdg-dirty><option value="business_definition">业务定义</option><option value="trigger_condition">触发条件</option><option value="responsibility">实际责任</option><option value="source_evidence">来源依据</option><option value="exception_handling">例外处理</option></select></label>' +
@@ -3786,7 +4016,7 @@
           '<div class="pdg-actions"><button type="button" class="btn secondary" id="pdgCreateFactBtn">发给业务部门</button></div></div>' : '');
       if ($('pdgDecisionStatus')) $('pdgDecisionStatus').value = selected.status === 'needs_business_fact' ? 'pending' : selected.status;
       renderPdgFactHistory(detail, selected);
-      state.processDataGovernance.dirty = false;
+      markPdgInputsClean();
     }
 
     function renderPdgFactHistory(detail, selected) {
@@ -3810,29 +4040,80 @@
     function renderPdgFactModal(payload) {
       var mask = $('pdgModalMask');
       var fact = payload.fact_request || {};
+      var canAnswer = pdgHasAction(payload, 'answer_targeted_business_fact') && fact.status === 'open';
       mask.classList.add('on');
       mask.setAttribute('aria-hidden', 'false');
       document.documentElement.classList.add('pdg-modal-open');
       document.body.classList.add('pdg-modal-open');
       state.processDataGovernance.activeHash = location.hash;
-      $('pdgModalTitle').textContent = '补充业务事实';
-      $('pdgModalSubtitle').textContent = (payload.package && payload.package.process_name || payload.package && payload.package.package_ref || '') + ' · 只回答具体问题';
+      $('pdgModalTitle').textContent = canAnswer ? '补充业务事实' : '业务事实记录';
+      $('pdgModalSubtitle').textContent = (payload.package && payload.package.process_name || payload.package && payload.package.package_ref || '') + (canAnswer ? ' · 只回答具体问题' : ' · 只读查阅');
       $('pdgGenerateCandidatesBtn').hidden = true;
       $('pdgDetailList').innerHTML = '<div class="pdg-list-item on"><strong>' + safeText(fact.requested_fact_type || '业务事实') + '</strong><span>' + safeText(fact.question_text) + '</span><span>' + safeText(fact.status) + '</span></div>';
-      $('pdgModalOverview').innerHTML = '<div class="pdg-responsibility">' +
+      $('pdgModalOverview').innerHTML = canAnswer ? '<div class="pdg-responsibility">' +
         '<div><strong>你需要做</strong><ul><li>回答下面这个具体问题</li><li>有来源时写明制度、表单或台账位置</li><li>不适用时说明实际原因</li></ul></div>' +
-        '<div><strong>你不需要做</strong><ul><li>不认定主数据</li><li>不决定统一对象匹配</li><li>不判断关键字段</li><li>不制定生命周期规则</li></ul></div></div>';
+        '<div><strong>你不需要做</strong><ul><li>不认定主数据</li><li>不决定统一对象匹配</li><li>不判断关键字段</li><li>不制定生命周期规则</li></ul></div></div>' :
+        '<div class="notice">此处保留原定向问题、业务答复和来源依据，当前无需答复，也不能修改记录。</div>';
       $('pdgSelectedDetail').innerHTML = '<h2>' + safeText(fact.question_text || '业务事实问题') + '</h2>' +
         '<div class="pdg-source"><strong>问题所指的流程事实</strong><br>' + safeText(pdgSourceText(payload.source_context || {})) + '</div>' +
         '<div class="notice" style="margin-top:12px"><strong>为什么需要：</strong>' + safeText(fact.request_reason || '') + '</div>' +
-        (pdgHasAction(payload, 'answer_targeted_business_fact') && fact.status === 'open' ? '<div class="pdg-form">' +
+        (canAnswer ? '<div class="pdg-form">' +
           '<label class="wide">事实答复<textarea id="pdgBusinessAnswer" data-pdg-dirty rows="4" placeholder="只写已经核对的业务事实；不确定时明确写不确定"></textarea></label>' +
           '<label class="wide">来源依据（如有）<textarea id="pdgBusinessEvidence" data-pdg-dirty rows="2" placeholder="制度或表单源文件名及页码、条款或表格位置"></textarea></label></div>' +
           '<div class="pdg-actions"><button type="button" class="btn primary" id="pdgRespondFactBtn">提交事实答复</button></div>' :
           '<div class="notice" style="margin-top:12px">当前问题状态为“' + safeText(fact.status) + '”，本页只读。</div>');
       $('pdgFactHistory').innerHTML = fact.answer_text ? '<h3>已提交答复</h3><div class="wb-work-item"><div class="wb-work-meta">' + safeText(fact.answer_text) + (fact.evidence_ref ? '<br>依据：' + safeText(fact.evidence_ref) : '') + '</div></div>' : '';
       $('pdgReviewHistory').innerHTML = '';
+      markPdgInputsClean();
+    }
+
+    function markPdgInputsClean() {
+      document.querySelectorAll('#pdgModalMask [data-pdg-dirty]').forEach(function(input) {
+        input.dataset.pdgInitialValue = input.value;
+      });
       state.processDataGovernance.dirty = false;
+    }
+
+    function pdgInputKey(input) {
+      return input.id || ('fact-close:' + input.dataset.pdgFactCloseBasis);
+    }
+
+    async function runPdgAction(action, submittedKeys, discardOtherInputs) {
+      var pdg = state.processDataGovernance;
+      if (pdg.busy) throw new Error('正在处理当前操作，请等待结果');
+      var submitted = new Set(submittedKeys || []);
+      var preserved = Array.from(document.querySelectorAll('#pdgModalMask [data-pdg-dirty]')).filter(function(input) {
+        return input.value !== input.dataset.pdgInitialValue && !submitted.has(pdgInputKey(input));
+      }).map(function(input) { return { key:pdgInputKey(input), value:input.value }; });
+      if (discardOtherInputs && preserved.length) {
+        var discard = await showConfirm({
+          title:'还有其他未保存输入',
+          message:'完成工作包后将只读。请先保存其他治理输入；只有确认这些输入不再需要时，才放弃它们并完成审核。',
+          confirmLabel:'放弃其他输入并继续', confirmClass:'danger'
+        });
+        if (!discard) return;
+        preserved = [];
+      }
+      var activeHash = location.hash;
+      var controls = Array.from(document.querySelectorAll('#pdgModalMask input, #pdgModalMask textarea, #pdgModalMask select, #pdgModalMask button, #logoutBtn')).map(function(el) {
+        return { el:el, disabled:el.disabled };
+      });
+      pdg.busy = true;
+      controls.forEach(function(item) { item.el.disabled = true; });
+      try {
+        await action();
+        if (location.hash === activeHash) {
+          var inputs = Array.from(document.querySelectorAll('#pdgModalMask [data-pdg-dirty]'));
+          preserved.forEach(function(saved) {
+            var input = inputs.find(function(item) { return pdgInputKey(item) === saved.key; });
+            if (input) input.value = saved.value;
+          });
+          pdg.dirty = inputs.some(function(input) { return input.value !== input.dataset.pdgInitialValue; });
+        }
+      } finally {
+        pdg.busy = false;
+        controls.forEach(function(item) { item.el.disabled = item.disabled; });
+      }
     }
 
     async function pdgReloadCurrent() {
@@ -3857,7 +4138,6 @@
         method:'POST', body:JSON.stringify({ expected_revision:Number(detail.package.revision_no) })
       });
       showToast(result.idempotent ? '待治理明细已经生成，没有重复创建' : '已生成' + Number(result.created) + '条待治理明细');
-      state.processDataGovernance.dirty = false;
       await pdgReloadCurrent();
     }
 
@@ -3875,7 +4155,6 @@
           governance:{ conclusion:$('pdgDecisionConclusion').value.trim(), unified_object_id:$('pdgUnifiedObjectId').value.trim() || null, basis:basis }
         })
       });
-      state.processDataGovernance.dirty = false;
       showToast('MDM治理结论已保存');
       await pdgReloadCurrent();
     }
@@ -3894,7 +4173,6 @@
           requested_fact_type:$('pdgFactType').value, question_text:question, request_reason:reason
         })
       });
-      state.processDataGovernance.dirty = false;
       showToast('已向具体部门发出业务事实问题');
       await pdgReloadCurrent();
     }
@@ -3910,7 +4188,6 @@
           evidence_ref:$('pdgBusinessEvidence').value.trim()
         })
       });
-      state.processDataGovernance.dirty = false;
       showToast('业务事实答复已提交，后续治理判断仍由MDM工作组完成');
       await pdgReloadCurrent();
     }
@@ -3923,7 +4200,6 @@
       await api('/api/process-data-governance/fact-requests/' + Number(requestId) + '/close', {
         method:'POST', body:JSON.stringify({ expected_revision:Number(detail.package.revision_no), basis:basis })
       });
-      state.processDataGovernance.dirty = false;
       showToast('业务事实问题已由MDM核对并关闭');
       await pdgReloadCurrent();
     }
@@ -3935,12 +4211,15 @@
       await api('/api/process-data-governance/work-packages/' + Number(detail.package.id) + '/complete', {
         method:'POST', body:JSON.stringify({ expected_revision:Number(detail.package.revision_no), basis:basis })
       });
-      state.processDataGovernance.dirty = false;
       showToast('数据生命周期治理工作包已完成');
       await pdgReloadCurrent();
     }
 
     async function confirmPdgDiscard(action) {
+      if (state.processDataGovernance.busy) {
+        showToast('正在处理当前操作，请等待结果');
+        return;
+      }
       if (!state.processDataGovernance.dirty) return action();
       var discard = await showConfirm({
         title:'尚未保存当前输入',
@@ -6390,7 +6669,10 @@
       if (!csrfTokenPromise) {
         csrfTokenPromise = nativeFetch('/api/csrf-token', { credentials: 'same-origin' })
           .then(function(res) {
-            if (!res.ok) throw new Error('CSRF token unavailable');
+            if (!res.ok) {
+              if (res.status === 401) handleUnauthorized('/api/csrf-token', false);
+              throw { status:res.status, message:'当前会话无法完成安全校验，请重新登录或稍后重试。' };
+            }
             return res.json();
           })
           .then(function(body) {
@@ -6445,7 +6727,12 @@
 
     function handleUnauthorized(path, silentUnauthorized) {
       csrfToken = '';
+      if (hasV7Edits()) {
+        v7Edits.message = '登录已失效，未提交输入仍保留在当前页面。请使用原账号重新登录；关闭或刷新页面前先保留意见。';
+        renderV7EditNotice();
+      }
       showLogin();
+      if (hasV7Edits() && $('loginMsg')) $('loginMsg').textContent = v7Edits.message;
       if (!silentUnauthorized && path !== '/api/org/login') showToast('登录已过期，请重新登录', 'error');
     }
 
@@ -6504,6 +6791,10 @@
       state.user = null;
       stopPolling();
       if ($('sessionUserName')) $('sessionUserName').textContent = '未登录';
+      if ($('sessionPositionStatus')) {
+        $('sessionPositionStatus').textContent = '';
+        $('sessionPositionStatus').hidden = true;
+      }
       var passwordChangeBtn = $('passwordChangeBtn');
       if (passwordChangeBtn) passwordChangeBtn.remove();
       if ($('logoutBtn')) $('logoutBtn').style.display = 'none';
@@ -6539,6 +6830,7 @@
         location.hash = '#/' + params.tab + '/' + params.type + '/' + (params.id || 'new') + ((params.action && params.id !== 'new') ? '/' + params.action : '');
       }
       else if (view === 'operation') { location.hash = '#/' + params.tab + '/' + params.type + '/' + params.id + '/' + params.action; }
+      if (!guardV7Route()) return;
       state.currentView = view;
       renderCurrentView(params);
     }
@@ -6555,6 +6847,7 @@
     function renderCurrentView(params) {
       state.pageWorkflowRequestId += 1;
       document.querySelectorAll('.panel,.page').forEach(function(el) { el.classList.remove('on'); });
+      if (isIsolatedLegacyPage(params)) { renderLegacyUnavailable(); return; }
       if (state.currentView === 'list' || !state.currentView) { renderListPanel(params.tab || 'dashboard'); }
       else if (state.currentView === 'detail') { renderDetailPage(params); }
       else if (state.currentView === 'form') { renderFormPage(params); }
@@ -6587,6 +6880,7 @@
     }
 
     function renderRouteFromHash() {
+      if (!guardV7Route()) return;
       var route = parseHash();
       state.currentRoute = route;
       navigateTo(route.view, route);
@@ -6597,14 +6891,14 @@
         state.processDataGovernance.suppressHashGuard = false;
         return;
       }
-      if (state.processDataGovernance.dirty && $('pdgModalMask') && $('pdgModalMask').classList.contains('on')) {
+      if ((state.processDataGovernance.dirty || state.processDataGovernance.busy) && $('pdgModalMask') && $('pdgModalMask').classList.contains('on')) {
         var requestedHash = location.hash;
         var activeHash = state.processDataGovernance.activeHash || '#/processGovernance?workspace=dataGovernance';
         confirmPdgDiscard(function() {
           state.processDataGovernance.activeHash = requestedHash;
           renderRouteFromHash();
         }).then(function(result) {
-          if (result === undefined && state.processDataGovernance.dirty && location.hash !== activeHash) {
+          if (result === undefined && (state.processDataGovernance.dirty || state.processDataGovernance.busy) && location.hash !== activeHash) {
             state.processDataGovernance.suppressHashGuard = true;
             location.hash = activeHash;
           }
@@ -6614,7 +6908,7 @@
       renderRouteFromHash();
     });
     window.addEventListener('beforeunload', function(event) {
-      if (!state.processDesign.canonicalDirty && !state.processDataGovernance.dirty) return;
+      if (!hasV7Edits() && !state.processDesign.canonicalDirty && !state.processDataGovernance.dirty && !state.processDataGovernance.busy) return;
       event.preventDefault();
       event.returnValue = '';
     });
@@ -7005,6 +7299,7 @@
           workflowTargetButton(action.target, action.label) +
         '</div>';
       }).join('') : '<div class="wb-empty">暂无额外入口。</div>';
+      if (isProcessGovernanceWorkflow) renderV7Sidebar(state.v7CurrentDetail);
       return shell;
     }
 
@@ -7019,6 +7314,7 @@
         return '<div class="wb-action">' +
           '<div class="wb-action-title">' + (index + 1) + '. ' + safeText(action.title) + '</div>' +
           '<div class="wb-action-meta">样例：' + safeText(action.sample) + '</div>' +
+          '<div class="wb-action-meta">来源角色：' + safeText(workbenchSourceRoles(action)) + '</div>' +
           '<button type="button" class="wb-link-btn" data-wb-target="' + safeText(action.target) + '">' + safeText(action.actionLabel || '进入处理') + '</button>' +
         '</div>';
       }).join('');
@@ -7048,9 +7344,18 @@
         return '<div class="wb-work-item">' +
           '<div class="wb-work-title">' + safeText(item.title) + '</div>' +
           '<div class="wb-work-meta">样例：' + safeText(item.sample) + '</div>' +
+          '<div class="wb-work-meta">来源角色：' + safeText(workbenchSourceRoles(item)) + '</div>' +
           '<button type="button" class="wb-link-btn" data-wb-target="' + safeText(item.target) + '">' + safeText(item.actionLabel || '进入') + '</button>' +
         '</div>';
       }).join('');
+    }
+
+    function workbenchSourceRoles(item) {
+      var codes = item.sourceRoles || [item.roleCode || item.roleHint].filter(Boolean);
+      return codes.map(function(code) {
+        var role = (state.roleWorkbench.data && state.roleWorkbench.data.roles || []).find(function(row) { return row.code === code; });
+        return role ? role.name : code;
+      }).join('、') || '按当前授权范围查看';
     }
 
     function renderRoleWorkbenchNodeDetail(node, data) {
@@ -7165,7 +7470,17 @@
           loadRoleWorkbenchActivity();
         }
       } catch (error) {
-        if ($('roleWorkbenchNextActions')) $('roleWorkbenchNextActions').innerHTML = '<div class="wb-empty">' + safeText(error.message || '角色工作台加载失败') + '</div>';
+        state.roleWorkbench.data = null;
+        if ($('roleWorkbenchPriority')) $('roleWorkbenchPriority').textContent = '待办数量：暂不可用';
+        ['roleWorkbenchNextActions', 'roleWorkbenchItems', 'roleWorkbenchGuide', 'roleWorkbenchNodeDetail', 'roleWorkbenchSankey'].forEach(function(id) {
+          if ($(id)) $(id).innerHTML = '<div class="wb-empty">工作台待办暂不可用，请重试；当前不能据此判断没有待办。</div>';
+        });
+        if ($('roleWorkbenchNextActions')) {
+          var retry = document.createElement('button');
+          retry.type = 'button'; retry.className = 'btn secondary'; retry.textContent = '重试读取待办';
+          retry.onclick = renderRoleWorkbench;
+          $('roleWorkbenchNextActions').appendChild(retry);
+        }
       }
     }
 
@@ -7217,7 +7532,7 @@
     function stopPolling() { if (state.pollTimer) { clearInterval(state.pollTimer); state.pollTimer = null; } }
     async function loadCurrentListData() {
       var tab = parseHash().tab;
-      if (tab === 'dashboard') { await loadMappings(); await renderDashboard(); return; }
+      if (tab === 'dashboard') { await loadDashboardData(); return; }
       if (tab === 'mySubmissions') await loadMappings();
       if (tab === 'todos') await loadTodos();
       if (tab === 'conflicts') await loadConflicts();
@@ -7237,6 +7552,26 @@
 
     async function activateAuthenticatedApp(user, options) {
       options = options || {};
+      var changingV7Identity = v7Edits.ownerId && v7Edits.ownerId !== String(user.personId || user.id || '');
+      if (hasV7Edits() && changingV7Identity) {
+        if (!confirmV7Leave('登录账号与原编辑人员不同。切换账号前需明确放弃原意见。')) {
+          await api('/api/org/logout', {method:'POST'});
+          showLogin();
+          $('loginMsg').textContent = '原输入仍保留，请使用原账号重新登录。';
+          return;
+        }
+        clearV7Edits();
+      }
+      if (changingV7Identity) {
+        clearV7Edits();
+        v7Edits.caseId = 0;
+        v7Edits.ownerId = null;
+        state.pgSelectedV7PreviewCaseId = 0;
+        state.v7CurrentDetail = null;
+        if ($('pgV7PreviewDetail')) $('pgV7PreviewDetail').textContent = '请从本人工作台选择可办理的案例。';
+        if ($('pgV7PreviewCaseRows')) $('pgV7PreviewCaseRows').textContent = '';
+        history.replaceState(null, '', '#/roleWorkbench');
+      }
       state.user = user;
       await loadCsrfToken();
       try {
@@ -7246,11 +7581,19 @@
         console.warn('当前用户资料补全失败，继续使用登录返回资料', error);
       }
       $('sessionUserName').textContent = state.user.name + ' · ' + ((state.user.roleNames || state.user.roleCodes || []).join(' / ') || '未分配有效角色');
+      // Finish initial identity/catalog reads before routing starts other page requests.
+      identityModel = await api('/api/rbac/model');
+      $('sessionUserName').textContent = state.user.name + ' · ' + currentUserRoleNames();
+      var positionUnavailable = state.user.positionInfo && state.user.positionInfo.status === 'unavailable';
+      $('sessionPositionStatus').textContent = positionUnavailable ? ' · 岗位信息暂不可用' : '';
+      $('sessionPositionStatus').title = positionUnavailable ? '当前访问权限仍按有效MDM工作角色计算。' : '';
+      $('sessionPositionStatus').hidden = !positionUnavailable;
+      await loadAllSafely();
+      if (!location.hash || location.hash === '#') history.replaceState(null, '', '#/roleWorkbench');
       showApp();
+      state.pgViewCache = {};
       applyRoleVisibility();
       applyPermissionControlledActions();
-      renderRouteFromHash();
-      await loadAllSafely();
       renderRouteFromHash();
       applyPermissionControlledActions();
       startPolling();
@@ -7284,11 +7627,37 @@
 
     // ===== Data loading =====
     async function loadAll() {
-      await Promise.all([loadCatalog(), loadMappings(), loadDataMapContexts(), loadTodos(), loadTerms(), loadConflicts()]);
-      renderDashboard();
+      var runtime = await api('/api/runtime-capabilities');
+      state.legacyTestMode = runtime.legacyTestMode === true;
+      await loadDepartments();
+    }
+
+    async function loadDepartments() {
+      state.departments = await api('/api/org/departments');
+      if ($('capDept')) fillSelect($('capDept'), state.departments);
+      if ($('dataMapContextDept')) fillSelect($('dataMapContextDept'), state.departments);
+      if ($('procDept')) fillSelect($('procDept'), state.departments);
+      refreshProcessDesignCatalogOptions();
+    }
+
+    async function loadDashboardData() {
+      await Promise.all([loadMappings(), loadDataMapContexts(), loadTodos(), loadConflicts()]);
+      await renderDashboard();
+    }
+
+    function isIsolatedLegacyPage(params) {
+      if (state.legacyTestMode === true) return false;
+      return ['capabilities', 'businessMap', 'processes', 'orgUnits', 'persons', 'products'].indexOf(params.tab) >= 0 ||
+        ['orgUnit', 'position', 'person', 'productFamily', 'product', 'process'].indexOf(params.type) >= 0;
+    }
+
+    function renderLegacyUnavailable() {
+      $('detailPage').classList.add('on');
+      $('detailContent').innerHTML = '<div class="notice">此历史功能入口已暂停，已有资料保留。请联系项目负责人确认后续承接范围。</div>';
     }
 
     async function loadCatalog() {
+      if (state.legacyTestMode !== true) return;
       state.departments = await api('/api/org/departments');
       state.capabilities = await api('/api/capabilities');
       state.processes = await api('/api/processes');
@@ -10451,6 +10820,10 @@
 
     function setProcessGovernanceViewError(view, error) {
       var message = error && error.message || '流程治理数据暂不可用';
+      if (view === 'v7Preview') {
+        v7Edits.message = '当前案例暂不可读取，原输入仍保留；请重试读取当前修订后再办理。';
+        renderV7EditNotice();
+      }
       if (view === 'editor' && $('pgDesignSummaryMeta')) $('pgDesignSummaryMeta').textContent = message;
       if (view === 'handoffs' && $('pgHandoffQueueRows')) $('pgHandoffQueueRows').innerHTML = '<tr><td colspan="6" class="empty">' + safeText(message) + '</td></tr>';
       if (view === 'conflicts' && $('pgHandoffConflictRows')) $('pgHandoffConflictRows').innerHTML = '<tr><td colspan="6" class="empty">' + safeText(message) + '</td></tr>';
@@ -10472,18 +10845,24 @@
         cacheFilters.pdgFactRequestId = route.pdgFactRequestId || '';
       }
       var cacheKey = processGovernanceLoadKey(view, cacheFilters);
-      if (!options.force && state.pgViewCache[cacheKey]) {
+      var requestId = (state.pgViewRequests[view] || 0) + 1;
+      state.pgViewRequests[view] = requestId;
+      if (view !== 'v7Preview' && !options.force && state.pgViewCache[cacheKey]) {
         renderProcessGovernanceView(view, state.pgViewCache[cacheKey], route);
         return state.pgViewCache[cacheKey];
       }
 
-      var requestId = (state.pgViewRequests[view] || 0) + 1;
-      state.pgViewRequests[view] = requestId;
       setProcessGovernanceViewLoading(view);
       try {
         var payload = await product.load(filters, route);
         if (state.pgViewRequests[view] !== requestId) return null;
         if (processGovernanceViewFromRoute(parseHash()) !== view) return null;
+        if (view === 'dataGovernance') {
+          var currentRoute = parseHash();
+          if (String(currentRoute.pdgPackageId || '') !== String(route.pdgPackageId || '') ||
+              String(currentRoute.pdgFactRequestId || '') !== String(route.pdgFactRequestId || '')) return null;
+          if (state.processDataGovernance.dirty && !state.processDataGovernance.busy) return null;
+        }
         state.pgViewCache[cacheKey] = payload;
         renderProcessGovernanceView(view, payload, route);
         return payload;
@@ -10651,7 +11030,7 @@
       }
       switch (tab) {
         case 'roleWorkbench': renderRoleWorkbench(); break;
-        case 'dashboard': renderDashboard(); break;
+        case 'dashboard': runPageTask(loadDashboardData, '统计看板加载失败'); break;
         case 'roleGuide': renderRoleGuide(); break;
         case 'mySubmissions': runPageTask(loadMySubmissions, '我的报送加载失败'); break;
         case 'dataMap': runPageTask(loadDataMapContexts, '数据地图加载失败'); break;
@@ -11036,7 +11415,7 @@
       var pdgCloseFactButton = event.target.closest('[data-pdg-close-fact]');
       if (pdgCloseFactButton) {
         event.preventDefault();
-        runPageTask(function() { return closePdgFactRequest(Number(pdgCloseFactButton.dataset.pdgCloseFact)); }, '业务事实问题关闭失败');
+        runPageTask(function() { return runPdgAction(function() { return closePdgFactRequest(Number(pdgCloseFactButton.dataset.pdgCloseFact)); }, ['fact-close:' + pdgCloseFactButton.dataset.pdgCloseFact]); }, '业务事实问题关闭失败');
         return;
       }
       if (event.target.closest('#pdgReconcileBtn')) {
@@ -11046,32 +11425,32 @@
       }
       if (event.target.closest('#pdgRefreshBtn')) {
         event.preventDefault();
-        runPageTask(pdgReloadCurrent, '数据生命周期治理工作包刷新失败');
+        runPageTask(function() { return runPdgAction(pdgReloadCurrent); }, '数据生命周期治理工作包刷新失败');
         return;
       }
       if (event.target.closest('#pdgGenerateCandidatesBtn')) {
         event.preventDefault();
-        runPageTask(generatePdgCandidates, '待治理明细生成失败');
+        runPageTask(function() { return runPdgAction(generatePdgCandidates); }, '待治理明细生成失败');
         return;
       }
       if (event.target.closest('#pdgSaveDecisionBtn')) {
         event.preventDefault();
-        runPageTask(savePdgDecision, 'MDM治理结论保存失败');
+        runPageTask(function() { return runPdgAction(savePdgDecision, ['pdgDecisionStatus','pdgDecisionConclusion','pdgUnifiedObjectId','pdgResponsibleDepartment','pdgDecisionBasis']); }, 'MDM治理结论保存失败');
         return;
       }
       if (event.target.closest('#pdgCreateFactBtn')) {
         event.preventDefault();
-        runPageTask(createPdgFactRequest, '业务事实问题发送失败');
+        runPageTask(function() { return runPdgAction(createPdgFactRequest, ['pdgFactDepartment','pdgFactType','pdgFactQuestion','pdgFactReason']); }, '业务事实问题发送失败');
         return;
       }
       if (event.target.closest('#pdgRespondFactBtn')) {
         event.preventDefault();
-        runPageTask(respondPdgFactRequest, '业务事实答复提交失败');
+        runPageTask(function() { return runPdgAction(respondPdgFactRequest, ['pdgBusinessAnswer','pdgBusinessEvidence']); }, '业务事实答复提交失败');
         return;
       }
       if (event.target.closest('#pdgCompleteBtn')) {
         event.preventDefault();
-        runPageTask(completePdgWorkPackage, '工作包完成审核失败');
+        runPageTask(function() { return runPdgAction(completePdgWorkPackage, ['pdgCompleteBasis'], true); }, '工作包完成审核失败');
         return;
       }
       if (event.target.closest('#pdgModalClose') || event.target === $('pdgModalMask')) {
@@ -11219,7 +11598,29 @@
     } else if ($('loginBtn')) {
       $('loginBtn').onclick = login;
     }
-    $('logoutBtn').onclick = async function() { await api('/api/org/logout', { method:'POST' }).catch(function() { return null; }); stopPolling(); location.reload(); };
+    $('logoutBtn').onclick = function() {
+      runPageTask(async function() {
+        var pdgWasDirty = state.processDataGovernance.dirty;
+        if (pdgWasDirty || state.processDataGovernance.busy) {
+          var canLeavePdg = false;
+          await confirmPdgDiscard(function() { canLeavePdg = true; });
+          if (!canLeavePdg) return;
+        }
+        if (!confirmV7Leave('准备退出登录。')) return;
+        var editable = Array.from(document.querySelectorAll('#pgV7PreviewDetail input, #pgV7PreviewDetail textarea, #pgV7PreviewDetail select')).map(function(el) { return { el:el, disabled:el.disabled }; });
+        v7Edits.busy = true;
+        editable.forEach(function(item) { item.el.disabled = true; });
+        try { await api('/api/org/logout', { method:'POST' }); }
+        catch (error) {
+          editable.forEach(function(item) { item.el.disabled = item.disabled; });
+          if (pdgWasDirty) state.processDataGovernance.dirty = true;
+          throw error;
+        } finally { v7Edits.busy = false; }
+        clearV7Edits();
+        stopPolling();
+        location.reload();
+      }, '退出未完成，当前输入仍保留，请稍后重试');
+    };
     $('createCapBtn').onclick = createCapability;
     $('createProcBtn').onclick = createProcess;
     if ($('refreshCapsBtn')) $('refreshCapsBtn').onclick = loadCatalog;
@@ -12501,6 +12902,11 @@
 
     // ── Quality Tab ──
     async function loadQualityDashboard() {
+      if (state.legacyTestMode !== true) {
+        $('qualityLegacySummary').hidden = true;
+        $('qualityLegacyNotice').hidden = false;
+        return;
+      }
       var data = await api('/api/quality/dashboard');
       var orgs = (data.org_person || {}).org_units || 0;
       var persons = (data.org_person || {}).persons || 0;

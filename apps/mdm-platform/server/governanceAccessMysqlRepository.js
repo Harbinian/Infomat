@@ -645,7 +645,7 @@ function makeGovernanceAccessMysqlRepository(pool) {
           FROM person_roles pr
           JOIN roles r ON r.role_id=pr.role_id
           WHERE pr.person_id=? AND pr.person_role_id=?
-          FOR UPDATE
+          FOR UPDATE OF pr FOR SHARE OF r
         `, [personId, assignmentId]);
         if (!assignment) throw domainError(404, 'ROLE_ASSIGNMENT_NOT_FOUND', '角色授权记录不存在');
         if (assignment.assignment_status !== 'active') {

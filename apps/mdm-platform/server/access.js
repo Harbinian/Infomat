@@ -1,4 +1,4 @@
-const db = require('./db');
+function legacyDb() { return require('./db'); }
 const { getUserEffectivePermissions, getUserEffectivePermissionsAsync, getUserRoleCodesAsync } = require('./auth');
 const { permissionSetHas } = require('./roleDefinitions');
 
@@ -47,7 +47,7 @@ async function isReviewerOrAdminAsync(req) {
 function getEffectiveRoleCodes(req) {
   const codes = new Set();
   if (!req.session || !req.session.userId) return codes;
-  const rows = db.prepare(`
+  const rows = legacyDb().prepare(`
     SELECT r.role_code
     FROM user_roles ur
     JOIN roles r ON ur.role_id = r.role_id
@@ -106,7 +106,7 @@ function mappingVisibility(alias, req) {
 
 function canViewMapping(req, mappingId) {
   const visibility = mappingVisibility('m', req);
-  const row = db.prepare(`SELECT m.id FROM mappings m WHERE m.id=?${visibility.sql}`).get(mappingId, ...visibility.params);
+  const row = legacyDb().prepare(`SELECT m.id FROM mappings m WHERE m.id=?${visibility.sql}`).get(mappingId, ...visibility.params);
   return Boolean(row);
 }
 
@@ -142,7 +142,7 @@ async function mappingVisibilityAsync(alias, req) {
 
 async function canViewMappingAsync(req, mappingId) {
   const visibility = await mappingVisibilityAsync('m', req);
-  const row = db.prepare(`SELECT m.id FROM mappings m WHERE m.id=?${visibility.sql}`).get(mappingId, ...visibility.params);
+  const row = legacyDb().prepare(`SELECT m.id FROM mappings m WHERE m.id=?${visibility.sql}`).get(mappingId, ...visibility.params);
   return Boolean(row);
 }
 

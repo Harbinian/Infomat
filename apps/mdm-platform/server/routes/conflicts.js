@@ -1,3 +1,4 @@
+const { sendMysqlUnavailable } = require('../mysqlRuntimeSchema');
 const express = require('express');
 const router = express.Router();
 const {
@@ -13,6 +14,7 @@ const {
 } = require('../conflictMysqlRepository');
 
 function handleDbError(res, error) {
+  if (sendMysqlUnavailable(res, error)) return;
   const code = String(error && error.code || '');
   const message = String(error && error.message || '');
   if (code.startsWith('ER_') || message.includes('constraint')) {
@@ -169,6 +171,9 @@ router.put('/:id/assign', requireAuth, (req, res) => {
 
 router.post('/:id/coordination', requireAuth, (req, res) => {
   return runAction(res, async () => {
+    if (!await canManageGeneralConflict(req)) {
+      return res.status(403).json({ error: '无一般冲突处理权限' });
+    }
     const repo = await conflictRepository();
     const result = await repo.submitCoordination(req.params.id, conflictTypeFromQuery(req), await conflictActor(req, {
       result: req.body && req.body.result,

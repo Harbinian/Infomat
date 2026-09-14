@@ -45,6 +45,15 @@
   function normalizePastedValue(column, rawValue, options = []) {
     const raw = String(rawValue == null ? '' : rawValue);
     const trimmed = raw.trim();
+    if (column?.editor === 'multi-select') {
+      const values = [];
+      for (const token of trimmed.split(/[,，、;；\n]+/).map(value => value.trim()).filter(Boolean)) {
+        const option = options.find(option => String(option.value) === token || option.label === token);
+        if (!option) return { error: `没有选项“${token}”` };
+        if (!values.includes(option.value)) values.push(option.value);
+      }
+      return { value: values };
+    }
     if (column?.editor === 'boolean') {
       if (!trimmed) return { value: false };
       const normalized = trimmed.toLowerCase();

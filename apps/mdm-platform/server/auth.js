@@ -1,3 +1,4 @@
+const { checkRuntimeSchema } = require('./mysqlRuntimeSchema');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const mysql = require('mysql2/promise');
@@ -46,12 +47,16 @@ function requireAuth(req, res, next) {
   if (!req.session || (!req.session.personId && !req.session.userId)) {
     return res.status(401).json({ error: '未登录' });
   }
-  if (!useMysqlIdentityReadModel() || !req.session.accountId || !req.session.authVersion) {
+  if (!useMysqlIdentityReadModel() || (require('./runtimeBoundary').legacyTestMode() && (!req.session.accountId || !req.session.authVersion))) {
     return next();
+  }
+  if (!req.session.personId || !Number.isSafeInteger(Number(req.session.accountId)) || Number(req.session.accountId) < 1 ||
+      !Number.isSafeInteger(Number(req.session.authVersion)) || Number(req.session.authVersion) < 1) {
+    return req.session.destroy(() => res.status(401).json({ error: '登录信息已失效，请重新登录', code: 'SESSION_IDENTITY_INVALID' }));
   }
   return identityRepository()
     .then(repo => {
-      if (typeof repo.validateSession !== 'function') return { valid: true };
+      if (typeof repo.validateSession !== 'function') throw new Error('SESSION_VALIDATOR_REQUIRED');
       return repo.validateSession(req.session);
     })
     .then(result => {
@@ -74,7 +79,7 @@ function requireAuth(req, res, next) {
       return next();
     })
     .catch(error => {
-      console.error(error);
+      console.error('IDENTITY_SERVICE_UNAVAILABLE');
       return res.status(503).json({
         error: '身份服务暂不可用',
         code: 'IDENTITY_SERVICE_UNAVAILABLE'
@@ -179,7 +184,7 @@ async function identityRepository() {
     identityRepoPromise = (async () => {
       const pool = mysql.createPool(mysqlConfigFromEnv());
       const repo = makeIdentityMysqlRepository(pool);
-      await repo.initSchema();
+      await checkRuntimeSchema(pool, 'identity');
       return repo;
     })();
   }
@@ -333,6 +338,7 @@ function isPasswordChangeBootstrapRequest(req) {
   return [
     '/api/org/me',
     '/api/org/session',
+    '/api/csrf-token',
     '/api/org/logout',
     '/api/org/me/password-status',
     '/api/org/me/password'

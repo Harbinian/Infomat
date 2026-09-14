@@ -10,6 +10,11 @@ delete process.env.PROCESS_GOVERNANCE_READ_MODEL;
 const express = require('express');
 const db = require('../server/db');
 const roleWorkbenchRouter = require('../server/routes/roleWorkbench');
+require('../server/todoMysqlRepository').setTodoRepositoryFactory(() => ({ async listTodos() { return []; } }));
+require('../server/routes/processDesignMysql').setProcessDesignRepositoryFactory(() => ({
+  async listHandoffQueue() { return { items: [] }; },
+  async listHandoffConflictQueue() { return { items: [] }; }
+}));
 
 const PORT = 3127;
 const BASE = `http://localhost:${PORT}`;

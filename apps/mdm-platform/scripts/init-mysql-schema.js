@@ -9,6 +9,7 @@ const { applyCrossDeptHandoffV2 } = require('../server/crossDeptHandoffV2Migrati
 const {
   ensureProcessDesignEditionSchema,
   ensureProcessDesignEvidenceStatusSchema,
+  ensureProcessDesignFormStructureSchema,
   ensureProcessDesignStepTransitionSchema
 } = require('../server/routes/processDesignMysql');
 
@@ -183,6 +184,7 @@ async function main() {
     await ensureDocumentStructuredOutputV2(pool);
     await ensureProcessDesignEditionSchema(pool);
     await ensureProcessDesignEvidenceStatusSchema(pool);
+    await ensureProcessDesignFormStructureSchema(pool);
     await ensureProcessDesignStepTransitionSchema(pool);
     await applyCrossDeptHandoffV2(pool);
     await seedFixedAccessModel(pool);

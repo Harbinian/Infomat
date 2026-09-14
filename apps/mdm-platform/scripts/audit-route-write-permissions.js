@@ -1,186 +1,98 @@
-const fs = require('fs');
-const path = require('path');
+// Read-only route review. Loads formal registrations with DB factories/SQLite blocked;
+// never listens, reads private config, or executes requests. JSON is a trace, not an authorization whitelist.
+const {source,reference,staticRoutes,formalRoutes,localEvidence,sha}=require('./testHelpers/routeInventory');
 
-const ROUTES_DIR = path.join(__dirname, '..', 'server', 'routes');
+const repositories={
+  accounts:['governanceAccessMysqlRepository'],governance:['governanceAccessMysqlRepository'],
+  conflicts:['conflictMysqlRepository'],dataMap:['dataMapMysqlRepository'],fieldEntries:['dataMapMysqlRepository'],
+  fieldIdentities:['dataMapMysqlRepository'],import:['dataMapMysqlRepository'],mappings:['mappingMysqlRepository','governanceAccessMysqlRepository'],
+  terminology:['terminologyMysqlRepository'],todos:['todoMysqlRepository'],
+  governanceGuidance:['governanceGuidanceMysqlRepository'],processV7PreviewReview:['processV7PreviewReviewRepository'],
+  processDataGovernance:['processDataGovernanceRepository'],processDesignMysql:['routes/processDesignMysql'],
+  processGovernance:['processGovernanceMysqlRepository','processGovernanceIssuePoolRepository','processInputBaselineReviewRepository']
+};
+const notes={
+  accounts:'身份管理；仓储检查授权依据、生效期、同部门授权、账号状态、最后管理员及撤权，事务更新auth_version并记录identity_access_events。',
+  governance:'部门责任记录；仓储检查当前人员、部门最终负责人及依据。无客户端修订令牌，按追加记录保存，不能视为流程审核或发布。',
+  processV7PreviewReview:'预览专表；写入受精确process_ref及开关限制。已有案例写入在事务中锁定案例/当前修订并复核摘要；核对绑定参与部门。提升才写正式草稿，非正式版本。',
+  processDesignMysql:'V7状态转换在同一事务中锁定案例、主档、草稿、审核及版本，复核正式身份、部门、状态、修订和摘要并记录事件；旧结构编辑入口拒绝V7。V3完整内容保存有expected_revision；旧分项编辑没有统一客户端修订令牌，不作V7事务证明。',
+  processDataGovernance:'默认关闭；精确不可变process_version_id，锁定工作包，复核来源摘要、expected_revision和当前状态；MDM治理或指定部门事实答复，写事件。',
+  processGovernance:'质量单、映射待办及问题池分别检查权限、部门/参与人和对象状态，调用各自事件仓储。旧工单部分动作无统一客户端修订令牌；不能以此清单宣称事务/并发验收。输入基线复核仍读指定artifact批次并写MySQL。',
+  mappings:'部门草稿、提交/审核任务、结构门槛和责任证据分别检查；仓储复核状态、记录审核/版本历史。具体锁与条件UPDATE见对应方法，不从路由分类推定原子性。',
+  governanceGuidance:'有效办理人、最终负责人或有效委派及指导意见状态检查；记录guidance事件。无统一客户端修订令牌，不能视为V7审核或事务证明。',
+  conflicts:'分派、处理人、升级与终裁权限分别检查，仓储校验指派及状态并记录历史。非V7发布事务。',
+  dataMap:'部门上下文维护；不是正式数据地图发布。无统一客户端修订令牌，状态/审计范围以具体SQL和方法为准。',
+  fieldEntries:'按所属上下文的部门及业务权限维护字段；保留字段变更审计。无统一客户端修订令牌，非正式版本发布。',
+  fieldIdentities:'本部门字段身份维护/确认；按现有字段与上下文校验。无统一客户端修订令牌，非V7事务。',
+  import:'内存Excel上传；本部门上下文、固定列和内容校验；不发送通知。无客户端修订令牌，不代表实际导入验收。',
+  terminology:'本部门流程下待审术语维护与部门审核；当前部分动作仅有状态检查及审核字段，无统一修订令牌或全量变更事件，不能视为正式术语发布验收。',
+  todos:'任务分派、目标部门办理、结构权限删除；记录mdm_todo_events。当前完成/删除无统一修订令牌，事件与写入不保证同一事务；不作为V7核对待办实现或验收。'
+};
 
-function routeKey(file, method, routePath) {
-  return `${file} ${method.toUpperCase()} ${routePath}`;
-}
-
-const businessGuarded = new Map([
-  ['conflicts.js POST /:id/assign', '冲突指派通过 conflict:manage/review/admin 权限检查'],
-  ['conflicts.js PUT /:id/assign', '冲突改派通过 conflict:manage/review/admin 权限检查'],
-  ['conflicts.js POST /:id/coordination', '冲突协调记录要求当前指派人或管理权限'],
-  ['conflicts.js POST /:id/final-decide', '冲突终裁通过 conflict:final_decide_escalated/review/admin 权限检查'],
-  ['conflicts.js POST /:id/escalate', '冲突升级通过 conflict:escalate/review/admin 权限检查'],
-  ['conflicts.js POST /:id/reopen', '冲突重开通过 conflict:manage/review/admin 权限检查'],
-  ['conflicts.js POST /:id/archive', '冲突归档通过 admin:access 权限检查'],
-  ['conflicts.js POST /detect', '冲突检测通过 conflict:manage/review/admin 权限检查'],
-  ['conflicts.js POST /:id/resolve', '字段冲突解决要求当前指派人或管理权限'],
-  ['conflicts.js POST /term/:id/resolve', '术语冲突解决要求当前指派人或管理权限'],
-  ['dataMap.js POST /contexts', '数据地图上下文创建通过 admin/data:view_all 管理权限检查'],
-  ['dataMap.js PUT /contexts/:id', '数据地图上下文维护通过 admin/data:view_all 管理权限检查'],
-  ['fieldEntries.js POST /', '字段台账创建通过提交人/管理员和映射提交人检查'],
-  ['fieldEntries.js PUT /:id', '字段台账编辑通过 owner/reviewer/admin 或本人提交检查'],
-  ['fieldEntries.js DELETE /:id', '字段台账删除通过 admin 或本人提交检查'],
-  ['fieldIdentities.js PUT /:fieldEntryId', '黄金源维护通过字段 owner/admin 检查'],
-  ['fieldIdentities.js POST /:fieldEntryId/confirm', '黄金源确认通过字段 owner/admin 检查'],
-  ['import.js POST /field-entries', '字段台账导入通过 submitter/admin 和映射提交人检查'],
-  ['integration.js POST /credentials/generate', '集成凭据生成在路由内执行 requireAuth + admin 检查'],
-  ['mappings.js POST /', '映射草稿创建要求报送人或管理员'],
-  ['mappings.js PUT /:id', '映射草稿更新要求创建人或管理员'],
-  ['mappings.js DELETE /:id', '映射草稿删除要求创建人或管理员'],
-  ['mappings.js POST /:id/submit', '映射提交要求本人提交的草稿'],
-  ['mappings.js POST /:id/review', '映射审核要求当前审批任务指派给本人'],
-  ['mappings.js POST /:id/publish', '映射发布要求 admin:access'],
-  ['mappings.js POST /:id/reject', '映射驳回要求当前审批任务指派给本人'],
-  ['processGovernance.js POST /quality-cases/:id/assign', '质量案例指派通过流程治理管理权限检查'],
-  ['processGovernance.js POST /quality-cases/:id/status', '质量案例状态变更通过负责人/管理权限检查'],
-  ['processGovernance.js POST /quality-cases/:id/comment', '质量案例评论通过可见性检查'],
-  ['processGovernance.js POST /quality-cases/:id/submit', '质量案例提交通过负责人/管理权限检查'],
-  ['processGovernance.js POST /quality-cases/:id/close', '质量案例关闭通过关闭/审核/管理权限检查'],
-  ['processGovernance.js POST /quality-cases/:id/reopen', '质量案例重开通过管理权限检查'],
-  ['processGovernance.js POST /mapping-todos/:id/assign', '映射待办指派通过流程治理管理权限检查'],
-  ['processGovernance.js POST /mapping-todos/:id/status', '映射待办状态变更通过负责人/管理权限检查'],
-  ['processGovernance.js POST /mapping-todos/:id/comment', '映射待办评论通过可见性检查'],
-  ['processGovernance.js POST /mapping-todos/:id/submit', '映射待办提交通过负责人/管理权限检查'],
-  ['processGovernance.js POST /mapping-todos/:id/close', '映射待办关闭通过关闭/审核/管理权限检查'],
-  ['processGovernance.js POST /mapping-todos/:id/reopen', '映射待办重开通过管理权限检查'],
-  ['processGovernance.js PUT /input-baseline-review/runs/:runId/review-items/:stableKey/review', '输入基线问题复核决策保存要求登录用户，会话 reviewer 覆盖请求体 reviewer'],
-  ['processDesign.js POST /drafts', '流程草稿创建通过本人部门、授权部门和流程治理角色检查'],
-  ['processDesign.js PUT /drafts/:id', '流程草稿编辑通过 assertCanEditDraft 检查'],
-  ['processDesign.js POST /drafts/:id/steps', '流程步骤新增通过 assertCanEditDraft 检查'],
-  ['processDesign.js PUT /steps/:id', '流程步骤编辑通过 assertCanEditDraft 检查'],
-  ['processDesign.js POST /drafts/:id/forms', '流程表单新增通过 assertCanEditDraft 检查'],
-  ['processDesign.js PUT /forms/:id', '流程表单编辑通过 assertCanEditDraft 检查'],
-  ['processDesign.js POST /forms/:id/fields', '流程字段新增通过 assertCanEditDraft 检查'],
-  ['processDesign.js PUT /form-fields/:id', '流程字段编辑通过 assertCanEditDraft 检查'],
-  ['processDesign.js POST /drafts/:id/evidence', '流程证据新增通过 assertCanEditDraft 检查'],
-  ['processDesign.js PUT /evidence/:id', '流程证据编辑通过 assertCanEditDraft 检查'],
-  ['processDesign.js POST /drafts/:id/submit', '流程草稿提交通过 assertCanEditDraft 检查'],
-  ['processDesign.js POST /review-tasks/:id/decision', '流程审核结论通过 assertCanReview 检查'],
-  ['processDesign.js POST /drafts/:id/publish', '流程发布通过 assertCanReview 和发布前校验检查'],
-  ['terminology.js POST /', '术语创建通过本部门流程治理范围检查'],
-  ['terminology.js PUT /:id', '术语编辑要求本人待审术语或管理员'],
-  ['todos.js POST /', '待办创建在路由内限制管理员'],
-  ['todos.js POST /:id/done', '待办完成通过目标部门或管理员检查'],
-  ['todos.js DELETE /:id', '待办删除通过目标部门或管理员检查']
-]);
-
-const followUp = new Map();
-
-const publicOrSelfService = new Map([
-  ['org.js POST /login', '登录入口'],
-  ['org.js POST /logout', '登出入口'],
-  ['org.js POST /me/password', '当前用户自助修改密码']
-]);
-
-function parseRoutes() {
-  const routeFiles = fs.readdirSync(ROUTES_DIR)
-    .filter(name => name.endsWith('.js'))
-    .sort();
-  const routes = [];
-
-  for (const file of routeFiles) {
-    const fullPath = path.join(ROUTES_DIR, file);
-    const lines = fs.readFileSync(fullPath, 'utf8').split(/\r?\n/);
-    lines.forEach((line, index) => {
-      const match = line.match(/router\.(post|put|patch|delete)\(\s*(['"`])([^'"`]+)\2\s*,\s*(.*)$/);
-      if (!match) return;
-      const [, method, , routePath, rest] = match;
-      routes.push({
-        file,
-        line: index + 1,
-        method,
-        path: routePath,
-        signature: line.trim(),
-        rest
-      });
-    });
+function repositoryEvidence(row,trace) {
+  const files=(repositories[row.file.replace(/\.js$/,'')]||[]).map(name=>'server/'+name+'.js');
+  const methods=[];
+  for(const name of trace.repositoryCalls) {
+    for(const file of files) {
+      const content=source(file);const pattern=new RegExp('(?:async\\s+|function\\s+)'+name+'\\s*\\(');const match=pattern.exec(content);
+      if(!match)continue;
+      const next=content.slice(match.index+match[0].length).search(/\n    (?:async )?\w+\([^\n]*\)\s*\{|\n  (?:async )?function /);
+      const body=content.slice(match.index,next<0?content.length:match.index+match[0].length+next);
+      const ref={file,line:content.slice(0,match.index).split('\n').length,anchor:name};
+      const signals=body.split(/\r?\n/).map((s,i)=>({line:ref.line+i,text:s.trim()})).filter(s=>/FOR UPDATE|FOR SHARE|beginTransaction|withTransaction|runFormalV7Transaction|status[=!.]|status\s+(?:IN|NOT)|expected|revision|content_hash|addEvent|insertEvent|record.*Event|audit|affectedRows|commit\(|rollback\(/i.test(s.text));
+      methods.push({...ref,signals});break;
+    }
   }
-
-  return routes;
-}
-
-function permissionFromSignature(signature) {
-  const match = signature.match(/require(?:Org)?Permission\(\s*['"`]([^'"`]+)['"`]\s*\)/);
-  if (match) return match[1];
-  if (
-    signature.includes('...adminGate') ||
-    signature.includes('...adminOnly') ||
-    signature.includes('...writeAdminOnly') ||
-    signature.includes('...importWriteGate')
-  ) return 'admin:access';
-  return '';
-}
-
-function classify(route) {
-  const key = routeKey(route.file, route.method, route.path);
-  const permission = permissionFromSignature(route.signature);
-  if (permission) return { bucket: 'permissionGuarded', permission };
-  if (route.signature.includes('apiKeyAuth') || route.signature.includes('requireIntegrationPermission')) {
-    return { bucket: 'integrationGuarded', reason: 'API Key + integration permission' };
-  }
-  if (businessGuarded.has(key)) {
-    return { bucket: 'businessGuarded', reason: businessGuarded.get(key) };
-  }
-  if (followUp.has(key)) {
-    return { bucket: 'followUp', reason: followUp.get(key) };
-  }
-  if (publicOrSelfService.has(key)) {
-    return { bucket: 'publicOrSelfService', reason: publicOrSelfService.get(key) };
-  }
-  return { bucket: 'unclassified', reason: '未分类写接口' };
+  return {files:files.map(file=>({file,sha256:sha(source(file))})),methods};
 }
 
 function buildAudit() {
-  const audit = {
-    permissionGuarded: [],
-    integrationGuarded: [],
-    businessGuarded: [],
-    followUp: [],
-    publicOrSelfService: [],
-    unclassified: []
-  };
-
-  for (const route of parseRoutes()) {
-    const classification = classify(route);
-    const entry = {
-      file: route.file,
-      line: route.line,
-      method: route.method,
-      path: route.path,
-      signature: route.signature
+  const declarations=staticRoutes();const formal=formalRoutes();const entries=[];const first=new Map();
+  for(const row of formal.rows) {
+    const trace=localEvidence(row);const code=trace.source;
+    const key=`${row.base} ${row.method} ${row.path}`;
+    const previous=first.get(key);
+    let classification;
+    if(previous&&previous.category==='retired')classification={category:'shadowed',reason:'同一路径前置终止处理器已拒绝；后方旧实现不可达',blockedBy:previous.id};
+    else if(/LEGACY_IDENTITY_API_RETIRED|CORE_GOVERNANCE_MODEL_READ_ONLY|ORGANIZATION_TRUTH_READ_ONLY/.test(row.handlers.map(h=>h.body).join('\n'))) classification={category:'retired',reason:'正式注册但明确拒绝写入'};
+    else if(row.file==='org.js'&&['/login','/logout','/me/password'].includes(row.path))classification={category:'publicOrSelfService',reason:'登录或本人会话/口令服务；不能作为业务写权限'};
+    else if((row.file==='processDesignEditor.js'&&row.path==='/validate')||(row.file==='processDesignMysql.js'&&row.path==='/import-structured-output/preview')||(row.file==='processV7PreviewReview.js'&&row.path.endsWith('/revisions/preview')))classification={category:'validationOnly',reason:'POST承载内存校验/差异预览，不持久化业务记录'};
+    else if(trace.guards.length&&(repositories[row.file.replace(/\.js$/,'')])) classification={category:row.file==='accounts.js'?'identityWrite':'businessWrite',reason:notes[row.file.replace(/\.js$/,'')]};
+    else classification={category:'unclassified',reason:'未找到已追溯的权限及仓储路径，须核对后补充具体证据'};
+    const entry={id:`${row.file}:${row.line} ${row.method} ${row.path}`,file:row.file,line:row.line,base:row.base,path:row.path,method:row.method,...classification,
+      authentication:row.handlers.some(h=>h.name==='requireAuth')||row.middleware.some(m=>m.handlers.some(h=>h.name==='requireAuth'))?'requireAuth: 账号/person状态、auth_version、首次改密':'公共登录/退出；见具体处理器',
+      csrf:'server/index.js在所有路由注册前应用csrfProtection；登录例外；本人会话写入要求令牌',
+      permissions:trace.permissions,guards:trace.guards,helperReferences:trace.helpers,
+      departmentAndStateChecks:code.split('\n').map(s=>s.trim()).filter(s=>/if\s*\(|assert\w+\(|expected|revision|content_hash/.test(s)).slice(0,100),
+      repository:repositoryEvidence(row,trace),sourceSha256:sha(source('server/routes/'+row.file))};
+    const signals=entry.repository.methods.flatMap(method=>method.signals.map(signal=>({file:method.file,...signal})));
+    entry.controls={
+      permission:{guards:entry.guards,codes:entry.permissions,authentication:entry.authentication},
+      department:{references:entry.helperReferences.filter(ref=>/Department|Visible|Scope|Participant|Actor|View|Edit|Review/.test(ref.anchor)),checks:entry.departmentAndStateChecks.filter(line=>/department|scope|participant|Visible/i.test(line))},
+      objectState:{checks:entry.departmentAndStateChecks.filter(line=>/status|state|draft|case|task|conflict/i.test(line)),repositorySignals:signals.filter(signal=>/status|state/i.test(signal.text))},
+      concurrency:{signals:signals.filter(signal=>/FOR UPDATE|FOR SHARE|Transaction|expected|revision|content_hash|affectedRows|commit|rollback/i.test(signal.text)),limitation:'静态锁、修订或事务线索不代表已执行；缺少线索不按默认值补造。V7另有真实隔离MySQL证据，旧分项接口不据此宣称并发安全。'},
+      audit:{signals:signals.filter(signal=>/event|audit|review|history/i.test(signal.text)),limitation:'按具体仓储方法、业务事件/审核字段追溯；没有独立事件或事务的部分如实保留，分类不是业务验收。'}
     };
-    if (classification.permission) entry.permission = classification.permission;
-    if (classification.reason) entry.reason = classification.reason;
-    audit[classification.bucket].push(entry);
+    entries.push(entry);if(!previous)first.set(key,entry);
   }
-
-  audit.counts = Object.fromEntries(
-    Object.entries(audit).filter(([, value]) => Array.isArray(value)).map(([key, value]) => [key, value.length])
-  );
-  return audit;
-}
-
-function printText(audit) {
-  console.log('Route write permission audit');
-  for (const key of ['permissionGuarded', 'integrationGuarded', 'businessGuarded', 'followUp', 'publicOrSelfService', 'unclassified']) {
-    console.log(`\n${key}: ${audit[key].length}`);
-    audit[key].forEach(route => {
-      const detail = route.permission || route.reason || '';
-      console.log(`- ${route.file}:${route.line} ${route.method.toUpperCase()} ${route.path}${detail ? ` - ${detail}` : ''}`);
-    });
+  const index=source('server/index.js');
+  const isolatedNames=[...index.match(/const legacyRoutes = new Set\(\[([\s\S]*?)\]\)/)[1].matchAll(/'([^']+)'/g)].map(m=>m[1]+'.js');
+  for(const row of declarations) {
+    if(formal.rows.some(r=>r.file===row.file&&r.line===row.line))continue;
+    const isolated=isolatedNames.includes(row.file)||row.file==='processDesign.js';
+    entries.push({...row,id:`${row.file}:${row.line} ${row.method} ${row.path}`,category:isolated?'isolatedLegacy':'unregistered',
+      reason:isolated?'正式模式不加载；历史SQLite记录保留。流程设计由MySQL模块取代，其余在正式入口requireAuth后返回410。':'未在正式Express注册中发现，须检查消费者；不计为已保护的正式业务写入',
+      registration:reference('server/index.js',row.file==='processDesign.js'?"registerRouteIfExists('/api/process-design'":'const legacyRoutes = new Set'),
+      permission:'正式请求不能进入此实现；旧签名权限只作历史信息',department:'正式请求不能进入此实现',state:'正式请求不能进入此实现',concurrency:'正式请求不能进入此实现',audit:'正式请求不能进入此实现'});
   }
+  const counts={};for(const entry of entries)counts[entry.category]=(counts[entry.category]||0)+1;
+  return {schemaVersion:2,kind:'read-only registration and source trace; not business acceptance',counts,formalRegistrations:formal.rows.length,staticDeclarations:declarations.length,
+    globalControls:[reference('server/index.js','app.use(csrfProtection)'),reference('server/auth.js','function requireAuth'),reference('server/roleDefinitions.js','const ACCESS_MODEL_VERSION')],
+    mounts:formal.mounts,entries,unclassified:entries.filter(e=>['unclassified','unregistered'].includes(e.category))};
 }
-
-const audit = buildAudit();
-if (process.argv.includes('--json')) {
-  process.stdout.write(`${JSON.stringify(audit, null, 2)}\n`);
-} else {
-  printText(audit);
+if(require.main===module) {
+  const audit=buildAudit();
+  console.log(JSON.stringify(process.argv.includes('--json')?audit:{counts:audit.counts,formalRegistrations:audit.formalRegistrations,staticDeclarations:audit.staticDeclarations,unclassified:audit.unclassified},null,2));
+  if(audit.unclassified.length)process.exitCode=1;
 }
-
-if (audit.unclassified.length > 0) {
-  process.exitCode = 1;
-}
+module.exports={buildAudit};

@@ -1,7 +1,8 @@
+const { checkRuntimeSchema, sendMysqlUnavailable } = require('../mysqlRuntimeSchema');
 const express = require('express');
 const mysql = require('mysql2/promise');
 const router = express.Router();
-const db = require('../db');
+function legacyDb() { return require('../db'); }
 const { hashPassword, verifyPassword, verifyPasswordAsync, requireAuth, requirePermission, getUserEffectivePermissions } = require('../auth');
 const { mysqlConfigFromEnv } = require('../mysqlConfig');
 const { makeIdentityMysqlRepository } = require('../identityMysqlRepository');
@@ -12,6 +13,8 @@ let identityRepoPromise = null;
 let identityRepositoryFactory = null;
 
 function handleDbError(res, error) {
+  if (error && error.code === 'SESSION_STORE_UNAVAILABLE') return res.status(503).json({ code: error.code, error: '会话服务暂不可用，请稍后重试' });
+  if (sendMysqlUnavailable(res, error)) return;
   if (error && (error.code === 'ER_DUP_ENTRY' || String(error.message).includes('Duplicate'))) {
     return res.status(409).json({ error: '编码或工号已存在' });
   }
@@ -49,6 +52,7 @@ function runAsyncAction(res, action, unavailableMessage) {
     )) {
       return handleDbError(res, error);
     }
+    if (sendMysqlUnavailable(res, error)) return;
     console.error(error);
     return res.status(unavailableMessage ? 503 : 500).json({ error: unavailableMessage || '服务器错误' });
   });
@@ -93,7 +97,7 @@ async function identityRepository() {
     identityRepoPromise = (async () => {
       const pool = mysql.createPool(mysqlConfigFromEnv());
       const repo = makeIdentityMysqlRepository(pool);
-      await repo.initSchema();
+      await checkRuntimeSchema(pool, 'identity');
       return repo;
     })();
   }
@@ -116,7 +120,7 @@ function resetIdentityRepositoryFactory() {
 }
 
 function getUserRoleCodes(userId, legacyRole) {
-  const roles = db.prepare(`
+  const roles = legacyDb().prepare(`
     SELECT r.role_code as code, r.role_name as name
     FROM user_roles ur
     JOIN roles r ON ur.role_id = r.role_id
@@ -125,7 +129,7 @@ function getUserRoleCodes(userId, legacyRole) {
   `).all(userId);
 
   if (legacyRole && !roles.some(role => role.code === legacyRole)) {
-    const legacy = db.prepare('SELECT role_code as code, role_name as name FROM roles WHERE role_code=?').get(legacyRole);
+    const legacy = legacyDb().prepare('SELECT role_code as code, role_name as name FROM roles WHERE role_code=?').get(legacyRole);
     if (legacy) roles.unshift(legacy);
   }
 
@@ -143,7 +147,7 @@ function getRolesByIds(roleIds) {
   const ids = normalizeRoleIds(roleIds);
   if (ids.length === 0) return [];
   const placeholders = ids.map(() => '?').join(',');
-  return db.prepare(`
+  return legacyDb().prepare(`
     SELECT role_id, role_code, role_name
     FROM roles
     WHERE role_id IN (${placeholders})
@@ -153,7 +157,7 @@ function getRolesByIds(roleIds) {
 
 function getRoleIdByCode(roleCode) {
   if (!roleCode) return null;
-  const role = db.prepare('SELECT role_id FROM roles WHERE role_code=?').get(roleCode);
+  const role = legacyDb().prepare('SELECT role_id FROM roles WHERE role_code=?').get(roleCode);
   return role ? role.role_id : null;
 }
 
@@ -175,8 +179,8 @@ function syncUserRoles(userId, roleIds, compatibleRole, assignedBy) {
 
   if (ids.size === 0) return;
 
-  db.prepare('DELETE FROM user_roles WHERE user_id=?').run(userId);
-  const insert = db.prepare('INSERT OR IGNORE INTO user_roles (user_id, role_id, assigned_by) VALUES (?, ?, ?)');
+  legacyDb().prepare('DELETE FROM user_roles WHERE user_id=?').run(userId);
+  const insert = legacyDb().prepare('INSERT OR IGNORE INTO user_roles (user_id, role_id, assigned_by) VALUES (?, ?, ?)');
   for (const roleId of ids) insert.run(userId, roleId, assignedBy || null);
 }
 
@@ -209,7 +213,7 @@ router.get('/departments', requireAuth, (req, res) => {
     }, '身份 MySQL 读取模型不可用');
   }
 
-  const depts = db.prepare('SELECT * FROM departments ORDER BY code').all();
+  const depts = legacyDb().prepare('SELECT * FROM departments ORDER BY code').all();
   res.json(depts);
 });
 
@@ -259,7 +263,7 @@ router.post('/departments', requireOrgPermission('admin:access'), (req, res) => 
       source_system, external_id, status, effective_from, effective_to 
     } = req.body;
     
-    const stmt = db.prepare(`
+    const stmt = legacyDb().prepare(`
       INSERT INTO departments 
         (name, code, parent_id, department_type, manager_user_id, data_owner_user_id, source_system, external_id, status, effective_from, effective_to, created_by) 
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -276,12 +280,12 @@ router.post('/departments', requireOrgPermission('admin:access'), (req, res) => 
     const id = result.lastInsertRowid;
     let path = `/${id}/`;
     if (parent_id) {
-      const parent = db.prepare('SELECT path FROM departments WHERE id=?').get(parent_id);
+      const parent = legacyDb().prepare('SELECT path FROM departments WHERE id=?').get(parent_id);
       if (parent && parent.path) {
         path = `${parent.path}${id}/`;
       }
     }
-    db.prepare('UPDATE departments SET path=? WHERE id=?').run(path, id);
+    legacyDb().prepare('UPDATE departments SET path=? WHERE id=?').run(path, id);
     
     res.json({ id });
   });
@@ -325,13 +329,13 @@ router.put('/departments/:id', requireOrgPermission('admin:access'), (req, res) 
     
     let path = `/${req.params.id}/`;
     if (parent_id) {
-      const parent = db.prepare('SELECT path FROM departments WHERE id=?').get(parent_id);
+      const parent = legacyDb().prepare('SELECT path FROM departments WHERE id=?').get(parent_id);
       if (parent && parent.path) {
         path = `${parent.path}${req.params.id}/`;
       }
     }
 
-    const stmt = db.prepare(`
+    const stmt = legacyDb().prepare(`
       UPDATE departments 
       SET name=?, code=?, parent_id=?, path=?, sort_order=?, department_type=?, 
           manager_user_id=?, data_owner_user_id=?, source_system=?, external_id=?, 
@@ -358,7 +362,7 @@ router.delete('/departments/:id', requireOrgPermission('admin:access'), (req, re
   }
 
   return runDbAction(res, () => {
-    db.prepare('DELETE FROM departments WHERE id=?').run(req.params.id);
+    legacyDb().prepare('DELETE FROM departments WHERE id=?').run(req.params.id);
     res.json({ success: true });
   });
 });
@@ -371,7 +375,7 @@ router.get('/users', requireAuth, requireOrgPermission('identity:read'), (req, r
     }, '身份 MySQL 读取模型不可用');
   }
 
-  const users = db.prepare(`
+  const users = legacyDb().prepare(`
     SELECT u.id, u.name, u.employee_no, u.department_id, u.post, u.role, u.created_at, d.name as dept_name
     FROM users u
     LEFT JOIN departments d ON u.department_id = d.id
@@ -390,7 +394,7 @@ router.get('/users/roles-summary', requireAuth, requireOrgPermission('identity:r
   }
 
   return runDbAction(res, () => {
-    const users = db.prepare(`
+    const users = legacyDb().prepare(`
       SELECT u.id, u.name, u.employee_no, u.post, u.role, u.department_id, u.created_at,
              d.name as dept_name,
              COALESCE(GROUP_CONCAT(r.role_code), '') as rbac_role_codes,
@@ -433,7 +437,7 @@ router.get('/users/assignable', requireAuth, (req, res) => {
     if (!requestHasAnyPermission(req, ['governance:assign-work', 'governance:handle-assigned-conflict'])) {
       return res.status(403).json({ error: '权限不足' });
     }
-    const rows = db.prepare(`
+    const rows = legacyDb().prepare(`
       SELECT u.id, u.name, u.department_id, d.name AS dept_name
       FROM users u
       LEFT JOIN departments d ON u.department_id = d.id
@@ -465,7 +469,7 @@ router.get('/persons/assignable', requireAuth, (req, res) => {
     if (!requestHasAnyPermission(req, permissions)) {
       return res.status(403).json({ error: '权限不足' });
     }
-    const rows = db.prepare(`
+    const rows = legacyDb().prepare(`
       SELECT u.id, u.id AS person_id, u.name, u.department_id, d.name AS dept_name
       FROM users u
       LEFT JOIN departments d ON u.department_id = d.id
@@ -525,8 +529,8 @@ router.post('/users', requireOrgPermission('admin:access'), (req, res) => {
     const passwordSetup = resolveCreatePassword(password);
     if (passwordSetup.error) return res.status(400).json({ error: passwordSetup.error });
     const hash = hashPassword(passwordSetup.password);
-    const stmt = db.prepare('INSERT INTO users (name, employee_no, department_id, post, role, password_hash, must_change_password) VALUES (?, ?, ?, ?, ?, ?, ?)');
-    const result = db.transaction(() => {
+    const stmt = legacyDb().prepare('INSERT INTO users (name, employee_no, department_id, post, role, password_hash, must_change_password) VALUES (?, ?, ?, ?, ?, ?, ?)');
+    const result = legacyDb().transaction(() => {
       const created = stmt.run(name, employee_no, department_id || null, post || null, compatibleRole, hash, passwordSetup.mustChangePassword);
       syncUserRoles(created.lastInsertRowid, role_ids, compatibleRole, req.session.userId);
       return created;
@@ -552,13 +556,13 @@ router.put('/users/:id', requireOrgPermission('admin:access'), (req, res) => {
   }
 
   return runDbAction(res, () => {
-    const existing = db.prepare('SELECT * FROM users WHERE id=?').get(req.params.id);
+    const existing = legacyDb().prepare('SELECT * FROM users WHERE id=?').get(req.params.id);
     if (!existing) return res.status(404).json({ error: '用户不存在' });
 
     const { name, department_id, post, role, role_ids } = req.body;
     const compatibleRole = chooseCompatibleRole(role, role_ids, existing.role);
-    const stmt = db.prepare('UPDATE users SET name=?, department_id=?, post=?, role=? WHERE id=?');
-    db.transaction(() => {
+    const stmt = legacyDb().prepare('UPDATE users SET name=?, department_id=?, post=?, role=? WHERE id=?');
+    legacyDb().transaction(() => {
       stmt.run(name || existing.name, department_id || null, post || null, compatibleRole, req.params.id);
       if (Array.isArray(role_ids)) syncUserRoles(req.params.id, role_ids, compatibleRole, req.session.userId);
     })();
@@ -587,12 +591,12 @@ router.post('/users/:id/password', requireOrgPermission('admin:access'), (req, r
 
   return runDbAction(res, () => {
     const { password } = req.body;
-    const existing = db.prepare('SELECT id FROM users WHERE id=?').get(req.params.id);
+    const existing = legacyDb().prepare('SELECT id FROM users WHERE id=?').get(req.params.id);
     if (!existing) return res.status(404).json({ error: '用户不存在' });
     const passwordSetup = resolveResetPassword(password);
     if (passwordSetup.error) return res.status(400).json({ error: passwordSetup.error });
     const hash = hashPassword(passwordSetup.password);
-    db.prepare('UPDATE users SET password_hash=?, must_change_password=? WHERE id=?').run(hash, passwordSetup.mustChangePassword, req.params.id);
+    legacyDb().prepare('UPDATE users SET password_hash=?, must_change_password=? WHERE id=?').run(hash, passwordSetup.mustChangePassword, req.params.id);
     const body = { success: true };
     if (passwordSetup.initialPassword) body.initial_password = passwordSetup.initialPassword;
     res.json(body);
@@ -638,6 +642,7 @@ async function loginWithMysqlIdentity(req, res) {
 
   await writeLoginSession(req, user);
   await repo.recordSuccessfulLogin(user.personId || user.id);
+  await new Promise((resolve, reject) => req.session.save(error => error ? reject(error) : resolve()));
   clearLoginFailures(req);
   return res.json({
     id: user.personId || user.id,
@@ -657,7 +662,7 @@ router.post('/login', loginRateLimit, (req, res) => {
 
   return runAsyncAction(res, async () => {
       const { employee_no, password } = req.body;
-    const user = db.prepare('SELECT * FROM users WHERE employee_no=?').get(employee_no);
+    const user = legacyDb().prepare('SELECT * FROM users WHERE employee_no=?').get(employee_no);
     if (!user) {
       recordLoginFailure(req);
       return res.status(401).json({ error: '工号或密码错误' });
@@ -676,7 +681,9 @@ router.post('/login', loginRateLimit, (req, res) => {
 
 router.post('/logout', (req, res) => {
   req.session.destroy(error => {
-    if (error) return res.status(500).json({ error: '登出失败' });
+    if (error) return res.status(503).json({ code: 'SESSION_STORE_UNAVAILABLE', error: '登出暂未完成，请稍后重试' });
+    const cookie = req.app.locals.sessionCookie;
+    if (cookie) res.clearCookie(cookie.name, cookie.options);
     res.json({ success: true });
   });
 });
@@ -685,7 +692,7 @@ function currentUserPayloadFromSqlite(req) {
   const { permSet } = getUserEffectivePermissions(req.session.userId);
   const rbacRoles = getUserRoleCodes(req.session.userId, req.session.userRole);
   const department = req.session.departmentId
-    ? db.prepare('SELECT name FROM departments WHERE id=?').get(req.session.departmentId)
+    ? legacyDb().prepare('SELECT name FROM departments WHERE id=?').get(req.session.departmentId)
     : null;
   return {
     id: req.session.userId,
@@ -738,7 +745,7 @@ router.get('/users/:id/roles', requireAuth, requireOrgPermission('identity:read'
   }
 
   return runDbAction(res, () => {
-    const roles = db.prepare(`
+    const roles = legacyDb().prepare(`
       SELECT r.role_id, r.role_code, r.role_name, r.is_system
       FROM user_roles ur JOIN roles r ON ur.role_id = r.role_id
       WHERE ur.user_id=?
@@ -770,13 +777,13 @@ router.put('/users/:id/roles', requireAuth, requireOrgPermission('identity:assig
       return res.status(400).json({ error: '至少需要一个角色' });
     }
 
-    const user = db.prepare('SELECT * FROM users WHERE id=?').get(req.params.id);
+    const user = legacyDb().prepare('SELECT * FROM users WHERE id=?').get(req.params.id);
     if (!user) return res.status(404).json({ error: '用户不存在' });
 
-    db.transaction(() => {
+    legacyDb().transaction(() => {
       const compatibleRole = chooseCompatibleRole(null, role_ids, user.role);
       syncUserRoles(req.params.id, role_ids, compatibleRole, req.session.userId);
-      db.prepare('UPDATE users SET role=? WHERE id=?').run(compatibleRole, req.params.id);
+      legacyDb().prepare('UPDATE users SET role=? WHERE id=?').run(compatibleRole, req.params.id);
     })();
 
     res.json({ success: true });
@@ -793,7 +800,7 @@ router.get('/permissions', requireAuth, requireOrgPermission('identity:read'), (
   }
 
   return runDbAction(res, () => {
-    const perms = db.prepare('SELECT * FROM permissions ORDER BY resource, action').all();
+    const perms = legacyDb().prepare('SELECT * FROM permissions ORDER BY resource, action').all();
     const grouped = {};
     for (const p of perms) {
       if (!grouped[p.resource]) grouped[p.resource] = [];
@@ -815,7 +822,7 @@ router.get('/me/password-status', requireAuth, (req, res) => {
   }
 
   return runDbAction(res, () => {
-    const user = db.prepare('SELECT must_change_password FROM users WHERE id=?').get(req.session.userId);
+    const user = legacyDb().prepare('SELECT must_change_password FROM users WHERE id=?').get(req.session.userId);
     if (!user) return res.status(404).json({ error: '用户不存在' });
     res.json({ is_default_password: Boolean(user.must_change_password) });
   });
@@ -846,7 +853,7 @@ router.post('/me/password', requireAuth, (req, res) => {
     const { current_password, new_password } = req.body;
     if (!current_password || !new_password) return res.status(400).json({ error: '缺少当前密码或新密码' });
 
-    const user = db.prepare('SELECT employee_no, password_hash FROM users WHERE id=?').get(req.session.userId);
+    const user = legacyDb().prepare('SELECT employee_no, password_hash FROM users WHERE id=?').get(req.session.userId);
     if (!user) return res.status(404).json({ error: '用户不存在' });
     if (!verifyPassword(current_password, user.password_hash)) return res.status(403).json({ error: '当前密码不正确' });
 
@@ -854,7 +861,7 @@ router.post('/me/password', requireAuth, (req, res) => {
     if (strengthError) return res.status(400).json({ error: strengthError });
 
     const hash = hashPassword(new_password);
-    db.prepare('UPDATE users SET password_hash=?, must_change_password=0 WHERE id=?').run(hash, req.session.userId);
+    legacyDb().prepare('UPDATE users SET password_hash=?, must_change_password=0 WHERE id=?').run(hash, req.session.userId);
     res.json({ success: true });
   });
 });
