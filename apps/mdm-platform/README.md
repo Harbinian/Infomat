@@ -83,6 +83,9 @@
 - 数据生命周期治理试点能力默认关闭，必须同时配置`PROCESS_DATA_GOVERNANCE_ENABLED=1`和唯一`PROCESS_DATA_GOVERNANCE_TRIAL_PROCESS_VERSION_ID`。工作包只绑定不可变`process_version_id`和来源摘要，不读取原始3001文件；固定规则生成的待核对内容不调用AI，也不自动确认。
 - 本批结束后保留查阅时，工作包启用和准确版本范围保持不变，另设`PROCESS_DATA_GOVERNANCE_READ_ONLY=1`，并保持两个V7写开关关闭。工作包只显示已完成成果、原有治理结论和依据；业务部门仅查看本部门定向事实。缺省或`0`保留原办理模式，非法值拒绝访问及写入，不能将拼写错误当作可写。默认总开关仍关闭；准确操作及验证见[迁移与恢复说明](docs/Process-Data-Governance-Migration-Runbook.md)。本地实现不表示真实服务已经开启。
 
+- 已发布的原生V7版本可在预览案例的正式版本区域点击“下载程序文件（Markdown）”。下载入口 `/api/process-design/versions/:processVersionId/procedure-markdown` 按固定正式版本读取、复核内容摘要并沿用正式版本查看权限，生成目的、范围、术语、业务行为、流程关系、数据及生命周期、表单与记录。未填写内容保持“未填写”，待确认状态保持待确认，不改写草稿或正式记录。已被后续版本替代的历史版本可按其准确标识下载并显示历史状态；撤销版本拒绝下载。旧版草稿的 Markdown 导出保持原入口，不将旧数据转换成V7。`npm run test:process-v7-procedure` 验证内容保留，接口回归和 `test:stage05-browser` 验证权限及页面下载。
+- V7案例、修订、核对意见和操作记录按数据库中记录的时间返回ISO时间，避免数据库与Node时区不同造成8小时偏差；新修订沿用核对意见时保留原决定时间，不改写历史记录。
+
 ## 正式运行与结构维护分离
 
 3000应用入口`npm start`要求显式配置`MDM_IDENTITY_READ_MODEL=mysql`和`PROCESS_GOVERNANCE_READ_MODEL=mysql`，并提供`MYSQL_HOST`、`MYSQL_PORT`、`MYSQL_USER`、`MYSQL_PASSWORD`、`MYSQL_DATABASE`。`MYSQL_CONNECTION_LIMIT`如提供，必须为正整数。配置缺失、读模型不一致或正式模式启用遗留测试时，进程在监听前退出。运行入口不使用MySQL配置函数中的开发默认值作为回退。

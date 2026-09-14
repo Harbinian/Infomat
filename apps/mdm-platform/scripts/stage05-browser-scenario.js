@@ -101,6 +101,8 @@ module.exports = async function stage05BrowserScenario(page, fixture) {
   assert(await decisions().nth(1).inputValue()==='pending_evidence','other item conclusion preserved');
   assert(await bases().nth(1).evaluate(el=>document.activeElement===el),'focus restored after redraw');
   const current=await detail();assert(current.items[1].origin_status==='pending','other item was not silently submitted');
+  const decidedAt=current.items[0].origin_decided_at;
+  assert(Math.abs(Date.now()-Date.parse(decidedAt))<60000,'saved review time preserves the current instant');
   assert((await work()).workItems.filter(i=>i.type==='v7_preview_review').length===1,'saved item disappears immediately');
   await shot('02-unsaved-other-item');
   pass('same-page save preserves other inputs, keyboard focus and server zero-write');
@@ -127,6 +129,8 @@ module.exports = async function stage05BrowserScenario(page, fixture) {
   const csrf=(await other.request.get(fixture.baseURL+'/api/csrf-token').then(r=>r.json())).csrfToken;
   const changed=JSON.parse(JSON.stringify(fixture.document));changed.behaviors[2].completion_standard='合成修订2：补清接收记录。';
   const change=await other.request.post(fixture.baseURL+'/api/process-v7-preview/cases/'+fixture.caseId+'/revisions',{headers:{'X-CSRF-Token':csrf},data:{...bind(current.case),document:changed,source_file_name:'synthetic-r2.json'}});assert(change.status()===201,'other uploader revision');await other.close();
+  const reopened=(await detail()).items.find(item=>item.stable_item_key===current.items[0].stable_item_key);
+  assert(reopened.carry_state==='reopened'&&reopened.origin_decided_at===null,'changed content reopens review without retaining the old decision time');
   const stale=page.waitForResponse(r=>r.url().includes('/items/')&&r.request().method()==='POST');await page.locator('[data-v7-preview-save-decision]').nth(1).click();assert((await stale).status()===409,'real stale revision rejected');await wait(200);
   assert((await bases().nth(1).inputValue()).includes('第二项未提交'),'409 preserves opinion');
   await page.locator('#pgV7ReloadConflictBtn').click();await page.locator('#pgV7AcknowledgeConflictBtn').waitFor();
@@ -220,6 +224,25 @@ module.exports = async function stage05BrowserScenario(page, fixture) {
   assert(!(await work()).workItems.some(i=>i.type==='v7_publish'),'published task removed from workbench');
   await shot('07-published-readback');
   pass('browser reprocessing reaches formal approval, publication and immutable version readback');
+  const publishedCase=await detail();
+  const versionId=publishedCase.formal_promotion.current_version.id;
+  const versionBefore=await request('/api/process-design/versions/'+versionId+'/content');
+  const publishedAge=Date.now()-Date.parse(versionBefore.body.published_at);
+  assert(publishedAge>=-5000 && publishedAge<60000,'newly published timestamp has no host/database timezone shift');
+  const download=page.waitForEvent('download');
+  await page.getByRole('button',{name:'下载程序文件（Markdown）',exact:true}).click();
+  const procedureDownload=await download;
+  assert(procedureDownload.suggestedFilename().endsWith('-version-'+versionId+'.md'),'download identifies immutable version');
+  const procedureFile=fixture.evidenceDir.replace(/\\/g,'/')+'/published-procedure.md';
+  await procedureDownload.saveAs(procedureFile);
+  const markdown=require('node:fs').readFileSync(procedureFile,'utf8');
+  assert(markdown.includes('正式版本标识：'+versionId),'download contains fixed version id');
+  assert(markdown.includes(versionBefore.body.content_hash),'download contains verified content hash');
+  for(const behavior of versionBefore.body.document.behaviors)assert(markdown.includes(behavior.behavior_name),'download includes published behavior');
+  const versionAfter=await request('/api/process-design/versions/'+versionId+'/content');
+  assert(JSON.stringify(versionBefore.body)===JSON.stringify(versionAfter.body),'download leaves published content unchanged');
+  await shot('07b-procedure-downloaded');
+  pass('published V7 procedure downloads through UI and leaves immutable version unchanged');
   // Read-only admin, including an account with an additional reviewer role.
   await logout();await login('adminMulti');await openCase();
   assert(await page.locator('#pgV7PreviewDetail textarea:not([readonly])').count()===0,'admin has no opinion editors');

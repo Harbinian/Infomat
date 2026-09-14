@@ -3447,9 +3447,10 @@
         }
         if (formalActions.indexOf('read_formal_version') >= 0 && formalVersion.id) {
           formalActionHtml += '<button type="button" class="btn secondary" id="pgReadV7FormalVersionBtn">核对已发布正文</button>';
+          formalActionHtml += '<button type="button" class="btn secondary" id="pgDownloadV7ProcedureBtn">下载程序文件（Markdown）</button>';
         }
         formalSummary = '<article class="process-design-detail" style="margin-top:18px">' +
-          '<div class="pg-section-hd"><div><h3>正式V7草稿</h3><p class="muted">主档 ' + safeText(formalDocument.document_no || formalDocument.id) + ' · 草稿 #' + Number(formalDraft.id) + ' · 来源修订 ' + Number(formalDraft.revision_no || 0) + '</p></div>' + statusTag(formalDraft.status) + '</div>' +
+          '<div class="pg-section-hd"><div><h3>' + (formalDraft.status === 'published' ? '已发布的正式V7版本' : '正式V7草稿') + '</h3><p class="muted">主档 ' + safeText(formalDocument.document_no || formalDocument.id) + ' · 草稿 #' + Number(formalDraft.id) + ' · 来源修订 ' + Number(formalDraft.revision_no || 0) + '</p></div>' + statusTag(formalDraft.status) + '</div>' +
           '<div class="grid g4"><div class="metric"><div class="lbl">内容摘要</div><div style="margin-top:6px;word-break:break-all">' + safeText(formalDraft.content_hash || '') + '</div></div>' +
           '<div class="metric"><div class="lbl">审核任务</div><div style="margin-top:6px">' + safeText(formalTask.status || '尚未提交') + '</div></div>' +
           '<div class="metric"><div class="lbl">正式版本</div><div style="margin-top:6px">' + safeText(formalVersion.version_no || '尚未发布') + '</div></div>' +
@@ -3504,6 +3505,9 @@
       };
       if ($('pgReadV7FormalVersionBtn')) $('pgReadV7FormalVersionBtn').onclick = function() {
         runPageTask(function() { return readV7FormalVersion(formalPromotion.current_version.id); }, '正式版本读回失败');
+      };
+      if ($('pgDownloadV7ProcedureBtn')) $('pgDownloadV7ProcedureBtn').onclick = function() {
+        runPageTask(function() { return downloadV7Procedure(formalPromotion.current_version.id); }, '程序文件下载失败');
       };
       bindV7Editors(detail);
       renderV7Sidebar(detail);
@@ -3775,6 +3779,19 @@
           '；来源修订=' + Number(result.source_revision_no || 0) + '。';
       }
       return result;
+    }
+
+    async function downloadV7Procedure(processVersionId) {
+      var result = await api('/api/process-design/versions/' + encodeURIComponent(processVersionId) + '/procedure-markdown');
+      var url = URL.createObjectURL(new Blob([result.markdown], {type:'text/markdown;charset=utf-8'}));
+      var link = document.createElement('a');
+      link.href = url;
+      link.download = result.filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+      showToast('已下载正式版本 ' + result.process_version_id + ' 的程序文件');
     }
 
     function pdgPackageStatusLabel(status) {

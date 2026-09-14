@@ -155,6 +155,7 @@ function makeFakeRepository() {
     async getVersionContent(versionId) {
       calls.push('getVersionContent');
       if (Number(versionId) !== 990) return null;
+      if (state.versionContent) return state.versionContent;
       const document = { schema_version: 'process-governance-v7', process: { process_ref: 'process_v7_read_test' } };
       return {
         process_version_id: 990,
@@ -1466,6 +1467,37 @@ async function main() {
 
     const globalVersionRead = await request(baseUrl, 'mdmLead', '/api/process-design/versions/990/content');
     assert.strictEqual(globalVersionRead.res.status, 200, JSON.stringify(globalVersionRead.body));
+
+    const beforeProcedureCalls = fakeRepo.calls.length;
+    const procedure = await request(baseUrl, 'submitter', '/api/process-design/versions/990/procedure-markdown');
+    assert.strictEqual(procedure.res.status, 200, JSON.stringify(procedure.body));
+    assert.strictEqual(procedure.body.process_version_id, 990);
+    assert.strictEqual(procedure.body.content_hash, v7VersionContent.body.content_hash);
+    assert.ok(procedure.body.markdown.includes('正式版本标识：990'));
+    assert.ok(procedure.body.filename.endsWith('-version-990.md'));
+    assert.deepStrictEqual(fakeRepo.calls.slice(beforeProcedureCalls), ['getVersionContent'], 'procedure export reads only the fixed version');
+    const crossDepartmentProcedure = await request(baseUrl, 'targetDept', '/api/process-design/versions/990/procedure-markdown');
+    assert.strictEqual(crossDepartmentProcedure.res.status, 403);
+    const adminProcedure = await request(baseUrl, 'admin', '/api/process-design/versions/990/procedure-markdown');
+    assert.strictEqual(adminProcedure.res.status, 200, 'read-only admin may download an authorized version');
+    const missingProcedure = await request(baseUrl, 'submitter', '/api/process-design/versions/991/procedure-markdown');
+    assert.strictEqual(missingProcedure.res.status, 404);
+    fakeRepo.state.versionContent = {...v7VersionContent.body, status:'withdrawn'};
+    const withdrawnProcedure = await request(baseUrl, 'submitter', '/api/process-design/versions/990/procedure-markdown');
+    assert.strictEqual(withdrawnProcedure.res.status, 409);
+    assert.strictEqual(withdrawnProcedure.body.code, 'PROCEDURE_VERSION_NOT_PUBLISHED');
+    fakeRepo.state.versionContent = {...v7VersionContent.body, status:'superseded'};
+    const historicalProcedure = await request(baseUrl, 'submitter', '/api/process-design/versions/990/procedure-markdown');
+    assert.strictEqual(historicalProcedure.res.status, 200, 'earlier immutable published version remains downloadable');
+    fakeRepo.state.versionContent = {...v7VersionContent.body, content_hash:'changed'};
+    const changedProcedure = await request(baseUrl, 'submitter', '/api/process-design/versions/990/procedure-markdown');
+    assert.strictEqual(changedProcedure.res.status, 409);
+    assert.strictEqual(changedProcedure.body.code, 'V7_VERSION_CONTENT_HASH_MISMATCH');
+    fakeRepo.state.versionContent = {...v7VersionContent.body, schema_version:'process-governance-v3'};
+    const legacyProcedure = await request(baseUrl, 'submitter', '/api/process-design/versions/990/procedure-markdown');
+    assert.strictEqual(legacyProcedure.res.status, 409);
+    assert.strictEqual(legacyProcedure.body.code, 'PROCEDURE_V7_REQUIRED');
+    delete fakeRepo.state.versionContent;
 
     const summary = await request(baseUrl, 'submitter', '/api/process-design/summary');
     assert.strictEqual(summary.res.status, 200);

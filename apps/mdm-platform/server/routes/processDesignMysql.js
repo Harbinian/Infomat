@@ -34,6 +34,7 @@ const {
   assertV7TrialProcessRef
 } = require('../processV7TrialScope');
 const { queueProcessDataGovernanceCreationTask } = require('../processDataGovernanceRepository');
+const { processV7ProcedureMarkdown } = require('../processV7ProcedureMarkdown');
 const {
   isProcessDataGovernanceEnabled,
   isProcessVersionAllowed
@@ -3212,7 +3213,8 @@ function makeProcessDesignMysqlRepository(pool) {
       const [version] = await mysqlQuery(pool, `
         SELECT id, draft_id, document_id, document_no, document_title, edition, version_no,
                department_id, schema_version, process_content_json, content_json, content_hash,
-               source_revision_no, status, published_at, effective_at, supersedes_version_id
+               source_revision_no, status, UNIX_TIMESTAMP(published_at) AS published_at_epoch,
+               effective_at, supersedes_version_id
         FROM process_design_versions
         WHERE id=?
         LIMIT 1
@@ -3232,7 +3234,9 @@ function makeProcessDesignMysqlRepository(pool) {
         content_hash: text(version.content_hash) || null,
         source_revision_no: version.source_revision_no == null ? null : Number(version.source_revision_no),
         status: version.status,
-        published_at: version.published_at,
+        // MySQL resolves TIMESTAMP in the session timezone. Reading its epoch
+        // avoids interpreting the server wall time in the Node host timezone.
+        published_at: version.published_at_epoch == null ? null : new Date(Number(version.published_at_epoch) * 1000).toISOString(),
         effective_at: version.effective_at,
         supersedes_version_id: version.supersedes_version_id == null ? null : Number(version.supersedes_version_id),
         document: rawContent ? parseJsonObject(rawContent) : null
@@ -6069,7 +6073,7 @@ router.post('/import-structured-output', requireAuth, (req, res) => runAction(re
   res.status(201).json(result);
 }));
 
-router.get('/versions/:processVersionId/content', requireAuth, (req, res) => runAction(res, async () => {
+async function readableProcessVersion(req) {
   const repo = await repository();
   const version = await repo.getVersionContent(req.params.processVersionId);
   if (!version) throw httpError(404, '正式流程版本不存在', { error: '正式流程版本不存在', code: 'PROCESS_VERSION_NOT_FOUND' });
@@ -6092,7 +6096,23 @@ router.get('/versions/:processVersionId/content', requireAuth, (req, res) => run
     }
     version.content_hash_verified = true;
   }
-  res.json(version);
+  return version;
+}
+
+router.get('/versions/:processVersionId/content', requireAuth, (req, res) => runAction(res, async () => {
+  res.json(await readableProcessVersion(req));
+}));
+
+router.get('/versions/:processVersionId/procedure-markdown', requireAuth, (req, res) => runAction(res, async () => {
+  const version = await readableProcessVersion(req);
+  if (!['published', 'superseded'].includes(version.status)) {
+    throw httpError(409, '该版本当前不能用于生成程序文件', { error: '该版本当前不能用于生成程序文件', code: 'PROCEDURE_VERSION_NOT_PUBLISHED' });
+  }
+  if (version.schema_version !== 'process-governance-v7' || version.document.schema_version !== 'process-governance-v7') {
+    throw httpError(409, '程序文件下载需要原生V7正式版本', { error: '程序文件下载需要原生V7正式版本', code: 'PROCEDURE_V7_REQUIRED' });
+  }
+  const filename = `${markdownFileSafe(version.document_no || version.document.process?.process_name || 'process')}-version-${version.process_version_id}.md`;
+  res.json({ filename, process_version_id: version.process_version_id, content_hash: version.content_hash, markdown: processV7ProcedureMarkdown(version) });
 }));
 
 router.post('/import-structured-output/preview', requireAuth, (req, res) => runAction(res, async () => {

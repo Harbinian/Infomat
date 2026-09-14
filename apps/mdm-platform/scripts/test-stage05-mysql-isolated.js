@@ -1,6 +1,8 @@
-// Stage05 real HTTP/Edge fixture. Fresh labelled tmpfs MySQL only, synthetic identities/data.
+// Stage05 real HTTP/Edge fixture. Fresh labelled tmpfs MySQL, synthetic identities.
 // Reuses the stage04 ownership-checked container helper. No private env, existing DB or formal service.
 // --serve keeps this owned fixture until Enter/SIGINT; the browser runner uses the same lifetime.
+// Callers may supply document/departments for an unreviewed source inspection;
+// previewOnly disables formal writes. These options still use the owned temporary DB.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -14,7 +16,8 @@ const appRoot = path.resolve(__dirname, '..');
 const evidenceDir = path.resolve(appRoot, '../../artifacts/mdm-3000-launch/stage05-20260910');
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-async function withStage05Fixture(action) {
+async function withStage05Fixture(action, options = {}) {
+  const evidenceDir = options.evidenceDir || path.resolve(appRoot, '../../artifacts/mdm-3000-launch/stage05-20260910');
   await withFreshMysql(async ({ pool, port, password, owner }) => {
     const identity = require('../server/identityMysqlRepository').makeIdentityMysqlRepository(pool);
     await identity.initSchema();
@@ -24,7 +27,7 @@ async function withStage05Fixture(action) {
     await require('../server/sessionMigration').manageSessionSchema(pool, 'apply');
     await require('../server/processV7PreviewReviewMigration').applyProcessV7PreviewReview(pool);
     await require('../server/processV7FormalMigration').applyProcessV7FormalFoundation(pool);
-    for (const [id, name] of [[91,'合成甲部'],[92,'合成乙部'],[93,'合成丙部']]) await pool.execute('INSERT INTO departments(id,code,name) VALUES (?,?,?)', [id,'SYNTHETIC_'+id,name]);
+    for (const [id, name] of options.departments || [[91,'合成甲部'],[92,'合成乙部'],[93,'合成丙部']]) await pool.execute('INSERT INTO departments(id,code,name) VALUES (?,?,?)', [id,'SYNTHETIC_'+id,name]);
     const actors = [['admin',['admin'],91], ['lead',['mdm_lead'],91], ['contact',['department_contact'],91], ['reviewA',['department_mdm_reviewer'],91], ['reviewB',['department_mdm_reviewer'],92], ['outsider',['department_mdm_reviewer'],93], ['multi',['department_contact','department_mdm_reviewer'],91], ['adminMulti',['admin','department_mdm_reviewer'],91]];
     const loginPassword = 'Stage05-Synthetic-Only!2026';
     const passwordHash = require('bcryptjs').hashSync(loginPassword,10);
@@ -37,11 +40,14 @@ async function withStage05Fixture(action) {
         await pool.execute('INSERT INTO person_roles(person_id,role_id,scope_type,scope_department_id,authorization_basis,effective_from) SELECT ?,role_id,?,?,?,CURRENT_DATE FROM roles WHERE role_code=?', [81+i,global?'global':'department',global?null:dept,'stage05 synthetic authorization',role]);
       }
     }
-    const document = require('../../structured-output-service/server').createEmptyProcessGovernanceV7Document();
+    let document = require('../../structured-output-service/server').createEmptyProcessGovernanceV7Document();
     document.export_meta.package_ref = 'package_stage05_synthetic';
     document.process.process_ref = 'process_stage05_synthetic';
     document.process.process_name = '合成材料核对流程';
     document.process.owning_department = '合成甲部';
+    document.process.purpose = '验证材料接收、核对及结果留存的完整操作。';
+    document.process.scope = '仅适用于本机合成数据功能验证。';
+    document.terms = [{term_ref:'term_synthetic_record',term_name:'合成核对记录',definition:'本机功能测试使用的虚构记录。'}];
     document.behaviors = ['prepare','check','receive'].map((name,i) => ({
       behavior_ref:'behavior_'+name,node_type:'action',behavior_name:['准备合成材料','核对合成内容','接收合成结果'][i],
       behavior_description:'按合成表单逐项核对材料并记录结果。',current_actor_role:(i?'合成乙部':'合成甲部')+'经办人',
@@ -49,6 +55,7 @@ async function withStage05Fixture(action) {
       completion_standard:'已核对并记录合成依据。',output_description:'合成核对记录',countersign_all_required:false,countersign_target_departments:[]
     }));
     document.flow_relations = [0,1].map(i=>({relation_ref:'relation_'+i,relation_type:'sequence',from_behavior_ref:document.behaviors[i].behavior_ref,to_behavior_ref:document.behaviors[i+1].behavior_ref,condition:''}));
+    if (options.document) document = structuredClone(options.document);
     await pool.query("CREATE USER 'stage05_runtime'@'%' IDENTIFIED BY ?", [password]);
     await pool.execute("GRANT SELECT,INSERT,UPDATE,DELETE ON stage04_isolated.* TO 'stage05_runtime'@'%'");
     const server = http.createServer(); server.listen(0,'127.0.0.1'); await once(server,'listening');
@@ -57,7 +64,7 @@ async function withStage05Fixture(action) {
     const env = isolatedEnvironment({NODE_ENV:'test',HOST:'127.0.0.1',PORT:String(appPort),MDM_ACCESS_MODE:'http-local',MDM_SESSION_STORE:'mysql',
       MYSQL_HOST:'127.0.0.1',MYSQL_PORT:String(port),MYSQL_USER:'stage05_runtime',MYSQL_PASSWORD:password,MYSQL_DATABASE:'stage04_isolated',
       MDM_IDENTITY_READ_MODEL:'mysql',PROCESS_GOVERNANCE_READ_MODEL:'mysql',SESSION_SECRET:crypto.randomBytes(32).toString('hex'),
-      PROCESS_V7_PREVIEW_ENABLED:'1',PROCESS_V7_FORMAL_ENABLED:'1',PROCESS_V7_TRIAL_PROCESS_REF:document.process.process_ref,PROCESS_DATA_GOVERNANCE_ENABLED:'0'});
+      PROCESS_V7_PREVIEW_ENABLED:'1',PROCESS_V7_FORMAL_ENABLED:options.previewOnly?'0':'1',PROCESS_V7_TRIAL_PROCESS_REF:document.process.process_ref,PROCESS_DATA_GOVERNANCE_ENABLED:'0'});
     const child = fork(path.join(appRoot,'server/index.js'),[],{cwd:appRoot,env,execArgv:[],silent:true,windowsHide:true});
     const diagnostics=[];
     child.stdout.on('data',data=>diagnostics.push(String(data))); child.stderr.on('data',data=>diagnostics.push(String(data)));
