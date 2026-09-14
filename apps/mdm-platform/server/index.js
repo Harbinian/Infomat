@@ -2,37 +2,62 @@ const express = require('express');
 const session = require('express-session');
 const path = require('path');
 const fs = require('fs');
+const { assertRuntimeConfig, legacyTestMode, rejectLegacyRoute } = require('./runtimeBoundary');
+assertRuntimeConfig(process.env);
 const { requireAuth } = require('./auth');
 const { securityHeaders, csrfProtection, issueCsrfToken } = require('./security');
 const { ACCESS_MODEL_VERSION } = require('./roleDefinitions');
-
-function resolveSessionSecret(env) {
-  if (env.SESSION_SECRET) return env.SESSION_SECRET;
-  if (env.ALLOW_INSECURE_SESSION_SECRET === '1') return 'mdm-platform-dev-secret-change-me';
-  throw new Error('SESSION_SECRET is required; set ALLOW_INSECURE_SESSION_SECRET=1 only for local development');
-}
+const { sessionConfig } = require('./sessionConfig');
+const { MysqlSessionStore } = require('./mysqlSessionStore');
+const { createReadiness } = require('./readiness');
+const { runtimeVersion } = require('./runtimeVersion');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const SESSION_SECRET = resolveSessionSecret(process.env);
-if (process.env.NODE_ENV === 'production' &&
-    String(process.env.MDM_IDENTITY_READ_MODEL || '').toLowerCase() !== 'mysql') {
-  throw new Error('3000 production runtime requires MDM_IDENTITY_READ_MODEL=mysql');
-}
+const config = sessionConfig();
+const version = runtimeVersion();
+const readiness = createReadiness({ env: { ...process.env }, version });
+const store = config.store === 'mysql' ? new MysqlSessionStore(config) : new session.MemoryStore();
+app.set('trust proxy', config.proxies.length ? config.proxies : false);
+app.locals.sessionCookie = { name: config.name, options: { path: '/', httpOnly: true, sameSite: 'lax', secure: config.secure } };
+app.locals.readiness = readiness;
+app.locals.closeRuntime = async () => {
+  readiness.stop();
+  await Promise.all([readiness.close(), typeof store.close === 'function' ? store.close() : Promise.resolve()]);
+};
 
 app.use(securityHeaders);
+// Health endpoints bypass session storage, so database failure cannot hide process liveness.
+app.get('/api/health', (req, res) => {
+  res.set('Cache-Control', 'no-store').json({ status: 'ok', identityModel: 'person', governanceModelVersion: ACCESS_MODEL_VERSION, version });
+});
+app.get('/api/ready', async (req, res, next) => {
+  try {
+    const result = await readiness.check();
+    res.set('Cache-Control', 'no-store').status(result.ready ? 200 : 503).json(result);
+  } catch (error) { next(error); }
+});
+app.use((req, res, next) => {
+  if (config.secure && (!req.secure || req.hostname !== new URL(config.origin).hostname)) {
+    return res.status(400).json({ code: 'HTTPS_PROXY_REQUIRED', error: '请使用已配置的HTTPS入口访问' });
+  }
+  next();
+});
 app.use(express.static(path.join(__dirname, '../public')));
 app.use(express.json({ limit: '2mb' }));
 
 app.use(session({
-  secret: SESSION_SECRET,
+  name: config.name,
+  secret: config.secret,
+  store,
   resave: false,
+  rolling: true,
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: 24 * 60 * 60 * 1000
+    secure: config.secure,
+    maxAge: config.ttlMs
   }
 }));
 
@@ -41,9 +66,17 @@ app.use(csrfProtection);
 app.get('/api/csrf-token', requireAuth, issueCsrfToken);
 
 function registerRouteIfExists(basePath, routeName) {
+  const legacyRoutes = new Set(['systems', 'capabilities', 'processes', 'views', 'orgUnit', 'position',
+    'person', 'productFamily', 'product', 'classNode', 'attribute', 'external', 'integration']);
+  if (legacyRoutes.has(routeName) && !legacyTestMode()) {
+    app.use(basePath, requireAuth, rejectLegacyRoute);
+    return;
+  }
   const routePath = path.join(__dirname, 'routes', `${routeName}.js`);
   if (fs.existsSync(routePath)) {
     app.use(basePath, require(routePath));
+  } else {
+    throw new Error(`Required route module is missing: ${routeName}`);
   }
 }
 
@@ -75,9 +108,7 @@ registerRouteIfExists('/api/role-workbench', 'roleWorkbench');
 registerRouteIfExists('/api/page-workflows', 'pageWorkflows');
 registerRouteIfExists('/api/org-units', 'orgUnit');
 registerRouteIfExists('/api/positions', 'position');
-if (process.env.MDM_ALLOW_LEGACY_TEST_MODE === '1') {
-  registerRouteIfExists('/api/persons', 'person');
-}
+registerRouteIfExists('/api/persons', 'person');
 registerRouteIfExists('/api/product-families', 'productFamily');
 registerRouteIfExists('/api/products', 'product');
 registerRouteIfExists('/api/class-nodes', 'classNode');
@@ -89,10 +120,38 @@ registerRouteIfExists('/api/roles', 'roles');
 registerRouteIfExists('/api/import-rbac', 'importRbac');
 registerRouteIfExists('/api/activity', 'activity');
 
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', identityModel: 'person', governanceModelVersion: ACCESS_MODEL_VERSION });
+app.get('/api/runtime-capabilities', requireAuth, (req, res) => {
+  res.json({ legacyTestMode: legacyTestMode() });
 });
 
-app.listen(PORT, () => {
-  console.log(`MDM 平台 running on http://localhost:${PORT}`);
+app.use((error, req, res, next) => {
+  if (res.headersSent) return next(error);
+  const sessionFailure = error && error.code === 'SESSION_STORE_UNAVAILABLE';
+  res.status(sessionFailure ? 503 : 500).json({ code: sessionFailure ? error.code : 'REQUEST_FAILED',
+    error: sessionFailure ? '会话服务暂不可用，请稍后重试' : '请求暂时无法完成' });
 });
+
+if (require.main === module) {
+  const server = app.listen(PORT, config.host, () => {
+    console.log(`MDM_LISTENING port=${PORT} sourceDigest=${version.sourceDigest}`);
+  });
+  let stopping = false;
+  function shutdown() {
+    if (stopping) return;
+    stopping = true;
+    readiness.stop();
+    const deadline = setTimeout(() => { server.closeAllConnections(); process.exit(1); }, 15000);
+    server.close(async () => {
+      await app.locals.closeRuntime().catch(() => {});
+      clearTimeout(deadline);
+      process.exit(0);
+    });
+    server.closeIdleConnections();
+  }
+  process.on('SIGINT', shutdown);
+  process.on('SIGTERM', shutdown);
+  process.on('disconnect', shutdown);
+  process.on('message', message => { if (message === 'mdm:stop') shutdown(); });
+}
+
+module.exports = app;

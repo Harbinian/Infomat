@@ -1,3 +1,4 @@
+const { syntheticSession, validateSyntheticSession } = require('./testHelpers/syntheticSession');
 const assert = require('assert');
 const express = require('express');
 
@@ -91,6 +92,7 @@ async function main() {
   setDataMapRepositoryFactory(async () => repo);
   let currentPersonId = 42;
   auth.setIdentityRepositoryFactory(async () => ({
+    validateSession: validateSyntheticSession,
     async getUserEffectivePermissions(personId) {
       if (personId === 42) {
         return {
@@ -120,12 +122,12 @@ async function main() {
   const app = express();
   app.use(express.json());
   app.use((req, res, next) => {
-    req.session = {
+    req.session = syntheticSession({
       personId: currentPersonId,
       userId: currentPersonId,
       userName: currentPersonId === 42 ? '数据地图管理员' : '部门主对接人',
       departmentId: 9
-    };
+    });
     next();
   });
   app.use('/api/data-map', dataMapRouter);

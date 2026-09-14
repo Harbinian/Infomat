@@ -1,3 +1,4 @@
+const { checkRuntimeSchema } = require('./mysqlRuntimeSchema');
 const mysql = require('mysql2/promise');
 const { mysqlConfigFromEnv } = require('./mysqlConfig');
 const { mdmMysqlSchemaSql, splitSqlStatements } = require('./mysqlSchema');
@@ -247,7 +248,7 @@ async function auditRepository() {
     auditRepoPromise = (async () => {
       const pool = mysql.createPool(mysqlConfigFromEnv());
       const repo = makeAuditMysqlRepository(pool);
-      await repo.initSchema();
+      await checkRuntimeSchema(pool, 'audit');
       return repo;
     })();
   }

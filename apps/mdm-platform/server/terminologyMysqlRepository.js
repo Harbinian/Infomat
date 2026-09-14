@@ -1,3 +1,4 @@
+const { checkRuntimeSchema } = require('./mysqlRuntimeSchema');
 const mysql = require('mysql2/promise');
 const { mysqlConfigFromEnv } = require('./mysqlConfig');
 const { mdmMysqlSchemaSql, splitSqlStatements } = require('./mysqlSchema');
@@ -310,7 +311,7 @@ async function terminologyRepository() {
     terminologyRepoPromise = (async () => {
       const pool = mysql.createPool(mysqlConfigFromEnv());
       const repo = makeTerminologyMysqlRepository(pool);
-      await repo.initSchema();
+      await checkRuntimeSchema(pool, 'terminology');
       return repo;
     })();
   }

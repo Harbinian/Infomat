@@ -6,18 +6,26 @@
 
 本目录脚本属于 MDM 平台应用内工具。跨 `docs/`、`pmo/` 和多个应用的仓库级脚本应放在仓库根 `scripts/`。
 
+仅3000运维入口为`service:start`、`service:stop`、`service:restart`、`service:check`；前台监督入口为`service:supervise`。它们复用非敏感固定配置和注入环境，核对进程归属，不读私有env、不运行DDL、不操作其他服务。命令会写被忽略的`artifacts/mdm-3000-runtime/`进程状态与轮转日志。会话维护为`migrate:sessions:inspect|apply|rollback`及`cleanup:sessions:inspect|apply`，均要求`--target host:port/database`；apply和rollback会写指定MySQL。具体前置条件、运行权限、失败处理与开机恢复边界见[3000发布与恢复](../../../docs/plans/2026-09-09-mdm-3000-launch/03-发布与恢复.md)。
+
 ## 1. 常用测试入口
 
 | 命令 | 覆盖范围 | 副作用 |
 |---|---|---|
+| `npm run test:stage03-runtime` | 会话/代理配置、维护目标、就绪合并/缓存/超时和进程归属拒绝 | 合成环境、SQL替身，不连接数据库或读取私有配置 |
+| `npm run test:stage03-mysql-isolated` | 会话迁移/清理、真实HTTPS代理、登录/重启/停用/授权失效、首改密、断库与结构恢复 | 仅新建带唯一标记的MySQL 8.4容器，tmpfs数据、随机回环端口、合成人员、临时证书；测试后核对标记并删除本轮容器，不操作已有实例。要求本机已有mysql:8.4镜像及Git OpenSSL |
+| `npm run test:stage03-service` | Windows临时进程的归属、端口冲突、重复监督、源码变化、停止、重启、异常恢复和日志轮转 | 系统临时目录与随机回环端口的合成应用；不读私有配置、不连接数据库、不使用3000/3001/PMO端口 |
+| `npm run test:mysql-runtime-boundary` | 正式模块加载、配置拒绝、SQLite加载阻断、运行SQL只读探测、缺结构/断库恢复、代表性HTTP及管理员写入拒绝 | 合成身份和SQL监测替身，随机回环端口及系统临时目录；不读取私有配置、不连接真实MySQL。`--serve`仅为人工浏览器隔离验证保留合成服务，须在验证后停止 |
 | `npm run test:rbac-raci-v2` | 固定十九项权限、七个MDM工作角色、十一项RACI、角色可见标签、账号接口、会话失效、迁移和空库初始化约束 | 命令名为兼容入口；使用fake repository和源码约束检查，不连接真实库 |
 | `npm run test:process-governance-unified` | 完整v2草稿、修订冲突、承接队列、故事链、冲突处理链和管理员写入403 | 使用fake repository和接口测试，不连接真实库 |
-| `npm run test:security` | 安全专项：默认口令、历史口令审计、写接口盘点、越权路由红线 | 迁移过渡期使用隔离遗留本地库，测试结束清理 |
+| `npm run test:security` | 废弃建号拒绝且零写、历史口令审计、正式注册与隔离路由追溯、固定角色权限及真实HTTP会话/CSRF门禁 | 子进程仅继承必要系统环境，阻断真实MySQL；历史审计使用自有临时SQLite，HTTP使用显式合成仓储；输出独立测试日志 |
+| `npm run test:launch-stage04` | 第04阶段聚合：安全、身份/RBAC、流程治理、冲突、映射、字段、工作包和运行边界，再执行真实隔离MySQL的V3/V7验证；相同脚本去重 | 模拟部分强制阻断真实MySQL；真实部分只新建本轮带标记的tmpfs容器和随机回环HTTP端口。不运行共同启动或正式初始化命令；要求本机已有mysql:8.4镜像和Docker |
+| `npm run test:stage04-mysql-isolated` | 真实应用HTTP、登录/首改密/停用/撤权、V7预览/修订/核对/退回再办、发布故障回滚/并发唯一/不可变版本读回、合成历史V3读回 | 仅自建MySQL 8.4容器、合成基础与业务数据、无DDL权限运行账号；结构准备和故障触发器仅在本轮容器内执行，结束核对归属并删除；不读取备份或真实历史数据 |
 | `npm run test:mainline` | MDM主线：组织结构、固定RBAC/RACI、角色工作台、人员身份、流程治理、数据地图、字段、术语、冲突、待办和导入导出 | MySQL路径使用fake pool/repository；遗留测试只使用隔离本地库并在结束后清理 |
 | `npm run test:process-governance` | 流程治理 MySQL 读模型、MySQL 导入/冒烟、Sankey API、MySQL 身份权限、输入基线问题复核、文档结构化输出、统一问题池、前端挂钩和字段引用 | 正式口径为 MySQL-only；当前入口使用 fake MySQL pool / fake repository，不连接真实库，不纳入遗留 SQLite 服务器/仓储测试 |
 | `npm run test:process-design` | 文档结构化输出 API、MySQL schema、制度主档、制度编号校验、A/B/AA 版次生成、下一版次完整重写草稿、制度 profile、术语、草稿级 L1/L2 既有映射枚举校验、流程明细、行为详情、跨部门承接回写、附表结构、字段新增/修改/删除/排序、自动编号、字段空格校验、证据状态核验、Markdown 草案导出、发布替代链路，以及术语/流程/业务行为编辑、删除、作废和只读状态 | 使用 fake process-design repository 和 fake MySQL 身份 repository，不连接真实库 |
 | `npm run test:process-v7-preview-review` | V7完整规则校验、固定跨部门核对项、修订沿用与重开、部门范围、管理员只读、预览边界和迁移保护 | 使用fake repository和fake pool，不连接真实库 |
-| `npm run test:process-data-governance` | 固定V7来源候选、精确单版本范围、MDM与业务责任隔离、管理员只读、API、迁移和全屏弹窗前端约束 | 使用确定性单元测试、fake repository和源码约束检查，不连接真实库 |
+| `npm run test:process-data-governance` | 固定V7来源候选、精确单版本范围、MDM与业务责任隔离、管理员只读、API、迁移、全屏弹窗及未提交输入保护 | 使用确定性单元测试、fake repository、源码约束和编辑/异步加载行为检查；包含保存时保留其他输入、失败保留、完成前确认及旧请求不得覆盖新页面，不连接真实库 |
 | `npm run migrate:process-data-governance:dry-run` | 只读检查六张后续数据治理表、迁移记录、已发布流程版本数量和结构一致性 | 通过固定MySQL配置连接；脱敏输出，不写MySQL |
 | `npm run migrate:process-data-governance:apply` | 只在`not_applied`时创建六张空表和迁移记录；不回填历史工作包 | 写入目标MySQL；必须另行取得授权并先验证备份恢复 |
 | `npm run migrate:process-data-governance:rollback` | 只在六张表全部为空时删除表和迁移记录 | 写入目标MySQL；发现任何治理记录即拒绝执行 |
@@ -29,7 +37,7 @@
 | `npm run migrate:process-v7-formal:dry-run` | 只读检查M1的`migration_recorded`、`applied`和`consistency_status`，同时检查M2列、索引、提升审计表和正式V3摘要 | 连接目标MySQL但不写入；只有M1为`applied`时`ready_for_apply`才可为true |
 | `npm run migrate:process-v7-formal:apply` | 增加原生V7正式基础，不创建V7业务行 | 写入目标MySQL；任何M2 DDL前要求M1`consistency_status=applied`，并必须取得单独授权 |
 | `npm run migrate:process-v7-formal:rollback` | 仅在没有V7正式使用痕迹时移除M2对象 | 写入目标MySQL；发现提升、V7草稿、版本或审核正文绑定即拒绝执行 |
-| `npm run rehearse:process-v7-migrations-isolated` | 在备份恢复的临时MySQL中验证M1部分结构停止应用、M2部分DDL恢复、提升幂等、过期审核拒绝、正式发布读回、并发发布和空表回退 | 不写正式库；完成后移除临时容器 |
+| `npm run rehearse:process-v7-migrations-isolated` | 历史备份演练入口，默认读取`output/process-v7-m0/2026-08-25-backup-restore.json`及其中的备份路径 | 会读取真实备份及恢复身份；不是纯合成入口，不可因isolated名称直接运行。第06阶段改用下述自有合成入口 |
 | `npm run test:identity-mysql` | `person/user_accounts/person_roles`身份链路、登录、会话、本人改密、固定角色只读接口、通用权限中间件、范围helper和旧RBAC导入拒绝 | 使用fake MySQL pool和fake repository，不连接真实库 |
 | `npm run test:access-mysql` | 验证 `access.js` 中角色码读取、管理员判断、全局查看、复核权限和待办处理判断的 MySQL-aware 异步 helper | 使用 fake repository，不连接真实库 |
 | `npm run test:role-workbench-mysql` | 角色工作台在 `MDM_IDENTITY_READ_MODEL=mysql` 下从 MySQL 身份读模型读取当前用户、角色、部门和权限；在 `PROCESS_GOVERNANCE_READ_MODEL=mysql` 下从流程治理 MySQL repository 读取质量问题和映射待办 | 使用 fake repository，不连接真实库 |
@@ -58,16 +66,20 @@
 |---|---|---|
 | `audit-fixed-default-passwords.js` | dry-run 检查历史库中是否仍有旧固定初始密码账号 | 只读，不输出密码哈希 |
 | `test-password-audit.js` | 验证历史口令审计脚本只读、脱敏 | 使用隔离遗留本地库 |
-| `audit-route-write-permissions.js` | 扫描 `server/routes/` 写接口，分类权限中间件、业务内检查、集成 Key、自助入口、未分类项 | 只读 |
-| `test-route-write-audit.js` | 验证写接口扫描脚本没有未分类写入口 | 只读 |
-| `test-security-routes.js` | 安全路由集成测试 | 使用隔离遗留本地库 |
-| `test-user-password-scripts.js` | 验证批量用户脚本不再硬编码固定初始密码 | 使用隔离遗留本地库和临时输入文件 |
+| `audit-route-write-permissions.js` | 在禁止建池/SQLite/监听的条件下加载真实Express注册，展开多行声明、动态动作和all；区分身份写入、业务写入、明确停用、前置遮蔽、公共/本人服务、内存校验和隔离遗留；逐项追溯权限、部门、状态、并发及审计源码 | 只读；`--json`输出完整锚点及摘要，分类不是权限白名单；未追溯注册或未分类项使命令失败，不据静态信号宣称事务验收 |
+| `test-route-write-audit.js` | 验证盘点完整性、实际分类、五类控制证据及仓储方法行号可定位 | 只读；不连接MySQL |
+| `test-security-routes.js` | 真实Express/会话/CSRF，固定角色正向办理及admin/无权/跨部门拒绝、首次改密、停用与授权版本失效；历史入口410 | 显式合成身份与业务仓储，随机回环端口；真实MySQL与SQLite均被阻断；不代表真实仓储事务 |
+| `test-user-password-scripts.js` | 两个废弃建号脚本分别在已存在及不存在库场景拒绝执行；检查退出标识、DB/Excel模块不加载、文件摘要不变及无新增文件 | 自有临时SQLite哨兵文件；不恢复废弃建号行为，不读取真实花名册 |
+
+第04阶段命令从本应用目录执行。`test:launch-stage04`与`test:security`的每次结果写入仓库被忽略的`artifacts/mdm-3000-launch/stage04-<时间戳>/`，包含脚本/日志摘要、退出码及实际依赖类型。完整命令中的真实MySQL步骤必须通过才构成本阶段聚合通过；`npm run test:launch-stage04 -- --simulated-only`仅运行模拟部分，不能作为完整验收结论。
+
+测试环境不继承调用终端的MySQL、会话或试点变量，不读取私有env。真实验证用`--pull never`新建`infomat.stage04`唯一标记容器，数据仅存tmpfs，无绑定目录或已有卷；临时端口不使用3000/3001/3306/3307/5173。正常结束和可捕获失败均核对容器ID及标记后清理自身资源。若测试被外部强制中止，先按本轮容器名和标记核对归属，再处理残留；不得按端口或全局标签批量删除其他轮次/人员的资源。第03阶段HTTPS/Windows运维证据按未变更范围复用，第04阶段合成V3/V7验证不能替代第06阶段真实历史数据、备份恢复或业务验收。
 
 ## 3. 初始化、种子和维护脚本
 
 | 脚本 | 作用 | 副作用 |
 |---|---|---|
-| `init-mysql-schema.js` | 初始化MySQL schema，包含固定身份/RBAC字段、访问审计、责任记录、迁移备份、流程治理、导入问题指纹、数据地图、字段、术语、冲突、待办和平台审计表；不覆盖现有账号密码或状态 | 写MySQL结构，不写仓库真源；本任务只修复结构定义和静态测试，未对任何运行实例执行 |
+| `init-mysql-schema.js` | 显式初始化MySQL及补齐已有版次、证据、表单与流转结构，包含固定模型、术语种子及历史记录补齐；不覆盖现有账号密码 | 写MySQL结构、种子和迁移记录；不是应用启动动作。第02阶段仅同步表单补齐入口，未对任何真实实例执行 |
 | `bootstrap-admin.js` | 仅在空身份库创建一次受控`ADMIN001`管理员入口；已有人员、账号或有效管理员时拒绝 | 写MySQL；一次性临时密码只在响应中显示 |
 | `migrate-rbac-raci-v2.js --dry-run` | 盘点人员、账号、部门、角色、重复标识、孤立关系、缺失部门和缺失最终负责人 | 只读MySQL |
 | `migrate-rbac-raci-v2.js --apply` | 备份身份授权数据，写入固定模型，仅保留`ADMIN001`管理员，停用其他旧账号并清除旧会话 | 写MySQL；执行前必须先dry-run |
@@ -93,7 +105,7 @@
 
 | 脚本 | 作用 | 副作用 |
 |---|---|---|
-| `sync-organization-structure.js` | 从组织真源同步部门、岗位、人员到 MDM 结构 | 写当前数据库 |
+| `sync-organization-structure.js` | 按脚本中的固定组织和领导办公室/人员安排同步，只检查组织Markdown包含相应名称与代码；不读取最新花名册或虚拟单位定义 | 写当前数据库；不是2026-09-11新版人员真源的导入入口，不因文档更新而执行 |
 | `sync-process-governance-org.js` | 遗留SQLite流程治理组织同步实现；公开命令为`npm run legacy-sqlite:sync-process-org` | 写`MDM_DB_PATH`指定的隔离SQLite库 |
 | `import-process-governance.js` | 遗留SQLite流程治理快照导入实现；公开命令为`npm run legacy-sqlite:import-process-governance` | 写`MDM_DB_PATH`指定的隔离SQLite库；不属于正式主线 |
 | `import-process-governance-mysql.js` | 导入 `docs/company-sankey-data.json` 到 MySQL 流程治理读模型 | 写 MySQL；不读取 `MDM_DB_PATH` |
@@ -148,7 +160,58 @@
 | 前端和视图 | `test-frontend-assets.js`、`test-views-routes.js`、`test-views-sankey-filters.js`、`test-activity-mysql-repository.js`、`test-activity-mysql-api.js`、`test-activity-heatmap-mysql-identity-api.js` |
 | 冒烟 | `smoke-test.js`、`smoke-master-data.js`、`smoke-rbac.js`、`smoke-integration.js` |
 
-## 6. 修改规则
+## 6. 第05阶段独立验收
+
+从`apps/mdm-platform`执行：
+
+```powershell
+npm run test:launch-stage05
+# 仅静态、替身及自有临时SQLite检查，不执行真实MySQL或Edge
+npm run test:launch-stage05 -- --simulated-only
+# 只复验真实合成MySQL待办，或真实Edge办理流程
+npm run test:stage05-mysql-isolated
+npm run test:stage05-browser
+```
+
+`test-stage05-local.js`展开并去重前端、固定角色、流程治理、主线、角色工作台、会话运行和MySQL边界套件。模拟子进程净化环境，并预加载`blockRealMysql.js`；内层npm测试继承该阻断，不能因机器默认配置连到真实库。`--failed-from <此前test-results.json绝对路径>`仅从上述已核对列表挑选前次失败项，不执行证据文件中的任意命令；定向结果不能单独代表完整聚合。
+
+两个真实入口复用第04阶段`freshMysql`：只创建唯一标记、tmpfs、随机回环端口的MySQL 8.4容器，要求Docker及本机已有`mysql:8.4`镜像，使用`--pull never`。沿用的容器前缀、标记和库名含stage04，这是测试助手的名称，不表示连接第04阶段留下的实例。结构初始化、合成身份授权、业务写入及临时表改名故障只在新容器内执行；应用运行账号只有SELECT/INSERT/UPDATE/DELETE。不会使用真实配置、已有数据库、已有卷或共同启动脚本。
+
+Edge入口使用已安装的`playwright`，找不到应用内运行库时使用已有Playwright CLI附带的运行库；不自动安装或下载浏览器。只启动自己的Microsoft Edge和随机端口应用，内容可视区1699×828、100%缩放，并补充390×844。测试包括两份完整合成案例，其中一份由测试准备关闭，供真实案例切换；业务办理始终通过公开HTTP及浏览器。故障注入用于网络/503和正式意见409保护，部门意见409来自另一真实合成会话上传新修订，401来自清除本轮Cookie。
+
+浏览器验证保存截图和操作断言，不覆盖人工中文输入法、真实人员或业务验收。主入口结果在`artifacts/mdm-3000-launch/stage05-<时间戳>/test-results.json`；本阶段定向HTTP、Edge结果及截图在`stage05-20260910/`。重复定向运行会更新该目录同名合成证据，需保留某次结果时先另行复制证据目录。正式业务文件不受影响。
+
+测试在正常结束及可捕获异常中停止自己的HTTP进程，核对具体容器ID与唯一标记后清理；浏览器也在finally关闭。外部强制结束后，只能按本轮确切归属核对残留，不批量删除容器或结束其他Node/Edge进程。`test-stage05-mysql-isolated.js --serve`仅供保持本轮合成环境进行人工检查，通过终端输入或它返回的专属停止文件结束，不可作为正式服务入口。
+
+## 7. 第06阶段迁移与恢复核对
+
+从本应用目录执行以下已授权的本地入口，输出目录使用新的准确路径：
+
+```powershell
+npm run prepare:launch-stage06 -- --output E:\CA001\Infomat\artifacts\mdm-3000-launch\stage06-20260910\formal-preparation
+npm run test:stage06-preflight
+npm run test:stage06-mysql-isolated
+```
+
+`prepare`不连接MySQL、不读取配置文件，生成可执行只读SQL和正式目标待填报告；同名文件拒绝覆盖。SQL原始结果可能包含获准读取的业务正文，应保存在批准的受控位置。优先使用下面的报告命令在内存中计算数量、稳定标识、状态和摘要；报告不输出业务正文。
+
+只有另行获准读取准确正式目标、并由维护身份安全注入`MYSQL_HOST/PORT/USER/PASSWORD/DATABASE`后，才能执行`npm run inspect:launch-stage06 -- --target <host:port/database> --output <新的受控目录>`。目标必须与注入变量完全相同；无默认库，不读私有env，不自动初始化，错误不回显驱动消息。单连接在REPEATABLE READ只读一致性快照中读取，整体最多60秒；窗口内不得有DDL，超时不放宽门槛。报告保留实际元数据、M0/M1/M2/会话及后续治理检查、正式/预览/审核/身份摘要和引用异常。口令摘要、会话ID、会话JSON及身份迁移备份正文不读取。`localSource`只是本地源码，`runningApplication`继续待核验；报告始终不授权DDL、不宣称正式备份已恢复。
+
+真实测试复用现有迁移实现、`freshMysql`及第04阶段公开HTTP场景，不另建模型。第06阶段使用`mdm-stage06-<UUID>`容器、`infomat.stage06=<UUID>`标签、`stage06_isolated`库；mysql:8.4镜像必须已存在，禁止自动拉取。每个实例只使用tmpfs和随机回环端口，不挂载已有目录/卷，不使用3000/3001/3306/3307/5173。源备份仅由本轮合成实例产生，在另一新实例恢复并比较后才演练迁移；发布后再在第三实例恢复并比较。备份命令通过环境传递一次性合成凭据，不放进命令参数或输出。
+
+测试涵盖M1/M2/会话首次和重复应用、部分结构、实际DDL之后的中断、漂移拒绝、历史V3及缺失审核依据保留、非空回退拒绝；在迁移后恢复库启动真实应用和持久会话，通过登录、CSRF及公开HTTP验证预览、提升、提交、退回、审核、发布故障回滚、并发唯一和固定版本完整读回。运行账号无DDL权限。后续治理因首发范围待定仅检查未应用及未回填，不开启或实施其迁移。没有浏览器变更，第05阶段Edge和输入保护证据按未受影响范围复用。
+
+结果写入新建的`artifacts/mdm-3000-launch/stage06-<毫秒时间戳>/`，包含合成备份、恢复前后表摘要、逐项结果和合成目标报告。它不证明真实旧数据恢复。正常结束或可捕获失败后，核对具体容器ID、标签和本轮归属再删除自身容器；失败证据目录保留。外部强制终止时，先按证据中确切ID和标签核对残留，不批量清理其他资源。旧M0备份脚本的固定源、用户Documents备份路径、旧身份会话和清理方式与该入口不同，不复用其默认执行方式。
+
+## 8. 第07阶段发布准备入口与执行限制
+
+2026-09-11本轮只形成[单流程发布作业单](../../../docs/plans/2026-09-09-mdm-3000-launch/03-发布与恢复.md#11-第07阶段单流程试点发布准备2026-09-11)，未新增应用脚本或改变运行/迁移命令。候选源码和完整文件摘要、依赖状态、最小身份SQL、正式目标/恢复报告及证据位于`artifacts/mdm-3000-launch/stage07-20260911/`。本地材料使用现有prepare入口重新生成到新目录，未覆盖第06阶段输出；prepare不连接数据库。
+
+用户已确认工作包纳入首发。第7节描述第06阶段当时未应用工作包，不代表现在可以免验工作包。关口A产生准确不可变V7版本后，关口B再核对六表必要性、覆盖该版本的恢复点及工作包专项MySQL/浏览器验证；不猜ID、不回填所有历史工作包。实际流程、人员及正式目标仍未确定。
+
+运维`service:*`会以固定JSON覆盖继承的MySQL目标；M1/M2/工作包旧CLI还会加载私有env，不能在其后附加`--target`就声称受到目标保护。正式执行须使用获准新布局、核对冻结的固定目标配置，并确认私有env不存在；Secret经批准环境注入。正式读取优先用显式目标的stage06 inspect，迁移和真实运行各需对应批准。不得从本轮候选112项源码清单直接打包整个脏工作区或连跑所有维护脚本。
+
+## 9. 修改规则
 
 1. 新增写数据库脚本时，默认使用 MySQL 配置；若仍服务遗留本地库，必须明确说明 `MDM_DB_PATH` 只是迁移过渡期隔离机制。
 2. 新增测试脚本时，优先使用 `testHelpers/isolatedDb`，不要写共享 `data/platform.db`。

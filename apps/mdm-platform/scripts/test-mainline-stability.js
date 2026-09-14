@@ -158,8 +158,8 @@ async function runMasterDataObjectSmoke() {
     const leadershipPersonList = await request('/api/persons?search=100000', {}, cookie);
     assert.strictEqual(
       leadershipPersonList.res.status,
-      404,
-      '旧 SQLite 人员接口必须退出 3000 运行时'
+      200,
+      '此烟测显式启用隔离遗留模式；正式模式的人员接口拒绝由 test:mysql-runtime-boundary 验证'
     );
 
     const legacyIdentityWrite = await request('/api/org/users', {
@@ -174,7 +174,7 @@ async function runMasterDataObjectSmoke() {
     assert.strictEqual(fixedModel.body.roles.length, 7);
     assert.strictEqual(fixedModel.body.permissions.length, 19);
 
-    console.log('[mainline] retired personnel identity runtime smoke passed');
+    console.log('[mainline] isolated legacy compatibility and retired account writes smoke passed');
     return;
 
     const leaderPerson = leadershipPersonList.body.rows.find(row => row.employee_no === '100000');

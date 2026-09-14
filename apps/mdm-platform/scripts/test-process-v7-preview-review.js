@@ -1,4 +1,5 @@
 const assert = require('assert');
+const { syntheticSession, validateSyntheticSession } = require('./testHelpers/syntheticSession');
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
@@ -675,7 +676,7 @@ async function main() {
           scope_decision: null
         }]];
       }
-      if (normalized.includes('FROM process_v7_preview_revisions') && normalized.endsWith('FOR UPDATE')) {
+      if (normalized.includes('FROM process_v7_preview_revisions') && normalized.endsWith('FOR SHARE')) {
         return [[{
           id: 241,
           case_id: 24,
@@ -781,7 +782,7 @@ async function main() {
   assert.strictEqual(updatedRevisionCaseParams[0], candidateRevisionProjection.processName, '调用方伪造的流程名称不得写入');
   assert.deepStrictEqual(JSON.parse(updatedRevisionCaseParams[5]), candidateRevisionProjection.blockingIssues, '调用方伪造的阻断项不得写入');
   const revisionCaseLockIndex = lockedRevisionQueries.findIndex(sql => sql === 'SELECT * FROM process_v7_preview_cases WHERE id=? FOR UPDATE');
-  const revisionLockIndex = lockedRevisionQueries.findIndex(sql => sql.includes('FROM process_v7_preview_revisions') && sql.endsWith('FOR UPDATE'));
+  const revisionLockIndex = lockedRevisionQueries.findIndex(sql => sql.includes('FROM process_v7_preview_revisions') && sql.endsWith('FOR SHARE'));
   const revisionItemsLockIndex = lockedRevisionQueries.findIndex(sql => sql.startsWith('SELECT * FROM process_v7_preview_review_items WHERE case_id=? AND is_current=1 ORDER BY id FOR UPDATE'));
   const revisionFirstWriteIndex = lockedRevisionQueries.findIndex(sql => sql.startsWith('UPDATE ') || sql.startsWith('INSERT '));
   assert.ok(
@@ -822,7 +823,7 @@ async function main() {
           scope_decision: null
         }]];
       }
-      if (normalized.includes('FROM process_v7_preview_revisions') && normalized.endsWith('FOR UPDATE')) {
+      if (normalized.includes('FROM process_v7_preview_revisions') && normalized.endsWith('FOR SHARE')) {
         return [[{
           id: 251,
           case_id: 25,
@@ -876,7 +877,7 @@ async function main() {
   assert.ok(decisionWrite && decisionWrite.sql.includes('counterparty_status'), '锁后推导为外部门时只能更新外部门决定列');
   assert.strictEqual(decidedItem.counterparty_status, 'confirmed');
   const decisionCaseLockIndex = decisionQueries.findIndex(sql => sql === 'SELECT * FROM process_v7_preview_cases WHERE id=? FOR UPDATE');
-  const decisionRevisionLockIndex = decisionQueries.findIndex(sql => sql.includes('FROM process_v7_preview_revisions') && sql.endsWith('FOR UPDATE'));
+  const decisionRevisionLockIndex = decisionQueries.findIndex(sql => sql.includes('FROM process_v7_preview_revisions') && sql.endsWith('FOR SHARE'));
   const decisionItemsLockIndex = decisionQueries.findIndex(sql => sql.startsWith('SELECT * FROM process_v7_preview_review_items WHERE case_id=? AND is_current=1 ORDER BY id FOR UPDATE'));
   const decisionFirstWriteIndex = decisionQueries.findIndex(sql => sql.startsWith('UPDATE ') || sql.startsWith('INSERT '));
   assert.ok(
@@ -1181,6 +1182,7 @@ async function main() {
 
   const identityByUserId = new Map(Object.values(identities).map(identity => [identity.userId, identity]));
   auth.setIdentityRepositoryFactory(async () => ({
+    validateSession: validateSyntheticSession,
     async getUserEffectivePermissions(userId) {
       return { permSet: new Set(identityByUserId.get(Number(userId))?.permissions || []), fieldConstraints: {} };
     },
@@ -1203,6 +1205,7 @@ async function main() {
       personId: identity.personId,
       departmentId: identity.departmentId
     };
+    req.session = syntheticSession(req.session);
     next();
   });
   app.use('/api/process-v7-preview', previewRouter);

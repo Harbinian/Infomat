@@ -372,11 +372,7 @@ router.post('/cases', requireAuth, (req, res) => runAction(res, async () => {
   }));
 }));
 
-router.get('/cases/:id', requireAuth, (req, res) => runAction(res, async () => {
-  const actor = await currentActor(req);
-  assertCanRead(actor);
-  const repo = await repository();
-  const detail = await repo.getCaseDetail(req.params.id);
+async function describeCaseForActor(repo, actor, detail) {
   assertVisible(actor, detail);
   const departments = await repo.listDepartments();
   const preview = validateAndProjectV7(detail.revision.document, departments, {
@@ -385,11 +381,13 @@ router.get('/cases/:id', requireAuth, (req, res) => runAction(res, async () => {
   const items = (detail.items || []).map(item => {
     const isOrigin = Number(item.origin_department_id) === Number(actor.departmentId);
     const isCounterparty = Number(item.target_department_id) === Number(actor.departmentId);
+    const canAct = Boolean(actor.canReviewDepartment && !actor.roleCodes.has('admin') &&
+      detail.case.status !== 'closed' && isV7TrialProcessRefAllowed(detail.case.process_ref) && (isOrigin || isCounterparty));
     return {
       ...item,
       my_party: isOrigin ? 'origin' : isCounterparty ? 'counterparty' : null,
-      can_act: Boolean(actor.canReviewDepartment && (isOrigin || isCounterparty)),
-      allowed_actions: actor.canReviewDepartment && (isOrigin || isCounterparty)
+      can_act: canAct,
+      allowed_actions: canAct
         ? ['record_department_decision']
         : []
     };
@@ -399,7 +397,7 @@ router.get('/cases/:id', requireAuth, (req, res) => runAction(res, async () => {
     case: { ...detail.case, blocking_issues: preview.blockingIssues || [] }
   };
   const formalActions = formalAllowedActions(actor, formalDetail);
-  res.json(previewBoundary({
+  const result = {
     ...detail,
     items,
     warnings: preview.warnings || [],
@@ -407,7 +405,117 @@ router.get('/cases/:id', requireAuth, (req, res) => runAction(res, async () => {
     allowed_actions: caseAllowedActions(actor, { ...detail.case, blocking_issues: preview.blockingIssues || [] }),
     formal_allowed_actions: formalActions,
     formal_allowed_decisions: formalAllowedDecisions(formalActions, formalDetail)
-  }));
+  };
+  result.handling_summary = caseHandlingSummary(result);
+  if (result.handling_summary.current_promotion) result.allowed_actions = result.allowed_actions.filter(action => action !== 'promote_to_formal_draft');
+  return result;
+}
+
+function caseHandlingSummary(detail) {
+  const formal = detail.formal_promotion || {};
+  const draft = formal.draft || {};
+  const task = formal.review_task || {};
+  const returns = [];
+  for (const item of detail.items || []) {
+    for (const party of ['origin', 'counterparty']) {
+      if (item[party + '_status'] === 'needs_changes') returns.push({
+        item_id: item.id,
+        department: party === 'origin' ? item.origin_department_name : item.target_department_name,
+        reason: item[party + '_basis'] || '尚未提供退回依据，请联系该部门核对',
+        behavior: item.behavior_name
+      });
+    }
+  }
+  if (['needs_changes', 'rejected'].includes(draft.status) && task.decision_note) {
+    returns.push({ review_task_id: task.id, department: detail.case.owning_department_name, reason: task.decision_note });
+  }
+  const prerequisites = (detail.blocking_issues || []).filter(issue =>
+    unresolvedBlockingIssues([issue], detail.case.scope_decision).length).map(issue => issue.message);
+  for (const item of detail.items || []) {
+    if (item.origin_status !== 'confirmed') prerequisites.push(item.origin_department_name + '需完成“' + item.behavior_name + '”核对');
+    if (item.counterparty_status !== 'confirmed') prerequisites.push(item.target_department_name + '需完成“' + item.behavior_name + '”核对');
+  }
+  const promotion = formal.promotion;
+  const currentPromotion = Boolean(promotion && Number(promotion.preview_revision_no) === Number(detail.case.current_revision_no) &&
+    promotion.content_hash === detail.case.current_content_hash);
+  if (draft.id && (Number(promotion && promotion.preview_revision_no) !== Number(draft.revision_no) ||
+    text(promotion && promotion.content_hash) !== text(draft.content_hash))) prerequisites.push('正式草稿与提升依据不一致，请由MDM工作组核对当前修订后再办理');
+  if (['submitted', 'under_review', 'approved'].includes(draft.status) && (!task.id ||
+    Number(task.draft_revision_no) !== Number(draft.revision_no) || text(task.content_hash) !== text(draft.content_hash))) {
+    prerequisites.push('审核记录缺失或与当前草稿不一致，请由归口部门审核员与MDM工作组核对');
+  }
+  if (draft.status === 'approved' && task.status !== 'approved') prerequisites.push('当前审核任务尚未通过，不能发布');
+  if (draft.id && process.env.PROCESS_V7_FORMAL_ENABLED !== '1') prerequisites.push('正式办理入口暂不可用，请联系维护人员核对开放条件');
+  if (!currentPromotion) prerequisites.push('部门核对完成后，由MDM工作组组长将当前修订提升为正式草稿');
+  else if (['draft', 'needs_changes'].includes(draft.status)) prerequisites.push('归口部门主对接人提交当前正式草稿审核');
+  else if (['submitted', 'under_review'].includes(draft.status)) prerequisites.push('归口部门审核员完成当前修订的正式审核');
+  else if (draft.status === 'approved') prerequisites.push('MDM工作组组长核对审核依据后发布正式版本');
+  else if (draft.status === 'rejected') prerequisites.push('正式审核已拒绝，请与归口部门审核员和MDM工作组核对后续处理方式');
+  return { return_reasons: returns, prerequisites: [...new Set(prerequisites)], current_promotion: currentPromotion };
+}
+
+// Read projection of existing cases/items/promotions/tasks; no new task records or engine.
+async function listV7WorkbenchItems(actor) {
+  if (process.env.PROCESS_V7_PREVIEW_ENABLED !== '1' || !trialProcessRefFromEnv() || actor.roleCodes.has('admin')) return [];
+  assertCanRead(actor);
+  const repo = await repository();
+  const listing = await repo.listCases(actor, { processRef: trialProcessRefFromEnv(), limit: 200 });
+  const result = [];
+  const { ROLE_GUIDES } = require('../roleDefinitions');
+  for (const row of listing.items || []) {
+    if (row.status === 'closed') continue;
+    const detail = await describeCaseForActor(repo, actor, await repo.getCaseDetail(row.id));
+    const c = detail.case;
+    const formal = detail.formal_promotion || {};
+    const draft = formal.draft || {};
+    const task = formal.review_task || {};
+    const allowed = detail.allowed_actions || [];
+    const formalAllowed = detail.formal_allowed_actions || [];
+    function add(type, id, label, permissions, extra = {}) {
+      if (!permissions.every(permission => actor.permissions.has(permission))) return;
+      const sourceRoles = ROLE_GUIDES.filter(role => actor.roleCodes.has(role.code) &&
+        permissions.every(permission => (role.permissions || []).some(p => p.code === permission))).map(role => role.code);
+      result.push({ id: type + ':' + id, type, governanceType: type, title: label + '：' + c.process_name,
+        source: c.case_ref, department: c.owning_department_name, currentStatus: draft.status || c.status,
+        caseId: c.id, revisionNo: c.current_revision_no, contentHash: c.current_content_hash,
+        target: '#/processGovernance?workspace=v7Preview&v7Case=' + c.id,
+        actionLabel: label, nextStep: label, canAct: true, sourceRoles, roleHint: sourceRoles[0],
+        requiredPermissions: permissions, urgency: type === 'v7_returned' ? 'high' : 'medium',
+        sample: '案例 ' + c.case_ref + '，当前修订 ' + c.current_revision_no + '。' + detail.handling_summary.prerequisites.join('；'), ...extra });
+    }
+    for (const item of detail.items || []) {
+      const status = item.my_party === 'origin' ? item.origin_status : item.counterparty_status;
+      if (item.can_act && ['pending', 'pending_evidence'].includes(status)) add('v7_preview_review', item.id, '核对本部门事实', ['governance:review-department'], {
+        target: '#/processGovernance?workspace=v7Preview&v7Case=' + c.id + '&v7Item=' + item.id,
+        reviewItemId: item.id, currentStatus: status, sample: item.behavior_name + '：查看当前修订和原文依据，填写本部门结论；保存后交另一参与部门核对。'
+      });
+    }
+    if (allowed.includes('upload_revision') && detail.handling_summary.return_reasons.length &&
+      ((detail.items || []).some(item => item.origin_status === 'needs_changes' || item.counterparty_status === 'needs_changes') ||
+       (draft.status === 'needs_changes' && detail.handling_summary.current_promotion))) {
+      const permission = actor.permissions.has('governance:assign-work') ? 'governance:assign-work' : 'governance:draft-department';
+      add('v7_returned', c.id, '按退回原因上传新修订', [permission], {
+        sample: detail.handling_summary.return_reasons.map(r => r.department + '：' + r.reason).join('；') +
+          '。回3001修改并下载后，上传至案例 ' + c.case_ref + '；受影响部门重新核对。'
+      });
+    }
+    const unresolvedScope = unresolvedBlockingIssues(detail.blocking_issues || [], c.scope_decision).some(issue =>
+      ['ZERO_CROSS_DEPARTMENT_SCOPE_PENDING', 'OWNING_DEPARTMENT_CHANGE_PENDING'].includes(issue.code));
+    if (allowed.includes('assign_owner') || (allowed.includes('record_scope_decision') && unresolvedScope)) add('v7_scope', c.id, '核对归口与范围依据', ['governance:assign-work']);
+    if (allowed.includes('promote_to_formal_draft') && !detail.handling_summary.current_promotion) add('v7_promote', c.id, '将核对完成修订提升为正式草稿', ['governance:assign-work']);
+    if (formalAllowed.includes('submit_formal_draft') && draft.status === 'draft') add('v7_submit', draft.id, '提交当前修订正式审核', ['governance:draft-department', 'governance:submit-department']);
+    if (formalAllowed.includes('review_formal_draft')) add('v7_formal_review', task.id, '办理当前修订正式审核', ['governance:review-department'], { reviewTaskId: task.id });
+    if (formalAllowed.includes('publish_formal_draft')) add('v7_publish', draft.id, '核对依据并发布正式版本', ['governance:publish'], { draftId: draft.id });
+    else if (draft.status === 'approved' && actor.permissions.has('governance:publish')) add('v7_publish', draft.id, '查看发布缺少的前置条件', ['governance:publish'], { draftId: draft.id });
+  }
+  return result;
+}
+
+router.get('/cases/:id', requireAuth, (req, res) => runAction(res, async () => {
+  const actor = await currentActor(req);
+  assertCanRead(actor);
+  const repo = await repository();
+  res.json(previewBoundary(await describeCaseForActor(repo, actor, await repo.getCaseDetail(req.params.id))));
 }));
 
 router.get('/cases/:id/formal-targets', requireAuth, (req, res) => runAction(res, async () => {
@@ -654,5 +762,6 @@ router.post('/items/:id/decision', requireAuth, (req, res) => runAction(res, asy
 
 router.setProcessV7PreviewRepositoryFactory = setProcessV7PreviewRepositoryFactory;
 router.resetProcessV7PreviewRepositoryFactory = resetProcessV7PreviewRepositoryFactory;
+router.listV7WorkbenchItems = listV7WorkbenchItems;
 
 module.exports = router;

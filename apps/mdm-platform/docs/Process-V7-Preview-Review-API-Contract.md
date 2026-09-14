@@ -8,6 +8,18 @@
 
 JSON请求正文上限为2MB。接口不接受文件路径或任意数据库查询，只接收用户浏览器上传并解析后的V7 JSON。
 
+## 第05阶段只读聚合与兼容补充
+
+`GET /cases/:id`沿用原响应，增加只读`handling_summary`：`return_reasons`来自各部门已保存的退回依据或当前正式审核意见；`prerequisites`列明未完成的核对、当前提升/审核绑定及下一办理角色；`current_promotion`表示提升记录是否绑定当前预览修订和摘要。该摘要是当前记录的投影，不是新增业务事实或审批决定。原字段、写请求和V3/V7格式不变，无数据库迁移或历史回填。旧客户端可以忽略新增字段。
+
+`GET /api/role-workbench?mode=todo|all`从既有案例、当前核对项、提升记录、草稿及审核任务读取V7事项，复用原`workItems`、`nextActions`和`governance`聚合结构；`governance.v7Tasks`补充V7来源集合。事项类型为`v7_preview_review`、`v7_returned`、`v7_scope`、`v7_promote`、`v7_submit`、`v7_formal_review`和`v7_publish`。类型只标识只读投影，不写通用待办表。
+
+事项的`id`由类型和原对象ID组成，`caseId/revisionNo/contentHash`绑定当前预览，按需带`reviewItemId/reviewTaskId/draftId`；`sourceRoles`、`requiredPermissions`保留来源角色及所需权限。`target`沿用`#/processGovernance?workspace=v7Preview&v7Case=...`，部门项增加`v7Item`定位。办理入口仍以详情返回的`allowed_actions/formal_allowed_actions`和服务端实时检查为准；工作台的`canAct`表示可进入当前事项，不是写接口授权凭证。
+
+聚合只读取实例明确限定的流程和当前人员范围。管理员（包括叠加业务角色）不生成V7办理任务；范围卡口解除后不再作为待办。可变MySQL响应不再缓存15秒，并返回`Cache-Control: no-store`。任一已启用来源查询失败时返回503，不伪装成空待办；正式功能已启用时缺少正式表也必须报错。正常完成后在下一次读取消失，相关修订变化后依据既有重开规则重新出现。
+
+意见保留发生在前端当前页面内存中，不改变业务正文或服务器保存合同。409不会自动更新请求绑定或重试；办理人须读取并核对当前修订再明确继续。未提交输入不迁移到其他账号、案例或不相关的业务项。
+
 ## 1. 案例与修订
 
 | 方法与路径 | 用途 | 主要权限 |

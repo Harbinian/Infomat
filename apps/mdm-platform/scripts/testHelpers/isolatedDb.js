@@ -7,6 +7,8 @@ const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), `${testName}-`));
 const testDbPath = path.join(tempDir, 'platform-test.db');
 
 process.env.MDM_DB_PATH = testDbPath;
+// This helper explicitly opts into the isolated legacy fixture, never production.
+process.env.MDM_ALLOW_LEGACY_TEST_MODE = '1';
 
 let cleaned = false;
 
@@ -61,7 +63,7 @@ function stopServer(child, timeoutMs = 2000) {
 }
 
 function legacyTestEnv(overrides = {}) {
-  const env = { ...process.env, ...overrides };
+  const env = { ...process.env, NODE_ENV: 'test', MDM_ALLOW_LEGACY_TEST_MODE: '1', ...overrides };
   delete env.MDM_IDENTITY_READ_MODEL;
   delete env.PROCESS_GOVERNANCE_READ_MODEL;
   return env;

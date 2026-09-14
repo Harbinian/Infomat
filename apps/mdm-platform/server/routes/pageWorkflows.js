@@ -1,6 +1,8 @@
+const { sendMysqlUnavailable } = require('../mysqlRuntimeSchema');
+const { listPendingTodos, listEscalatedConflicts } = require('../workbenchMysqlSources');
 const express = require('express');
 const router = express.Router();
-const db = require('../db');
+function legacyDb() { return require('../db'); }
 const {
   requireAuth,
   getUserEffectivePermissionsAsync,
@@ -190,6 +192,7 @@ function runDbAction(res, action) {
   try {
     return action();
   } catch (error) {
+    if (sendMysqlUnavailable(res, error)) return;
     console.error(error);
     return res.status(500).json({ error: '服务器错误' });
   }
@@ -197,6 +200,7 @@ function runDbAction(res, action) {
 
 function runAction(res, action) {
   return action().catch(error => {
+    if (sendMysqlUnavailable(res, error)) return;
     console.error(error);
     return res.status(500).json({ error: '服务器错误' });
   });
@@ -208,20 +212,26 @@ async function departmentName(departmentId) {
   return row && row.name || null;
 }
 
-function pendingTodos(req, canViewAll) {
+async function pendingTodos(req, canViewAll, permissions) {
+  if (process.env.MDM_IDENTITY_READ_MODEL === 'mysql') {
+    return (await listPendingTodos(req.session, permissions)).length;
+  }
   const params = [];
   let sql = "SELECT COUNT(*) as count FROM todos WHERE status='pending'";
   if (!canViewAll) {
     sql += ' AND (to_dept_id=? OR to_dept_id IS NULL)';
     params.push(req.session.departmentId || -1);
   }
-  return db.prepare(sql).get(...params).count || 0;
+  return legacyDb().prepare(sql).get(...params).count || 0;
 }
 
-function escalatedConflictCount(canDecideEscalated) {
+async function escalatedConflictCount(canDecideEscalated) {
+  if (process.env.MDM_IDENTITY_READ_MODEL === 'mysql') {
+    return (await listEscalatedConflicts(canDecideEscalated)).length;
+  }
   if (!canDecideEscalated) return 0;
-  const fieldCount = db.prepare("SELECT COUNT(*) as count FROM field_conflicts WHERE status='escalated'").get().count || 0;
-  const termCount = db.prepare("SELECT COUNT(*) as count FROM term_conflicts WHERE status='escalated'").get().count || 0;
+  const fieldCount = legacyDb().prepare("SELECT COUNT(*) as count FROM field_conflicts WHERE status='escalated'").get().count || 0;
+  const termCount = legacyDb().prepare("SELECT COUNT(*) as count FROM term_conflicts WHERE status='escalated'").get().count || 0;
   return fieldCount + termCount;
 }
 
@@ -349,8 +359,8 @@ router.get('/', requireAuth, (req, res) => {
     const canViewAll = permSet.has('governance:read-global');
     const canDecideEscalated = permSet.has('governance:decide-escalation');
     const counts = {
-      pendingTodos: pendingTodos(req, canViewAll),
-      escalatedConflicts: escalatedConflictCount(canDecideEscalated)
+      pendingTodos: await pendingTodos(req, canViewAll, permSet),
+      escalatedConflicts: await escalatedConflictCount(canDecideEscalated)
     };
     const nextActions = buildNextActions(req, page, ownedRoles, counts);
     const workflow = view === 'form' ? formWorkflow(entityType) : workflowFromLabels(page.workflow, view);

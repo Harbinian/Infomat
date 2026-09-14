@@ -1,3 +1,4 @@
+const { sendMysqlUnavailable } = require('../mysqlRuntimeSchema');
 const express = require('express');
 const mysql = require('mysql2/promise');
 const router = express.Router();
@@ -28,6 +29,7 @@ async function governanceRepository() {
 }
 
 function handleDbError(res, error) {
+  if (sendMysqlUnavailable(res, error)) return;
   const code = String(error && error.code || '');
   const message = String(error && error.message || '');
   if (code.startsWith('ER_DUP_ENTRY') || code.startsWith('ER_NO_REFERENCED_ROW') || message.includes('constraint')) {

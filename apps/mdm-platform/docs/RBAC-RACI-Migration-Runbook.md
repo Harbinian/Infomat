@@ -23,6 +23,8 @@
 
 ## 2. 前置条件
 
+2026-09-10第06阶段不执行身份重迁移。现行身份链及授权按兼容读取保留，实际人员和迁移批次待正式读取授权；不得依据下文历史固定配置重新停用或授权账号。第06阶段的合成身份仅用于自有隔离验证。正式只读、备份、身份变更和运行操作分别批准，见[发布与恢复第10节](../../../docs/plans/2026-09-09-mdm-3000-launch/03-发布与恢复.md#10-第06阶段迁移核对与恢复)。
+
 1. 固定MySQL容器和连接配置可用。
 2. `scripts/infomat-services.local.env`存在且不输出其内容。
 3. `ADMIN001`已经存在于`person`和`user_accounts`。
@@ -31,16 +33,12 @@
 
 ## 3. 装载本机配置
 
-在仓库根目录读取本机配置。不要把密码打印到终端、日志或文档。
+本节是旧本机部署的配置来源说明，不是第06阶段可直接执行步骤。私有配置存在性不代表读取授权；由已批准的维护身份安全注入必要变量，核对准确服务器、端口、库名和迁移批次，不把Secret放入命令、输出或报告。
 
 ```powershell
 cd E:\CA001\Infomat
-$lines = Get-Content scripts\infomat-services.local.env
-foreach ($line in $lines) {
-  if ($line -match '^\s*([^#][^=]*)=(.*)$') {
-    [Environment]::SetEnvironmentVariable($matches[1].Trim(), $matches[2], 'Process')
-  }
-}
+# MYSQL_PASSWORD must be injected through the separately approved secure channel.
+# The following legacy target values must be confirmed for the actual environment.
 $env:MYSQL_HOST = "localhost"
 $env:MYSQL_PORT = "3307"
 $env:MYSQL_USER = "mdm_user"
@@ -114,11 +112,11 @@ npm run test:mainline
 - 迁移批次状态为`completed`。
 - 账号与角色变化均有`identity_access_events`。
 
-随后从仓库根目录执行：
+只有另行取得3000运行授权并完成版本、数据兼容及恢复核对后，才在应用目录使用专用入口；单独3000任务不得使用会同时操作PMO并执行初始化的共同启动脚本：
 
 ```powershell
-npm run start:infomat-services
-npm run smoke:infomat-services
+npm run service:start
+npm run service:check
 ```
 
 浏览器核对：

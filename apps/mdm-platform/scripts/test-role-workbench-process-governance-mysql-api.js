@@ -9,6 +9,11 @@ process.env.MDM_IDENTITY_READ_MODEL = 'mysql';
 process.env.PROCESS_GOVERNANCE_READ_MODEL = 'mysql';
 
 const roleWorkbenchRouter = require('../server/routes/roleWorkbench');
+require('../server/todoMysqlRepository').setTodoRepositoryFactory(() => ({ async listTodos() { return []; } }));
+require('../server/routes/processDesignMysql').setProcessDesignRepositoryFactory(() => ({
+  async listHandoffQueue() { return { items: [] }; },
+  async listHandoffConflictQueue() { return { items: [] }; }
+}));
 
 function request(server, method, urlPath) {
   const address = server.address();
@@ -83,6 +88,7 @@ async function main() {
   }));
 
   roleWorkbenchRouter.setProcessGovernanceRepositoryFactory(() => ({
+    async getWorkbenchContext() { return { a1Rows: [], nodes: [], edges: [] }; },
     async getQualityCases(filters = {}) {
       qualityCalls += 1;
       if (filters.canViewAll !== false) {

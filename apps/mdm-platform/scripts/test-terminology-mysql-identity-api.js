@@ -1,3 +1,4 @@
+const { syntheticSession, validateSyntheticSession } = require('./testHelpers/syntheticSession');
 const assert = require('assert');
 const express = require('express');
 
@@ -113,6 +114,7 @@ async function main() {
   ]);
   let permissionCalls = 0;
   auth.setIdentityRepositoryFactory(async () => ({
+    validateSession: validateSyntheticSession,
     async getUserEffectivePermissions(personId) {
       permissionCalls += 1;
       assert.strictEqual(personId, 42);
@@ -129,12 +131,12 @@ async function main() {
   const app = express();
   app.use(express.json());
   app.use((req, res, next) => {
-    req.session = {
+    req.session = syntheticSession({
       personId: 42,
       userId: 42,
       userName: '测试人员',
       departmentId: 8
-    };
+    });
     next();
   });
   app.use('/api/terminology', terminologyRouter);

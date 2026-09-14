@@ -21,7 +21,7 @@ assert.equal(INFOMAT_SERVICE_CONFIG.pmo.host, '127.0.0.1');
 assert.equal(INFOMAT_SERVICE_CONFIG.pmo.bindHost, '0.0.0.0');
 assert.equal(INFOMAT_SERVICE_CONFIG.mysql.host, 'localhost');
 assert.equal(INFOMAT_SERVICE_CONFIG.mysql.port, 3307);
-assert.equal(INFOMAT_SERVICE_CONFIG.mysql.user, 'mdm_user');
+assert.equal(INFOMAT_SERVICE_CONFIG.mysql.user, 'sa');
 assert.equal(INFOMAT_SERVICE_CONFIG.mysql.database, 'infomat_mdm');
 assert.equal(INFOMAT_SERVICE_CONFIG.mysql.connectionLimit, 16);
 assert.equal(INFOMAT_SERVICE_CONFIG.mysql.dockerContainer, 'infomat-input-baseline-review-mysql');
@@ -45,7 +45,7 @@ const fixed = buildFixedServiceEnv({
 
 assert.equal(fixed.MYSQL_HOST, 'localhost');
 assert.equal(fixed.MYSQL_PORT, '3307');
-assert.equal(fixed.MYSQL_USER, 'mdm_user');
+assert.equal(fixed.MYSQL_USER, 'sa');
 assert.equal(fixed.MYSQL_PASSWORD, 'secret-from-env');
 assert.equal(fixed.MYSQL_DATABASE, 'infomat_mdm');
 assert.equal(fixed.MYSQL_CONNECTION_LIMIT, '16');

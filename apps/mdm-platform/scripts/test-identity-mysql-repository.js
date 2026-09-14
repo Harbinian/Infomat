@@ -189,6 +189,41 @@ async function main() {
   assert.deepStrictEqual(payload.dataScopes.sort(), ['department:9', 'person:42'].sort());
   assert.strictEqual(payload.governanceModelVersion, ACCESS_MODEL_VERSION);
   assert.strictEqual(payload.positions[0].positionName, '流程治理专员');
+  assert.deepStrictEqual(payload.positionInfo, { status: 'available' });
+
+  // Optional position failures must be explicit and cannot relax core identity
+  // or permission checks. The existing positions array remains compatible.
+  for (const code of ['ER_NO_SUCH_TABLE', 'ER_BAD_FIELD_ERROR', 'ER_TABLEACCESS_DENIED_ERROR', 'ER_COLUMNACCESS_DENIED_ERROR']) {
+    const optionalPool = {
+      async execute(sql, params) {
+        if (sql.includes('FROM person_position_assignment ppa')) throw Object.assign(new Error(code), { code });
+        return pool.execute(sql, params);
+      }
+    };
+    const partial = await makeIdentityMysqlRepository(optionalPool).getCurrentUserPayload({ personId: 42 });
+    assert.deepStrictEqual(partial.positions, []);
+    assert.strictEqual(partial.positionInfo.status, 'unavailable');
+    assert.strictEqual(partial.positionInfo.code, 'POSITION_INFO_UNAVAILABLE');
+    assert.deepStrictEqual(partial.permissions, payload.permissions);
+    assert.deepStrictEqual(partial.roleAssignments, payload.roleAssignments);
+    assert.deepStrictEqual(partial.dataScopes, payload.dataScopes);
+  }
+  for (const marker of ['FROM person p LEFT JOIN user_accounts', 'FROM person_roles pr', 'FROM role_permissions rp']) {
+    const deniedPool = {
+      async execute(sql, params) {
+        if (sql.replace(/\s+/g, ' ').includes(marker)) throw Object.assign(new Error('denied'), { code: 'ER_TABLEACCESS_DENIED_ERROR' });
+        return pool.execute(sql, params);
+      }
+    };
+    await assert.rejects(() => makeIdentityMysqlRepository(deniedPool).getCurrentUserPayload({ personId: 42 }), { code: 'ER_TABLEACCESS_DENIED_ERROR' });
+  }
+  const failedPool = {
+    async execute(sql, params) {
+      if (sql.includes('FROM person_position_assignment ppa')) throw Object.assign(new Error('connection lost'), { code: 'PROTOCOL_CONNECTION_LOST' });
+      return pool.execute(sql, params);
+    }
+  };
+  await assert.rejects(() => makeIdentityMysqlRepository(failedPool).getCurrentUserPayload({ personId: 42 }), { code: 'PROTOCOL_CONNECTION_LOST' });
 
   const effective = await repo.getUserEffectivePermissions(42);
   assert.deepStrictEqual(effective.fieldConstraints['governance:draft-department'], {

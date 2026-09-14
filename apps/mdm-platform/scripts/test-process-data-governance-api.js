@@ -4,6 +4,7 @@ const express = require('express');
 process.env.MDM_DB_QUIET = '1';
 process.env.PROCESS_DATA_GOVERNANCE_ENABLED = '1';
 process.env.PROCESS_DATA_GOVERNANCE_TRIAL_PROCESS_VERSION_ID = '77';
+delete process.env.PROCESS_DATA_GOVERNANCE_READ_ONLY;
 
 const router = require('../server/routes/processDataGovernance');
 
@@ -40,9 +41,11 @@ const actors = {
   }
 };
 
+let packageStatus = 'mdm_governing';
+let packageVersionId = 77;
 function packageDetail() {
   return {
-    package: { id: 8, package_ref: 'pdg-package-v77', process_version_id: 77, process_name: '测试流程', status: 'mdm_governing', revision_no: 3 },
+    package: { id: 8, package_ref: 'pdg-package-v77', process_version_id: packageVersionId, process_name: '测试流程', status: packageStatus, revision_no: 3 },
     source_version: { process_version_id: 77, immutable: true, process: { process_ref: 'process_test' } },
     details: [{ id: 81, work_package_id: 8, detail_ref: 'object:data_test', detail_type: 'data_object_identity', status: 'pending', source: { data_name: '测试记录' } }],
     fact_requests: [{ id: 91, work_package_id: 8, detail_id: 81, target_department_id: 10, status: 'open', question_text: '实际触发条件是什么？' }],
@@ -160,6 +163,71 @@ async function request(baseUrl, method, path, user, body) {
     assert.strictEqual(result.status, 200);
     assert.ok(calls.some(call => call[0] === 'complete'));
 
+    process.env.PROCESS_DATA_GOVERNANCE_READ_ONLY = '1';
+    result = await request(baseUrl, 'GET', '/api/process-data-governance/status', 'lead');
+    assert.strictEqual(result.body.enabled, true);
+    assert.strictEqual(result.body.read_only, true);
+    result = await request(baseUrl, 'GET', '/api/process-data-governance/workbench', 'contact');
+    assert.deepStrictEqual(result.body.fact_requests, [], 'unfinished package facts must not enter the retained archive');
+    result = await request(baseUrl, 'GET', '/api/process-data-governance/work-packages/8', 'lead');
+    assert.strictEqual(result.status, 403);
+    assert.strictEqual(result.body.code, 'PROCESS_DATA_GOVERNANCE_COMPLETED_ONLY');
+    result = await request(baseUrl, 'GET', '/api/process-data-governance/fact-requests/91', 'contact');
+    assert.strictEqual(result.status, 403);
+    packageStatus = 'completed';
+    for (const actor of ['lead', 'admin', 'contact']) {
+      result = await request(baseUrl, 'GET', '/api/process-data-governance/workbench', actor);
+      assert.strictEqual(result.status, 200);
+      assert.deepStrictEqual(result.body.allowed_actions, ['view']);
+      assert.deepStrictEqual(result.body.work_items, []);
+      assert.strictEqual(result.body.summary.my_action_items, 0);
+      assert.strictEqual(result.body.work_packages.length, actor === 'contact' ? 0 : 1);
+    }
+    result = await request(baseUrl, 'GET', '/api/process-data-governance/fact-requests/91', 'contact');
+    assert.strictEqual(result.status, 200);
+    assert.deepStrictEqual(result.body.allowed_actions, ['view']);
+    result = await request(baseUrl, 'GET', '/api/process-data-governance/fact-requests/91', 'otherContact');
+    assert.strictEqual(result.status, 403, 'retained access must keep department isolation');
+    result = await request(baseUrl, 'GET', '/api/process-data-governance/work-packages/8', 'contact');
+    assert.strictEqual(result.status, 403);
+    result = await request(baseUrl, 'GET', '/api/process-data-governance/work-packages/8', 'lead');
+    assert.strictEqual(result.status, 200);
+    assert.deepStrictEqual(result.body.allowed_actions, ['view']);
+    packageVersionId = 78;
+    result = await request(baseUrl, 'GET', '/api/process-data-governance/work-packages/8', 'lead');
+    assert.strictEqual(result.status, 403, 'retained access must keep exact version scope');
+    packageVersionId = 77;
+    const beforeReadOnlyCalls = calls.length;
+    const mutations = [
+      ['POST', '/creation-tasks/reconcile'], ['POST', '/work-packages/8/generate-candidates'],
+      ['PATCH', '/work-packages/8/details/81'], ['POST', '/work-packages/8/fact-requests'],
+      ['POST', '/fact-requests/91/respond'], ['POST', '/fact-requests/91/close'],
+      ['POST', '/work-packages/8/complete']
+    ];
+    for (const actor of ['lead', 'admin', 'contact']) for (const [method, path] of mutations) {
+      result = await request(baseUrl, method, '/api/process-data-governance' + path, actor, { expected_revision: 3, process_version_id: 77 });
+      assert.strictEqual(result.status, 409, actor + ' ' + path);
+      assert.strictEqual(result.body.code, 'PROCESS_DATA_GOVERNANCE_READ_ONLY');
+    }
+    assert.strictEqual(calls.length, beforeReadOnlyCalls, 'read-only rejection must occur before repository writes');
+    const { makeProcessDataGovernanceRepository, queueProcessDataGovernanceCreationTask } = require('../server/processDataGovernanceRepository');
+    const noSql = new Proxy({}, { get() { throw new Error('read-only guard must precede every database operation'); } });
+    const guardedRepository = makeProcessDataGovernanceRepository(noSql);
+    await assert.rejects(queueProcessDataGovernanceCreationTask(noSql, 77), { code: 'PROCESS_DATA_GOVERNANCE_READ_ONLY' });
+    for (const method of ['queueAndMaterialize', 'materializeCreationTask', 'generateCandidates', 'updateDetail', 'createFactRequest', 'respondFactRequest', 'closeFactRequest', 'completeWorkPackage']) {
+      await assert.rejects(guardedRepository[method](), { code: 'PROCESS_DATA_GOVERNANCE_READ_ONLY' });
+    }
+    assert.deepStrictEqual(await guardedRepository.listWorkbenchItems(actors.lead, 77), []);
+    process.env.PROCESS_DATA_GOVERNANCE_READ_ONLY = 'typo';
+    result = await request(baseUrl, 'POST', '/api/process-data-governance/creation-tasks/reconcile', 'lead', { process_version_id: 77 });
+    assert.strictEqual(result.status, 503);
+    assert.strictEqual(result.body.code, 'PROCESS_DATA_GOVERNANCE_READ_ONLY_INVALID');
+    assert.strictEqual(calls.length, beforeReadOnlyCalls);
+    process.env.PROCESS_DATA_GOVERNANCE_READ_ONLY = '1';
+    process.env.PROCESS_DATA_GOVERNANCE_TRIAL_PROCESS_VERSION_ID = '';
+    result = await request(baseUrl, 'GET', '/api/process-data-governance/workbench', 'lead');
+    assert.strictEqual(result.status, 503, 'read-only must not bypass a missing exact version');
+    process.env.PROCESS_DATA_GOVERNANCE_TRIAL_PROCESS_VERSION_ID = '77';
     process.env.PROCESS_DATA_GOVERNANCE_ENABLED = '0';
     result = await request(baseUrl, 'GET', '/api/process-data-governance/status', 'lead');
     assert.strictEqual(result.status, 200);
@@ -168,6 +236,7 @@ async function request(baseUrl, method, path, user, body) {
     assert.strictEqual(result.status, 503);
     assert.strictEqual(result.body.code, 'PROCESS_DATA_GOVERNANCE_DISABLED');
   } finally {
+    delete process.env.PROCESS_DATA_GOVERNANCE_READ_ONLY;
     process.env.PROCESS_DATA_GOVERNANCE_ENABLED = '1';
     router.resetProcessDataGovernanceRepositoryFactory();
     router.resetProcessDataGovernanceActorFactory();

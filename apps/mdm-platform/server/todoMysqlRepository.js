@@ -1,3 +1,4 @@
+const { checkRuntimeSchema } = require('./mysqlRuntimeSchema');
 const mysql = require('mysql2/promise');
 const { mysqlConfigFromEnv } = require('./mysqlConfig');
 const { mdmMysqlSchemaSql, splitSqlStatements } = require('./mysqlSchema');
@@ -123,10 +124,11 @@ function makeTodoMysqlRepository(pool) {
 
       return (await rows(
         pool,
-        `SELECT t.*, fd.name AS from_dept_name, td.name AS to_dept_name
+        `SELECT t.*, fd.name AS from_dept_name, td.name AS to_dept_name${filters.includeFieldContext ? ', fe.process_governance_a1_code AS a1_code' : ''}
          FROM mdm_todos t
          LEFT JOIN departments fd ON fd.id = t.from_dept_id
          LEFT JOIN departments td ON td.id = t.to_dept_id
+         ${filters.includeFieldContext ? 'LEFT JOIN data_map_fields fe ON fe.id = t.related_field_id' : ''}
          WHERE ${conditions.join(' AND ')}
          ORDER BY
            CASE t.urgency WHEN 'high' THEN 3 WHEN 'medium' THEN 2 WHEN 'low' THEN 1 ELSE 2 END DESC,
@@ -202,7 +204,7 @@ async function todoRepository() {
     todoRepoPromise = (async () => {
       const pool = mysql.createPool(mysqlConfigFromEnv());
       const repo = makeTodoMysqlRepository(pool);
-      await repo.initSchema();
+      await checkRuntimeSchema(pool, 'todo');
       return repo;
     })();
   }

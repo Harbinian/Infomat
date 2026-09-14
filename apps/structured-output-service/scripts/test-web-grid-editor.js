@@ -662,6 +662,28 @@ const adapterOptions = {
   console.log(`web grid performance sample: ${elapsed.toFixed(1)}ms`);
 }
 
+{
+  const source = documentFixture();
+  source.forms[0].areas[0].items[0].required = false;
+  const session = WebGridCore.createSession({ adapter: ProcessV7GridAdapter, documentValue: source, sourceKey: 'false-value', adapterOptions });
+  const row = session.rows('form_items')[0];
+  session.updateCell('form_items', row._row_id, 'instructions', 'Keep the explicit false value');
+  const result = session.prepare(source, 'false-value');
+  assert.equal(result.ok, true, JSON.stringify(result.errors));
+  assert.equal(result.document.forms[0].areas[0].items[0].required, false);
+  session.updateCell('form_items', row._row_id, 'required', null);
+  assert.ok(session.prepare(source, 'false-value').errors.some(error => error.column === 'required'));
+
+  const column = session.definition('form_behavior_links').columns.find(column => column.key === 'operations');
+  assert.deepEqual(NativeWebGrid.normalizePastedValue(column, '填写、复核', column.values), { value: ['fill', 'review'] });
+  assert.deepEqual(NativeWebGrid.normalizePastedValue(column, 'fill,review', column.values), { value: ['fill', 'review'] });
+  assert.ok(NativeWebGrid.normalizePastedValue(column, '不支持的操作', column.values).error);
+  const link = session.rows('form_behavior_links')[0];
+  session.updateCell('form_items', row._row_id, 'required', false);
+  session.updateCell('form_behavior_links', link._row_id, 'operations', ['fill', 'review']);
+  assert.deepEqual(session.prepare(source, 'false-value').document.forms[0].behavior_links[0].operations, ['fill', 'review']);
+}
+
 console.log('web grid editor tests passed');
 
 function performanceNow() {

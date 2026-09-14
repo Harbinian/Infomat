@@ -1,3 +1,4 @@
+const { checkRuntimeSchema } = require('./mysqlRuntimeSchema');
 const mysql = require('mysql2/promise');
 const { mysqlConfigFromEnv } = require('./mysqlConfig');
 const { mdmMysqlSchemaSql, splitSqlStatements } = require('./mysqlSchema');
@@ -674,7 +675,7 @@ async function conflictRepository() {
     conflictRepoPromise = (async () => {
       const pool = mysql.createPool(mysqlConfigFromEnv());
       const repo = makeConflictMysqlRepository(pool);
-      await repo.initSchema();
+      await checkRuntimeSchema(pool, 'conflict');
       return repo;
     })();
   }

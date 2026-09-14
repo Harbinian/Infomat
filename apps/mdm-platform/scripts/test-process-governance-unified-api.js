@@ -1,4 +1,5 @@
 const assert = require('assert');
+const { syntheticSession, validateSyntheticSession } = require('./testHelpers/syntheticSession');
 const express = require('express');
 
 process.env.MDM_DB_QUIET = '1';
@@ -194,6 +195,7 @@ function makeRepository() {
 async function main() {
   const identityByUserId = new Map(Object.values(identities).map(item => [item.userId, item]));
   auth.setIdentityRepositoryFactory(async () => ({
+    validateSession: validateSyntheticSession,
     async getUserEffectivePermissions(userId) {
       return { permSet: new Set(identityByUserId.get(Number(userId))?.permissions || []), fieldConstraints: {} };
     },
@@ -222,6 +224,7 @@ async function main() {
       userName: identity.userName,
       departmentId: identity.departmentId
     };
+    req.session = syntheticSession(req.session);
     next();
   });
   app.use('/api/process-design', processDesignRouter);

@@ -36,6 +36,7 @@
   const LANE_FONT_SIZE = 42;
   const POOL_TITLE_FONT_SIZE = 48;
   const NODE_FONT_SIZE = 45;
+  const CLEAR_VIEW_ZOOM = 18 / NODE_FONT_SIZE;
   const EXTERNAL_NODE_FONT_SIZE = 42;
   const BADGE_FONT_SIZE = 36;
   const EDGE_FONT_SIZE = 39;
@@ -79,8 +80,13 @@
       }
       let current = '';
       let currentUnits = 0;
-      Array.from(paragraph).forEach(character => {
-        const units = characterUnits(character);
+      const words = typeof Intl !== 'undefined' && Intl.Segmenter
+        ? Array.from(new Intl.Segmenter('zh-CN', { granularity: 'word' }).segment(paragraph), item => item.segment)
+        : Array.from(paragraph);
+      const unitsOf = value => Array.from(value).reduce((sum, character) => sum + characterUnits(character), 0);
+      const chunks = words.flatMap(word => unitsOf(word) > maxUnits ? Array.from(word) : [word]);
+      chunks.forEach(character => {
+        const units = unitsOf(character);
         if (current && currentUnits + units > maxUnits) {
           lines.push(current);
           current = character;
@@ -113,7 +119,8 @@
     const wrapped = wrapDisplayText(rawLabel, maxUnits);
     const lineHeight = (external ? 21 : 22) * DIAGRAM_SCALE;
     const verticalPadding = (diamond ? 0 : external ? 40 : 36) * DIAGRAM_SCALE;
-    const measuredTextWidth = Math.ceil(wrapped.maxLineUnits * (external ? 13.2 : 14.4) * DIAGRAM_SCALE);
+    // Keep the pre-wrapped Chinese words intact when Cytoscape measures the bold font.
+    const measuredTextWidth = Math.ceil(wrapped.maxLineUnits * (external ? EXTERNAL_NODE_FONT_SIZE : NODE_FONT_SIZE) * 1.12);
     const measuredTextHeight = wrapped.lineCount * lineHeight;
     if (diamond) {
       const textMaxWidth = Math.max(154 * DIAGRAM_SCALE, measuredTextWidth);
@@ -1847,8 +1854,8 @@
     const anchor = selectedNode || (firstNode && cy.getElementById(firstNode.data.id));
     const bounds = anchor?.length ? anchor.boundingBox({ includeLabels: true }) : null;
     const zoom = bounds
-      ? Math.max(cy.minZoom(), Math.min(1, (cy.width() - 48) / bounds.w, (cy.height() - 48) / bounds.h))
-      : 1;
+      ? Math.max(cy.minZoom(), Math.min(CLEAR_VIEW_ZOOM, (cy.width() - 48) / bounds.w, (cy.height() - 48) / bounds.h))
+      : CLEAR_VIEW_ZOOM;
     cy.zoom(zoom);
     cy.pan(bounds ? { x: 24 - bounds.x1 * zoom, y: 24 - bounds.y1 * zoom } : { x: 24, y: 24 });
     return {
@@ -1885,14 +1892,55 @@
       minZoom: 0.03,
       maxZoom: 1.8
     });
+    let viewportMode = 'clear';
+    const selectionKey = options.selectedFocus ? `${options.selectedFocus.kind}:${options.selectedFocus.ref}` : '';
+    let readingFocusRef = options.viewport?.focusRef || '';
+    if (options.viewport?.selectionKey !== selectionKey) readingFocusRef = '';
+    let adjustingViewport = false;
+    let resizeObserver;
+    let lastSize = { width: cy.width(), height: cy.height() };
+    function reportViewport(extra = {}) {
+      const viewport = { ...extra, mode: viewportMode, zoom: cy.zoom(), focusRef: currentReadingFocus() };
+      options.onViewportModeChange?.(viewport);
+      return viewport;
+    }
+    function currentReadingFocus() {
+      return readingFocusRef || cy.nodes('.behavior-node:selected').first().data('focusRef') || '';
+    }
+    function applyViewport(mode, saved) {
+      adjustingViewport = true;
+      cy.resize();
+      let result = {};
+      if (mode === 'full') {
+        result.fullFitZoom = fitViewport(cy);
+      } else if (mode === 'clear') {
+        result = showInitialViewport(cy, model);
+      } else {
+        cy.zoom(saved.zoom);
+        cy.pan({
+          x: saved.pan.x + (cy.width() - (saved.width || cy.width())) / 2,
+          y: saved.pan.y + (cy.height() - (saved.height || cy.height())) / 2
+        });
+      }
+      viewportMode = mode;
+      lastSize = { width: cy.width(), height: cy.height() };
+      adjustingViewport = false;
+      return reportViewport(result);
+    }
+    cy.on('pan zoom', () => {
+      if (adjustingViewport) return;
+      viewportMode = 'manual';
+      reportViewport();
+    });
     cy.on('tap', '.behavior-node, .internal-call-node, .external-node, .countersign-badge, .aggregate-badge, edge', event => {
       const element = event.target;
       const focusKind = element.data('focusKind');
       const focusRef = element.data('focusRef');
+      readingFocusRef = focusKind === 'behavior' ? focusRef : '';
       if (focusKind && typeof options.onFocus === 'function') options.onFocus(focusKind, focusRef);
     });
     cy.ready(() => {
-      const selectedFocus = options.selectedFocus;
+      const selectedFocus = readingFocusRef ? { kind: 'behavior', ref: readingFocusRef } : options.selectedFocus;
       if (selectedFocus?.kind && selectedFocus?.ref) {
         const selector = selectedFocus.kind === 'relation'
           ? 'edge'
@@ -1903,49 +1951,48 @@
         );
         if (match.length) match[0].select();
       }
-      let viewport;
       if (options.viewport && Number.isFinite(options.viewport.zoom) && options.viewport.pan) {
-        cy.zoom(options.viewport.zoom);
-        cy.pan(options.viewport.pan);
-        viewport = { mode: 'restored', fullFitZoom: options.viewport.zoom };
+        applyViewport(options.viewport.mode || 'manual', options.viewport);
       } else {
-        viewport = showInitialViewport(cy, model);
+        applyViewport('clear');
       }
-      if (typeof options.onViewportModeChange === 'function') {
-        options.onViewportModeChange(viewport);
+      if (typeof ResizeObserver === 'function') {
+        resizeObserver = new ResizeObserver(() => {
+          const width = container.clientWidth;
+          const height = container.clientHeight;
+          if (!width || !height || (Math.abs(width - lastSize.width) < 1 && Math.abs(height - lastSize.height) < 1)) return;
+          applyViewport(viewportMode, { zoom: cy.zoom(), pan: cy.pan(), ...lastSize });
+        });
+        resizeObserver.observe(container);
       }
     });
     return {
       cy,
       model,
       fit() {
-        fitViewport(cy);
-        const viewport = {
-          mode: 'full',
-          fullFitZoom: cy.zoom()
-        };
-        if (typeof options.onViewportModeChange === 'function') {
-          options.onViewportModeChange(viewport);
-        }
-        return viewport;
+        return applyViewport('full');
       },
       reset() {
-        const viewport = showInitialViewport(cy, model);
-        if (typeof options.onViewportModeChange === 'function') {
-          options.onViewportModeChange(viewport);
-        }
-        return viewport;
+        return applyViewport('clear');
+      },
+      focusNode(ref) {
+        const node = cy.nodes('.behavior-node').filter(item => item.data('focusRef') === ref).first();
+        if (!node.length) return false;
+        cy.$(':selected').unselect();
+        node.select();
+        readingFocusRef = ref;
+        applyViewport('clear');
+        return true;
       },
       viewport() {
-        return { zoom: cy.zoom(), pan: cy.pan() };
+        return { mode: viewportMode, zoom: cy.zoom(), pan: cy.pan(), focusRef: currentReadingFocus(), selectionKey, ...lastSize };
       },
       restore(viewport) {
         if (!viewport || !Number.isFinite(viewport.zoom) || !viewport.pan) return this.reset();
-        cy.zoom(viewport.zoom);
-        cy.pan(viewport.pan);
-        return { mode: 'restored', fullFitZoom: viewport.zoom };
+        return applyViewport(viewport.mode || 'manual', viewport);
       },
       destroy() {
+        resizeObserver?.disconnect();
         cy.destroy();
       }
     };

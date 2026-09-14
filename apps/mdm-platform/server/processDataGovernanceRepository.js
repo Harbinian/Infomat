@@ -9,6 +9,7 @@ const {
   riskFromDocument,
   text
 } = require('./processDataGovernance');
+const { assertProcessDataGovernanceWritable, isProcessDataGovernanceReadOnly } = require('./processDataGovernanceScope');
 
 function parseJson(value, fallback = null) {
   if (value == null || value === '') return fallback;
@@ -227,6 +228,7 @@ async function insertEvent(executor, packageId, eventType, actor, options = {}) 
 }
 
 async function queueProcessDataGovernanceCreationTask(executor, processVersionId, actor = {}) {
+  assertProcessDataGovernanceWritable();
   const versionId = Number(processVersionId);
   if (!Number.isInteger(versionId) || versionId < 1) {
     throw repositoryError(422, 'PROCESS_DATA_GOVERNANCE_VERSION_REQUIRED', '流程版本标识必须是正整数');
@@ -248,14 +250,14 @@ async function queueProcessDataGovernanceCreationTask(executor, processVersionId
 function makeProcessDataGovernanceRepository(pool) {
   async function packageRow(executor, packageId, lock = false) {
     return await one(executor, `
-      SELECT p.*, d.department_name AS owning_department_name,
+      SELECT p.*, d.name AS owning_department_name,
              v.document_no, v.document_title, v.edition, v.schema_version,
              COALESCE(JSON_UNQUOTE(JSON_EXTRACT(v.process_content_json, '$.process.process_name')), v.document_title) AS process_name
       FROM process_data_governance_work_packages p
       JOIN process_design_versions v ON v.id=p.process_version_id
       LEFT JOIN departments d ON d.id=p.owning_department_id
       WHERE p.id=?
-      ${lock ? 'FOR UPDATE' : ''}
+      ${lock ? 'FOR UPDATE OF p, v FOR SHARE OF d' : ''}
     `, [packageId]);
   }
 
@@ -291,6 +293,7 @@ function makeProcessDataGovernanceRepository(pool) {
   }
 
   async function materializeCreationTask(processVersionId, actor = {}) {
+    assertProcessDataGovernanceWritable();
     const versionId = Number(processVersionId);
     try {
       return await withTransaction(pool, async connection => {
@@ -366,13 +369,14 @@ function makeProcessDataGovernanceRepository(pool) {
   }
 
   async function queueAndMaterialize(processVersionId, actor = {}) {
+    assertProcessDataGovernanceWritable();
     await withTransaction(pool, connection => queueProcessDataGovernanceCreationTask(connection, processVersionId, actor));
     return await materializeCreationTask(processVersionId, actor);
   }
 
   async function listWorkPackages(processVersionId) {
     const result = await rows(pool, `
-      SELECT p.*, d.department_name AS owning_department_name,
+      SELECT p.*, d.name AS owning_department_name,
              v.document_no, v.document_title, v.edition, v.schema_version,
              COALESCE(JSON_UNQUOTE(JSON_EXTRACT(v.process_content_json, '$.process.process_name')), v.document_title) AS process_name,
              (SELECT JSON_OBJECT(
@@ -399,7 +403,7 @@ function makeProcessDataGovernanceRepository(pool) {
     const statuses = options.all ? ['open', 'answered', 'closed', 'cancelled'] : ['open'];
     const placeholders = statuses.map(() => '?').join(',');
     const result = await rows(pool, `
-      SELECT fr.*, gd.detail_ref, d.department_name AS target_department_name,
+      SELECT fr.*, gd.detail_ref, d.name AS target_department_name,
              p.process_version_id, p.package_ref, p.revision_no AS package_revision_no,
              v.document_no, v.document_title,
              COALESCE(JSON_UNQUOTE(JSON_EXTRACT(v.process_content_json, '$.process.process_name')), v.document_title) AS process_name
@@ -422,13 +426,13 @@ function makeProcessDataGovernanceRepository(pool) {
     const sourceIndex = buildSourceIndex(document);
     const [detailRows, factRows, reviewRows, eventRows] = await Promise.all([
       rows(pool, `
-        SELECT gd.*, d.department_name AS responsible_department_name
+        SELECT gd.*, d.name AS responsible_department_name
         FROM process_data_governance_details gd
         LEFT JOIN departments d ON d.id=gd.responsible_department_id
         WHERE gd.work_package_id=? ORDER BY gd.detail_type, gd.detail_ref
       `, [packageId]),
       rows(pool, `
-        SELECT fr.*, gd.detail_ref, d.department_name AS target_department_name
+        SELECT fr.*, gd.detail_ref, d.name AS target_department_name
         FROM process_data_governance_fact_requests fr
         JOIN process_data_governance_details gd ON gd.id=fr.detail_id
         LEFT JOIN departments d ON d.id=fr.target_department_id
@@ -484,6 +488,7 @@ function makeProcessDataGovernanceRepository(pool) {
   }
 
   async function generateCandidates(packageId, expectedRevision, actor = {}) {
+    assertProcessDataGovernanceWritable();
     return await withTransaction(pool, async connection => {
       const packageDataRow = await assertPackageRevision(connection, packageId, expectedRevision);
       const { document } = await assertPackageSourceBinding(connection, packageDataRow);
@@ -553,6 +558,7 @@ function makeProcessDataGovernanceRepository(pool) {
   }
 
   async function updateDetail(packageId, detailId, expectedRevision, payload, actor = {}) {
+    assertProcessDataGovernanceWritable();
     const status = text(payload && payload.status);
     if (!DETAIL_STATUSES.includes(status)) throw repositoryError(422, 'PROCESS_DATA_GOVERNANCE_DETAIL_STATUS_INVALID', '明细处理状态无效');
     if (status === 'needs_business_fact') {
@@ -602,6 +608,7 @@ function makeProcessDataGovernanceRepository(pool) {
   }
 
   async function createFactRequest(packageId, expectedRevision, payload, actor = {}) {
+    assertProcessDataGovernanceWritable();
     const detailId = Number(payload && payload.detail_id);
     const targetDepartmentId = Number(payload && payload.target_department_id);
     const factType = text(payload && payload.requested_fact_type);
@@ -655,13 +662,13 @@ function makeProcessDataGovernanceRepository(pool) {
   async function getFactRequest(requestId, lock = false, executor = pool) {
     return await one(executor, `
       SELECT fr.*, gd.detail_ref, gd.detail_type, gd.source_ref, p.process_version_id, p.revision_no AS package_revision_no,
-             d.department_name AS target_department_name
+             d.name AS target_department_name
       FROM process_data_governance_fact_requests fr
       JOIN process_data_governance_details gd ON gd.id=fr.detail_id
       JOIN process_data_governance_work_packages p ON p.id=fr.work_package_id
       LEFT JOIN departments d ON d.id=fr.target_department_id
       WHERE fr.id=?
-      ${lock ? 'FOR UPDATE' : ''}
+      ${lock ? 'FOR UPDATE OF fr, gd, p FOR SHARE OF d' : ''}
     `, [requestId]);
   }
 
@@ -700,6 +707,7 @@ function makeProcessDataGovernanceRepository(pool) {
   }
 
   async function respondFactRequest(requestId, expectedRevision, payload, actor = {}) {
+    assertProcessDataGovernanceWritable();
     const answer = text(payload && payload.answer_text);
     const evidence = text(payload && payload.evidence_ref);
     if (!answer) throw repositoryError(422, 'PROCESS_DATA_GOVERNANCE_FACT_ANSWER_REQUIRED', '业务事实答复不能为空');
@@ -734,6 +742,7 @@ function makeProcessDataGovernanceRepository(pool) {
   }
 
   async function closeFactRequest(requestId, expectedRevision, payload, actor = {}) {
+    assertProcessDataGovernanceWritable();
     const basis = text(payload && payload.basis);
     if (!basis) throw repositoryError(422, 'PROCESS_DATA_GOVERNANCE_FACT_CLOSE_BASIS_REQUIRED', '关闭业务事实问题时必须填写采用情况和依据');
     return await withTransaction(pool, async connection => {
@@ -766,6 +775,7 @@ function makeProcessDataGovernanceRepository(pool) {
   }
 
   async function completeWorkPackage(packageId, expectedRevision, basis, actor = {}) {
+    assertProcessDataGovernanceWritable();
     const reviewBasis = text(basis);
     if (!reviewBasis) throw repositoryError(422, 'PROCESS_DATA_GOVERNANCE_REVIEW_BASIS_REQUIRED', 'MDM工作组审核依据不能为空');
     return await withTransaction(pool, async connection => {
@@ -807,6 +817,7 @@ function makeProcessDataGovernanceRepository(pool) {
   }
 
   async function listWorkbenchItems(actor = {}, processVersionId) {
+    if (isProcessDataGovernanceReadOnly()) return [];
     const roleCodes = actor.roleCodes instanceof Set ? actor.roleCodes : new Set(actor.roleCodes || []);
     if (roleCodes.has('admin')) return [];
     const items = [];

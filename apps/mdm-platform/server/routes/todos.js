@@ -1,3 +1,4 @@
+const { sendMysqlUnavailable } = require('../mysqlRuntimeSchema');
 const express = require('express');
 const router = express.Router();
 const {
@@ -11,6 +12,7 @@ const {
 } = require('../todoMysqlRepository');
 
 function handleDbError(res, error) {
+  if (sendMysqlUnavailable(res, error)) return;
   const code = String(error && error.code || '');
   const message = String(error && error.message || '');
   if (code.startsWith('ER_') || message.includes('constraint')) {

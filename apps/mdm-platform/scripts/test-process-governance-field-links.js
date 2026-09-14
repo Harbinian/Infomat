@@ -1,4 +1,5 @@
 const assert = require('assert');
+const { syntheticSession, validateSyntheticSession } = require('./testHelpers/syntheticSession');
 const express = require('express');
 
 process.env.MDM_DB_QUIET = '1';
@@ -78,6 +79,7 @@ async function main() {
   const repo = makeFakeRepository();
   setDataMapRepositoryFactory(async () => repo);
   auth.setIdentityRepositoryFactory(async () => ({
+    validateSession: validateSyntheticSession,
     async getUserEffectivePermissions(userId) {
       assert.strictEqual(userId, 42);
       return {
@@ -99,6 +101,7 @@ async function main() {
       userName: '部门主对接人',
       departmentId: 8
     };
+    req.session = syntheticSession(req.session);
     next();
   });
   app.use('/api/field-entries', fieldEntriesRouter);

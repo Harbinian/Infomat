@@ -494,7 +494,7 @@ function makeIdentityMysqlRepository(pool) {
     return row ? normalizePersonUser(row) : null;
   }
 
-  async function listPersonPositions(personId, executor = pool) {
+  async function readPersonPositionInfo(personId, executor = pool) {
     try {
       const positionRows = await rows(executor, `
         SELECT p.position_id, p.position_code, p.position_name,
@@ -505,7 +505,7 @@ function makeIdentityMysqlRepository(pool) {
           AND ppa.status='active'
         ORDER BY p.department_admin_level IS NULL, p.department_admin_level, p.position_name
       `, [personId]);
-      return positionRows.map(row => ({
+      const positions = positionRows.map(row => ({
         positionId: row.position_id,
         positionCode: row.position_code,
         positionName: row.position_name,
@@ -513,9 +513,22 @@ function makeIdentityMysqlRepository(pool) {
         departmentAdminTitle: row.department_admin_title,
         responsibilityScope: row.responsibility_scope
       }));
+      return { positions, positionInfo: { status: 'available' } };
     } catch (error) {
-      if (!shouldFallbackFromPersonIdentity(error)) throw error;
-      return [];
+      // Positions are optional display data, never a source of MDM permissions.
+      // A table-scoped MySQL account can receive access denied before MySQL
+      // reports that these optional tables do not exist. Keep this exception
+      // local: failures reading person/accounts/roles/permissions must propagate.
+      const accessDenied = ['ER_TABLEACCESS_DENIED_ERROR', 'ER_COLUMNACCESS_DENIED_ERROR'].includes(error.code);
+      if (!accessDenied && !shouldFallbackFromPersonIdentity(error)) throw error;
+      return {
+        positions: [],
+        positionInfo: {
+          status: 'unavailable',
+          code: 'POSITION_INFO_UNAVAILABLE',
+          message: '岗位信息暂不可用。当前访问权限仍按有效MDM工作角色计算。'
+        }
+      };
     }
   }
 
@@ -968,7 +981,7 @@ function makeIdentityMysqlRepository(pool) {
       const roleCodes = rbacRoles.map(role => role.code);
       const { permSet } = await getUserEffectivePermissions(user.personId);
       const permissions = Array.from(permSet);
-      const positions = await listPersonPositions(user.personId);
+      const { positions, positionInfo } = await readPersonPositionInfo(user.personId);
 
       return {
         id: user.personId,
@@ -987,6 +1000,7 @@ function makeIdentityMysqlRepository(pool) {
           name: user.departmentName || null
         } : null,
         positions,
+        positionInfo,
         rbacRoles,
         roleAssignments: rbacRoles,
         roleCodes,

@@ -1038,6 +1038,23 @@ function makeProcessGovernanceMysqlRepository(pool) {
       };
     },
 
+    async getWorkbenchContext({ departmentName, canViewAll }) {
+      if (!canViewAll && !departmentName) return { a1Rows: [], nodes: [], edges: [] };
+      const [snapshots] = await pool.execute(activeSnapshotSql());
+      const snapshot = snapshots[0];
+      if (!snapshot) return { a1Rows: [], nodes: [], edges: [] };
+      const params = [snapshot.id];
+      const departmentClause = canViewAll ? '' : ' AND dept_name=?';
+      if (!canViewAll) params.push(departmentName);
+      const [a1Rows] = await pool.execute(`SELECT * FROM process_a1_items
+        WHERE snapshot_id=?${departmentClause} ORDER BY dept_name, l3_name, a1_code, id LIMIT 80`, params);
+      const [nodes] = await pool.execute(`SELECT node_key, node_type, name, parent_key, dept_name, domain_name
+        FROM process_governance_nodes WHERE snapshot_id=?`, [snapshot.id]);
+      const [edges] = await pool.execute(`SELECT source_key, target_key
+        FROM process_governance_edges WHERE snapshot_id=?`, [snapshot.id]);
+      return { a1Rows, nodes, edges };
+    },
+
     async getA1Items(filters = {}) {
       const [snapshots] = await pool.execute(activeSnapshotSql());
       const snapshot = snapshots[0];

@@ -5379,6 +5379,7 @@
       return `<section class="authoring-guide" aria-label="逐步操作引导">
         <div class="authoring-guide-copy">
           <strong id="authoring-guide-title" tabindex="-1">操作引导 · ${index + 1}/${steps.length} · ${escapeHtml(step.title)}</strong>
+          <span class="technical-note">手动阅读位置，不代表编制完成进度；按“下一步”推进。</span>
           <p>${escapeHtml(started && !onStep ? `逐步核对停在“${step.title}”。你可以继续自由查看，或点击右侧按钮返回这一步。` : step.instruction)}</p>
         </div>
         <div class="authoring-guide-actions">
@@ -5961,6 +5962,7 @@
     function nativeGridDisplayValue(column, value, row) {
       if (value == null || value === '') return '';
       if (column.editor === 'boolean') return value ? '是' : '否';
+      if (column.editor === 'multi-select') return list(value).map(value => column.values?.find(option => option.value === value)?.label || value).join('、');
       if (column.editor === 'select') return column.values?.find(option => String(option.value) === String(value))?.label || value;
       if (column.editor === 'lookup') return gridLookupLabel(column.lookup, value, row);
       if (column.editor === 'update-fields') return selectedUpdateFieldLabels(row.data_ref, value, gridUpdateFieldOptions(row)).join('、');
@@ -5968,7 +5970,7 @@
     }
 
     function nativeGridOptionRows(column, row) {
-      if (column.editor === 'select') return column.values || [];
+      if (column.editor === 'select' || column.editor === 'multi-select') return column.values || [];
       if (column.editor === 'lookup') return gridLookupRows(column.lookup, row);
       return [];
     }
@@ -6003,6 +6005,9 @@
       }
       if (column.editor === 'boolean') {
         return `<input type="checkbox" ${attributes}${rawValue ? ' checked' : ''}${disabled}>`;
+      }
+      if (column.editor === 'multi-select') {
+        return `<select multiple size="4" style="height:auto" ${attributes}${disabled} title="按住Ctrl可选择多项，也可粘贴用顿号分隔的中文操作名称">${(column.values || []).map(option => `<option value="${escapeAttribute(option.value)}" ${list(rawValue).includes(option.value) ? 'selected' : ''}>${escapeHtml(option.label)}</option>`).join('')}</select>`;
       }
       if (column.editor === 'select' || column.editor === 'lookup') {
         const options = nativeGridOptionRows(column, row);
@@ -6094,6 +6099,8 @@
           </div>
         </div>
         ${addDisabled ? `<div class="inline-warning"><strong>暂不能新增。</strong>${escapeHtml(parent.deleted ? `当前${parent.label}已在工作副本中标记删除。` : `请先到上级表格明确选择${parent.label}。`)}</div>` : ''}
+        ${tableId === 'form_items' ? '<p class="technical-note">引用对象字段后，字段类型和业务数据归属为派生只读列。补录引用时，请从“引用对象字段”起粘贴三列：引用、字段值使用方式、取值方式。</p>' : ''}
+        <p data-grid-paste-feedback role="status" aria-live="polite"></p>
         <div class="web-grid-shell" id="webGrid-${escapeAttribute(tableId)}">${renderNativeGridTable(tableId)}</div>
       </section>`;
     }
@@ -6511,7 +6518,8 @@
       if (kind === 'flow') {
         return `
           <button class="button primary small" data-action="reset-flow-diagram">清晰检查</button>
-          <button class="button secondary small" data-action="fit-flow-diagram">查看全图</button>`;
+          <button class="button secondary small" data-action="fit-flow-diagram">查看全图</button>
+          <label class="flow-node-focus">定位节点<select data-flow-node-focus aria-label="定位流程节点">${optionHtml([{ value: '', label: '请选择节点' }, ...(currentDocument()?.behaviors || []).map((item, index) => ({ value: item.behavior_ref, label: `${index + 1}. ${item.behavior_name || '未命名节点'}` }))], graphStateManager.view(candidateStateKey()).flow?.focusRef || '')}</select></label>`;
       }
       return `
         <details class="graph-view-actions">
@@ -6900,6 +6908,9 @@
         ['pending_confirmation', 'needs_recheck'].includes(event.review_status)
       ).length;
       const showLifecycleDetails = lifecycle.applicability === 'applicable' || advancedLifecycleMode;
+      const detailsKey = `${candidateStateKey()}:${dataObject.data_ref}`;
+      const previousDetails = workspace.querySelector('[data-lifecycle-details]');
+      const detailsOpen = previousDetails?.dataset.lifecycleDetails === detailsKey ? previousDetails.open : showLifecycleDetails;
       const advancedChecklist = (globalThis.StructureLearningScore?.advancedLifecycleChecklist?.(currentDocument()) || [])
         .filter(item => item.focusPath.startsWith(`data_objects.${dataIndex}.`));
       const routes = (lifecycle.routes || []).map((route, routeIndex) => {
@@ -6949,10 +6960,12 @@
             }) : ''}
             ${lifecycle.applicability === 'not_applicable' ? field(`data_objects.${dataIndex}.lifecycle.decision_notes`, '补充说明', { type: 'textarea', className: 'wide' }) : ''}
           </div>
-          ${lifecycle.applicability === 'applicable' ? renderLifecycleStateFields(`data_objects.${dataIndex}.lifecycle.entry_state`, '这条数据进入本流程时的状态', lifecycle.entry_state) : ''}
-          ${showLifecycleDetails
-            ? `<div class="cross-department-list">${routes || `<div class="inline-warning"><strong>尚未形成生命周期事件。</strong>现有材料可能没有明确动作，也可能尚未建立数据与行为关系。请返回数据流编辑对象信息，或保留待确认后下载。</div>`}</div>`
-            : '<div class="inline-note"><strong>先回答上面的问题。</strong><p>选择“会改变”后，页面再显示业务使用状态、保管方式和确实适用的匿名处理问题。</p></div>'}
+          <details class="nested" data-lifecycle-details="${escapeAttribute(detailsKey)}" ${detailsOpen ? 'open' : ''}>
+            <summary>查看或维护已记录的生命周期明细</summary>
+            <p class="technical-note">展开可核对入口状态和已有路径。展开、收起或修改明细都不会替你改变上面的判断；“待确认”仍保留待确认。</p>
+            ${renderLifecycleStateFields(`data_objects.${dataIndex}.lifecycle.entry_state`, '这条数据进入本流程时的状态', lifecycle.entry_state)}
+            <div class="cross-department-list">${routes || '<div class="inline-note">尚未记录生命周期路径。可以先核对入口状态；没有依据的内容保留待确认。</div>'}</div>
+          </details>
           <p class="boundary"><strong>边界：</strong>当前v7文件记录未审核的单流程事实和建议，暂不能直接导入3000。生命周期缺口属于业务提示，不阻止草稿下载。</p>
         </div>
       </section>`;
@@ -7478,17 +7491,21 @@
           selectedFocus: compactTaskUiEnabled() ? reviewContext().trail.findLast(item => ['behavior', 'relation'].includes(item.kind) && globalThis.ReviewWorkspace.resolve(data, item)) || null : ['behavior', 'relation'].includes(graphSelection?.kind) ? graphSelection : null,
           onFocus: handleFlowDiagramFocus,
           onViewportModeChange(viewport) {
+            const nodeFocus = document.querySelector('[data-flow-node-focus]');
+            if (nodeFocus) nodeFocus.value = viewport.focusRef || '';
             const notice = document.getElementById('diagramViewportNotice');
             if (notice) {
-              notice.hidden = viewport?.mode !== 'clear';
-              if (viewport?.mode === 'clear') {
-                notice.textContent = `已定位选中节点或流程起点，当前缩放${Math.round(viewport.zoom * 100)}%；需要总览时点击“查看全图”。`;
-              }
+              notice.hidden = false;
+              const percent = Math.round(viewport.zoom * 100);
+              notice.textContent = viewport.mode === 'full'
+                ? `全图概览，当前缩放${percent}%。${viewport.zoom < 0.31 ? '流程较长，文字已缩小；点击“清晰检查”阅读节点。' : '点击“清晰检查”阅读节点。'}`
+                : `当前缩放${percent}%；可拖动画布或用滚轮缩放。清晰检查定位选中节点或流程起点；查看全图用于总览。`;
             }
           }
         });
         if (compactTaskUiEnabled() && !reviewContext().diagramInitialized) {
-          diagramView.fit();
+          const overview = diagramView.fit();
+          if (overview.zoom < 0.31) diagramView.reset();
           reviewContext().diagramInitialized = true;
           captureGraphViewport();
         }
@@ -7674,7 +7691,6 @@
       }
       entry.data = result.document;
       if (options.resetEditSessionOnSuccess) editSessionManager.reset();
-      updateSelectionFromGraphResult(result);
       if (command.type === 'delete_object') {
         editSessionManager.reset();
         graphSelection = null;
@@ -7687,6 +7703,7 @@
       }
       invalidateCurrentChecks(entry);
       resetWebGridEditor({ preserveViewState: true });
+      updateSelectionFromGraphResult(result);
       refreshCandidateDirty(entry);
       render();
       if (result.details?.warnings?.length) {
@@ -8015,7 +8032,12 @@
         activeDataRef = focusRef;
         activeDataFieldRef = text(target.dataFieldRef);
         activeStepView = 'data';
-        if (activeDataEditingMode === 'guided' && activeDataMode === 'flow') openEntityEditSession('data', focusRef);
+        const relationPath = focusPaths.map(path => path.match(/^data_objects\.(\d+)\.behavior_links\.(\d+)\./)).find(Boolean);
+        if (relationPath && activeDataEditingMode === 'guided') {
+          activeDataMode = 'flow';
+          const link = currentDocument()?.data_objects?.[Number(relationPath[1])]?.behavior_links?.[Number(relationPath[2])];
+          if (link) openDataEdgeSession(focusRef, link.behavior_ref);
+        } else if (activeDataEditingMode === 'guided' && activeDataMode === 'flow') openEntityEditSession('data', focusRef);
       } else if (focusKind === 'form') {
         activeEditorSection = 'forms';
         activeFormRef = focusRef;
@@ -8629,12 +8651,13 @@
       const values = (currentDocument()?.behaviors || []).map((behavior, index) => {
         const mode = actorAssignmentMode(behavior);
         const parsed = parseActorRole(behavior.current_actor_role);
-        const department = mode === 'company_wide'
+        const isControl = ['decision', 'parallel_split', 'parallel_join'].includes(behavior.node_type);
+        const department = isControl ? '流程控制' : mode === 'company_wide'
           ? '全公司通用'
           : mode === 'dynamic_from_data'
             ? '运行时责任部门'
             : parsed.department || '执行部门待选择';
-        const crossDepartment = mode === 'fixed_department'
+        const crossDepartment = !isControl && mode === 'fixed_department'
           && owner
           && parsed.department
           && parsed.department !== owner
@@ -8783,7 +8806,7 @@
           <div class="item-actions">
             <button class="button danger small" data-action="remove-data-field" data-data-index="${dataIndex}" data-index="${active.index}">删除当前字段</button>
           </div>
-        </div>` : `<div class="data-field-detail">${emptyList('尚未建立对象字段。')}</div>`;
+        </div>` : `<div class="data-field-detail">${emptyList(item.fields?.length ? '请选择左侧字段查看或维护。' : '尚未建立对象字段。')}</div>`;
       return `
         <div class="field wide" data-focus-path="data_objects.${dataIndex}.fields">
           <span class="field-label">数据对象字段明细</span>
@@ -8806,7 +8829,7 @@
       return section(
         '数据对象与对象字段引用摘要（只读）',
         '这里不再重复编辑对象名称、信息类型、对象字段名称、类型或定义。需要调整时，使用稳定引用返回正式定义入口。',
-        rows || emptyList('尚未登记数据对象。请先回到“数据对象与行为关系”建立正式定义。')
+        `<details><summary>展开对象字段引用摘要（${(currentDocument()?.data_objects || []).length}个对象）</summary>${rows || emptyList('尚未登记数据对象。请先回到“数据对象与行为关系”建立正式定义。')}</details>`
       );
     }
 
@@ -10034,6 +10057,7 @@
 
     function nativeGridControlValue(control) {
       if (control.matches('input[type="checkbox"]')) return control.checked;
+      if (control.matches('select[multiple]')) return Array.from(control.selectedOptions, option => option.value);
       return control.value;
     }
 
@@ -10115,13 +10139,22 @@
     }
 
     function nativeGridPasteOptions(tableId, column, row) {
-      if (column.editor === 'select') return column.values || [];
+      if (column.editor === 'select' || column.editor === 'multi-select') return column.values || [];
       if (column.editor === 'lookup') return gridLookupRows(column.lookup, row || {});
       return [];
     }
 
     function restoreWebGridTables(snapshot) {
       Object.entries(snapshot || {}).forEach(([tableId, rows]) => webGridSession.replaceRows(tableId, rows));
+    }
+
+    function showNativeGridPasteFeedback(message, level) {
+      const feedback = workspace.querySelector('[data-grid-paste-feedback]');
+      if (feedback) {
+        feedback.textContent = message;
+        feedback.className = level === 'error' ? 'inline-warning' : 'inline-note';
+      }
+      showStatus(message, level);
     }
 
     function applyNativeGridPaste(control, clipboardText) {
@@ -10139,7 +10172,7 @@
         optionResolver(column, rowOffset) { return nativeGridPasteOptions(tableId, column, rows[startRow + rowOffset]); }
       });
       if (plan.errors) {
-        showStatus(`没有粘贴任何内容。${plan.errors.slice(0, 5).map(item => item.row ? `第${item.row}行第${item.column}列（${item.fieldLabel}）：${item.message}` : item.message).join('；')}`, 'error');
+        showNativeGridPasteFeedback(`没有粘贴任何内容。${plan.errors.slice(0, 5).map(item => item.row ? `第${item.row}行第${item.column}列（${item.fieldLabel}）：${item.message}` : item.message).join('；')}`, 'error');
         return false;
       }
       if ((webGridFilters[tableId] || webGridSorts[tableId]) && startRow + plan.height > rows.length) {
@@ -10178,12 +10211,12 @@
         }
       } catch (error) {
         restoreWebGridTables(snapshot);
-        showStatus(`没有粘贴任何内容。${error.message}`, 'error');
+        showNativeGridPasteFeedback(`没有粘贴任何内容。${error.message}`, 'error');
         return false;
       }
       clearNativeGridIssues();
       render();
-      showStatus(`已粘贴${plan.height}行 × ${plan.width}列。修改仍在表格工作副本中。`, 'success');
+      showNativeGridPasteFeedback(`已粘贴${plan.height}行 × ${plan.width}列。修改仍在表格工作副本中，点击“应用本次修改”后才会进入下载文件。`, 'success');
       return true;
     }
 
@@ -11966,7 +11999,7 @@
         return;
       }
       if (action === 'grid-add-row') return addGridRow(element.dataset.tableId);
-      if (action === 'open-grid-update-fields') return openGridUpdateFields(element.dataset.rowId, element);
+      if (action === 'open-grid-update-fields') return openGridUpdateFields(element.dataset.gridRowId, element);
       if (action === 'grid-duplicate-row') {
         const tableId = element.dataset.tableId;
         const rowId = webGridSelectedRows[tableId];
@@ -13827,6 +13860,11 @@
     });
 
     workspace.addEventListener('change', event => {
+      if (event.target.matches('[data-flow-node-focus]')) {
+        if (!diagramView?.focusNode(event.target.value)) event.target.value = diagramView?.viewport().focusRef || '';
+        captureGraphViewport();
+        return;
+      }
       const target = event.target;
       if (target.matches('[data-grid-cell]')) {
         const tableId = target.dataset.gridTableId;
@@ -13930,7 +13968,8 @@
         editSessionManager.updatePatch(patch);
         updateDataEdgeCanApply();
         refreshUnappliedIndicators();
-        enableActiveApplyButton();
+        render();
+        workspace.querySelector(`[data-graph-data-operation][value="${CSS.escape(target.value)}"]`)?.focus({ preventScroll: true });
         return;
       }
       if (target.matches('[data-bind="process.owning_department"]')) {
@@ -14027,11 +14066,22 @@
         render();
         return;
       }
+      if (/^data_objects\.\d+\.fields\.\d+\.(field_name|field_type)$/.test(target.dataset.bind || '')) {
+        // These fields are already committed by input. Keep the controls mounted
+        // so native Tab navigation and pointer focus can complete normally.
+        const [, dataIndex, fieldIndex] = target.dataset.bind.match(/^data_objects\.(\d+)\.fields\.(\d+)\./);
+        const dataField = currentDocument()?.data_objects?.[Number(dataIndex)]?.fields?.[Number(fieldIndex)];
+        const selector = dataField && workspace.querySelector(`[data-action="select-data-field"][data-ref="${CSS.escape(dataField.field_ref)}"]`);
+        if (selector) {
+          selector.textContent = `${Number(fieldIndex) + 1}. ${dataField.field_name || '未命名对象字段'}`;
+          selector.title = dataField.field_name || `未命名对象字段 ${Number(fieldIndex) + 1}`;
+        }
+        return;
+      }
       if (target.matches('[data-bind]') && (
         /^behaviors\.\d+\.node_type$/.test(target.dataset.bind)
         || /^behaviors\.\d+\.(actor_department_data_ref|actor_position_rule)$/.test(target.dataset.bind)
         || /^data_objects\.\d+\.(information_type|behavior_links\.\d+\.(behavior_ref|operation)|source_relations\.\d+\.availability_mode)$/.test(target.dataset.bind)
-        || /^data_objects\.\d+\.fields\.\d+\.(field_name|field_type)$/.test(target.dataset.bind)
         || /^data_objects\.\d+\.lifecycle\./.test(target.dataset.bind)
         || /^forms\.\d+\.form_design_state$/.test(target.dataset.bind)
         || /^forms\.\d+\.behavior_links\.\d+\.behavior_ref$/.test(target.dataset.bind)
@@ -14111,7 +14161,7 @@
       const control = event.target.closest('[data-grid-cell]');
       if (!control) return;
       const clipboardText = event.clipboardData?.getData('text/plain') || '';
-      if (!/[\t\r\n]/.test(clipboardText)) return;
+      if (!/[\t\r\n]/.test(clipboardText) && !control.matches('select[multiple]')) return;
       event.preventDefault();
       applyNativeGridPaste(control, clipboardText);
     });
@@ -14136,7 +14186,7 @@
           );
           if (composing) return;
           gridCell.dataset.gridCompositionEndedAt = '0';
-          if (gridCell.matches('textarea, select, input[type="checkbox"]')) return;
+          if (gridCell.matches('button, textarea, select, input[type="checkbox"]')) return;
           event.preventDefault();
           event.stopPropagation();
           updateNativeGridCell(gridCell);

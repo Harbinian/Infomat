@@ -1,3 +1,4 @@
+const { checkRuntimeSchema } = require('./mysqlRuntimeSchema');
 const crypto = require('crypto');
 const mysql = require('mysql2/promise');
 const { mysqlConfigFromEnv } = require('./mysqlConfig');
@@ -835,7 +836,7 @@ async function dataMapRepository() {
     dataMapRepoPromise = (async () => {
       const pool = mysql.createPool(mysqlConfigFromEnv());
       const repo = makeDataMapMysqlRepository(pool);
-      await repo.initSchema();
+      await checkRuntimeSchema(pool, 'dataMap');
       return repo;
     })();
   }

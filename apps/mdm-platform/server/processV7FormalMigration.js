@@ -94,7 +94,7 @@ async function columnState(pool, tableName, columnName) {
 
 async function indexState(pool, tableName, indexName) {
   const rows = await query(pool, `
-    SELECT INDEX_NAME, NON_UNIQUE, SEQ_IN_INDEX, COLUMN_NAME
+    SELECT INDEX_NAME, NON_UNIQUE, SEQ_IN_INDEX, COLUMN_NAME, SUB_PART, INDEX_TYPE, IS_VISIBLE, COLLATION
     FROM information_schema.STATISTICS
     WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND INDEX_NAME=?
     ORDER BY SEQ_IN_INDEX
@@ -103,7 +103,9 @@ async function indexState(pool, tableName, indexName) {
   return {
     exists: true,
     unique: Number(rows[0].NON_UNIQUE) === 0,
-    columns: rows.map(row => String(row.COLUMN_NAME))
+    columns: rows.map(row => String(row.COLUMN_NAME)),
+    full_columns: rows.every(row => row.SUB_PART == null),
+    ordinary_index: rows.every(row => row.INDEX_TYPE === 'BTREE' && row.IS_VISIBLE === 'YES' && row.COLLATION === 'A')
   };
 }
 
@@ -139,7 +141,7 @@ async function inspectLegacyFormalRows(pool) {
 }
 
 function desiredColumn(state, type, nullable = true) {
-  return state.exists && state.column_type === type && state.nullable === nullable;
+  return state.exists && state.column_type === type && state.nullable === nullable && state.default == null && !state.extra;
 }
 
 function summarizeProcessV7PreviewFoundation(inspection = {}) {
@@ -189,10 +191,16 @@ async function inspectProcessV7FormalFoundation(pool, options = {}) {
     },
     business_data_plan: 'no V7 business rows are created; feature flag remains disabled'
   };
+  result.structure_complete = structureComplete(result);
+  result.consistency_status = schemaDrift(result).length ? 'schema_drift'
+    : result.applied ? (result.structure_complete ? 'applied' : 'record_without_structure')
+      : result.structure_complete ? 'structure_without_record' : 'not_recorded';
+  result.business_usage = await formalUsage(pool, result);
   if (previewFoundation) {
     result.m1_preview_foundation = summarizeProcessV7PreviewFoundation(previewFoundation);
     result.ready_for_apply = result.m1_preview_foundation.ready_for_m2 &&
-      schemaDrift(result).length === 0 &&
+      schemaDrift(result).length === 0 && result.consistency_status !== 'record_without_structure' &&
+      (result.applied || !Object.values(result.business_usage).some(Number)) &&
       result.anti_join.duplicate_non_null_process_refs.length === 0;
   }
   if (options.includeLegacyBaseline !== false) result.legacy_formal_baseline = await inspectLegacyFormalRows(pool);
@@ -206,15 +214,34 @@ function schemaDrift(inspection) {
   if (columns.review_draft_revision_no.exists && !desiredColumn(columns.review_draft_revision_no, 'int', true)) drift.push('process_design_review_tasks.draft_revision_no');
   if (columns.review_content_hash.exists && !desiredColumn(columns.review_content_hash, 'char(64)', true)) drift.push('process_design_review_tasks.content_hash');
   for (const key of ['version_l1_name', 'version_l2_name', 'version_l3_name']) {
-    if (!columns[key].exists || columns[key].column_type !== 'varchar(255)') drift.push(`process_design_versions.${key.replace('version_', '')}`);
+    if (!columns[key].exists || columns[key].column_type !== 'varchar(255)' || columns[key].default != null || columns[key].extra) drift.push(`process_design_versions.${key.replace('version_', '')}`);
   }
-  if (!columns.version_content_json.exists || columns.version_content_json.column_type !== 'json') drift.push('process_design_versions.content_json');
+  if (!columns.version_content_json.exists || columns.version_content_json.column_type !== 'json' || columns.version_content_json.default != null || columns.version_content_json.extra) drift.push('process_design_versions.content_json');
   const documentIndex = inspection.indexes.document_process_ref;
-  if (documentIndex.exists && (!documentIndex.unique || documentIndex.columns.join(',') !== 'process_ref')) drift.push('uq_process_design_documents_process_ref');
+  if (documentIndex.exists && (!documentIndex.unique || documentIndex.columns.join(',') !== 'process_ref' || documentIndex.full_columns === false || documentIndex.ordinary_index === false)) drift.push('uq_process_design_documents_process_ref');
   const reviewIndex = inspection.indexes.review_content_binding;
-  if (reviewIndex.exists && (reviewIndex.unique || reviewIndex.columns.join(',') !== 'draft_id,draft_revision_no,content_hash,status')) drift.push('idx_process_design_review_content');
+  if (reviewIndex.exists && (reviewIndex.unique || reviewIndex.columns.join(',') !== 'draft_id,draft_revision_no,content_hash,status' || reviewIndex.full_columns === false || reviewIndex.ordinary_index === false)) drift.push('idx_process_design_review_content');
   if (inspection.promotion_table.exists && inspection.promotion_table.schema_status !== 'matching') drift.push(PROMOTION_TABLE);
   return drift;
+}
+
+function structureComplete(inspection) {
+  return Object.values(inspection.columns).every(state => state.exists && state.nullable) &&
+    Object.values(inspection.indexes).every(state => state.exists) &&
+    inspection.promotion_table.exists && schemaDrift(inspection).length === 0;
+}
+
+async function formalUsage(pool, inspection) {
+  const documentCount = inspection.columns.document_process_ref.exists
+    ? '(SELECT COUNT(*) FROM process_design_documents WHERE process_ref IS NOT NULL)' : '0';
+  const reviewFields = [['review_draft_revision_no','draft_revision_no'],['review_content_hash','content_hash']]
+    .filter(([key]) => inspection.columns[key].exists).map(([,name]) => `${name} IS NOT NULL`);
+  const reviewCount = reviewFields.length ? `(SELECT COUNT(*) FROM process_design_review_tasks WHERE ${reviewFields.join(' OR ')})` : '0';
+  const rows = await query(pool, `SELECT ${documentCount} AS document_count,
+    (SELECT COUNT(*) FROM process_design_drafts WHERE schema_version='process-governance-v7') AS draft_count,
+    (SELECT COUNT(*) FROM process_design_versions WHERE schema_version='process-governance-v7') AS version_count,
+    ${reviewCount} AS review_binding_count`);
+  return {promotion_count:inspection.promotion_table.rows, ...Object.fromEntries(Object.entries(rows[0]).map(([key,value])=>[key,Number(value)]))};
 }
 
 function assertProcessV7PreviewFoundationApplied(inspection) {
@@ -246,6 +273,12 @@ async function applyProcessV7FormalFoundation(pool) {
     error.manual_objects = before.anti_join.duplicate_non_null_process_refs;
     throw error;
   }
+  if (before.applied) {
+    if (!before.structure_complete) throw Object.assign(new Error('M2迁移登记存在但结构不完整，拒绝自动补建'), {code:'V7_FORMAL_MIGRATION_INCONSISTENT'});
+    return {...before, legacy_formal_comparison:{unchanged:true,before_digest:legacyBefore.digest,after_digest:legacyBefore.digest}};
+  }
+  const usage = await formalUsage(pool, before);
+  if (Object.values(usage).some(Number)) throw Object.assign(new Error('未登记M2结构已有业务使用，拒绝认领或补写迁移记录'), {code:'V7_FORMAL_UNRECORDED_NONEMPTY',manual_objects:usage});
   if (!before.columns.document_process_ref.exists) {
     await pool.execute('ALTER TABLE process_design_documents ADD COLUMN process_ref VARCHAR(160) NULL AFTER document_no');
   }
@@ -316,27 +349,18 @@ async function rollbackProcessV7FormalFoundation(pool) {
     includeLegacyBaseline: false,
     includePreviewFoundation: false
   });
-  const promotionRows = before.promotion_table.rows;
-  const v7Rows = await query(pool, `
-    SELECT
-      (SELECT COUNT(*) FROM process_design_documents WHERE process_ref IS NOT NULL) AS document_count,
-      (SELECT COUNT(*) FROM process_design_drafts WHERE schema_version='process-governance-v7') AS draft_count,
-      (SELECT COUNT(*) FROM process_design_versions WHERE schema_version='process-governance-v7') AS version_count,
-      (SELECT COUNT(*) FROM process_design_review_tasks WHERE draft_revision_no IS NOT NULL OR content_hash IS NOT NULL) AS review_binding_count
-  `);
-  const usage = {
-    promotion_count: promotionRows,
-    document_count: Number(v7Rows[0] && v7Rows[0].document_count || 0),
-    draft_count: Number(v7Rows[0] && v7Rows[0].draft_count || 0),
-    version_count: Number(v7Rows[0] && v7Rows[0].version_count || 0),
-    review_binding_count: Number(v7Rows[0] && v7Rows[0].review_binding_count || 0)
-  };
+  if (schemaDrift(before).length || !before.applied || !before.structure_complete) {
+    throw Object.assign(new Error('M2结构或迁移登记不一致，拒绝自动回退'), {code:'V7_FORMAL_MIGRATION_INCONSISTENT'});
+  }
+  const usage = await formalUsage(pool, before);
   if (Object.values(usage).some(Number)) {
     const error = new Error('V7正式基础结构已有业务使用记录，拒绝自动回退');
     error.code = 'V7_FORMAL_ROLLBACK_NONEMPTY';
     error.manual_objects = usage;
     throw error;
   }
+  const nullRows = await query(pool, 'SELECT COUNT(*) AS count FROM process_design_versions WHERE l1_name IS NULL OR l2_name IS NULL OR l3_name IS NULL OR content_json IS NULL');
+  if (Number(nullRows[0].count)) throw Object.assign(new Error('历史版本含旧结构不能容纳的空值，保留数据并停止回退'), {code:'V7_FORMAL_ROLLBACK_LEGACY_NULLS'});
   if (before.promotion_table.exists) await pool.execute(`DROP TABLE \`${PROMOTION_TABLE}\``);
   if (before.indexes.review_content_binding.exists) await pool.execute('ALTER TABLE process_design_review_tasks DROP INDEX idx_process_design_review_content');
   if (before.columns.review_content_hash.exists) await pool.execute('ALTER TABLE process_design_review_tasks DROP COLUMN content_hash');

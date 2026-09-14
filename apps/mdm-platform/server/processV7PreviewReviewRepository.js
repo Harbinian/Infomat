@@ -256,7 +256,7 @@ async function getCaseDetailFrom(executor, caseId) {
       formalPromotion.current_version = publicFormalVersionMetadata(currentVersion);
     }
   } catch (error) {
-    if (error && error.code !== 'ER_NO_SUCH_TABLE') throw error;
+    if (!error || error.code !== 'ER_NO_SUCH_TABLE' || process.env.PROCESS_V7_FORMAL_ENABLED === '1') throw error;
   }
   return {
     case: publicCase(caseRow),
@@ -283,7 +283,7 @@ async function lockCurrentPreviewWriteState(connection, caseId, meta = {}) {
   const lockedRevision = await one(connection, `
     SELECT * FROM process_v7_preview_revisions
     WHERE id=? AND case_id=?
-    FOR UPDATE
+    FOR SHARE
   `, [lockedCase.current_revision_id, lockedCase.id]);
   if (!lockedRevision) {
     throw repositoryError(409, 'V7_PREVIEW_REVISION_MISSING', '当前V7修订不存在，请刷新后重试');
@@ -477,7 +477,7 @@ function makeProcessV7PreviewReviewRepository(pool) {
           (SELECT COUNT(*) FROM process_v7_preview_review_items i
            WHERE i.case_id=c.id AND i.is_current=1 AND i.status='confirmed') AS confirmed_item_count
         FROM process_v7_preview_cases c
-        WHERE (?=1
+        WHERE (?='' OR c.process_ref=?) AND (?=1
           OR c.owning_department_id=?
           OR EXISTS (
             SELECT 1 FROM process_v7_preview_review_items i
@@ -486,7 +486,7 @@ function makeProcessV7PreviewReviewRepository(pool) {
           ))
         ORDER BY c.updated_at DESC, c.id DESC
         LIMIT ${limit}
-      `, [canReadGlobal, departmentId, departmentId, departmentId]);
+      `, [text(options.processRef), text(options.processRef), canReadGlobal, departmentId, departmentId, departmentId]);
       let myActionCount = 0;
       if (actor.canReviewDepartment && departmentId) {
         const action = await one(pool, `
@@ -892,7 +892,7 @@ function makeProcessV7PreviewReviewRepository(pool) {
         const lockedRevision = await one(connection, `
           SELECT * FROM process_v7_preview_revisions
           WHERE id=? AND case_id=?
-          FOR UPDATE
+          FOR SHARE
         `, [lockedCase.current_revision_id, lockedCase.id]);
         if (!lockedRevision) throw repositoryError(409, 'V7_PREVIEW_REVISION_MISSING', '当前V7修订不存在，不能提升');
         if (
@@ -943,7 +943,7 @@ function makeProcessV7PreviewReviewRepository(pool) {
         const existingPromotion = await one(connection, `
           SELECT * FROM process_v7_promotions
           WHERE preview_case_id=? AND preview_revision_id=? AND preview_revision_no=? AND content_hash=?
-          FOR UPDATE
+          FOR SHARE
         `, [lockedCase.id, lockedRevision.id, lockedRevision.revision_no, lockedRevision.content_hash]);
         if (existingPromotion) return await promotionResult(connection, existingPromotion, true);
 

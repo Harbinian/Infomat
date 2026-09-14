@@ -1,11 +1,13 @@
+const { checkRuntimeSchema, sendMysqlUnavailable } = require('../mysqlRuntimeSchema');
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const mysql = require('mysql2/promise');
 const router = express.Router();
-const db = require('../db');
+function legacyDb() { return require('../db'); }
 const {
   requireAuth,
+  requireAnyPermission,
   getUserEffectivePermissions,
   getUserEffectivePermissionsAsync,
   getUserRoleCodesAsync,
@@ -38,6 +40,7 @@ function runDbAction(res, action) {
   try {
     return action();
   } catch (error) {
+    if (sendMysqlUnavailable(res, error)) return;
     console.error(error);
     return res.status(500).json({ error: '服务器错误' });
   }
@@ -45,6 +48,7 @@ function runDbAction(res, action) {
 
 function runAsyncAction(res, action) {
   return action().catch(error => {
+    if (sendMysqlUnavailable(res, error)) return;
     console.error(error);
     return res.status(500).json({ error: '服务器错误' });
   });
@@ -78,7 +82,7 @@ async function inputBaselineReviewRepository() {
     inputBaselineReviewRepoPromise = (async () => {
       const pool = mysql.createPool(mysqlConfigFromEnv());
       const repo = makeProcessInputBaselineReviewRepository(pool);
-      await repo.initSchema();
+      await checkRuntimeSchema(pool, 'inputBaseline');
       return repo;
     })();
   }
@@ -117,7 +121,7 @@ async function processGovernanceRepository() {
     processGovernanceRepoPromise = (async () => {
       const pool = mysql.createPool(mysqlConfigFromEnv());
       const repo = makeProcessGovernanceMysqlRepository(pool);
-      await repo.initSchema();
+      await checkRuntimeSchema(pool, 'processGovernance');
       return repo;
     })();
   }
@@ -160,7 +164,7 @@ async function issuePoolRepository() {
       }
       const pool = mysql.createPool(mysqlConfigFromEnv());
       const repo = makeProcessGovernanceIssuePoolRepository(pool);
-      await repo.initSchema();
+      await checkRuntimeSchema(pool, 'issuePool');
       return repo;
     })();
   }
@@ -200,12 +204,13 @@ async function inputBaselineReviewRepositoryOrNull() {
     if (process.env.MDM_DB_QUIET !== '1') {
       console.warn(`input baseline review MySQL unavailable: ${error.message}`);
     }
+    if (useMysqlProcessGovernanceReadModel()) throw error;
     return null;
   }
 }
 
 function activeSnapshot() {
-  return db.prepare(`
+  return legacyDb().prepare(`
     SELECT *
     FROM process_governance_snapshots
     WHERE status='active'
@@ -445,7 +450,7 @@ function emptySankey() {
 }
 
 function publishedDesignSankeyParts() {
-  const versions = db.prepare(`
+  const versions = legacyDb().prepare(`
     SELECT v.id AS version_id, v.l1_name, v.l2_name, v.l3_name, d.department_id, dept.name AS department_name
     FROM process_design_versions v
     JOIN process_design_drafts d ON d.id=v.draft_id
@@ -453,7 +458,7 @@ function publishedDesignSankeyParts() {
     WHERE v.status='published'
     ORDER BY v.id
   `).all();
-  const steps = db.prepare(`
+  const steps = legacyDb().prepare(`
     SELECT s.id, s.step_name, s.a1_code, s.sort_order, v.id AS version_id
     FROM process_design_steps s
     JOIN process_design_versions v ON v.draft_id=s.draft_id
@@ -512,7 +517,7 @@ function emptyQualitySummary() {
 function qualitySummary(snapshotId) {
   const summary = emptyQualitySummary();
   if (!snapshotId) return summary;
-  const rows = db.prepare(`
+  const rows = legacyDb().prepare(`
     SELECT severity, COUNT(*) AS count
     FROM process_governance_quality_findings
     WHERE snapshot_id=?
@@ -550,7 +555,7 @@ async function canViewAllProcessGovernanceAsync(req) {
 function currentDepartmentName(req) {
   if (req.session && req.session.departmentName) return String(req.session.departmentName || '');
   if (!req.session || !req.session.departmentId) return '';
-  const department = db.prepare('SELECT name FROM departments WHERE id=?').get(req.session.departmentId);
+  const department = legacyDb().prepare('SELECT name FROM departments WHERE id=?').get(req.session.departmentId);
   return department && department.name || '';
 }
 
@@ -1068,11 +1073,11 @@ function mappingTodoSelectSql() {
 }
 
 function loadMappingTodo(todoId) {
-  return db.prepare(`${mappingTodoSelectSql()} WHERE t.id=?`).get(todoId);
+  return legacyDb().prepare(`${mappingTodoSelectSql()} WHERE t.id=?`).get(todoId);
 }
 
 function mappingTodoEvents(todoId) {
-  return db.prepare(`
+  return legacyDb().prepare(`
     SELECT e.*, u.name AS actor_user_name
     FROM process_mapping_todo_events e
     LEFT JOIN users u ON u.id = e.actor_user_id
@@ -1085,7 +1090,7 @@ function mappingTodoEvents(todoId) {
 }
 
 function addMappingTodoEvent(todoId, eventType, actorUserId, note, payload) {
-  db.prepare(`
+  legacyDb().prepare(`
     INSERT INTO process_mapping_todo_events (todo_id, event_type, actor_user_id, note, payload_json)
     VALUES (?, ?, ?, ?, ?)
   `).run(todoId, eventType, actorUserId || null, note || null, payload ? JSON.stringify(payload) : null);
@@ -1097,11 +1102,11 @@ function sendMappingTodoWithEvents(res, todoId) {
 }
 
 function loadQualityCase(caseId) {
-  return db.prepare(`${caseSelectSql()} WHERE c.id=?`).get(caseId);
+  return legacyDb().prepare(`${caseSelectSql()} WHERE c.id=?`).get(caseId);
 }
 
 function qualityCaseEvents(caseId) {
-  return db.prepare(`
+  return legacyDb().prepare(`
     SELECT e.*, u.name AS actor_user_name
     FROM process_governance_quality_case_events e
     LEFT JOIN users u ON u.id = e.actor_user_id
@@ -1142,7 +1147,7 @@ function qualityCaseSummary(items) {
 }
 
 function addQualityCaseEvent(caseId, eventType, actorUserId, note, payload) {
-  db.prepare(`
+  legacyDb().prepare(`
     INSERT INTO process_governance_quality_case_events (case_id, event_type, actor_user_id, note, payload_json)
     VALUES (?, ?, ?, ?, ?)
   `).run(caseId, eventType, actorUserId || null, note || null, payload ? JSON.stringify(payload) : null);
@@ -1156,7 +1161,7 @@ function sendCaseWithEvents(res, caseId) {
 function getOwnerDeptId(ownerUserId, ownerDeptId) {
   if (ownerDeptId) return ownerDeptId;
   if (!ownerUserId) return null;
-  const owner = db.prepare('SELECT department_id FROM users WHERE id=?').get(ownerUserId);
+  const owner = legacyDb().prepare('SELECT department_id FROM users WHERE id=?').get(ownerUserId);
   return owner && owner.department_id || null;
 }
 
@@ -1193,7 +1198,7 @@ router.get('/snapshots', requireAuth, (req, res) => {
   }
 
   return runDbAction(res, () => {
-    const snapshots = db.prepare(`
+    const snapshots = legacyDb().prepare(`
       SELECT id, source_json_path, source_hash, generated_at, imported_at, status, note
       FROM process_governance_snapshots
       ORDER BY imported_at DESC, id DESC
@@ -1251,14 +1256,14 @@ router.get('/sankey', requireAuth, (req, res) => {
     const snapshot = activeSnapshot();
     if (!snapshot) return res.json(emptySankey());
 
-    let nodes = db.prepare(`
+    let nodes = legacyDb().prepare(`
       SELECT node_key AS name, name AS label, node_type, domain_name, dept_name, parent_key, source_file
       FROM process_governance_nodes
       WHERE snapshot_id=?
       ORDER BY sort_order, id
     `).all(snapshot.id);
 
-    let links = db.prepare(`
+    let links = legacyDb().prepare(`
       SELECT source_key AS source, target_key AS target, value
       FROM process_governance_edges
       WHERE snapshot_id=?
@@ -1275,7 +1280,7 @@ router.get('/sankey', requireAuth, (req, res) => {
       .map(node => node.name)
       .sort((a, b) => a.localeCompare(b, 'zh-CN'));
 
-    const risks = db.prepare(`
+    const risks = legacyDb().prepare(`
       SELECT source_dept AS source, target_dept AS target, a1_code AS a1, refs,
              risk_level AS risk, confirm_status AS status, description AS desc, source_report
       FROM process_cross_dept_interactions
@@ -1283,7 +1288,7 @@ router.get('/sankey', requireAuth, (req, res) => {
       ORDER BY CASE risk_level WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END, id
     `).all(snapshot.id);
 
-    const interactionChains = db.prepare(`
+    const interactionChains = legacyDb().prepare(`
       SELECT name, status, breaks_json, source_report
       FROM process_interaction_chains
       WHERE snapshot_id=?
@@ -1357,7 +1362,7 @@ router.get('/a1', requireAuth, (req, res) => {
     }
 
     sql += ' ORDER BY dept_name, l3_name, a1_code, id';
-    const items = db.prepare(sql).all(...params).map(row => ({
+    const items = legacyDb().prepare(sql).all(...params).map(row => ({
       ...row,
       suggested_systems: parseJsonArray(row.suggested_systems)
     }));
@@ -1398,13 +1403,13 @@ router.get('/source-files', requireAuth, (req, res) => {
       params.push(String(req.query.assetType));
     }
 
-    const summaryRows = db.prepare(`
+    const summaryRows = legacyDb().prepare(`
       SELECT process_status, asset_type, COUNT(*) AS count
       FROM process_source_files
       ${whereSql}
       GROUP BY process_status, asset_type
     `).all(...params);
-    const items = db.prepare(`
+    const items = legacyDb().prepare(`
       SELECT file_path, dept_name, asset_type, file_no, revision, size_bytes, mtime, sha256, process_status, process_reason
       FROM process_source_files
       ${whereSql}
@@ -1441,13 +1446,13 @@ router.get('/mdm-requirements', requireAuth, (req, res) => {
       params.push(String(req.query.object));
     }
 
-    const summaryRows = db.prepare(`
+    const summaryRows = legacyDb().prepare(`
       SELECT dept_name, COUNT(*) AS count
       FROM process_mdm_requirement_items
       ${whereSql}
       GROUP BY dept_name
     `).all(...params);
-    const items = db.prepare(`
+    const items = legacyDb().prepare(`
       SELECT dept_name, master_data_object, source_l2, key_fields, responsible_dept, system_boundary, governance_requirement, source_file
       FROM process_mdm_requirement_items
       ${whereSql}
@@ -1505,13 +1510,13 @@ router.get('/evidence', requireAuth, (req, res) => {
       params.push(refType);
     }
 
-    const summaryRows = db.prepare(`
+    const summaryRows = legacyDb().prepare(`
       SELECT ref_type, COUNT(*) AS count
       FROM process_evidence_refs
       ${whereSql}
       GROUP BY ref_type
     `).all(...params);
-    const items = db.prepare(`
+    const items = legacyDb().prepare(`
       SELECT ref_type, dept_name, l3_name, a1_code, master_data_object, evidence_type, source_file, citation, note
       FROM process_evidence_refs
       ${whereSql}
@@ -1561,7 +1566,7 @@ router.get('/cross-dept', requireAuth, (req, res) => {
     }
 
     sql += " ORDER BY CASE risk_level WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END, id";
-    res.json({ items: db.prepare(sql).all(...params) });
+    res.json({ items: legacyDb().prepare(sql).all(...params) });
   });
 });
 
@@ -1609,7 +1614,7 @@ router.get('/quality', requireAuth, (req, res) => {
 
     res.json({
       summary: qualitySummary(snapshot.id),
-      items: db.prepare(sql).all(...params)
+      items: legacyDb().prepare(sql).all(...params)
     });
   });
 });
@@ -1674,7 +1679,7 @@ router.get('/quality-cases', requireAuth, (req, res) => {
 
     if (!canViewAllQualityCases(req)) {
       const department = req.session.departmentId
-        ? db.prepare('SELECT name FROM departments WHERE id=?').get(req.session.departmentId)
+        ? legacyDb().prepare('SELECT name FROM departments WHERE id=?').get(req.session.departmentId)
         : null;
       sql += ` AND (
         c.dept_name=?
@@ -1704,7 +1709,7 @@ router.get('/quality-cases', requireAuth, (req, res) => {
                c.id
     `;
 
-    const items = db.prepare(sql).all(...params);
+    const items = legacyDb().prepare(sql).all(...params);
     res.json({ summary: qualityCaseSummary(items), items });
   });
 });
@@ -1764,18 +1769,18 @@ router.post('/quality-cases/:id/assign', requireAuth, (req, res) => {
     if (qualityCase.status === 'closed') return res.status(409).json({ error: '已关闭问题单不能分派' });
 
     const ownerUserId = req.body.owner_user_id ? Number(req.body.owner_user_id) : null;
-    if (ownerUserId && !db.prepare('SELECT id FROM users WHERE id=?').get(ownerUserId)) {
+    if (ownerUserId && !legacyDb().prepare('SELECT id FROM users WHERE id=?').get(ownerUserId)) {
       return res.status(400).json({ error: '责任人不存在' });
     }
     const ownerDeptId = getOwnerDeptId(ownerUserId, req.body.owner_dept_id ? Number(req.body.owner_dept_id) : null);
-    if (ownerDeptId && !db.prepare('SELECT id FROM departments WHERE id=?').get(ownerDeptId)) {
+    if (ownerDeptId && !legacyDb().prepare('SELECT id FROM departments WHERE id=?').get(ownerDeptId)) {
       return res.status(400).json({ error: '责任部门不存在' });
     }
     const priority = String(req.body.priority || qualityCase.priority || 'medium');
     if (!QUALITY_CASE_PRIORITIES.has(priority)) return res.status(400).json({ error: '优先级无效' });
     const dueDate = req.body.due_date ? String(req.body.due_date) : null;
 
-    db.prepare(`
+    legacyDb().prepare(`
       UPDATE process_governance_quality_cases
       SET owner_user_id=COALESCE(?, owner_user_id),
           owner_dept_id=COALESCE(?, owner_dept_id),
@@ -1822,7 +1827,7 @@ router.post('/quality-cases/:id/status', requireAuth, (req, res) => {
     if (!USER_SET_STATUSES.has(nextStatus)) return res.status(400).json({ error: '状态无效' });
     if (qualityCase.status === 'closed') return res.status(409).json({ error: '已关闭问题单不能直接改状态' });
 
-    db.prepare(`
+    legacyDb().prepare(`
       UPDATE process_governance_quality_cases
       SET status=?, updated_at=CURRENT_TIMESTAMP
       WHERE id=?
@@ -1835,7 +1840,10 @@ router.post('/quality-cases/:id/status', requireAuth, (req, res) => {
   });
 });
 
-router.post('/quality-cases/:id/comment', requireAuth, (req, res) => {
+router.post('/quality-cases/:id/comment', requireAuth, requireAnyPermission(
+  'governance:draft-department', 'governance:submit-department', 'governance:review-department',
+  'governance:assign-work', 'governance:quality-audit'
+), (req, res) => {
   if (useMysqlProcessGovernanceReadModel()) {
     return runAsyncAction(res, async () => {
       const repo = await processGovernanceRepositoryOrSendUnavailable(res);
@@ -1862,7 +1870,7 @@ router.post('/quality-cases/:id/comment', requireAuth, (req, res) => {
     const note = String(req.body.note || '').trim();
     if (!note) return res.status(400).json({ error: '备注不能为空' });
     addQualityCaseEvent(qualityCase.id, 'commented', req.session.userId, note, null);
-    db.prepare('UPDATE process_governance_quality_cases SET updated_at=CURRENT_TIMESTAMP WHERE id=?').run(qualityCase.id);
+    legacyDb().prepare('UPDATE process_governance_quality_cases SET updated_at=CURRENT_TIMESTAMP WHERE id=?').run(qualityCase.id);
     return sendCaseWithEvents(res, qualityCase.id);
   });
 });
@@ -1889,7 +1897,7 @@ router.post('/quality-cases/:id/submit', requireAuth, (req, res) => {
     if (!canManageQualityCase(req, qualityCase)) return res.status(403).json({ error: '权限不足' });
     if (qualityCase.status === 'closed') return res.status(409).json({ error: '已关闭问题单不能提交整改' });
 
-    db.prepare(`
+    legacyDb().prepare(`
       UPDATE process_governance_quality_cases
       SET status='submitted', updated_at=CURRENT_TIMESTAMP
       WHERE id=?
@@ -1960,7 +1968,7 @@ router.post('/quality-cases/:id/reopen', requireAuth, (req, res) => {
     if (!qualityCase) return res.status(404).json({ error: '问题单不存在' });
     if (!canCloseQualityCase(req)) return res.status(403).json({ error: '权限不足' });
 
-    db.prepare(`
+    legacyDb().prepare(`
       UPDATE process_governance_quality_cases
       SET status='reopened',
           reopened_count=reopened_count + CASE WHEN status='reopened' THEN 0 ELSE 1 END,
@@ -2226,13 +2234,13 @@ router.get('/mapping-workspace', requireAuth, (req, res) => {
 
     if (!canViewAllMappingTodos(req)) {
       const department = req.session.departmentId
-        ? db.prepare('SELECT name FROM departments WHERE id=?').get(req.session.departmentId)
+        ? legacyDb().prepare('SELECT name FROM departments WHERE id=?').get(req.session.departmentId)
         : null;
       whereSql += ' AND r.dept_name=?';
       params.push(department && department.name || '__none__');
     }
 
-    const summaryRows = db.prepare(`
+    const summaryRows = legacyDb().prepare(`
       SELECT r.record_type, r.status, COUNT(*) AS count
       FROM process_mapping_records r
       ${whereSql}
@@ -2246,7 +2254,7 @@ router.get('/mapping-workspace', requireAuth, (req, res) => {
                r.dept_name, r.l2_name, r.l3_name, r.a1_code, r.id
       LIMIT 500
     `;
-    const items = db.prepare(sql).all(...params).map(row => ({
+    const items = legacyDb().prepare(sql).all(...params).map(row => ({
       ...row,
       suggested_systems: parseJsonArray(row.suggested_systems)
     }));
@@ -2302,7 +2310,7 @@ router.get('/mapping-todos', requireAuth, (req, res) => {
 
     if (!canViewAllMappingTodos(req)) {
       const department = req.session.departmentId
-        ? db.prepare('SELECT name FROM departments WHERE id=?').get(req.session.departmentId)
+        ? legacyDb().prepare('SELECT name FROM departments WHERE id=?').get(req.session.departmentId)
         : null;
       whereSql += ` AND (
         t.dept_name=?
@@ -2316,7 +2324,7 @@ router.get('/mapping-todos', requireAuth, (req, res) => {
       params.push(department && department.name || '__none__', department && department.name || '__none__', req.session.userId, req.session.departmentId || -1);
     }
 
-    const summaryRows = db.prepare(`
+    const summaryRows = legacyDb().prepare(`
       SELECT t.todo_type, t.status, COUNT(*) AS count
       FROM process_mapping_todos t
       ${whereSql}
@@ -2341,7 +2349,7 @@ router.get('/mapping-todos', requireAuth, (req, res) => {
                t.due_date IS NULL, t.due_date, t.dept_name, t.id
       LIMIT 500
     `;
-    const items = db.prepare(sql).all(...params);
+    const items = legacyDb().prepare(sql).all(...params);
     return res.json({ summary: { ...summary, returned: items.length, limit: 500 }, items });
   });
 });
@@ -2401,18 +2409,18 @@ router.post('/mapping-todos/:id/assign', requireAuth, (req, res) => {
     if (todo.status === 'closed') return res.status(409).json({ error: '已关闭待办不能分派' });
 
     const ownerUserId = req.body.owner_user_id ? Number(req.body.owner_user_id) : null;
-    if (ownerUserId && !db.prepare('SELECT id FROM users WHERE id=?').get(ownerUserId)) {
+    if (ownerUserId && !legacyDb().prepare('SELECT id FROM users WHERE id=?').get(ownerUserId)) {
       return res.status(400).json({ error: '责任人不存在' });
     }
     const ownerDeptId = getOwnerDeptId(ownerUserId, req.body.owner_dept_id ? Number(req.body.owner_dept_id) : null);
-    if (ownerDeptId && !db.prepare('SELECT id FROM departments WHERE id=?').get(ownerDeptId)) {
+    if (ownerDeptId && !legacyDb().prepare('SELECT id FROM departments WHERE id=?').get(ownerDeptId)) {
       return res.status(400).json({ error: '责任部门不存在' });
     }
     const priority = String(req.body.priority || todo.priority || 'medium');
     if (!QUALITY_CASE_PRIORITIES.has(priority)) return res.status(400).json({ error: '优先级无效' });
     const dueDate = req.body.due_date ? String(req.body.due_date) : null;
 
-    db.prepare(`
+    legacyDb().prepare(`
       UPDATE process_mapping_todos
       SET owner_user_id=COALESCE(?, owner_user_id),
           owner_dept_id=COALESCE(?, owner_dept_id),
@@ -2459,7 +2467,7 @@ router.post('/mapping-todos/:id/status', requireAuth, (req, res) => {
     if (!USER_SET_MAPPING_TODO_STATUSES.has(nextStatus)) return res.status(400).json({ error: '状态无效' });
     if (todo.status === 'closed') return res.status(409).json({ error: '已关闭待办不能直接改状态' });
 
-    db.prepare('UPDATE process_mapping_todos SET status=?, updated_at=CURRENT_TIMESTAMP WHERE id=?').run(nextStatus, todo.id);
+    legacyDb().prepare('UPDATE process_mapping_todos SET status=?, updated_at=CURRENT_TIMESTAMP WHERE id=?').run(nextStatus, todo.id);
     addMappingTodoEvent(todo.id, 'status_changed', req.session.userId, req.body.note || null, {
       from_status: todo.status,
       to_status: nextStatus
@@ -2468,7 +2476,10 @@ router.post('/mapping-todos/:id/status', requireAuth, (req, res) => {
   });
 });
 
-router.post('/mapping-todos/:id/comment', requireAuth, (req, res) => {
+router.post('/mapping-todos/:id/comment', requireAuth, requireAnyPermission(
+  'governance:draft-department', 'governance:submit-department', 'governance:review-department',
+  'governance:assign-work', 'governance:structure-gate'
+), (req, res) => {
   if (useMysqlProcessGovernanceReadModel()) {
     return runAsyncAction(res, async () => {
       const repo = await processGovernanceRepositoryOrSendUnavailable(res);
@@ -2495,7 +2506,7 @@ router.post('/mapping-todos/:id/comment', requireAuth, (req, res) => {
     const note = String(req.body.note || '').trim();
     if (!note) return res.status(400).json({ error: '备注不能为空' });
     addMappingTodoEvent(todo.id, 'commented', req.session.userId, note, null);
-    db.prepare('UPDATE process_mapping_todos SET updated_at=CURRENT_TIMESTAMP WHERE id=?').run(todo.id);
+    legacyDb().prepare('UPDATE process_mapping_todos SET updated_at=CURRENT_TIMESTAMP WHERE id=?').run(todo.id);
     return sendMappingTodoWithEvents(res, todo.id);
   });
 });
@@ -2522,7 +2533,7 @@ router.post('/mapping-todos/:id/submit', requireAuth, (req, res) => {
     if (!canManageMappingTodo(req, todo)) return res.status(403).json({ error: '权限不足' });
     if (todo.status === 'closed') return res.status(409).json({ error: '已关闭待办不能提交' });
 
-    db.prepare('UPDATE process_mapping_todos SET status=\'submitted\', updated_at=CURRENT_TIMESTAMP WHERE id=?').run(todo.id);
+    legacyDb().prepare('UPDATE process_mapping_todos SET status=\'submitted\', updated_at=CURRENT_TIMESTAMP WHERE id=?').run(todo.id);
     addMappingTodoEvent(todo.id, 'submitted', req.session.userId, req.body.note || '已提交流程映射处理说明', {
       from_status: todo.status
     });
@@ -2589,7 +2600,7 @@ router.post('/mapping-todos/:id/reopen', requireAuth, (req, res) => {
     if (!todo) return res.status(404).json({ error: '映射待办不存在' });
     if (!canCloseMappingTodo(req)) return res.status(403).json({ error: '权限不足' });
 
-    db.prepare(`
+    legacyDb().prepare(`
       UPDATE process_mapping_todos
       SET status='reopened',
           reopened_count=reopened_count + CASE WHEN status='reopened' THEN 0 ELSE 1 END,
@@ -2731,7 +2742,7 @@ router.get('/chains', requireAuth, (req, res) => {
   return runDbAction(res, () => {
     const snapshot = activeSnapshot();
     if (!snapshot) return res.json({ items: [] });
-    const items = db.prepare(`
+    const items = legacyDb().prepare(`
       SELECT *
       FROM process_interaction_chains
       WHERE snapshot_id=?

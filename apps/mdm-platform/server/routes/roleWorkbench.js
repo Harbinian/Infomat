@@ -1,7 +1,9 @@
+const { listPendingTodos, listEscalatedConflicts } = require('../workbenchMysqlSources');
+const { checkRuntimeSchema, sendMysqlUnavailable } = require('../mysqlRuntimeSchema');
 const express = require('express');
 const mysql = require('mysql2/promise');
 const router = express.Router();
-const db = require('../db');
+function legacyDb() { return require('../db'); }
 const { requireAuth, getUserEffectivePermissions } = require('../auth');
 const { mysqlConfigFromEnv } = require('../mysqlConfig');
 const { makeIdentityMysqlRepository } = require('../identityMysqlRepository');
@@ -78,6 +80,7 @@ function runAsyncAction(res, action, unavailableMessage) {
     if (error && error.statusCode) {
       return res.status(error.statusCode).json({ error: error.message });
     }
+    if (sendMysqlUnavailable(res, error)) return;
     console.error(error);
     return res.status(unavailableMessage ? 503 : 500).json({ error: unavailableMessage || '服务器错误' });
   });
@@ -106,7 +109,7 @@ async function identityRepository() {
     identityRepoPromise = (async () => {
       const pool = mysql.createPool(mysqlConfigFromEnv());
       const repo = makeIdentityMysqlRepository(pool);
-      await repo.initSchema();
+      await checkRuntimeSchema(pool, 'identity');
       return repo;
     })();
   }
@@ -136,7 +139,7 @@ async function processGovernanceRepository() {
     processGovernanceRepoPromise = (async () => {
       const pool = mysql.createPool(mysqlConfigFromEnv());
       const repo = makeProcessGovernanceMysqlRepository(pool);
-      await repo.initSchema();
+      await checkRuntimeSchema(pool, 'processGovernance');
       return repo;
     })();
   }
@@ -166,7 +169,7 @@ async function inputBaselineReviewRepository() {
     inputBaselineReviewRepoPromise = (async () => {
       const pool = mysql.createPool(mysqlConfigFromEnv());
       const repo = makeProcessInputBaselineReviewRepository(pool);
-      await repo.initSchema();
+      await checkRuntimeSchema(pool, 'inputBaseline');
       return repo;
     })();
   }
@@ -186,6 +189,7 @@ async function inputBaselineReviewRepositoryOrNull() {
     if (process.env.MDM_DB_QUIET !== '1') {
       console.warn(`input baseline review store unavailable: ${error.message}`);
     }
+    if (useMysqlProcessGovernanceReadModel()) throw error;
     return null;
   }
 }
@@ -201,7 +205,7 @@ function resetInputBaselineReviewRepositoryFactory() {
 }
 
 function getCurrentRoles(userId, legacyRole) {
-  const roles = db.prepare(`
+  const roles = legacyDb().prepare(`
     SELECT r.role_code as code, r.role_name as name
     FROM user_roles ur
     JOIN roles r ON ur.role_id = r.role_id
@@ -210,7 +214,7 @@ function getCurrentRoles(userId, legacyRole) {
   `).all(userId);
 
   if (legacyRole && !roles.some(role => role.code === legacyRole)) {
-    const legacy = db.prepare('SELECT role_code as code, role_name as name FROM roles WHERE role_code=?').get(legacyRole);
+    const legacy = legacyDb().prepare('SELECT role_code as code, role_name as name FROM roles WHERE role_code=?').get(legacyRole);
     if (legacy) roles.unshift(legacy);
   }
 
@@ -221,7 +225,7 @@ function sqliteWorkbenchIdentity(req) {
   const currentRoles = getCurrentRoles(req.session.userId, req.session.userRole);
   const { permSet } = getUserEffectivePermissions(req.session.userId);
   const department = req.session.departmentId
-    ? db.prepare('SELECT name FROM departments WHERE id=?').get(req.session.departmentId)
+    ? legacyDb().prepare('SELECT name FROM departments WHERE id=?').get(req.session.departmentId)
     : null;
   return {
     currentRoles,
@@ -321,6 +325,9 @@ function cachePart(value) {
 }
 
 async function getOrBuildWorkbenchResponse(cacheKey, build) {
+  // Current decisions/revisions must disappear or reopen on the next workbench read.
+  // Keep the fixed role-guide cache, but never cache mutable MySQL task projections.
+  if (useMysqlProcessGovernanceReadModel()) return await build();
   const now = Date.now();
   const cached = workbenchResponseCache.get(cacheKey);
   if (cached && cached.expiresAt > now) {
@@ -365,7 +372,7 @@ function clearWorkbenchCaches() {
 }
 
 function activeSnapshot() {
-  return db.prepare(`
+  return legacyDb().prepare(`
     SELECT *
     FROM process_governance_snapshots
     WHERE status='active'
@@ -430,8 +437,8 @@ function openInputBaselineReviewItem(row) {
   return true;
 }
 
-function loadProcessContexts(mode, workItems, options = {}) {
-  const bundle = cachedProcessContextBundle();
+async function loadProcessContexts(mode, workItems, options = {}) {
+  const bundle = await cachedProcessContextBundle(options);
   if (!bundle) return [];
 
   const todoA1Codes = new Set(workItems.map(item => item.a1Code).filter(Boolean));
@@ -471,7 +478,18 @@ function loadProcessContexts(mode, workItems, options = {}) {
   }];
 }
 
-function cachedProcessContextBundle() {
+async function cachedProcessContextBundle(options = {}) {
+  if (useMysqlProcessGovernanceReadModel()) {
+    const repo = await processGovernanceRepository();
+    const { a1Rows, nodes, edges } = await repo.getWorkbenchContext(options);
+    const a1Nodes = nodes.filter(node => node.node_type === 'a1');
+    return {
+      a1Rows, a1Nodes,
+      nodeByKey: new Map(nodes.map(node => [node.node_key, node])),
+      a1NodeByName: new Map(a1Nodes.map(node => [node.name, node])),
+      parentByTarget: new Map(edges.map(edge => [edge.target_key, edge.source_key]))
+    };
+  }
   const now = Date.now();
   if (
     processContextBundleCache &&
@@ -482,7 +500,7 @@ function cachedProcessContextBundle() {
 
   const snapshot = activeSnapshot();
   if (!snapshot) return null;
-  const a1Rows = db.prepare(`
+  const a1Rows = legacyDb().prepare(`
     SELECT *
     FROM process_a1_items
     WHERE snapshot_id=?
@@ -490,12 +508,12 @@ function cachedProcessContextBundle() {
     LIMIT 80
   `).all(snapshot.id);
 
-  const nodes = db.prepare(`
+  const nodes = legacyDb().prepare(`
     SELECT node_key, node_type, name, parent_key, dept_name, domain_name
     FROM process_governance_nodes
     WHERE snapshot_id=?
   `).all(snapshot.id);
-  const edges = db.prepare(`
+  const edges = legacyDb().prepare(`
     SELECT source_key, target_key
     FROM process_governance_edges
     WHERE snapshot_id=?
@@ -521,12 +539,12 @@ function findA1Node(row, bundle) {
   const code = row.a1_code || '';
   const exact = code ? bundle.nodeByKey.get(code) : null;
   if (exact && exact.node_type === 'a1') return exact;
-  const byName = bundle.a1NodeByName.get(row.behavior);
+  const byName = bundle.a1Nodes.find(node => node.name === row.behavior && node.dept_name === row.dept_name);
   if (byName) return byName;
-  return bundle.a1Nodes.find(node => String(node.node_key || '').includes(code || '__none__')) || null;
+  return bundle.a1Nodes.find(node => node.dept_name === row.dept_name && String(node.node_key || '').includes(code || '__none__')) || null;
 }
 
-function loadTodos(req, canViewAll) {
+async function loadTodos(req, canViewAll, permissions) {
   const params = [];
   let sql = `
     SELECT t.*, fd.name as from_dept_name, td.name as to_dept_name,
@@ -545,7 +563,10 @@ function loadTodos(req, canViewAll) {
 
   sql += " ORDER BY CASE urgency WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END, due_date IS NULL, due_date, t.id LIMIT 20";
 
-  return db.prepare(sql).all(...params).map(row => ({
+  const rows = useMysqlIdentityReadModel()
+    ? (await listPendingTodos(req.session, permissions)).slice(0, 20)
+    : legacyDb().prepare(sql).all(...params);
+  return rows.map(row => ({
     id: `todo:${row.id}`,
     type: row.type,
     title: `${TODO_TYPE_LABELS[row.type] || '待办'}：${row.content}`,
@@ -595,7 +616,7 @@ function qualityCaseWorkItem(row) {
 function loadProcessQualityFindings(req, canViewAll, currentDepartmentName) {
   const departmentName = currentDepartmentName || (
     req.session.departmentId
-      ? (db.prepare('SELECT name FROM departments WHERE id=?').get(req.session.departmentId) || {}).name
+      ? (legacyDb().prepare('SELECT name FROM departments WHERE id=?').get(req.session.departmentId) || {}).name
       : null
   );
 
@@ -621,7 +642,7 @@ function loadProcessQualityFindings(req, canViewAll, currentDepartmentName) {
     LIMIT 20
   `;
 
-  return db.prepare(sql).all(...params).map(qualityCaseWorkItem);
+  return legacyDb().prepare(sql).all(...params).map(qualityCaseWorkItem);
 }
 
 async function loadProcessQualityFindingsAsync(req, canViewAll, currentDepartmentName) {
@@ -677,7 +698,7 @@ function mappingTodoWorkItem(row) {
 function loadProcessMappingTodos(req, canViewAll, currentDepartmentName) {
   const departmentName = currentDepartmentName || (
     req.session.departmentId
-      ? (db.prepare('SELECT name FROM departments WHERE id=?').get(req.session.departmentId) || {}).name
+      ? (legacyDb().prepare('SELECT name FROM departments WHERE id=?').get(req.session.departmentId) || {}).name
       : null
   );
 
@@ -701,7 +722,7 @@ function loadProcessMappingTodos(req, canViewAll, currentDepartmentName) {
     LIMIT 20
   `;
 
-  return db.prepare(sql).all(...params).map(mappingTodoWorkItem);
+  return legacyDb().prepare(sql).all(...params).map(mappingTodoWorkItem);
 }
 
 async function loadProcessMappingTodosAsync(req, canViewAll, currentDepartmentName) {
@@ -809,10 +830,23 @@ function sampleForTodo(type) {
   return '先确认事项来源、责任部门和截止时间，再记录处理结论。';
 }
 
-function loadEscalatedConflicts(canDecideEscalated) {
+async function loadEscalatedConflicts(canDecideEscalated) {
   if (!canDecideEscalated) return [];
+  if (useMysqlIdentityReadModel()) {
+    const rows = await listEscalatedConflicts(canDecideEscalated);
+    return rows.map(row => ({
+      id: `${row.conflict_type}-conflict:${row.id}`,
+      type: 'escalated_conflict',
+      title: `升级事项待终裁：${row.term || row.conflict_field}`,
+      roleHint: 'decision_group',
+      urgency: row.severity === 'blocking' ? 'high' : 'medium',
+      target: `#/conflicts/${row.conflict_type}/${row.id}`,
+      actionLabel: '查看升级事项',
+      sample: '先看流程场景、双方意见和字段差异，再给出决定及后续责任人。'
+    }));
+  }
 
-  const termRows = db.prepare(`
+  const termRows = legacyDb().prepare(`
     SELECT id, term as title, severity, created_at
     FROM term_conflicts
     WHERE status='escalated'
@@ -829,7 +863,7 @@ function loadEscalatedConflicts(canDecideEscalated) {
     sample: '先看 A1、字段台账和双方意见，再给出终裁结论和后续责任人。'
   }));
 
-  const fieldRows = db.prepare(`
+  const fieldRows = legacyDb().prepare(`
     SELECT id, conflict_field, severity, created_at
     FROM field_conflicts
     WHERE status='escalated'
@@ -887,6 +921,8 @@ function buildNextActions(workItems, ownedRoles) {
     target: item.target,
     actionLabel: item.actionLabel,
     sample: item.sample,
+    sourceRoles: item.sourceRoles || [item.roleHint].filter(Boolean),
+    requiredPermissions: item.requiredPermissions || [],
     priority: item.urgency || 'medium'
   }));
   return actionItems.length ? actionItems : fallbackActions(ownedRoles);
@@ -1067,7 +1103,7 @@ async function loadDirectProcessGovernanceWorkItems(identity) {
     if (process.env.MDM_DB_QUIET !== '1') {
       console.warn(`direct process governance work items unavailable: ${error.message}`);
     }
-    return [];
+    throw error;
   }
 }
 
@@ -1091,7 +1127,7 @@ async function loadProcessDataGovernanceWorkItems(identity) {
     if (process.env.MDM_DB_QUIET !== '1') {
       console.warn(`process data governance work items unavailable: ${error.message}`);
     }
-    return [];
+    throw error;
   }
 }
 
@@ -1108,25 +1144,30 @@ router.get('/', requireAuth, (req, res) => {
     const currentDepartmentName = identity.user.departmentName;
     const cacheKey = workbenchResponseCacheKey({ mode, identity, roleCodes, permSet });
     const body = await getOrBuildWorkbenchResponse(cacheKey, async () => {
-      const [todos, qualityFindings, mappingTodos, inputBaselineIssues, escalated, directProcessGovernance, processDataGovernance] = await Promise.all([
-        Promise.resolve().then(() => loadTodos(req, canViewAll)),
+      const [todos, qualityFindings, mappingTodos, inputBaselineIssues, escalated, directProcessGovernance, processDataGovernance, v7WorkItems] = await Promise.all([
+        Promise.resolve().then(() => loadTodos(req, canViewAll, permSet)),
         loadProcessQualityFindingsAsync(req, canViewAll, currentDepartmentName),
         loadProcessMappingTodosAsync(req, canViewAll, currentDepartmentName),
         loadInputBaselineReviewIssuesAsync(canViewAll, currentDepartmentName),
         Promise.resolve().then(() => loadEscalatedConflicts(canDecideEscalated)),
         loadDirectProcessGovernanceWorkItems(identity),
-        loadProcessDataGovernanceWorkItems(identity)
+        loadProcessDataGovernanceWorkItems(identity),
+        useMysqlProcessGovernanceReadModel() ? require('./processV7PreviewReview').listV7WorkbenchItems({
+          userId: identity.user.id, personId: identity.user.personId, departmentId: identity.user.departmentId,
+          departmentName: identity.user.departmentName, roleCodes: new Set(roleCodes), permissions: permSet,
+          canReadGlobal: canViewAll, canReviewDepartment: permSet.has('governance:review-department')
+        }) : []
       ]);
-      const activeRoles = ownedRoles;
+      const activeRoles = roleCodes.includes('admin') ? ownedRoles.filter(role => role.code === 'admin') : ownedRoles;
       const pmoReviewGates = pmoReviewGateWorkItems(roleCodes, currentDepartmentName);
       const visibleWorkItems = normalizeWorkItems(
-        [...processDataGovernance, ...directProcessGovernance, ...escalated, ...inputBaselineIssues, ...qualityFindings, ...mappingTodos, ...todos, ...pmoReviewGates],
+        [...v7WorkItems, ...processDataGovernance, ...directProcessGovernance, ...escalated, ...inputBaselineIssues, ...qualityFindings, ...mappingTodos, ...todos, ...pmoReviewGates],
         { department: currentDepartmentName }
       );
-      const pendingWorkItems = visibleWorkItems.filter(item => canActOnWorkbenchItem(item, permSet));
+      const pendingWorkItems = roleCodes.includes('admin') ? [] : visibleWorkItems.filter(item => canActOnWorkbenchItem(item, permSet));
       const guidanceItems = guidanceItemsForRoles(activeRoles);
       const workItems = mode === 'all' ? [...pendingWorkItems, ...guidanceItems] : pendingWorkItems;
-      const contexts = loadProcessContexts(mode, pendingWorkItems, {
+      const contexts = await loadProcessContexts(mode, pendingWorkItems, {
         canViewAll,
         departmentName: currentDepartmentName
       });
@@ -1156,6 +1197,7 @@ router.get('/', requireAuth, (req, res) => {
             pmoReviewGates: pmoReviewGates.length,
             crossDepartmentHandoffs: directProcessGovernance.filter(item => item.type === 'cross_dept_handoff').length,
             handoffConflicts: directProcessGovernance.filter(item => item.type === 'handoff_conflict').length,
+            v7Tasks: v7WorkItems.length,
             processDataGovernance: processDataGovernance.filter(item => item.type === 'process_data_governance_package').length,
             businessFactRequests: processDataGovernance.filter(item => item.type === 'process_data_business_fact').length,
             overdue: pendingWorkItems.filter(item => item.overdue).length
@@ -1194,8 +1236,9 @@ router.get('/', requireAuth, (req, res) => {
         sankey: buildSankey(activeRoles, contexts, sankeyWorkItems)
       };
     });
+    res.setHeader('Cache-Control', 'no-store');
     res.json(body);
-  }, useMysqlIdentityReadModel() ? '身份 MySQL 读取模型不可用' : null);
+  }, useMysqlIdentityReadModel() ? '工作台待办暂不可用，请稍后重试' : null);
 });
 
 router.setIdentityRepositoryFactory = setIdentityRepositoryFactory;

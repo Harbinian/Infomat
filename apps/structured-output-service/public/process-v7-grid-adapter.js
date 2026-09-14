@@ -128,7 +128,7 @@
           column('link_ref', '技术标识', { technicalRef: true, readOnly: true }),
           column('form_ref', '表单', { required: true, technicalRef: true, editor: 'lookup', lookup: 'forms' }),
           column('behavior_ref', '业务行为', { required: true, technicalRef: true, editor: 'lookup', lookup: 'behaviors' }),
-          column('operations', '操作（可多选）', { editor: 'list', allowedValues: FORM_OPERATIONS, width: 240 }),
+          column('operations', '操作（可多选）', { editor: 'multi-select', allowedValues: FORM_OPERATIONS, values: options(FORM_OPERATIONS), width: 240 }),
           column('notes', '说明', { editor: 'textarea', width: 260 })
         ]
       },
@@ -200,7 +200,7 @@
       arrays(form.behavior_links).forEach((link, index) => rows.form_behavior_links.push({
         ...meta(link.link_ref, index), _source_parent_ref: form.form_ref,
         link_ref: link.link_ref, form_ref: form.form_ref, behavior_ref: link.behavior_ref,
-        operations: arrays(link.operations).join('、'), notes: link.notes
+        operations: arrays(link.operations), notes: link.notes
       }));
       arrays(form.areas).forEach((area, areaIndex) => {
         rows.form_areas.push({
@@ -244,7 +244,7 @@
       data_behavior_links: { ref: 'link_ref', prefix: 'data_link', parent: 'data_ref', defaults: { behavior_ref: '', operation: 'pending_confirmation', updated_field_refs: [] } },
       data_source_relations: { ref: 'source_ref', prefix: 'data_source', parent: 'data_ref', defaults: { source_department: '', source_process_name: '', source_behavior_name: '', source_data_name: '', availability_mode: 'pending_confirmation', available_from_behavior_ref: null } },
       forms: { ref: 'form_ref', prefix: 'form', defaults: { form_name: '', form_no: null, form_design_state: 'unspecified' } },
-      form_behavior_links: { ref: 'link_ref', prefix: 'form_link', parent: 'form_ref', defaults: { behavior_ref: '', operations: '', notes: '' } },
+      form_behavior_links: { ref: 'link_ref', prefix: 'form_link', parent: 'form_ref', defaults: { behavior_ref: '', operations: [], notes: '' } },
       form_areas: { ref: 'area_ref', prefix: 'area', parent: 'form_ref', defaults: { area_type: '', area_title: '' } },
       form_items: { ref: 'item_ref', prefix: 'item', parent: 'area_ref', defaults: { form_ref: context.formRef || '', item_name: '', item_type: '', required: null, instructions: '', business_data_ref: null, data_field_ref: null, value_usage_mode: 'pending_confirmation', value_origin_mode: 'pending_confirmation' } },
       field_source_links: { ref: 'source_link_ref', prefix: 'field_source', parent: 'item_ref', defaults: { source_type: '', source_data_ref: null, source_system_name: '', source_data_name: '', source_role: '' } }
@@ -289,7 +289,7 @@
           if (spec.technicalRef && value != null && clean(value) && !REF_PATTERN.test(clean(value))) {
             problem(result.errors, row, definition.id, spec.key, 'REF_INVALID', `${spec.label}必须以字母或数字开头，只能包含字母、数字、点、下划线、冒号或连字符`);
           }
-          if (spec.values?.length && clean(value) && !spec.values.some(option => String(option.value) === String(value))) {
+          if (spec.values?.length && !spec.allowedValues && clean(value) && !spec.values.some(option => String(option.value) === String(value))) {
             problem(result.errors, row, definition.id, spec.key, 'ENUM_INVALID', `${spec.label}“${clean(value)}”不在允许范围内`);
           }
           if (spec.allowedValues) {

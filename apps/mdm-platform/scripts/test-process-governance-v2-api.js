@@ -1,4 +1,5 @@
 const assert = require('assert');
+const { syntheticSession, validateSyntheticSession } = require('./testHelpers/syntheticSession');
 const express = require('express');
 
 process.env.MDM_DB_QUIET = '1';
@@ -219,6 +220,7 @@ async function main() {
     [1, ['governance:read-global']]
   ]);
   auth.setIdentityRepositoryFactory(async () => ({
+    validateSession: validateSyntheticSession,
     async getUserRoleCodes(userId) {
       return roles.get(Number(userId)) || [];
     },
@@ -248,7 +250,7 @@ async function main() {
   const app = express();
   app.use(express.json());
   app.use((req, res, next) => {
-    req.session = sessions[req.get('X-Test-User')] || sessions.contact;
+    req.session = syntheticSession(sessions[req.get('X-Test-User')] || sessions.contact);
     next();
   });
   app.use('/api/process-design', processDesignRouter);

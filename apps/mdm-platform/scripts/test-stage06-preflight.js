@@ -1,0 +1,21 @@
+// Pure target guards plus prepare-mode subprocess with real MySQL blocked.
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const os=require('node:os');
+const path=require('node:path');
+const {spawnSync}=require('node:child_process');
+const {isolatedEnvironment}=require('./testHelpers/isolatedProcess');
+const {targetConfig}=require('./inspect-launch-stage06');
+const env={MYSQL_HOST:'127.0.0.1',MYSQL_PORT:'49123',MYSQL_DATABASE:'synthetic_check',MYSQL_USER:'synthetic',MYSQL_PASSWORD:'synthetic-not-a-real-credential'};
+assert.throws(()=>targetConfig([],{}),/STAGE06_EXPLICIT_ENV_REQUIRED/);
+assert.throws(()=>targetConfig(['--target','localhost:3307/infomat_mdm'],env),/STAGE06_TARGET_CONFIRMATION_REQUIRED/);
+assert.throws(()=>targetConfig(['--target','127.0.0.1:49123/synthetic_check'],{...env,MYSQL_DATABASE:'invalid;drop'}),/STAGE06_TARGET_INVALID/);
+assert.equal(targetConfig(['--target','127.0.0.1:49123/synthetic_check'],env).port,49123);
+const output=fs.mkdtempSync(path.join(os.tmpdir(),'mdm-stage06-prepare-'));
+const result=spawnSync(process.execPath,['--require',path.join(__dirname,'testHelpers/blockRealMysql.js'),path.join(__dirname,'inspect-launch-stage06.js'),'--prepare','--output',output],{env:isolatedEnvironment(),encoding:'utf8',windowsHide:true,timeout:10000});
+assert.equal(result.status,0,result.stderr);
+const template=JSON.parse(fs.readFileSync(path.join(output,'inspection-report.template.json')));
+assert.equal(template.target.database,null);assert.equal(template.backup.restoredAndCompared,false);
+assert.equal(template.ddlAuthorized,false);
+assert.doesNotMatch(fs.readFileSync(path.join(output,'inspection-plan.sql'),'utf8'),/password_hash|session_json|sid_hash|DELETE FROM|DROP TABLE|INSERT INTO|UPDATE [a-z_]+ SET/i);
+console.log('STAGE06_PREFLIGHT_PASS: explicit target refusal, no-connection prepare, pending formal template');
