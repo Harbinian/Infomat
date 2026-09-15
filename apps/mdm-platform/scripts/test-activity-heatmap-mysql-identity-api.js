@@ -1,6 +1,7 @@
 const assert = require('assert');
 const express = require('express');
 const { cleanupDb } = require('./testHelpers/isolatedDb');
+const { syntheticSession, validateSyntheticSession } = require('./testHelpers/syntheticSession');
 
 process.env.MDM_DB_QUIET = '1';
 const previousIdentityReadModel = process.env.MDM_IDENTITY_READ_MODEL;
@@ -24,12 +25,14 @@ function closeServer(server) {
 async function main() {
   let permissionsCalls = 0;
   let roleCalls = 0;
+  let permissions = new Set(['governance:read-global']);
 
   auth.setIdentityRepositoryFactory(async () => ({
+    validateSession: validateSyntheticSession,
     async getUserEffectivePermissions(userId) {
       permissionsCalls += 1;
       assert.strictEqual(userId, 42);
-      return { permSet: new Set(['data:view_all']), fieldConstraints: {} };
+      return { permSet: permissions, fieldConstraints: {} };
     },
     async getUserRoleCodes(userId, legacyRole) {
       roleCalls += 1;
@@ -55,12 +58,12 @@ async function main() {
   const app = express();
   app.use(express.json());
   app.use((req, res, next) => {
-    req.session = {
+    req.session = syntheticSession({
+      personId: 42,
       userId: 42,
-      userRole: 'owner',
       userName: 'MySQL 身份用户',
       departmentId: 900
-    };
+    });
     next();
   });
   app.use('/api/activity', activityRouter);
@@ -76,7 +79,10 @@ async function main() {
     assert.strictEqual(body.days, 90);
     assert.ok(Array.isArray(body.dates), '应返回日期序列');
     assert.ok(permissionsCalls > 0, '应通过 MySQL 身份仓储读取权限');
-    assert.strictEqual(roleCalls, 0, '已有 data:view_all 权限时不需要再读取角色码');
+    assert.strictEqual(roleCalls, 0, '有效读取权限不依赖旧角色名放行');
+    permissions = new Set(['data:view_all']);
+    assert.strictEqual((await fetch(`${baseUrl}/api/activity/heatmap?scope=all&days=90`)).status, 403, 'retired permission must not grant global activity access');
+    assert.strictEqual((await fetch(`${baseUrl}/api/activity/heatmap?scope=me&days=90`)).status, 200, 'authenticated users retain their own activity');
 
     console.log('Activity heatmap MySQL identity API test passed');
   } finally {

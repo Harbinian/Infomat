@@ -904,7 +904,7 @@ async function main() {
       if (/^SELECT \* FROM process_v7_preview_cases WHERE id=\? FOR UPDATE$/.test(normalizedQuery(sql))) {
         return [[{
           id: 1,
-          process_ref: 'process_other_trial',
+          process_ref: 'invalid ref',
           current_revision_no: 1,
           current_content_hash: projected.contentHash
         }]];
@@ -931,7 +931,7 @@ async function main() {
   await assert.rejects(
     lockedScopeRepository.addRevision(
       { id: 1 },
-      { ...projected, processRef: 'process_other_trial' },
+      { ...projected, processRef: 'invalid ref' },
       {
         sourceFileName: '请求范围复核.json',
         expectedRevisionNo: 1,
@@ -939,9 +939,9 @@ async function main() {
       },
       { userId: 10, personId: 10 }
     ),
-    error => error && error.statusCode === 403 && error.code === 'V7_TRIAL_PROCESS_SCOPE_DENIED'
+    error => error && error.statusCode === 422 && error.code === 'V7_PROCESS_REF_INVALID'
   );
-  assert.strictEqual(lockedScopeQueries.length, 0, '请求中的process_ref越界时仓储不得开启事务');
+  assert.strictEqual(lockedScopeQueries.length, 0, '请求中的process_ref无效时仓储不得开启事务');
 
   await assert.rejects(
     lockedScopeRepository.addRevision(
@@ -954,23 +954,23 @@ async function main() {
       },
       { userId: 10, personId: 10 }
     ),
-    error => error && error.statusCode === 403 && error.code === 'V7_TRIAL_PROCESS_SCOPE_DENIED'
+    error => error && error.statusCode === 422 && error.code === 'V7_PROCESS_REF_INVALID'
   );
-  assert.strictEqual(lockedScopeQueries.length, 1, '仓储在锁定案例并发现越界后不得执行写SQL');
+  assert.strictEqual(lockedScopeQueries.length, 1, '仓储在锁定案例并发现无效后不得执行写SQL');
 
   await assert.rejects(
     lockedScopeRepository.decideItem(
       { id: 101, case_id: 1 },
       'counterparty',
       'confirmed',
-      '试图直接绕过试点范围。',
+      '试图直接绕过流程标识有效性。',
       1,
       projected.contentHash,
       { userId: 12, personId: 12, departmentId: 2 }
     ),
-    error => error && error.statusCode === 403 && error.code === 'V7_TRIAL_PROCESS_SCOPE_DENIED'
+    error => error && error.statusCode === 422 && error.code === 'V7_PROCESS_REF_INVALID'
   );
-  assert.strictEqual(lockedScopeQueries.length, 2, '部门决定仓储也必须在锁定案例后按process_ref复核试点范围');
+  assert.strictEqual(lockedScopeQueries.length, 2, '部门决定仓储也必须在锁定案例后按process_ref复核流程标识有效性');
 
   process.env.PROCESS_V7_FORMAL_ENABLED = '0';
   await assert.rejects(
@@ -1230,40 +1230,35 @@ async function main() {
       method: 'POST',
       body: JSON.stringify({ source_file_name: '制造大纲.json', document })
     });
-    assert.strictEqual(trialScopeMissing.response.status, 503);
-    assert.strictEqual(trialScopeMissing.body.code, 'V7_TRIAL_SCOPE_NOT_CONFIGURED');
+    assert.strictEqual(trialScopeMissing.response.status, 201, 'retired trial environment never blocks another valid process');
 
     process.env.PROCESS_V7_TRIAL_PROCESS_REF = '*';
     const trialScopeInvalid = await request(baseUrl, 'contact', '/api/process-v7-preview/cases', {
       method: 'POST',
       body: JSON.stringify({ source_file_name: '制造大纲.json', document })
     });
-    assert.strictEqual(trialScopeInvalid.response.status, 503);
-    assert.strictEqual(trialScopeInvalid.body.code, 'V7_TRIAL_SCOPE_NOT_CONFIGURED');
+    assert.strictEqual(trialScopeInvalid.response.status, 201, 'retired trial environment never blocks another valid process');
 
     process.env.PROCESS_V7_TRIAL_PROCESS_REF = `${projected.processRef},process_other_trial`;
     const trialScopeListInvalid = await request(baseUrl, 'contact', '/api/process-v7-preview/cases', {
       method: 'POST',
       body: JSON.stringify({ source_file_name: '制造大纲.json', document })
     });
-    assert.strictEqual(trialScopeListInvalid.response.status, 503);
-    assert.strictEqual(trialScopeListInvalid.body.code, 'V7_TRIAL_SCOPE_NOT_CONFIGURED');
+    assert.strictEqual(trialScopeListInvalid.response.status, 201, 'retired trial environment never blocks another valid process');
 
     process.env.PROCESS_V7_TRIAL_PROCESS_REF = ` ${projected.processRef} `;
     const trialScopeWhitespaceInvalid = await request(baseUrl, 'contact', '/api/process-v7-preview/cases', {
       method: 'POST',
       body: JSON.stringify({ source_file_name: '制造大纲.json', document })
     });
-    assert.strictEqual(trialScopeWhitespaceInvalid.response.status, 503);
-    assert.strictEqual(trialScopeWhitespaceInvalid.body.code, 'V7_TRIAL_SCOPE_NOT_CONFIGURED');
+    assert.strictEqual(trialScopeWhitespaceInvalid.response.status, 201, 'retired trial environment never blocks another valid process');
 
     process.env.PROCESS_V7_TRIAL_PROCESS_REF = 'process_other_trial';
     const trialScopeDenied = await request(baseUrl, 'contact', '/api/process-v7-preview/cases', {
       method: 'POST',
       body: JSON.stringify({ source_file_name: '制造大纲.json', document })
     });
-    assert.strictEqual(trialScopeDenied.response.status, 403);
-    assert.strictEqual(trialScopeDenied.body.code, 'V7_TRIAL_PROCESS_SCOPE_DENIED');
+    assert.strictEqual(trialScopeDenied.response.status, 201, 'retired trial environment never blocks another valid process');
 
     process.env.PROCESS_V7_TRIAL_PROCESS_REF = projected.processRef;
 
@@ -1302,8 +1297,8 @@ async function main() {
     assert.strictEqual(outOfTrialFormalRead.response.status, 200, '单流程范围不得阻止已授权读取');
     assert.deepStrictEqual(
       outOfTrialFormalRead.body.formal_allowed_actions,
-      ['view_formal_draft', 'read_formal_version'],
-      '流程不在试点范围时不得广告正式写动作'
+      ['view_formal_draft', 'read_formal_version', 'submit_formal_draft'],
+      '旧试点配置不再隐藏已获权限且证据匹配的正式写动作'
     );
 
     process.env.PROCESS_V7_TRIAL_PROCESS_REF = projected.processRef;
@@ -1391,9 +1386,8 @@ async function main() {
       method: 'POST',
       body: JSON.stringify({ decision: 'confirmed', basis: '不在试点范围', expected_revision_no: 1, expected_content_hash: projected.contentHash })
     });
-    assert.strictEqual(trialDeniedDecision.response.status, 403);
-    assert.strictEqual(trialDeniedDecision.body.code, 'V7_TRIAL_PROCESS_SCOPE_DENIED');
-    assert.strictEqual(repository.calls.length, callsBeforeTrialDeniedDecision, '范围拒绝不得写入核对结果');
+    assert.strictEqual(trialDeniedDecision.response.status, 200, 'old trial environment must not block authorized actions');
+    assert.strictEqual(repository.calls.length, callsBeforeTrialDeniedDecision + 1);
     process.env.PROCESS_V7_TRIAL_PROCESS_REF = projected.processRef;
 
     const pendingOwnerDocument = sampleDocument();
@@ -1419,9 +1413,8 @@ async function main() {
         expected_content_hash: pendingOwnerProjection.contentHash
       })
     });
-    assert.strictEqual(trialDeniedOwnerAssignment.response.status, 403);
-    assert.strictEqual(trialDeniedOwnerAssignment.body.code, 'V7_TRIAL_PROCESS_SCOPE_DENIED');
-    assert.strictEqual(pendingOwnerRepository.calls.length, 0, '范围拒绝不得分派归口部门');
+    assert.strictEqual(trialDeniedOwnerAssignment.response.status, 200, 'old trial environment must not block authorized actions');
+    assert.strictEqual(pendingOwnerRepository.calls.length, 1);
 
     previewRouter.setProcessV7PreviewRepositoryFactory(() => repository);
     process.env.PROCESS_V7_TRIAL_PROCESS_REF = projected.processRef;
@@ -1487,9 +1480,8 @@ async function main() {
         expected_content_hash: projected.contentHash
       })
     });
-    assert.strictEqual(trialDeniedRevision.response.status, 403);
-    assert.strictEqual(trialDeniedRevision.body.code, 'V7_TRIAL_PROCESS_SCOPE_DENIED');
-    assert.strictEqual(repository.calls.length, callsBeforeRevisionPreview, '范围拒绝不得写入新修订');
+    assert.strictEqual(trialDeniedRevision.response.status, 201, 'same-process revision remains writable regardless of retired trial environment');
+    assert.strictEqual(repository.calls.length, callsBeforeRevisionPreview + 1);
     process.env.PROCESS_V7_TRIAL_PROCESS_REF = projected.processRef;
 
     const changedProcessDocument = JSON.parse(JSON.stringify(changedDocument));
@@ -1503,9 +1495,9 @@ async function main() {
         expected_content_hash: projected.contentHash
       })
     });
-    assert.strictEqual(requestScopeDeniedRevision.response.status, 403);
-    assert.strictEqual(requestScopeDeniedRevision.body.code, 'V7_TRIAL_PROCESS_SCOPE_DENIED');
-    assert.strictEqual(repository.calls.length, callsBeforeRevisionPreview, '请求中的process_ref越界时不得写入新修订');
+    assert.strictEqual(requestScopeDeniedRevision.response.status, 422);
+    assert.strictEqual(requestScopeDeniedRevision.body.code, 'V7_PREVIEW_PROCESS_REF_MISMATCH');
+    assert.strictEqual(repository.calls.length, callsBeforeRevisionPreview + 1, 'another process cannot replace this case');
 
     const revisionPreview = await request(baseUrl, 'contact', '/api/process-v7-preview/cases/1/revisions/preview', {
       method: 'POST',
@@ -1518,7 +1510,7 @@ async function main() {
     assert.strictEqual(revisionPreview.response.status, 200);
     assert.strictEqual(revisionPreview.body.comparison.counts.reopened, 1);
     assert.strictEqual(revisionPreview.body.candidate_content_hash, changedProjection.contentHash);
-    assert.strictEqual(repository.calls.length, callsBeforeRevisionPreview, 'read-only comparison must not call a write repository method');
+    assert.strictEqual(repository.calls.length, callsBeforeRevisionPreview + 1, 'read-only comparison must not call a write repository method');
 
     const list = await request(baseUrl, 'targetReviewer', '/api/process-v7-preview/cases');
     assert.strictEqual(list.response.status, 200);
@@ -1554,9 +1546,8 @@ async function main() {
         expected_content_hash: zeroCrossDepartmentProjection.contentHash
       })
     });
-    assert.strictEqual(trialDeniedScopeDecision.response.status, 403);
-    assert.strictEqual(trialDeniedScopeDecision.body.code, 'V7_TRIAL_PROCESS_SCOPE_DENIED');
-    assert.strictEqual(zeroRepository.calls.length, callsBeforeTrialDeniedScopeDecision, '范围拒绝不得写入范围决定');
+    assert.strictEqual(trialDeniedScopeDecision.response.status, 200, 'old trial environment must not block authorized actions');
+    assert.strictEqual(zeroRepository.calls.length, callsBeforeTrialDeniedScopeDecision + 1);
     process.env.PROCESS_V7_TRIAL_PROCESS_REF = zeroCrossDepartmentProjection.processRef;
 
     const scopeDecision = await request(baseUrl, 'lead', '/api/process-v7-preview/cases/1/scope-decision', {
@@ -1586,8 +1577,8 @@ async function main() {
         target: { mode: 'create', document_no: 'V7-TEST-001', document_title: '产品制造大纲编制与审批' }
       })
     });
-    assert.strictEqual(trialDeniedPromotion.response.status, 403);
-    assert.strictEqual(trialDeniedPromotion.body.code, 'V7_TRIAL_PROCESS_SCOPE_DENIED');
+    assert.strictEqual(trialDeniedPromotion.response.status, 409);
+    assert.strictEqual(trialDeniedPromotion.body.code, 'V7_PREVIEW_REVIEW_INCOMPLETE', 'removing the trial setting must not bypass review');
     assert.strictEqual(repository.calls.length, callsBeforeTrialDeniedPromotion, '范围拒绝不得提升正式草稿');
     process.env.PROCESS_V7_TRIAL_PROCESS_REF = projected.processRef;
 

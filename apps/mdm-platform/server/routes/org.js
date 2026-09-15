@@ -384,6 +384,14 @@ router.get('/users', requireAuth, requireOrgPermission('identity:read'), (req, r
   res.json(users);
 });
 
+router.get('/roster', requireAuth, requireOrgPermission('identity:read'), (req, res) => {
+  if (!useMysqlIdentityReadModel()) return res.status(409).json({ code: 'MYSQL_IDENTITY_REQUIRED', error: '花名册需要MySQL人员目录' });
+  return runAsyncAction(res, async () => {
+    const repo = await identityRepository();
+    return res.json({ rows: await repo.listRoster(), source: 'person', publication: null });
+  }, '花名册暂时无法读取');
+});
+
 // GET /api/users/roles-summary — all users with legacy role + RBAC roles
 router.get('/users/roles-summary', requireAuth, requireOrgPermission('identity:read'), (req, res) => {
   if (useMysqlIdentityReadModel()) {

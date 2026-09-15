@@ -55,6 +55,7 @@ function packageDetail() {
 
 const calls = [];
 const repository = {
+  async listPublishedVersions() { return [77,78].map(id => ({process_version_id:id,document_title:'合成流程版本'+id,status:'published'})); },
   async listWorkPackages() { return [packageDetail().package]; },
   async listBusinessFactRequests(departmentId) {
     return Number(departmentId) === 10 ? [{
@@ -132,6 +133,9 @@ async function request(baseUrl, method, path, user, body) {
     assert.strictEqual(result.status, 200);
     assert.strictEqual(result.body.work_packages.length, 0, 'business users must not receive the MDM package list');
     assert.strictEqual(result.body.fact_requests.length, 1);
+    assert.deepStrictEqual(result.body.published_versions, [], 'department users must not receive global published version metadata');
+    result = await request(baseUrl, 'GET', '/api/process-data-governance/workbench', 'lead');
+    assert.deepStrictEqual(result.body.published_versions.map(item => item.process_version_id), [77,78]);
 
     result = await request(baseUrl, 'GET', '/api/process-data-governance/work-packages/8', 'contact');
     assert.strictEqual(result.status, 403, 'business users must not read the full MDM package');
@@ -145,7 +149,10 @@ async function request(baseUrl, method, path, user, body) {
     assert.strictEqual(result.status, 403, 'admin must remain read-only');
 
     result = await request(baseUrl, 'POST', '/api/process-data-governance/creation-tasks/reconcile', 'lead', { process_version_id: 78 });
-    assert.strictEqual(result.status, 403, 'writes must be restricted to the exact configured process_version_id');
+    assert.strictEqual(result.status, 201, 'an old trial setting must not block another selected version');
+    assert.ok(calls.some(call => call[0] === 'reconcile' && call[1] === 78));
+    result = await request(baseUrl, 'POST', '/api/process-data-governance/creation-tasks/reconcile', 'lead', { process_version_id: '*' });
+    assert.strictEqual(result.status, 422);
 
     result = await request(baseUrl, 'POST', '/api/process-data-governance/creation-tasks/reconcile', 'lead', { process_version_id: 77 });
     assert.strictEqual(result.status, 201);
@@ -195,7 +202,7 @@ async function request(baseUrl, method, path, user, body) {
     assert.deepStrictEqual(result.body.allowed_actions, ['view']);
     packageVersionId = 78;
     result = await request(baseUrl, 'GET', '/api/process-data-governance/work-packages/8', 'lead');
-    assert.strictEqual(result.status, 403, 'retained access must keep exact version scope');
+    assert.strictEqual(result.status, 200, 'retained completed packages support every published source version');
     packageVersionId = 77;
     const beforeReadOnlyCalls = calls.length;
     const mutations = [
@@ -226,7 +233,7 @@ async function request(baseUrl, method, path, user, body) {
     process.env.PROCESS_DATA_GOVERNANCE_READ_ONLY = '1';
     process.env.PROCESS_DATA_GOVERNANCE_TRIAL_PROCESS_VERSION_ID = '';
     result = await request(baseUrl, 'GET', '/api/process-data-governance/workbench', 'lead');
-    assert.strictEqual(result.status, 503, 'read-only must not bypass a missing exact version');
+    assert.strictEqual(result.status, 200, 'retained access no longer requires retired trial configuration');
     process.env.PROCESS_DATA_GOVERNANCE_TRIAL_PROCESS_VERSION_ID = '77';
     process.env.PROCESS_DATA_GOVERNANCE_ENABLED = '0';
     result = await request(baseUrl, 'GET', '/api/process-data-governance/status', 'lead');

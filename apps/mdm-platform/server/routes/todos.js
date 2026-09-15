@@ -12,6 +12,7 @@ const {
 } = require('../todoMysqlRepository');
 
 function handleDbError(res, error) {
+  if (error.code === 'OFFICE_TASK_REQUIRES_WORKBENCH') return res.status(409).json({code:error.code,error:error.message});
   if (sendMysqlUnavailable(res, error)) return;
   const code = String(error && error.code || '');
   const message = String(error && error.message || '');

@@ -4,14 +4,12 @@ function text(value) {
   return String(value == null ? '' : value).trim();
 }
 
-function trialProcessRefFromEnv(env = process.env) {
-  const raw = String(env && env.PROCESS_V7_TRIAL_PROCESS_REF || '');
-  return raw === raw.trim() && TECHNICAL_REF_PATTERN.test(raw) ? raw : '';
-}
+// Compatibility export. The retired trial setting no longer selects a process.
+function trialProcessRefFromEnv() { return ''; }
 
 function isV7TrialProcessRefAllowed(processRef, options = {}) {
-  const configured = trialProcessRefFromEnv(options.env || process.env);
-  return Boolean(configured && text(processRef) === configured);
+  const value = String(processRef == null ? '' : processRef);
+  return value === value.trim() && TECHNICAL_REF_PATTERN.test(value);
 }
 
 function trialScopeError(statusCode, code, message) {
@@ -35,28 +33,18 @@ function assertV7FormalEnabled(options = {}) {
   }
 }
 
-function assertV7TrialScopeConfigured(options = {}) {
-  const configured = trialProcessRefFromEnv(options.env || process.env);
-  if (!configured) {
-    throw trialScopeError(
-      503,
-      'V7_TRIAL_SCOPE_NOT_CONFIGURED',
-      'V7单流程试点范围尚未配置'
-    );
-  }
-  return configured;
-}
+// Compatibility export for existing repository/readiness entry points.
+function assertV7TrialScopeConfigured() { return true; }
 
 function assertV7TrialProcessRef(processRef, options = {}) {
-  const configured = assertV7TrialScopeConfigured(options);
-  if (text(processRef) !== configured) {
+  if (!isV7TrialProcessRefAllowed(processRef)) {
     throw trialScopeError(
-      403,
-      'V7_TRIAL_PROCESS_SCOPE_DENIED',
-      '当前流程不在已批准的V7单流程试点范围内'
+      422,
+      'V7_PROCESS_REF_INVALID',
+      '流程稳定标识无效，请核对V7文件中的process_ref'
     );
   }
-  return configured;
+  return text(processRef);
 }
 
 module.exports = {

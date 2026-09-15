@@ -15,6 +15,10 @@ function runtimeVersion(root = path.resolve(__dirname, '..')) {
   walk('server');
   walk('public');
   for (const file of ['package.json', 'package-lock.json']) if (fs.existsSync(path.join(root, file))) files.push(file);
+  for (const file of ['public/process-diagram.js','public/data-relation-diagram.js','node_modules/cytoscape/dist/cytoscape.min.js']) {
+    const shared = '../structured-output-service/' + file;
+    if (fs.existsSync(path.join(root, shared))) files.push(shared);
+  }
   const hash = crypto.createHash('sha256');
   for (const file of files.sort()) hash.update(file).update('\0').update(fs.readFileSync(path.join(root, file))).update('\0');
   let head = 'unavailable';

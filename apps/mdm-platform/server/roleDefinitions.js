@@ -13,6 +13,18 @@ const VISIBLE_TABS = Object.freeze({
     access: 'read',
     reason: '固定角色模型向全部已登录人员公开'
   },
+  dashboard: {
+    code: 'dashboard', name: '治理活跃与统计', access: 'role_scoped',
+    reason: '按照现有治理读取范围查看活跃记录和统计'
+  },
+  orgUnits: {
+    code: 'orgUnits', name: '组织架构', access: 'read',
+    reason: '查看当前MySQL部门目录'
+  },
+  persons: {
+    code: 'persons', name: '花名册', access: 'read',
+    reason: '具备身份读取权限的人员查看当前MySQL花名册'
+  },
   processGovernance: {
     code: 'processGovernance',
     name: '流程治理',
@@ -24,6 +36,10 @@ const VISIBLE_TABS = Object.freeze({
     name: '数据地图',
     access: 'role_scoped',
     reason: '按固定治理角色授予的数据范围查看'
+  },
+  publications: {
+    code: 'publications', name: '主数据发布', access: 'role_scoped',
+    reason: '读取发布记录；具备发布权限的业务角色核对并发布手工导入的数据'
   },
   conflicts: {
     code: 'conflicts',
@@ -196,7 +212,7 @@ const ROLE_GUIDES = [
       BASE_PERMISSIONS.identityReadAudit,
       BASE_PERMISSIONS.governanceReadGlobal
     ],
-    visibleTabs: visibleTabs('roleWorkbench', 'roleGuide', 'processGovernance', 'dataMap', 'conflicts', 'quality', 'rbac')
+    visibleTabs: visibleTabs('roleWorkbench', 'dashboard', 'orgUnits', 'persons', 'roleGuide', 'processGovernance', 'dataMap', 'publications', 'conflicts', 'quality', 'rbac')
   },
   {
     code: 'mdm_lead',
@@ -216,7 +232,7 @@ const ROLE_GUIDES = [
       BASE_PERMISSIONS.governancePublish,
       BASE_PERMISSIONS.governanceEscalateConflict
     ],
-    visibleTabs: visibleTabs('roleWorkbench', 'roleGuide', 'processGovernance', 'dataMap', 'conflicts', 'quality')
+    visibleTabs: visibleTabs('roleWorkbench', 'roleGuide', 'processGovernance', 'dataMap', 'publications', 'conflicts', 'quality')
   },
   {
     code: 'department_contact',

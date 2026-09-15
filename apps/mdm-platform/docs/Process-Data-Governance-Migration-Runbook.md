@@ -2,6 +2,8 @@
 
 ## 1. 当前结论
 
+2026-09-15用户确认数据治理改为可选择任一已发布原生V7版本，包括历史已发布版本。当前运行规则以本段和应用README为准：`PROCESS_DATA_GOVERNANCE_ENABLED=1`开启后，由用户在页面选择版本并主动建立工作包；旧`PROCESS_DATA_GOVERNANCE_TRIAL_PROCESS_VERSION_ID`不再读取，状态接口返回`scope_mode=published_v7_versions`及兼容字段`configured_process_version_id:null`。每个既有工作包的版本、来源摘要、标识及审核记录继续保留，无需数据迁移或重建。`PROCESS_DATA_GOVERNANCE_READ_ONLY=1`仍仅展示已完成包并拒绝所有工作包写入，不改变V7写开关。以下2026-09-11及更早段落为历史准备与验证记录，其中单版本范围、配置联动及当时未开启状态不再用于判断当前运行。
+
 2026-09-11 Q16已确认本批完成及观察结束后保留正式版本和已完成治理工作包的只读查阅。新结束配置为：`PROCESS_V7_PREVIEW_ENABLED=0`、`PROCESS_V7_FORMAL_ENABLED=0`、`PROCESS_V7_TRIAL_PROCESS_REF`为空；工作包`PROCESS_DATA_GOVERNANCE_ENABLED=1`，保留本批实际批准的准确`PROCESS_DATA_GOVERNANCE_TRIAL_PROCESS_VERSION_ID`，另设`PROCESS_DATA_GOVERNANCE_READ_ONLY=1`。不得把工作包范围清空后仍称为保留查阅；如需完全停用，工作包总开关仍可关闭，此时查阅也关闭。上述为待执行的准备方案，尚未修改真实配置。
 
 只读模式不需要新DDL或数据迁移，已有历史记录原样保留。运维在获准切换时须确认准确版本的工作包已完成，记录实际状态接口的`enabled=true/read_only=true`及准确版本ID；具名人员验证原权限内的正式正文、治理结论/依据和定向事实可读，工作包7类写入口及V7写入被拒绝、行内容不变，错误版本和越部门仍拒绝。未完成包不进入本批保留查阅范围；不得为通过检查而修改其状态。只读参数缺省或`0`保留原办理模式，非法值停止访问及写入并使ready不可用；正式切换必须显式填写`1`，不能依赖默认值。重新开启办理或扩展范围仍须单独批准。技术证据见[上线记录C06](../../../docs/plans/2026-09-09-mdm-3000-launch/03-发布与恢复.md#c06本批结束后的只读模式补充隔离技术验证)。
@@ -48,8 +50,8 @@ npm run migrate:process-data-governance:rollback
 2. 已完成全库备份，并在隔离实例验证可以恢复；
 3. dry-run返回`not_applied`，没有`partial_structure`、`record_without_structure`、`structure_without_record`或`schema_drift`；
 4. 已按本次读取授权记录现有已发布版本的实际数量、关键标识、来源摘要和引用，不自动生成工作包；
-5. 业务负责人和MDM工作组已经确认唯一试点`process_version_id`；
-6. 功能开关保持关闭，应用迁移期间没有用户进入试点操作；
+5. 已确认迁移只建立空表，工作包随后由有权限的用户选择实际已发布版本建立，不预填版本ID；
+6. 功能开关保持关闭，应用迁移期间没有用户进入工作包操作；
 7. 已安排失败后的恢复负责人和停止条件。
 
 缺少任一条件时停止，不通过补表、补迁移记录或改环境变量掩盖问题。
@@ -61,8 +63,8 @@ npm run migrate:process-data-governance:rollback
 3. 执行`npm run migrate:process-data-governance:apply`。
 4. 再次执行dry-run，结果必须为`applied`，六张表结构摘要全部匹配，行数均为0。
 5. 核对迁移前后的已发布流程版本数量、`process_design_versions`关键摘要和引用关系一致。
-6. 不立即打开功能。先在隔离环境完成试点流程补建和角色验收。
-7. 正式试点启用时，同时配置开关和唯一版本标识，再重启3000并验证`GET /api/process-data-governance/status`。
+6. 开启前在隔离环境验证多个已发布版本、固定来源、重复建立及角色权限。
+7. 按本次授权设置`PROCESS_DATA_GOVERNANCE_ENABLED=1`，重启3000并验证`GET /api/ready`和`GET /api/process-data-governance/status`。无需填写旧试点版本配置；页面无已发布V7时显示空状态，不自动补建。
 
 迁移只建空表和写入迁移键，不回填历史工作包。
 
@@ -79,17 +81,17 @@ npm run migrate:process-data-governance:rollback
 
 这些状态必须由数据库负责人核查实际对象和备份，不能让脚本自动修复。
 
-## 6. 试点旧版本补建
+## 6. 为所选已发布版本建立工作包
 
-迁移完成后，MDM工作组只能通过公开接口对配置中的唯一试点版本执行补建：
+迁移完成且功能开启后，MDM工作组在页面选择已发布的原生V7版本；页面调用以下公开接口：
 
 ```text
 POST /api/process-data-governance/creation-tasks/reconcile
 ```
 
-请求必须携带精确`process_version_id`。重复补建返回既有工作包。版本不是V7、不是不可变正式状态、与试点配置不一致或来源摘要不可读取时停止。
+请求必须携带所选`process_version_id`。重复建立返回既有工作包。版本不是原生V7、不是已发布或历史已发布状态、来源内容不可读取或摘要不匹配时拒绝，不替换旧工作包的来源。
 
-补建过程不读取原始3001文件，不修改流程版本正文，不向精确试点以外的历史版本扩散。
+建立过程只读取所选正式版本，不读取原始3001文件，不修改流程正文，不自动为其他版本创建工作包。
 
 ## 7. 回退
 
@@ -113,7 +115,7 @@ npm run migrate:process-data-governance:rollback
 | 场景 | 验证内容 |
 |---|---|
 | 上一状态进入当前结构 | 在迁移前结构上执行dry-run和apply；以本次基线登记的历史版本不被自动改写或回填 |
-| 当前版本往返 | 唯一试点版本补建后读取工作包、生成候选并重新读取；`process_version_id`和来源摘要不变 |
+| 多版本往返 | 分别选择两个已发布版本建立工作包、生成候选并重新读取；两个工作包独立，各自`process_version_id`和来源摘要不变 |
 | 重复执行 | 重复apply和重复补建均幂等；不出现第二个工作包或重复明细 |
 | 失败恢复 | 模拟部分DDL、来源摘要变化、并发修订冲突和非空回退；系统停止并保留恢复路径 |
 
@@ -122,7 +124,7 @@ npm run migrate:process-data-governance:rollback
 - 六张表的结构摘要与当前代码一致。
 - 迁移键唯一且时间可追溯。
 - 迁移前后已发布流程版本数量一致，流程内容摘要未变化。
-- 未配置试点时数据生命周期治理入口不可见，业务接口返回503。
+- 功能关闭时工作包业务接口返回503，页面展示关闭状态；开启后无需配置试点版本，没有已发布V7时显示空列表。
 - 配置错误或版本范围不一致时返回范围拒绝，不创建任务或工作包。
 - `admin`写入返回403；MDM工作组和目标业务部门分别只能执行自己的动作。
 - 浏览器关闭或切换带未提交内容的蒙版弹窗时出现保护提示。

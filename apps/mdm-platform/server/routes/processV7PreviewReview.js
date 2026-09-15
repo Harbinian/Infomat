@@ -18,8 +18,7 @@ const { makeProcessV7PreviewReviewRepository } = require('../processV7PreviewRev
 const {
   assertV7TrialProcessRef,
   assertV7TrialScopeConfigured,
-  isV7TrialProcessRefAllowed,
-  trialProcessRefFromEnv
+  isV7TrialProcessRefAllowed
 } = require('../processV7TrialScope');
 
 const DECISIONS = new Set([...PARTY_STATUSES].filter(value => value !== 'pending'));
@@ -159,7 +158,6 @@ function assertVisible(actor, detail) {
 function listAllowedActions(actor) {
   const actions = ['view'];
   if (
-    trialProcessRefFromEnv() &&
     !actor.roleCodes.has('admin') &&
     (actor.permissions.has('governance:draft-department') || actor.permissions.has('governance:assign-work'))
   ) actions.push('create_case');
@@ -456,10 +454,10 @@ function caseHandlingSummary(detail) {
 
 // Read projection of existing cases/items/promotions/tasks; no new task records or engine.
 async function listV7WorkbenchItems(actor) {
-  if (process.env.PROCESS_V7_PREVIEW_ENABLED !== '1' || !trialProcessRefFromEnv() || actor.roleCodes.has('admin')) return [];
+  if (process.env.PROCESS_V7_PREVIEW_ENABLED !== '1' || actor.roleCodes.has('admin')) return [];
   assertCanRead(actor);
   const repo = await repository();
-  const listing = await repo.listCases(actor, { processRef: trialProcessRefFromEnv(), limit: 200 });
+  const listing = await repo.listCases(actor, { limit: 200 });
   const result = [];
   const { ROLE_GUIDES } = require('../roleDefinitions');
   for (const row of listing.items || []) {
@@ -585,6 +583,9 @@ router.post('/cases/:id/revisions', requireAuth, (req, res) => runAction(res, as
     owningDepartmentName: detail.case.owning_department_name
   });
   assertV7TrialProcessRef(preview.processRef);
+  if (text(preview.processRef) !== text(detail.case.process_ref)) {
+    throw httpError(422, '新修订的流程稳定引用与当前案例不一致，请作为另一流程上传', 'V7_PREVIEW_PROCESS_REF_MISMATCH');
+  }
   const result = await repo.addRevision(detail.case, preview, {
     sourceFileName: sourceFileName(req.body || {}),
     expectedRevisionNo: expectedRevisionNo(req.body || {}),

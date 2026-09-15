@@ -9,10 +9,6 @@ assert.match(html, /role-workbench\.on\.wb-task-first/);
 assert.match(html, /height: calc\(100vh - 105px\)/);
 assert.match(html, /我现在该做什么/);
 assert.match(html, /职责全景放在“全量职责”中查看/);
-assert.match(html, /class="legacy-v3-history" id="pgLegacyV3History"/);
-assert.match(html, /历史V3编辑器（仅处理旧草稿）/);
-assert.match(html, /data-src="\/process-governance-editor\/index\.html"/);
-assert.match(html, /pgLegacyV3History.*addEventListener\('toggle'/s);
 assert.match(html, /id="pgDataGovernanceSection" data-pg-view="dataGovernance"/);
 assert.match(html, /业务部门只回答定向事实问题/);
 assert.match(html, /class="pdg-modal-mask" id="pdgModalMask"/);
@@ -30,9 +26,14 @@ assert.match(html, /尚未保存当前输入/);
 assert.match(html, /beforeunload[\s\S]*processDataGovernance\.dirty/);
 assert.match(html, /cacheFilters\.pdgPackageId = route\.pdgPackageId \|\| ''/);
 assert.match(html, /cacheFilters\.pdgFactRequestId = route\.pdgFactRequestId \|\| ''/);
-assert.match(html, /const PROCESS_DATA_GOVERNANCE_SUBTAB = \{ key: 'dataGovernance', label: '数据生命周期治理' \}/);
-assert.match(html, /state\.processDataGovernance\.status && state\.processDataGovernance\.status\.enabled\s*\? \[PROCESS_DATA_GOVERNANCE_SUBTAB\]\.concat\(PROCESS_GOVERNANCE_SUBTABS\)\s*: PROCESS_GOVERNANCE_SUBTABS/);
 assert.match(html, /if \(mode === 'all'\) \{\s*renderWorkbenchRoles\(data\);/);
-assert.match(html, /当前未启用、未迁移业务数据，也没有形成业务验收结论/);
+assert.match(html, /数据治理尚未开启。开启后，可选择已发布的V7流程版本建立工作包/);
+assert.match(html, /id="pdgVersionSelect"/);
+assert.match(html, /payload.published_versions/);
+assert.match(html, /process_version_id:versionId/);
+assert.doesNotMatch(html, /status.configured_process_version_id/);
 
 console.log('Process data governance frontend contract tests passed');
+
+assert.ok(html.includes('data-parent-tab="processGovernance" data-workspace="dataGovernance"'), 'data governance keeps its sidebar entry');
+assert.ok(!html.includes('const PROCESS_DATA_GOVERNANCE_SUBTAB'), 'data governance must not duplicate a page-level workspace tab');

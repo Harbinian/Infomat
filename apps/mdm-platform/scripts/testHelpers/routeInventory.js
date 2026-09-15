@@ -99,10 +99,15 @@ function localEvidence(row) {
     }
     if(!grew)break;
   }
+  if (row.file === 'offices.js') {
+    const repositoryFile='server/officeRepository.js';
+    parts.push(source(repositoryFile));
+    for(const name of ['currentActor','transaction','requireActiveOffice','member']) found.set('office:'+name,reference(repositoryFile,'async function '+name));
+  }
   const text=parts.join('\n');
   const guards=[...new Set(text.match(/\b(?:assert|can|has|require|authorized|requestHas)\w*(?=\s*\()/g)||[])].filter(n=>!['require','requireAuth'].includes(n));
   const permissions=[...new Set([...text.matchAll(/['"]((?:governance|identity|guidance):[a-z_-]+)['"]/g)].map(m=>m[1]))];
-  const calls=[...new Set([...text.matchAll(/\brepo\.(\w+)\(/g)].map(m=>m[1]))];
+  const calls=[...new Set([...text.matchAll(/\b(?:repo|officeRepository)(?:\(\))?\.(\w+)\(/g)].map(m=>m[1]))];
   return {guards,permissions,helpers:[...found.values()],repositoryCalls:calls,source:text};
 }
 module.exports={appRoot,source,reference,staticRoutes,formalRoutes,localEvidence,sha};

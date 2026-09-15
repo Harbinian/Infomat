@@ -1,3 +1,6 @@
+const { PUBLICATION_SCHEMA_SQL } = require('./publicationSchema');
+const { OFFICE_SCHEMA_SQL } = require('./officeSchema');
+
 function mdmMysqlSchemaSql() {
   return `
 CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -2087,7 +2090,7 @@ CREATE TABLE IF NOT EXISTS data_map_version_log (
   CONSTRAINT fk_data_map_version_log_change_set FOREIGN KEY (change_set_id)
     REFERENCES data_map_change_sets(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-`;
+` + PUBLICATION_SCHEMA_SQL + ';\n' + OFFICE_SCHEMA_SQL;
 }
 
 function splitSqlStatements(sql) {

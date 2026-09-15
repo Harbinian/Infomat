@@ -8,7 +8,14 @@ const audit=JSON.parse(execFileSync(process.execPath,[path.join(__dirname,'audit
 assert.equal(audit.unclassified.length,0);
 assert.equal(audit.schemaVersion,2);
 const find=(file,method,url)=>audit.entries.filter(r=>r.file===file&&r.method===method&&r.path===url);
-assert.equal(find('person.js','POST','/')[0].category,'isolatedLegacy');
+for(const url of ['/tasks','/tasks/:id/receive','/tasks/:id/assign','/tasks/:id/complete']) {
+  const entry=find('offices.js','POST',url)[0];assert.equal(entry.category,'businessWrite');
+  assert.ok(entry.helperReferences.some(ref=>ref.file==='server/officeRepository.js'&&ref.anchor.includes('currentActor')));
+}
+assert.equal(find('publications.js','POST','/publish')[0].category,'businessWrite');
+assert.ok(find('publications.js','POST','/publish')[0].permissions.includes('governance:publish'));
+for(const url of ['/parse','/preview'])assert.equal(find('publications.js','POST',url)[0].category,'validationOnly');
+assert.equal(find('person.js','POST','/').length,0,'retired personnel route must not be registered');
 assert.deepEqual(find('org.js','POST','/users').map(r=>r.category),['retired','shadowed']);
 assert.equal(find('roles.js','POST','/')[0].category,'retired');
 assert.equal(find('rbac.js','ALL','/model')[0].category,'retired');
@@ -38,5 +45,5 @@ for(const url of ['/quality-cases/:id/comment','/mapping-todos/:id/comment']) {
   assert.ok(find('processGovernance.js','POST',url)[0].permissions.some(p=>p.startsWith('governance:')&&!p.includes('read-')),'read access alone cannot authorize comments');
 }
 assert.ok(find('conflicts.js','POST','/:id/coordination')[0].guards.includes('canManageGeneralConflict'));
-for(const [file,url] of [['processDesignEditor.js','/validate'],['processDesignMysql.js','/import-structured-output/preview'],['processV7PreviewReview.js','/cases/:id/revisions/preview']])assert.equal(find(file,'POST',url)[0].category,'validationOnly');
+for(const [file,url] of [['processV7PreviewReview.js','/cases/:id/revisions/preview']])assert.equal(find(file,'POST',url)[0].category,'validationOnly');
 console.log(JSON.stringify({result:'ROUTE_WRITE_TRACE_PASS',counts:audit.counts,formalRegistrations:audit.formalRegistrations,staticDeclarations:audit.staticDeclarations}));

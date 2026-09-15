@@ -3,6 +3,8 @@
 const {source,reference,staticRoutes,formalRoutes,localEvidence,sha}=require('./testHelpers/routeInventory');
 
 const repositories={
+  offices:['officeRepository'],
+  publications:['publicationRepository'],
   accounts:['governanceAccessMysqlRepository'],governance:['governanceAccessMysqlRepository'],
   conflicts:['conflictMysqlRepository'],dataMap:['dataMapMysqlRepository'],fieldEntries:['dataMapMysqlRepository'],
   fieldIdentities:['dataMapMysqlRepository'],import:['dataMapMysqlRepository'],mappings:['mappingMysqlRepository','governanceAccessMysqlRepository'],
@@ -12,6 +14,8 @@ const repositories={
   processGovernance:['processGovernanceMysqlRepository','processGovernanceIssuePoolRepository','processInputBaselineReviewRepository']
 };
 const notes={
+  offices:'办公室任务复用mdm_todos。交办沿用治理分派权限；成员分配仅限明确的办公室负责人，办结仅限当前办理人。事务中复核当前身份、办公室和成员状态、修订号，写入任务与人员事件，不授予正式审核或发布权限。',
+  publications:'手工导入发布；事务内复核当前账号和发布权限、唯一标识、内容摘要、目录基线及版本指针，追加不可变发布记录和变更日志。组织和人员保留原标识，不批量创建账号。',
   accounts:'身份管理；仓储检查授权依据、生效期、同部门授权、账号状态、最后管理员及撤权，事务更新auth_version并记录identity_access_events。',
   governance:'部门责任记录；仓储检查当前人员、部门最终负责人及依据。无客户端修订令牌，按追加记录保存，不能视为流程审核或发布。',
   processV7PreviewReview:'预览专表；写入受精确process_ref及开关限制。已有案例写入在事务中锁定案例/当前修订并复核摘要；核对绑定参与部门。提升才写正式草稿，非正式版本。',
@@ -26,7 +30,7 @@ const notes={
   fieldIdentities:'本部门字段身份维护/确认；按现有字段与上下文校验。无统一客户端修订令牌，非V7事务。',
   import:'内存Excel上传；本部门上下文、固定列和内容校验；不发送通知。无客户端修订令牌，不代表实际导入验收。',
   terminology:'本部门流程下待审术语维护与部门审核；当前部分动作仅有状态检查及审核字段，无统一修订令牌或全量变更事件，不能视为正式术语发布验收。',
-  todos:'任务分派、目标部门办理、结构权限删除；记录mdm_todo_events。当前完成/删除无统一修订令牌，事件与写入不保证同一事务；不作为V7核对待办实现或验收。'
+  todos:'任务分派、目标部门办理、结构权限删除；完成与删除在事务中锁定待办并拒绝已由办公室承接的任务。旧任务仍无客户端修订令牌，创建事件与创建写入尚未合并事务；不作为V7核对待办实现或验收。'
 };
 
 function repositoryEvidence(row,trace) {
@@ -56,7 +60,7 @@ function buildAudit() {
     if(previous&&previous.category==='retired')classification={category:'shadowed',reason:'同一路径前置终止处理器已拒绝；后方旧实现不可达',blockedBy:previous.id};
     else if(/LEGACY_IDENTITY_API_RETIRED|CORE_GOVERNANCE_MODEL_READ_ONLY|ORGANIZATION_TRUTH_READ_ONLY/.test(row.handlers.map(h=>h.body).join('\n'))) classification={category:'retired',reason:'正式注册但明确拒绝写入'};
     else if(row.file==='org.js'&&['/login','/logout','/me/password'].includes(row.path))classification={category:'publicOrSelfService',reason:'登录或本人会话/口令服务；不能作为业务写权限'};
-    else if((row.file==='processDesignEditor.js'&&row.path==='/validate')||(row.file==='processDesignMysql.js'&&row.path==='/import-structured-output/preview')||(row.file==='processV7PreviewReview.js'&&row.path.endsWith('/revisions/preview')))classification={category:'validationOnly',reason:'POST承载内存校验/差异预览，不持久化业务记录'};
+    else if((row.file==='publications.js'&&['/parse','/preview'].includes(row.path))||(row.file==='processDesignEditor.js'&&row.path==='/validate')||(row.file==='processDesignMysql.js'&&row.path==='/import-structured-output/preview')||(row.file==='processV7PreviewReview.js'&&row.path.endsWith('/revisions/preview')))classification={category:'validationOnly',reason:'POST承载内存校验/差异预览，不持久化业务记录'};
     else if(trace.guards.length&&(repositories[row.file.replace(/\.js$/,'')])) classification={category:row.file==='accounts.js'?'identityWrite':'businessWrite',reason:notes[row.file.replace(/\.js$/,'')]};
     else classification={category:'unclassified',reason:'未找到已追溯的权限及仓储路径，须核对后补充具体证据'};
     const entry={id:`${row.file}:${row.line} ${row.method} ${row.path}`,file:row.file,line:row.line,base:row.base,path:row.path,method:row.method,...classification,
@@ -76,13 +80,13 @@ function buildAudit() {
     entries.push(entry);if(!previous)first.set(key,entry);
   }
   const index=source('server/index.js');
-  const isolatedNames=[...index.match(/const legacyRoutes = new Set\(\[([\s\S]*?)\]\)/)[1].matchAll(/'([^']+)'/g)].map(m=>m[1]+'.js');
+  const isolatedNames=[];
   for(const row of declarations) {
     if(formal.rows.some(r=>r.file===row.file&&r.line===row.line))continue;
     const isolated=isolatedNames.includes(row.file)||row.file==='processDesign.js';
     entries.push({...row,id:`${row.file}:${row.line} ${row.method} ${row.path}`,category:isolated?'isolatedLegacy':'unregistered',
       reason:isolated?'正式模式不加载；历史SQLite记录保留。流程设计由MySQL模块取代，其余在正式入口requireAuth后返回410。':'未在正式Express注册中发现，须检查消费者；不计为已保护的正式业务写入',
-      registration:reference('server/index.js',row.file==='processDesign.js'?"registerRouteIfExists('/api/process-design'":'const legacyRoutes = new Set'),
+      registration:reference('server/index.js','function registerRouteIfExists'),
       permission:'正式请求不能进入此实现；旧签名权限只作历史信息',department:'正式请求不能进入此实现',state:'正式请求不能进入此实现',concurrency:'正式请求不能进入此实现',audit:'正式请求不能进入此实现'});
   }
   const counts={};for(const entry of entries)counts[entry.category]=(counts[entry.category]||0)+1;

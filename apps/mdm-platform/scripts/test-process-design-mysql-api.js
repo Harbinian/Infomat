@@ -1155,22 +1155,20 @@ async function main() {
     const trialScopeMissing = await request(baseUrl, 'submitter', '/api/process-design/drafts/900/submit', {
       method: 'POST',
       body: JSON.stringify({
-        expected_revision_no: 1,
-        expected_content_hash: v7Draft.content_hash
+        note: '合成缺失修订绑定检查'
       })
     });
-    assert.strictEqual(trialScopeMissing.res.status, 503, JSON.stringify(trialScopeMissing.body));
-    assert.strictEqual(trialScopeMissing.body.code, 'V7_TRIAL_SCOPE_NOT_CONFIGURED');
+    assert.strictEqual(trialScopeMissing.res.status, 422, JSON.stringify(trialScopeMissing.body));
+    assert.strictEqual(trialScopeMissing.body.code, 'V7_FORMAL_EXPECTED_REVISION_REQUIRED');
     process.env.PROCESS_V7_TRIAL_PROCESS_REF = 'another_process';
     const trialScopeDenied = await request(baseUrl, 'submitter', '/api/process-design/drafts/900/submit', {
       method: 'POST',
       body: JSON.stringify({
-        expected_revision_no: 1,
-        expected_content_hash: v7Draft.content_hash
+        note: '合成缺失修订绑定检查'
       })
     });
-    assert.strictEqual(trialScopeDenied.res.status, 403, JSON.stringify(trialScopeDenied.body));
-    assert.strictEqual(trialScopeDenied.body.code, 'V7_TRIAL_PROCESS_SCOPE_DENIED');
+    assert.strictEqual(trialScopeDenied.res.status, 422, JSON.stringify(trialScopeDenied.body));
+    assert.strictEqual(trialScopeDenied.body.code, 'V7_FORMAL_EXPECTED_REVISION_REQUIRED', 'the old trial setting cannot replace formal revision checks');
     process.env.PROCESS_V7_TRIAL_PROCESS_REF = 'process_v7_read_test';
     const adminWriteDenied = await request(baseUrl, 'admin', '/api/process-design/drafts/900/submit', {
       method: 'POST',

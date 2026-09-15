@@ -4,6 +4,11 @@ const { makeTodoMysqlRepository } = require('../server/todoMysqlRepository');
 
 async function main() {
   const pool = {
+    async getConnection() { return this; },
+    async beginTransaction() {},
+    async commit() {},
+    async rollback() {},
+    release() {},
     state: {
       statements: [],
       nextId: 1,
@@ -14,6 +19,8 @@ async function main() {
       const normalizedSql = sql.replace(/\s+/g, ' ').trim();
 
       if (normalizedSql.startsWith('CREATE TABLE')) return [[], undefined];
+      if (normalizedSql.startsWith('SELECT todo_id FROM mdm_todo_office_assignments')) return [[], undefined];
+      if (normalizedSql.startsWith('SELECT id FROM mdm_todos WHERE id=?')) return [[this.state.todos.find(todo=>Number(todo.id)===Number(params[0]))].filter(Boolean),undefined];
 
       if (normalizedSql.includes('INSERT INTO mdm_todos')) {
         const id = this.state.nextId++;
