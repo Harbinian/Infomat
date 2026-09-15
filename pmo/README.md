@@ -59,7 +59,6 @@ npm run dev
 
 PMO 看板内的“周会事项”页签用于首次周例会 W-A03 模板试运行，登记行动项、风险、问题、变更和责任池事项。该页签数据保存在浏览器本地，不回写 PMO Markdown 真源或 `tasks.json`。
 
-独立周会行动项服务在 `apps/weekly-action-service/`，默认端口 `3002`。它用于周会行动项的服务端本机运行台账，适合多人访问同一套本机记录；该服务同样不回写 PMO Markdown 真源或 `tasks.json`。
 
 流程地图驾驶舱的独立路由为：
 

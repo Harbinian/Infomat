@@ -3,7 +3,7 @@
 Infomat 是航空复材制造领域的信息化资料与工具仓库，包含：
 
 - 资料与交付文档：业务流程、数据地图、制度体系文件、集成方案等
-- 可运行应用：MDM 平台、单流程治理编制工具、MDM-AI助手、PMO 周会行动项服务、信息表收集服务
+- 可运行应用：MDM 平台、单流程治理编制工具、信息表收集服务
 - 辅助工具与脚本：用于可视化、导入导出、文档生成与校验
 
 ## 仓库边界
@@ -24,8 +24,6 @@ Infomat 是航空复材制造领域的信息化资料与工具仓库，包含：
 - `apps/`：可运行应用
   - `apps/mdm-platform/`：MDM 平台（Express + MySQL 当前运行形态 + 原生前端；SQLite 仅用于历史兼容和隔离测试）
   - `apps/structured-output-service/`：单流程治理编制工具（局域网 3001，按统一结构规则提供无状态编辑和结构化文件导入导出）
-  - `apps/structure-assistant/`：MDM-AI助手，当前为独立的五账号内网浏览器试点（集中部署，调用DeepSeek云端API，显式读取3001的v5公开结构规则；不是3001的访问入口或运行依赖）
-  - `apps/weekly-action-service/`：PMO 周会行动项服务（本地 3002，保存每周例会行动项运行台账）
   - `apps/information-collection-service/`：信息表收集服务（4000管理端、4001实名填报端，业务数据写入`collection_*`表）
 - `docs/`：资料、说明、方案与沉淀
   - `docs/samples/`：必要样例（用于复现、格式示例与对齐）
@@ -112,9 +110,7 @@ npm run test:work-role-contract
 
 单流程治理编制工具在 [apps/structured-output-service](apps/structured-output-service/README.md)，默认监听`0.0.0.0:3001`，公司局域网用户通过`http://<服务器局域网IP>:3001`直接使用。该工具只在当前页面内存中编制一条流程，支持空白新建、历史JSON迁移、花名册岗位选择、主表和明细表填写、只读流程图预览及单流程JSON导入导出。页面不提供编制参考材料入口，不保存用户内容，不写回流程输入基线、花名册或工作角色真源，也不依赖DeepSeek、MDM-AI助手或认证网关。
 
-MDM-AI助手在 [apps/structure-assistant](apps/structure-assistant/README.md)。它当前承载独立的五账号内网结构化填报试点，由服务器集中部署，用户只使用浏览器；5个试点账号分别调用独立DeepSeek接口密钥。试点显式读取3001的`process-governance-v5`结构规则，并在每次模型调用前后核对Git提交和结构摘要；它不保存材料、对话、草稿或模型答复，也不自动写入3001或3000。启动或停止该试点不得影响3001，局域网用户使用3001无需经过该试点。
 
-PMO 周会行动项服务在 [apps/weekly-action-service](apps/weekly-action-service/README.md)，默认端口 `3002`。该服务用于登记和跟踪每周例会行动项、风险、问题、变更和责任池事项，数据保存到服务端本机运行台账；它不写回 PMO Markdown 真源、`tasks.json` 或 MDM 数据库。
 
 信息表收集服务在 [apps/information-collection-service](apps/information-collection-service/README.md)。同一Express进程提供4000管理端和4001实名填报端；应用只读复用MDM人员、账号和部门身份数据，权限及收集业务数据独立写入`collection_*`表，附件正文写入仓库外受控目录。只有从未发布且没有版本、任务记录的表单设计稿可以删除，已经发布或保留历史的表单只能归档。
 

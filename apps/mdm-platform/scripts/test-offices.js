@@ -1,0 +1,96 @@
+const assert=require('node:assert/strict');
+const crypto=require('node:crypto');
+const path=require('node:path');
+const {withStage05Fixture}=require('./test-stage05-mysql-isolated');
+const spreadsheet=require('../server/publicationSpreadsheet');
+const {makePublicationRepository}=require('../server/publicationRepository');
+const {manageOfficeSchema}=require('../server/officeSchema');
+
+function input(kind,headers,rows){return spreadsheet.normalizePublication({kind,title:'合成办公室功能验证',sourceFileName:'synthetic-offices.xlsx',headers,rows,mapping:spreadsheet.suggestedMapping(kind,headers)});}
+async function officeChecks({pool,fixture,expect,request}) {
+  await pool.execute("INSERT INTO org_unit(org_unit_code,org_unit_name,org_type,parent_org_unit_id) VALUES ('LEGACY_OFFICE','合成历史办公室','office',777)");
+  await pool.execute('ALTER TABLE org_unit DROP INDEX idx_org_unit_department, DROP COLUMN department_id');
+  assert.equal((await manageOfficeSchema(pool,'inspect')).changes[0].action,'add_department');
+  assert.equal((await manageOfficeSchema(pool,'apply')).ready,true);
+  assert.equal((await manageOfficeSchema(pool,'apply')).ready,true);
+  const [[legacy]]=await pool.execute("SELECT department_id,parent_org_unit_id FROM org_unit WHERE org_unit_code='LEGACY_OFFICE'");
+  assert.equal(legacy.department_id,null);assert.equal(legacy.parent_org_unit_id,777);
+  assert.equal((await pool.query('SELECT * FROM office_membership'))[0].length,0);
+  const repo=makePublicationRepository(pool),actor={personId:82,accountId:182,authVersion:1};
+  const publish=async content=>repo.publish({content:content.content,...await repo.preview(content),requestId:crypto.randomUUID()},actor);
+  const orgHeaders=['组织编码','组织名称','组织层级','归口部门编码','办公室负责人工号'];
+  const organization=input('organization',orgHeaders,[['SYNTHETIC_NEW','合成新增归口部','部门','',''],['OFFICE_A','合成核对办公室','办公室','SYNTHETIC_91','SYNTHETIC_contact'],['OFFICE_B','合成接收办公室','办公室','SYNTHETIC_NEW','SYNTHETIC_reviewA']]);
+  const orgVersion=await publish(organization);
+  const colliding=input('organization',orgHeaders,[['SYNTHETIC_91','重复编码办公室','办公室','SYNTHETIC_92','SYNTHETIC_contact']]);
+  assert.match((await repo.preview(colliding)).errors.map(e=>e.message).join(''),/已被部门使用/);
+  assert.equal((await repo.preview(organization)).summary.unchanged,3);
+  const [offices]=await pool.query("SELECT * FROM org_unit WHERE org_unit_code IN ('OFFICE_A','OFFICE_B') ORDER BY org_unit_code");
+  const [officeA,officeB]=offices;
+  assert.equal(Number(officeA.department_id),91);assert.equal(Number(officeA.manager_person_id),83);
+  assert.equal((await pool.query("SELECT * FROM departments WHERE code='OFFICE_A'"))[0].length,0);
+  const rosterHeaders=['工号','姓名','部门编码','办公室编码'];
+  const roster=input('roster',rosterHeaders,[['SYNTHETIC_reviewB','合成跨办公室办理人','SYNTHETIC_92','OFFICE_A;OFFICE_B']]);
+  const rosterVersion=await publish(roster);
+  assert.equal((await repo.get(rosterVersion.id)).content.rows[0][3],'OFFICE_A;OFFICE_B');
+  const roundTrip=await spreadsheet.parseSpreadsheet(Buffer.from(await spreadsheet.exportSpreadsheet((await repo.get(orgVersion.id)).content)),'roundtrip.xlsx');
+  assert.deepEqual(roundTrip.rows,organization.content.rows);
+  const oldRoster=input('roster',rosterHeaders.slice(0,3),[['SYNTHETIC_reviewB','合成跨办公室办理人','SYNTHETIC_92']]);
+  await publish(oldRoster);
+  assert.equal((await pool.query("SELECT * FROM office_membership WHERE person_id=85 AND status='active'"))[0].length,2);
+  assert.equal((await expect('reviewB','/api/offices/workbench','GET')).offices.length,2);
+  assert.equal((await request('outsider','/api/offices/workbench?office_id='+officeA.org_unit_id)).status,403);
+  await require('./stage05-workbench-scenario')({fixture,expect});
+  const payload={request_id:crypto.randomUUID(),office_id:officeA.org_unit_id,content:'合成跨办公室任务：核对材料并记录结果',process_version_id:1,behavior_ref:'behavior_check',due_date:'2026-10-01'};
+  await expect('admin','/api/offices/tasks','POST',payload,403);
+  await expect('reviewB','/api/offices/tasks','POST',payload,403);
+  await expect('lead','/api/offices/tasks','POST',{...payload,behavior_ref:'missing'},422);
+  const created=await expect('lead','/api/offices/tasks','POST',payload,201);
+  await expect('lead','/api/offices/tasks','POST',payload,409);
+  const taskURL='/api/offices/tasks/'+created.id;
+  await expect('reviewA',taskURL+'/assign','POST',{assignee_person_id:85,expected_revision:1},403);
+  await expect('admin',taskURL+'/assign','POST',{assignee_person_id:85,expected_revision:1},403);
+  await expect('contact',taskURL+'/assign','POST',{assignee_person_id:86,expected_revision:1},422);
+  await expect('contact',taskURL+'/assign','POST',{assignee_person_id:85,expected_revision:1});
+  await expect('contact',taskURL+'/assign','POST',{assignee_person_id:85,expected_revision:1},409);
+  await expect('contact','/api/todos/'+created.id+'/done','POST',{},409);
+  await assert.rejects(require('../server/todoMysqlRepository').makeTodoMysqlRepository(pool).deleteTodo(created.id,{actor_user_id:82}),e=>e.code==='OFFICE_TASK_REQUIRES_WORKBENCH');
+  await expect('contact',taskURL+'/complete','POST',{note:'不能代办',expected_revision:2},403);
+  const removed=input('roster',rosterHeaders,[['SYNTHETIC_reviewB','合成跨办公室办理人','SYNTHETIC_92','OFFICE_B']]);
+  assert.match((await repo.preview(removed)).errors.map(e=>e.message).join(''),/未办结/);
+  const moved=input('organization',orgHeaders,[['OFFICE_A','合成核对办公室','办公室','SYNTHETIC_92','SYNTHETIC_contact']]);
+  assert.match((await repo.preview(moved)).errors.map(e=>e.message).join(''),/办结/);
+  await expect('reviewB',taskURL+'/complete','POST',{note:'合成材料核对完成，结果已记录。',expected_revision:2});
+  await expect('reviewB',taskURL+'/complete','POST',{note:'重复完成',expected_revision:2},409);
+  const completed=(await expect('contact','/api/offices/workbench?office_id='+officeA.org_unit_id,'GET')).tasks.find(t=>Number(t.id)===Number(created.id));
+  assert.equal(completed.status,'done');assert.match(completed.completion_json,/结果已记录/);assert.equal(completed.owning_department_name,'合成甲部');
+  assert.equal(completed.due_date,'2026-10-01');assert.ok(Number(completed.done_epoch)>0);
+  const [[events]]=await pool.query("SELECT COUNT(*) count FROM mdm_todo_events WHERE todo_id=?",[created.id]);assert.equal(Number(events.count),3);
+  const old=await expect('lead','/api/todos','POST',{to_dept_id:91,content:'合成原部门待办',type:'test'});
+  await expect('lead','/api/offices/tasks/'+old.id+'/receive','POST',{office_id:officeB.org_unit_id},422);
+  await expect('lead','/api/offices/tasks/'+old.id+'/receive','POST',{office_id:officeA.org_unit_id});
+  const stale=await repo.preview(roster);
+  await pool.execute("UPDATE office_membership SET status='inactive' WHERE office_id=? AND person_id=85",[officeB.org_unit_id]);
+  await assert.rejects(repo.publish({content:roster.content,...stale,requestId:crypto.randomUUID()},actor),e=>e.code==='PUBLICATION_SOURCE_CHANGED');
+  await publish(roster);
+  const identity=await expect('admin','/api/org/roster','GET');
+  assert.equal(identity.rows.find(p=>Number(p.person_id)===85).offices.length,2);
+  await pool.execute("UPDATE person_roles SET assignment_status='revoked' WHERE person_id=83");
+  assert.equal((await expect('contact','/api/offices/workbench?office_id='+officeA.org_unit_id,'GET')).can_assign,true,'explicit office manager needs no added MDM role');
+  await expect('contact','/api/offices/tasks/'+old.id+'/assign','POST',{assignee_person_id:85,expected_revision:1});
+  await pool.execute("UPDATE office_membership SET status='inactive' WHERE office_id=? AND person_id=85",[officeA.org_unit_id]);
+  await expect('reviewB','/api/offices/tasks/'+old.id+'/complete','POST',{expected_revision:2,note:'已撤销成员不得办理'},403);
+  await publish(roster);
+  console.log('OFFICE_MYSQL_HTTP_PASS: additive legacy migration, manual organization/roster, multiple offices, manager-only assignment, assignee-only completion, old-route guard, conflicts and result history');
+  return {officeA:officeA.org_unit_id,taskId:old.id};
+}
+async function main(){await withStage05Fixture(async context=>{
+  const result=await officeChecks(context);
+  if(process.argv.includes('--serve')){
+    const fs=require('node:fs'),stopFile=path.join(context.fixture.evidenceDir,'stop-'+context.owner);
+    console.log(JSON.stringify({baseURL:context.fixture.baseURL,...result,stopFile,fixture:'owned synthetic office fixture; press Enter or create stopFile to stop'}));
+    process.stdin.resume();await new Promise(resolve=>{const timer=setInterval(()=>{if(fs.existsSync(stopFile)){clearInterval(timer);resolve();}},500);const stop=()=>{clearInterval(timer);resolve();};process.stdin.once('data',stop);process.once('SIGINT',stop);});process.stdin.pause();
+    if(fs.existsSync(stopFile))fs.unlinkSync(stopFile);
+  }
+},{evidenceDir:path.resolve(__dirname,'../../../artifacts/mdm-office-layer/tests')});}
+if(require.main===module)main().catch(error=>{console.error(error.stack);process.exitCode=1;});
+module.exports={officeChecks};

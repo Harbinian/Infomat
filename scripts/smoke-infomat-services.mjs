@@ -314,54 +314,12 @@ async function checkMdm(summary, fixedEnv, mdmBaseUrl) {
     todos: countRows(workbench.body.todos || [])
   });
 
-  const processDrafts = await requireJson(
-    `${mdmBaseUrl}/api/process-design/drafts?limit=100`,
-    { headers: authedHeaders }
-  );
-  const processHandoffs = await requireJson(
-    `${mdmBaseUrl}/api/process-design/cross-dept-handoffs?limit=200`,
-    { headers: authedHeaders }
-  );
-  const handoffConflicts = await requireJson(
-    `${mdmBaseUrl}/api/process-design/handoff-conflicts?limit=200`,
-    { headers: authedHeaders }
-  );
-  addCheck(summary, 'MDM unified process governance queues', {
-    drafts: countRows(processDrafts.body.items || []),
-    handoffs: countRows(processHandoffs.body.items || []),
-    conflicts: countRows(handoffConflicts.body.items || [])
-  });
-
-  const editorPage = await request(`${mdmBaseUrl}/process-governance-editor/index.html`);
-  assert.equal(editorPage.response.ok, true, `MDM process editor page returned ${editorPage.response.status}`);
-  assert.ok(editorPage.text.includes('单流程治理编制工作台'), 'MDM process editor page is not the 3001-style workbench');
-  assert.ok(editorPage.text.includes('跨职能流程图预览'), 'MDM process editor is missing the cross-functional diagram');
-  assert.ok(editorPage.text.includes('结构化学习评分'), 'MDM process editor is missing the structure score');
-  const editorSchema = await requireJson(`${mdmBaseUrl}/api/process-design/editor/schema`, { headers: authedHeaders });
-  assert.equal(
-    editorSchema.body.properties?.schema_version?.const,
-    'process-governance-v3',
-    'MDM process editor schema version is stale'
-  );
-  const editorTemplate = await requireJson(
-    `${mdmBaseUrl}/api/process-design/editor/template?version=process-governance-v3`,
-    { headers: authedHeaders }
-  );
-  const editorValidation = await requireJson(`${mdmBaseUrl}/api/process-design/editor/validate`, {
-    method: 'POST',
-    headers: {
-      ...authedHeaders,
-      'Content-Type': 'application/json',
-      'X-CSRF-Token': csrf.body.csrfToken
-    },
-    body: JSON.stringify({ data: editorTemplate.body.data })
-  });
-  assert.equal(editorValidation.body.valid, true, 'MDM process editor empty template failed technical validation');
-  addCheck(summary, 'MDM 3001-style process editor', {
-    page: editorPage.response.status,
-    schemaVersion: editorTemplate.body.schema_version,
-    technicalValidation: editorValidation.body.valid
-  });
+  const previewCases = await requireJson(`${mdmBaseUrl}/api/process-v7-preview/cases`, { headers: authedHeaders });
+  addCheck(summary, 'MDM V7 preview', { status: previewCases.response.status });
+  for (const retiredPath of ['/process-governance-editor/index.html', '/api/process-design/editor/schema', '/api/process-design/drafts']) {
+    const retired = await request(mdmBaseUrl + retiredPath, { headers: authedHeaders });
+    assert.equal(retired.response.status, 404, 'Retired endpoint must not be registered: ' + retiredPath);
+  }
 
   const currentProcess = await requireJson(`${mdmBaseUrl}/api/process-governance/current`, { headers: authedHeaders });
   addCheck(summary, 'MDM process governance current', {

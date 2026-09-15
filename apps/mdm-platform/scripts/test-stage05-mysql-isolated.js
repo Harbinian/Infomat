@@ -27,6 +27,7 @@ async function withStage05Fixture(action, options = {}) {
     await require('../server/sessionMigration').manageSessionSchema(pool, 'apply');
     await require('../server/processV7PreviewReviewMigration').applyProcessV7PreviewReview(pool);
     await require('../server/processV7FormalMigration').applyProcessV7FormalFoundation(pool);
+    if (options.processDataGovernanceVersionId) await require('../server/processDataGovernanceMigration').applyProcessDataGovernance(pool);
     for (const [id, name] of options.departments || [[91,'合成甲部'],[92,'合成乙部'],[93,'合成丙部']]) await pool.execute('INSERT INTO departments(id,code,name) VALUES (?,?,?)', [id,'SYNTHETIC_'+id,name]);
     const actors = [['admin',['admin'],91], ['lead',['mdm_lead'],91], ['contact',['department_contact'],91], ['reviewA',['department_mdm_reviewer'],91], ['reviewB',['department_mdm_reviewer'],92], ['outsider',['department_mdm_reviewer'],93], ['multi',['department_contact','department_mdm_reviewer'],91], ['adminMulti',['admin','department_mdm_reviewer'],91]];
     const loginPassword = 'Stage05-Synthetic-Only!2026';
@@ -64,7 +65,8 @@ async function withStage05Fixture(action, options = {}) {
     const env = isolatedEnvironment({NODE_ENV:'test',HOST:'127.0.0.1',PORT:String(appPort),MDM_ACCESS_MODE:'http-local',MDM_SESSION_STORE:'mysql',
       MYSQL_HOST:'127.0.0.1',MYSQL_PORT:String(port),MYSQL_USER:'stage05_runtime',MYSQL_PASSWORD:password,MYSQL_DATABASE:'stage04_isolated',
       MDM_IDENTITY_READ_MODEL:'mysql',PROCESS_GOVERNANCE_READ_MODEL:'mysql',SESSION_SECRET:crypto.randomBytes(32).toString('hex'),
-      PROCESS_V7_PREVIEW_ENABLED:'1',PROCESS_V7_FORMAL_ENABLED:options.previewOnly?'0':'1',PROCESS_V7_TRIAL_PROCESS_REF:document.process.process_ref,PROCESS_DATA_GOVERNANCE_ENABLED:'0'});
+      PROCESS_V7_PREVIEW_ENABLED:'1',PROCESS_V7_FORMAL_ENABLED:options.previewOnly?'0':'1',PROCESS_V7_TRIAL_PROCESS_REF:document.process.process_ref,
+      PROCESS_DATA_GOVERNANCE_ENABLED:options.processDataGovernanceVersionId?'1':'0',PROCESS_DATA_GOVERNANCE_TRIAL_PROCESS_VERSION_ID:String(options.processDataGovernanceVersionId||'')});
     const child = fork(path.join(appRoot,'server/index.js'),[],{cwd:appRoot,env,execArgv:[],silent:true,windowsHide:true});
     const diagnostics=[];
     child.stdout.on('data',data=>diagnostics.push(String(data))); child.stderr.on('data',data=>diagnostics.push(String(data)));

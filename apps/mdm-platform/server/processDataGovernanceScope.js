@@ -16,19 +16,16 @@ function assertProcessDataGovernanceWritable(env = process.env) {
   }
 }
 
-function configuredProcessVersionId(env = process.env) {
-  const raw = String(env && env[TRIAL_VERSION_FLAG] || '').trim();
-  if (!/^[1-9]\d*$/.test(raw)) return null;
-  return Number(raw);
-}
+// Kept for callers of the previous status contract; the retired trial setting
+// never chooses a version or limits access. Each work package stores its source.
+function configuredProcessVersionId() { return null; }
 
 function isProcessDataGovernanceEnabled(env = process.env) {
   return String(env && env[FEATURE_FLAG] || '') === '1';
 }
 
 function isProcessVersionAllowed(processVersionId, env = process.env) {
-  const configured = configuredProcessVersionId(env);
-  return Boolean(configured && Number(processVersionId) === configured);
+  return /^[1-9]\d*$/.test(String(processVersionId || '')) && Number.isSafeInteger(Number(processVersionId));
 }
 
 function scopeError(statusCode, code, message) {
@@ -47,19 +44,14 @@ function assertProcessDataGovernanceEnabled(env = process.env) {
 
 function assertProcessVersionScopeConfigured(env = process.env) {
   isProcessDataGovernanceReadOnly(env);
-  const configured = configuredProcessVersionId(env);
-  if (!configured) {
-    throw scopeError(503, 'PROCESS_DATA_GOVERNANCE_SCOPE_NOT_CONFIGURED', '尚未配置唯一试点流程版本');
-  }
-  return configured;
+  return true;
 }
 
 function assertProcessVersionAllowed(processVersionId, env = process.env) {
-  const configured = assertProcessVersionScopeConfigured(env);
-  if (Number(processVersionId) !== configured) {
-    throw scopeError(403, 'PROCESS_DATA_GOVERNANCE_SCOPE_DENIED', '当前流程版本不在唯一试点范围内');
-  }
-  return configured;
+  assertProcessVersionScopeConfigured(env);
+  if (!isProcessVersionAllowed(processVersionId)) throw scopeError(422, 'PROCESS_DATA_GOVERNANCE_VERSION_REQUIRED', '请选择有效的已发布流程版本');
+  // Actual publication state, native V7 and source digest are checked in MySQL.
+  return Number(processVersionId);
 }
 
 function featureStatus(env = process.env) {
@@ -67,7 +59,7 @@ function featureStatus(env = process.env) {
     enabled: isProcessDataGovernanceEnabled(env),
     read_only: isProcessDataGovernanceReadOnly(env),
     configured_process_version_id: configuredProcessVersionId(env),
-    scope_mode: 'exact_process_version_id',
+    scope_mode: 'published_v7_versions',
     responsibility_model: 'process-data-governance-v1-2026-08-27'
   };
 }

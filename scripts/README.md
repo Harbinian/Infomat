@@ -31,17 +31,12 @@
 | `infomat-service-config.mjs` | 读取固定启动配置并合成本机运行环境 | `infomat-services.config.json`、本机 `infomat-services.local.env` | 供启动和冒烟脚本复用 |
 | `repair-infomat-mysql-container.ps1` | 将本机历史MySQL容器调整为固定启动配置 | 固定配置、本机私有env、Docker容器状态 | 只修复本机Docker运行态，不写仓库真源 |
 | `start-infomat-services.ps1` | 固定启动MDM、PMO和项目MySQL | 固定配置、本机私有env、Docker容器`infomat-input-baseline-review-mysql` | 按固定环境启动服务，不修改仓库真源 |
-| `smoke-infomat-services.mjs` | 固定配置下检查MDM和PMO是否可用，并核对MDM流程编辑器使用`process-governance-v3` | 固定配置、本机私有env、运行中的服务 | 只读检查，输出会隐藏密码 |
+| `smoke-infomat-services.mjs` | 固定配置下检查MDM和PMO是否可用，并核对V7预览及旧编制入口不再注册 | 固定配置、本机私有env、运行中的服务 | 只读检查，输出会隐藏密码 |
 | `test-infomat-services-config.mjs` | 防止启动配置再次漂移 | 固定配置、启动脚本、冒烟脚本、`.gitignore` | 只读校验 |
-| `start-structure-pilot.ps1` | 在工作区干净、测试通过和HTTPS配置齐全时启动MDM-AI助手及认证后的DSH入口 | Node.js 24、`apps/structure-assistant/config/pilot.config.json`、本机`structure-pilot.local.env`、公共Host白名单、同一Git提交、已独立运行的3001 | 只启停本机3003/3004及其DSH子进程；检查但不停止、重绑或代管3001；不拉取代码、不写业务真源 |
-| `smoke-structure-pilot.mjs` | 登录独立试点并检查版本、模板、结构校验、未预置会话Key、DSH实例、五账号非内容状态和`/structured-tool/` | 本机试点秘密、运行中的HTTPS服务 | 不调用付费模型，不输出密码、API Key、内部端口、运行令牌、工作区或案例名称 |
-| `test-structure-pilot-config.mjs` | 防止五账号、会话Key边界、端口、模型和固定启动入口漂移 | 助手固定配置、根`package.json`和试点脚本 | 只读校验 |
 | `information-collection.config.json` | 固定信息表收集服务的监听地址、端口、数据库目标和附件限制 | 非敏感固定配置 | 不保存数据库密码、会话密钥或扫描命令 |
 | `start-information-collection.ps1` | 校验端口、身份结构和信息收集表后启动 4000/4001 | 固定配置、被 Git 忽略的本机环境文件、现有 MySQL | 启动本机服务；不修改 MDM 身份和治理业务表 |
 | `smoke-information-collection.mjs` | 检查两个端口健康状态、登录边界和独立 Cookie 名 | 运行中的 4000/4001 | 只读烟测，不输出凭据 |
 | `invoke-information-collection-migration.ps1` | 执行信息表收集 schema 的 dry-run、apply 或 check | 固定配置、本机数据库凭据、现有身份表 | dry-run/check 只读；apply 仅创建或升级 `collection_*` 表 |
-| `generate-weekly-action-personnel-snapshot.mjs` | 从信息化项目人员角色映射和花名册生成 3002 只读人员快照 | `docs/organization/信息化项目人员角色映射.md`、`docs/organization/花名册.md` | 默认写 `artifacts/weekly-actions/personnel-snapshot.json`；不修改组织真源、PMO 真源、SQLite 或 MySQL |
-| `test-weekly-action-personnel-snapshot.mjs` | 校验 3002 人员快照生成、花名册一致性和待补人员警告 | 组织人员映射、花名册、临时输出目录 | 只读校验，临时输出写入系统临时目录 |
 
 常用命令：
 
@@ -50,10 +45,6 @@ npm run start:infomat-services
 npm run smoke:infomat-services
 npm run repair:infomat-mysql
 npm run test:infomat-services-config
-npm run verify:structure-pilot
-npm run verify:dsh-entry
-npm run start:structure-pilot
-npm run smoke:structure-pilot
 npm run migrate:information-collection:dry-run
 npm run migrate:information-collection:apply
 npm run check:information-collection-schema
@@ -80,8 +71,6 @@ npm run test:project-governance-upgrade
 npm run test:process-evidence-skill
 npm run test:process-input-baseline-review
 npm run test:ocr-source
-npm run generate:weekly-action-personnel -- --generated-by "<name>"
-npm run test:weekly-action-personnel
 $env:MYSQL_HOST='<host>'; $env:MYSQL_PORT='<port>'; $env:MYSQL_USER='<user>'; $env:MYSQL_PASSWORD='<password>'; $env:MYSQL_DATABASE='<database>'; npm run sync:process-governance
 ```
 
@@ -167,30 +156,6 @@ npm run migrate:rbac-raci-v2:apply
 ```
 
 迁移只自动保留受控`ADMIN001`管理员，其他旧账号停用，旧角色不自动映射。回滚和补偿必须使用迁移返回的批次编号，完整步骤见`apps/mdm-platform/docs/RBAC-RACI-Migration-Runbook.md`。空身份库使用`npm run bootstrap:admin`，检测到已有身份数据后会拒绝重复初始化。
-
-## AI结构化填报试点固定启动
-
-试点固定配置位于`apps/structure-assistant/config/pilot.config.json`。本机登录密码哈希、HTTPS证书路径和会话密钥放在被Git忽略的`scripts/structure-pilot.local.env`。DeepSeek API Key不写入该文件，由5名用户登录后在前端分别输入。
-
-```powershell
-npm run verify:structure-pilot
-npm run start:structure-pilot
-npm run smoke:structure-pilot
-```
-
-固定端口：
-
-| 服务 | 监听 |
-|---|---|
-| 独立3001 | `0.0.0.0:3001`，公司局域网用户直接访问；由3001自身启动入口管理 |
-| MDM-AI助手登录与运行控制 | HTTPS `0.0.0.0:3003` |
-| 认证后的DSH治理入口 | HTTPS `0.0.0.0:3004`；同时提供`/mdm-api/*`和`/structured-tool/*` |
-
-`start-structure-pilot.ps1`不执行`git pull`。脚本要求Node.js 24和`STRUCTURE_ASSISTANT_PUBLIC_HOSTS`，先拒绝存在未提交修改的工作区，再运行3001结构规则测试、助手测试、固定配置测试和真实DSH兼容门禁。确认独立3001可达后，只重启3003、3004及其受控DSH子进程。该脚本不得停止、重绑或启动3001。局域网用户仍可通过服务器局域网地址直接使用3001。
-
-`smoke-structure-pilot.mjs`需要`STRUCTURE_ASSISTANT_SMOKE_BASE_URL`、烟测账号和密码；使用私有CA时还需`STRUCTURE_ASSISTANT_SMOKE_CA_PATH`。该脚本启动并结束烟测会话的隔离DSH实例，检查受限治理页面和`/structured-tool/`，但不调用模型，也不要求API Key。正式发布后的模型连通性由5名用户在前端分别输入本人Key并使用合成材料验证，执行前必须显式确认实际费用；不得由管理员集中收集Key。
-
-正式环境的`STRUCTURE_ASSISTANT_PUBLIC_HOSTS`必须填写用户实际访问端口3004时使用的`主机名:端口`或`IP:端口`，多个值用英文逗号分隔。DSH固定为`@deepseek-ai/dsh@0.1.0-rc.6`，不得使用`latest`；升级前重新运行兼容门禁并单独审核。
 
 输入基线问题复核正式入口在 MDM 平台：
 

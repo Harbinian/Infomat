@@ -112,6 +112,9 @@ async function main() {
         account_status: 'active'
       }];
     },
+    async listRoster() {
+      return [{ person_id:42, employee_no:'TEST042', person_name:'合成测试人员', current_department_id:9, department_name:'合成测试部门', employment_status:'active', status:'active' }];
+    },
     async listDepartments() {
       return [{ id: 9, code: 'ENG', name: '工程技术部', status: 'active' }];
     },
@@ -161,6 +164,7 @@ async function main() {
   const server = await listen(app);
   const baseUrl = `http://127.0.0.1:${server.address().port}`;
   try {
+    assert.strictEqual((await fetch(`${baseUrl}/api/org/roster`)).status, 401);
     const failedLoginRes = await fetch(`${baseUrl}/api/org/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -199,6 +203,16 @@ async function main() {
     assert.strictEqual(sessionRes.status, 200, JSON.stringify(session));
     assert.strictEqual(session.authenticated, true);
     assert.deepStrictEqual(session.user.roleCodes, ['department_contact']);
+
+    const rosterRes = await fetch(`${baseUrl}/api/org/roster`);
+    assert.strictEqual(rosterRes.status, 200);
+    const roster = await rosterRes.json();
+    assert.strictEqual(roster.rows[0].employee_no, 'TEST042');
+    assert.strictEqual(roster.source, 'person');
+    assert.strictEqual(roster.publication, null, 'stored identities must not be represented as a published roster');
+    permissions.splice(permissions.indexOf('identity:read'), 1);
+    assert.strictEqual((await fetch(`${baseUrl}/api/org/roster`)).status, 403);
+    permissions.push('identity:read');
 
     const legacyReadRes = await fetch(`${baseUrl}/api/org/users`);
     assert.strictEqual(legacyReadRes.status, 200);

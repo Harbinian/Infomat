@@ -13,7 +13,6 @@ const {
   assertProcessDataGovernanceEnabled,
   assertProcessDataGovernanceWritable,
   assertProcessVersionAllowed,
-  configuredProcessVersionId,
   featureStatus,
   isProcessDataGovernanceReadOnly
 } = require('../processDataGovernanceScope');
@@ -229,10 +228,8 @@ router.get('/status', requireAuth, (req, res) => {
 router.use(requireAuth, (req, res, next) => {
   try {
     assertProcessDataGovernanceEnabled();
-    const versionId = configuredProcessVersionId();
-    assertProcessVersionAllowed(versionId);
     if (!['GET', 'HEAD'].includes(req.method)) assertProcessDataGovernanceWritable();
-    req.processDataGovernanceVersionId = versionId;
+    req.processDataGovernanceVersionId = req.query.process_version_id ? assertProcessVersionAllowed(req.query.process_version_id) : null;
     next();
   } catch (error) {
     res.status(error.statusCode || 503).json(error.payload || { error: error.message, code: error.code });
@@ -262,6 +259,7 @@ router.get('/workbench', (req, res) => runAction(res, async () => {
       my_action_items: workItems.length
     },
     work_packages: packages,
+    published_versions: actor.canReadGlobal ? await repo.listPublishedVersions() : [],
     fact_requests: factRequests,
     work_items: workItems
   });
@@ -270,8 +268,7 @@ router.get('/workbench', (req, res) => runAction(res, async () => {
 router.post('/creation-tasks/reconcile', (req, res) => runAction(res, async () => {
   const actor = normalizeActor(await currentActor(req));
   assertMdmGovernanceWrite(actor);
-  const processVersionId = Number(req.body && req.body.process_version_id);
-  assertProcessVersionAllowed(processVersionId);
+  const processVersionId = assertProcessVersionAllowed(req.body && req.body.process_version_id);
   const repo = await getProcessDataGovernanceRepository();
   res.status(201).json(await repo.queueAndMaterialize(processVersionId, actor));
 }));

@@ -86,6 +86,21 @@ function scopeClause(scope = {}) {
 }
 
 function makeTodoMysqlRepository(pool) {
+  async function mutateUnallocated(todoId, action) {
+    const db = await pool.getConnection();
+    try {
+      await db.beginTransaction();
+      await db.execute('SELECT id FROM mdm_todos WHERE id=? FOR UPDATE', [todoId]);
+      const [assigned] = await db.execute('SELECT todo_id FROM mdm_todo_office_assignments WHERE todo_id=? FOR UPDATE', [todoId]);
+      if (assigned.length) {
+        const error = new Error('该任务已由办公室承接，请到办公室工作台办理');
+        error.code = 'OFFICE_TASK_REQUIRES_WORKBENCH'; error.statusCode = 409; throw error;
+      }
+      const result = await action(db);
+      await db.commit(); return result;
+    } catch (error) { await db.rollback(); throw error; }
+    finally { db.release(); }
+  }
   async function insertEvent(todoId, eventType, actorUserId, note = null, actorPersonId = actorUserId) {
     await pool.execute(
       `INSERT INTO mdm_todo_events (todo_id, event_type, actor_user_id, actor_person_id, note)
@@ -179,21 +194,27 @@ function makeTodoMysqlRepository(pool) {
 
     async completeTodo(todoId, actor = {}) {
       const actorPersonId = personIdFromActor(actor);
-      const result = await pool.execute(
+      const updated = await mutateUnallocated(todoId, async db => {
+      const result = await db.execute(
         "UPDATE mdm_todos SET status='done', done_at=CURRENT_TIMESTAMP, completed_by=?, completed_by_person_id=?, updated_at=CURRENT_TIMESTAMP WHERE id=?",
         [actor.actor_user_id || null, actorPersonId, todoId]
       );
-      if (affectedRows(result) === 0) return null;
-      await insertEvent(todoId, 'done', actor.actor_user_id || null, null, actorPersonId);
+      if (affectedRows(result) === 0) return false;
+      await db.execute("INSERT INTO mdm_todo_events(todo_id,event_type,actor_user_id,actor_person_id) VALUES (?,'done',?,?)", [todoId,actor.actor_user_id || null,actorPersonId]);
+      return true;
+      });
+      if (!updated) return null;
       return await this.getTodo(todoId);
     },
 
     async deleteTodo(todoId, actor = {}) {
-      const existing = await this.getTodo(todoId);
-      if (!existing) return false;
-      await insertEvent(todoId, 'deleted', actor.actor_user_id || null, null, personIdFromActor(actor));
-      const result = await pool.execute('DELETE FROM mdm_todos WHERE id=?', [todoId]);
-      return affectedRows(result) > 0;
+      return mutateUnallocated(todoId, async db => {
+        const [existing] = await db.execute('SELECT id FROM mdm_todos WHERE id=?', [todoId]);
+        if (!existing.length) return false;
+        await db.execute("INSERT INTO mdm_todo_events(todo_id,event_type,actor_user_id,actor_person_id) VALUES (?,'deleted',?,?)",[todoId,actor.actor_user_id || null,personIdFromActor(actor)]);
+        const result = await db.execute('DELETE FROM mdm_todos WHERE id=?', [todoId]);
+        return affectedRows(result) > 0;
+      });
     }
   };
 }

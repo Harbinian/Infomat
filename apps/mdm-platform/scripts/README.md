@@ -1,4 +1,14 @@
+# 旧功能退役验证
+
+2026-09-15已删除独立SQLite业务路由和V1至V3在线编制入口。`test:retired-capabilities`验证旧接口不可访问、旧草稿不能通过共享接口流转、V7身份与版本读取继续有效。历史迁移及恢复脚本保留用于旧记录追溯，不授权写入正式数据库。
+
 # apps/mdm-platform/scripts 说明
+
+办公室管理使用`migrate:offices:inspect|apply -- --target host:port/database`，要求显式MySQL配置。检查旧`org_unit`兼容性，只增加可空部门关系、`office_membership`、`mdm_todo_office_assignments`及迁移记录；不推断历史办公室归属、负责人或成员。应用与数据回退边界见[应用README](../README.md)。`test:offices`在本轮新建MySQL与真实HTTP中验证增量迁移、旧数据保留、手工发布、多办公室成员、负责人分配、办理人办结、重复请求、修订冲突及旧待办接口保护。`node scripts/test-offices.js --serve`保留该合成实例供浏览器验证；按回车或创建输出中的stopFile结束并清理本轮实例，不操作已有3000、3001或数据库。
+
+手工发布新增`migrate:publications:inspect|apply`，须显式传入MySQL环境变量和`--target host:port/database`。apply仅创建空的`mdm_publications`和迁移记录，拒绝同名异构表，不改写历史业务数据；应用回退可保留新增表及发布记录。`test:publications`在本轮新建的带归属标记MySQL容器中验证文件导入、目录更新、版本、并发、重复提交、权限和下载，结束后移除本轮容器，不访问已有数据库或私有配置。
+
+交互验证可运行`node scripts/serve-publication-test-fixture.js`。脚本创建独立MySQL和合成账号，执行V7核对、退回、审核与发布，提供随机本地端口验证手工发布、图形和绑定正式版本的数据治理；按回车关闭后清理本轮实例。该入口不读取私有配置、不连接现有数据库，也不占用3000或3001。
 
 > 状态：应用内脚本导航  
 > 生效日期：2026-06-10  
@@ -25,7 +35,8 @@
 | `npm run test:process-governance` | 流程治理 MySQL 读模型、MySQL 导入/冒烟、Sankey API、MySQL 身份权限、输入基线问题复核、文档结构化输出、统一问题池、前端挂钩和字段引用 | 正式口径为 MySQL-only；当前入口使用 fake MySQL pool / fake repository，不连接真实库，不纳入遗留 SQLite 服务器/仓储测试 |
 | `npm run test:process-design` | 文档结构化输出 API、MySQL schema、制度主档、制度编号校验、A/B/AA 版次生成、下一版次完整重写草稿、制度 profile、术语、草稿级 L1/L2 既有映射枚举校验、流程明细、行为详情、跨部门承接回写、附表结构、字段新增/修改/删除/排序、自动编号、字段空格校验、证据状态核验、Markdown 草案导出、发布替代链路，以及术语/流程/业务行为编辑、删除、作废和只读状态 | 使用 fake process-design repository 和 fake MySQL 身份 repository，不连接真实库 |
 | `npm run test:process-v7-preview-review` | V7完整规则校验、固定跨部门核对项、修订沿用与重开、部门范围、管理员只读、预览边界和迁移保护 | 使用fake repository和fake pool，不连接真实库 |
-| `npm run test:process-data-governance` | 固定V7来源候选、精确单版本范围、MDM与业务责任隔离、管理员只读、API、迁移、全屏弹窗及未提交输入保护 | 使用确定性单元测试、fake repository、源码约束和编辑/异步加载行为检查；包含保存时保留其他输入、失败保留、完成前确认及旧请求不得覆盖新页面，不连接真实库 |
+| `npm run test:process-data-governance` | 固定V7来源候选、任一已发布版本选择、MDM与业务责任隔离、管理员只读、API、迁移、全屏弹窗及未提交输入保护 | 使用确定性单元测试、fake repository、源码约束和编辑/异步加载行为检查；包含保存时保留其他输入、失败保留、完成前确认及旧请求不得覆盖新页面，不连接真实库 |
+| `npm run test:process-data-governance-mysql` | 两个合成正式版本独立建包、来源篡改拒绝和部门隔离；另一个流程从上传、核对、提升、审核到发布完整运行，验证旧试点配置不阻止办理 | 新建本轮标记的tmpfs MySQL容器及随机回环HTTP服务，保留真实3000/3001；结束核对归属后清理。追加`-- --serve`可保留合成页面供浏览器验证，创建打印出的stopFile结束 |
 | `npm run migrate:process-data-governance:dry-run` | 只读检查六张后续数据治理表、迁移记录、已发布流程版本数量和结构一致性 | 通过固定MySQL配置连接；脱敏输出，不写MySQL |
 | `npm run migrate:process-data-governance:apply` | 只在`not_applied`时创建六张空表和迁移记录；不回填历史工作包 | 写入目标MySQL；必须另行取得授权并先验证备份恢复 |
 | `npm run migrate:process-data-governance:rollback` | 只在六张表全部为空时删除表和迁移记录 | 写入目标MySQL；发现任何治理记录即拒绝执行 |
@@ -222,3 +233,5 @@ npm run test:stage06-mysql-isolated
 3. 新增安全红线时，优先接入 `npm run test:security`。
 4. 修改流程治理导入链路后，运行 `npm run test:process-governance` 和 `npm run test:mainline`。
 5. 不在本目录提交日志、数据库、Excel 临时文件或生成缓存。
+
+前端体验定向回归：`node scripts/test-frontend-ux.js`，覆盖只读／本部门／跨部门操作入口、指引与待办分离、中文状态与已知旧提示模板，以及搜索回车的输入法保护；使用内存替身，不访问数据库。

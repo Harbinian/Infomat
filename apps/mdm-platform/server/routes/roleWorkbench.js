@@ -11,7 +11,6 @@ const { makeProcessGovernanceMysqlRepository } = require('../processGovernanceMy
 const { makeProcessInputBaselineReviewRepository } = require('../processInputBaselineReviewRepository');
 const { ROLE_GUIDES } = require('../roleDefinitions');
 const {
-  configuredProcessVersionId,
   isProcessDataGovernanceEnabled
 } = require('../processDataGovernanceScope');
 
@@ -1043,74 +1042,10 @@ function buildSankey(activeRoles, contexts, workItems) {
   return { nodes: Array.from(nodes.values()), links: Array.from(links.values()) };
 }
 
-async function loadDirectProcessGovernanceWorkItems(identity) {
-  if (!useMysqlProcessGovernanceReadModel()) return [];
-  try {
-    const processDesignRoutes = require('./processDesignMysql');
-    const repo = await processDesignRoutes.getProcessDesignRepository();
-    const actor = {
-      userId: identity.user.id,
-      personId: identity.user.personId || identity.user.id,
-      departmentId: identity.user.departmentId,
-      departmentName: identity.user.departmentName,
-      roleCodes: identity.roleCodes
-    };
-    const [handoffs, conflicts] = await Promise.all([
-      repo.listHandoffQueue(actor, { limit: 100 }),
-      repo.listHandoffConflictQueue(actor, { limit: 100 })
-    ]);
-    const handoffItems = (handoffs.items || []).filter(item => item.can_act).map(item => ({
-      id: `cross-dept-handoff:${item.id}`,
-      type: 'cross_dept_handoff',
-      governanceType: 'cross_dept_handoff',
-      title: `跨部门承接：${item.process_name || item.document_no || item.handoff_ref}`,
-      roleHint: item.next_responsible_role,
-      urgency: item.status === 'returned' ? 'high' : 'medium',
-      target: `#/processGovernance?workspace=handoffs&handoff=${item.id}`,
-      actionLabel: '处理承接待办',
-      sample: `当前步骤：${item.current_stage && item.current_stage.name || item.status}。打开故事链后按当前责任步骤处理。`,
-      source: item.handoff_ref,
-      department: item.counterparty_department || item.origin_department,
-      currentStatus: item.status,
-      nextStep: item.current_stage && item.current_stage.name,
-      canAct: true,
-      sourceRoles: [item.next_responsible_role].filter(Boolean)
-    }));
-    const conflictItems = (conflicts.items || []).filter(item => item.can_act).map(item => ({
-      id: `handoff-conflict:${item.id}`,
-      type: 'handoff_conflict',
-      governanceType: 'handoff_conflict',
-      title: `承接冲突：${item.process_name || item.document_no || item.handoff_ref}`,
-      roleHint: item.action_role || (item.status === 'pending_assignment'
-        ? 'mdm_lead'
-        : item.status === 'pending_decision'
-          ? 'decision_group'
-          : item.status === 'pending_department_confirmation'
-            ? 'department_mdm_reviewer'
-            : 'data_conflict_handler'),
-      urgency: item.status === 'pending_decision' ? 'high' : 'medium',
-      target: `#/processGovernance?workspace=conflicts&conflict=${item.id}`,
-      actionLabel: '处理承接冲突',
-      sample: '查看双方立场、证据和协调方案，再按当前角色完成分派、协调、部门确认或项目决策。',
-      source: item.handoff_ref,
-      department: item.counterparty_department || item.origin_department,
-      currentStatus: item.status,
-      nextStep: item.status,
-      canAct: true
-    }));
-    return [...handoffItems, ...conflictItems];
-  } catch (error) {
-    if (process.env.MDM_DB_QUIET !== '1') {
-      console.warn(`direct process governance work items unavailable: ${error.message}`);
-    }
-    throw error;
-  }
-}
+async function loadDirectProcessGovernanceWorkItems() { return []; }
 
 async function loadProcessDataGovernanceWorkItems(identity) {
   if (!isProcessDataGovernanceEnabled()) return [];
-  const processVersionId = configuredProcessVersionId();
-  if (!processVersionId) return [];
   try {
     const repo = processDataGovernanceRepositoryFactory
       ? await processDataGovernanceRepositoryFactory()
@@ -1122,7 +1057,7 @@ async function loadProcessDataGovernanceWorkItems(identity) {
       departmentName: identity.user.departmentName,
       roleCodes: new Set(identity.roleCodes || []),
       permissions: identity.permSet
-    }, processVersionId);
+    });
   } catch (error) {
     if (process.env.MDM_DB_QUIET !== '1') {
       console.warn(`process data governance work items unavailable: ${error.message}`);
@@ -1186,6 +1121,7 @@ router.get('/', requireAuth, (req, res) => {
         },
         summary: {
           priorityCount: nextActions.length,
+          actionableCount: pendingWorkItems.length,
           pendingTodos: todos.length,
           escalatedConflicts: escalated.length,
           processContexts: contexts.length,

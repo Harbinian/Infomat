@@ -33,12 +33,7 @@ const {
   assertV7FormalEnabled,
   assertV7TrialProcessRef
 } = require('../processV7TrialScope');
-const { queueProcessDataGovernanceCreationTask } = require('../processDataGovernanceRepository');
 const { processV7ProcedureMarkdown } = require('../processV7ProcedureMarkdown');
-const {
-  isProcessDataGovernanceEnabled,
-  isProcessVersionAllowed
-} = require('../processDataGovernanceScope');
 const { ACCESS_MODEL_VERSION } = require('../roleDefinitions');
 
 const FIELD_STATUSES = new Set(['suggested', 'business_confirmed', 'data_governed', 'published', 'retired']);
@@ -114,6 +109,12 @@ function httpError(statusCode, message, payload) {
   error.payload = payload || { error: message };
   if (error.payload && error.payload.code) error.code = error.payload.code;
   return error;
+}
+
+
+function assertActiveV7Draft(draft) {
+  if (!draft) throw httpError(404, '流程草稿不存在');
+  if (text(draft.schema_version) !== 'process-governance-v7') throw httpError(410, '旧版流程办理入口已删除，历史记录保留；新流程请通过3001编制V7后上传。', { code: 'LEGACY_PROCESS_RETIRED', error: '旧版流程办理入口已删除，历史记录保留。' });
 }
 
 function text(value) {
@@ -5219,15 +5220,7 @@ function makeProcessDesignMysqlRepository(pool) {
           authorizedActor.personId,
           currentVersion && currentVersion.id || null
         ]);
-        if (
-          isProcessDataGovernanceEnabled() &&
-          isProcessVersionAllowed(Number(result.insertId))
-        ) {
-          await queueProcessDataGovernanceCreationTask(pool, Number(result.insertId), {
-            personId: authorizedActor.personId,
-            roleCode: 'mdm_lead'
-          });
-        }
+        // Users explicitly select a published version in the data governance workspace.
         if (currentVersion) {
           const supersedeResult = await mysqlRun(pool, `
             UPDATE process_design_versions
@@ -5637,32 +5630,6 @@ async function assertHandoffParticipant(repo, handoff, actor) {
   }
 }
 
-router.get('/summary', requireAuth, (req, res) => runAction(res, async () => {
-  const repo = await repository();
-  let deptIds = null;
-  if (!await canViewAcrossDepartments(req)) {
-    deptIds = Array.from(await authorizedDepartmentIds(req));
-  }
-  res.json(await repo.summary(deptIds, req.query && req.query.document_no));
-}));
-
-router.get('/process-taxonomy', requireAuth, (req, res) => runAction(res, async () => {
-  const repo = await repository();
-  res.json(await repo.listProcessTaxonomy(await currentDepartmentTaxonomyScope(req)));
-}));
-
-router.get('/field-types', requireAuth, (req, res) => runAction(res, async () => {
-  const repo = await repository();
-  res.json({ items: await repo.listFieldTypes() });
-}));
-
-router.get('/departments/:id/roster-roles', requireAuth, (req, res) => runAction(res, async () => {
-  const repo = await repository();
-  const departmentId = Number(req.params.id);
-  if (!departmentId) throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'department_id', message: '归档责任部门无效' }] });
-  res.json(await repo.listRosterRolesByDepartment(departmentId));
-}));
-
 async function canMaintainDocument(req, document) {
   if (!await hasCurrentPermission(req, 'governance:draft-department')) return false;
   const allowed = await authorizedDepartmentIds(req);
@@ -6048,31 +6015,6 @@ async function importStructuredOutput(req, repo, body) {
   return { draft, imported: counts, warnings, detail };
 }
 
-router.get('/documents/lookup', requireAuth, (req, res) => runAction(res, async () => {
-  const repo = await repository();
-  const documentNo = text(req.query && req.query.document_no);
-  if (!documentNo) throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'document_no', message: '制度编号不能为空' }] });
-  const result = await repo.lookupDocument(documentNo);
-  if (result.exists && !(await canMaintainDocument(req, result.document))) {
-    return res.json({
-      exists: true,
-      accessible: false,
-      can_create: false,
-      can_create_next: false,
-      document_no: documentNo,
-      message: '该制度编号已存在，不属于当前可维护范围。'
-    });
-  }
-  res.json({ accessible: true, ...result });
-}));
-
-router.post('/import-structured-output', requireAuth, (req, res) => runAction(res, async () => {
-  assertWorkRoleBindingsSupported(structuredOutputData(req.body || {}));
-  const repo = await repository();
-  const result = await importStructuredOutput(req, repo, req.body || {});
-  res.status(201).json(result);
-}));
-
 async function readableProcessVersion(req) {
   const repo = await repository();
   const version = await repo.getVersionContent(req.params.processVersionId);
@@ -6115,145 +6057,11 @@ router.get('/versions/:processVersionId/procedure-markdown', requireAuth, (req, 
   res.json({ filename, process_version_id: version.process_version_id, content_hash: version.content_hash, markdown: processV7ProcedureMarkdown(version) });
 }));
 
-router.post('/import-structured-output/preview', requireAuth, (req, res) => runAction(res, async () => {
-  const preview = await processGovernancePreview(req);
-  res.json({
-    summary: preview.summary,
-    handoff_candidates: preview.handoff_candidates,
-    governance_warnings: preview.warnings,
-    content_hash: preview.content_hash,
-    normalized_schema_version: PROCESS_GOVERNANCE_SCHEMA_VERSION
-  });
-}));
-
-router.post('/import-structured-output/approve', requireAuth, (req, res) => runAction(res, async () => {
-  const roleCodes = await requireCurrentRole(req, 'department_mdm_reviewer');
-  const decisionBasis = text(req.body && (req.body.decision_basis || req.body.review_basis));
-  if (!decisionBasis) {
-    throw httpError(422, '校验失败', {
-      error: '校验失败',
-      details: [{ field: 'decision_basis', message: '审核依据不能为空' }]
-    });
-  }
-  const preview = await processGovernancePreview(req);
-  const expectedHash = text(req.body && (req.body.preview_hash || req.body.content_hash));
-  if (!expectedHash || expectedHash !== preview.content_hash) {
-    throw httpError(409, '预览内容已变化，请重新预览后再审核导入', {
-      error: '预览内容已变化，请重新预览后再审核导入',
-      code: 'PREVIEW_HASH_MISMATCH',
-      expected_hash: expectedHash || null,
-      actual_hash: preview.content_hash
-    });
-  }
-  const department = await currentDepartmentIdentity(req);
-  const actor = handoffActor(req, roleCodes, department, 'department_mdm_reviewer');
-  const repo = await repository();
-  const result = await repo.importProcessGovernanceCandidate(preview, {
-    decisionBasis,
-    voidedHandoffs: req.body && req.body.voided_handoffs
-  }, actor);
-  res.status(result.idempotent ? 200 : 201).json({
-    ...result,
-    governance_warnings: preview.warnings,
-    normalized_schema_version: PROCESS_GOVERNANCE_SCHEMA_VERSION
-  });
-}));
-
-router.post('/documents/:id/drafts', requireAuth, (req, res) => runAction(res, async () => {
-  const repo = await repository();
-  const document = await repo.getDocumentById(req.params.id);
-  if (!document) throw httpError(404, '制度不存在');
-  if (!(await canMaintainDocument(req, document))) throw httpError(403, '无权维护该制度');
-  const lookup = await repo.lookupDocument(document.document_no);
-  assertLegacyDraftCreationAllowed(document, lookup && lookup.current_version);
-  res.status(201).json(await repo.createNextEditionDraft(document.id, req.session.userId, document.owning_department_id));
-}));
-
-router.get('/drafts', requireAuth, (req, res) => runAction(res, async () => {
-  const repo = await repository();
-  const departmentIds = await canViewAcrossDepartments(req)
-    ? null
-    : Array.from(await authorizedDepartmentIds(req));
-  const items = await repo.listCanonicalDrafts(departmentIds, { limit: req.query && req.query.limit });
-  res.json({ items, total: items.length, schema_version: PROCESS_GOVERNANCE_SCHEMA_VERSION });
-}));
-
-router.post('/drafts/canonical', requireAuth, (req, res) => runAction(res, async () => {
-  const roleCodes = await currentRoleCodes(req);
-  assertAdminCannotWrite(roleCodes);
-  if (!roleCodes.has('department_contact')) throw httpError(403, '只有部门主对接人可以新建流程编制草稿');
-  const normalized = normalizeProcessGovernanceDocument(req.body && (req.body.content || req.body.document || req.body));
-  if (normalized.errors.length) {
-    throw httpError(422, '单流程治理JSON不符合结构规则', {
-      error: '单流程治理JSON不符合结构规则',
-      code: 'PROCESS_GOVERNANCE_CONTENT_INVALID',
-      details: normalized.errors
-    });
-  }
-  const department = await currentDepartmentIdentity(req);
-  if (!department || department.name !== text(normalized.document.process.owning_department)) {
-    throw httpError(403, '部门主对接人只能新建本人部门归口的流程');
-  }
-  const repo = await repository();
-  const process = normalized.document.process;
-  const documentNo = text(req.body && req.body.document_no) || `PG-${text(process.process_ref)}`.slice(0, 128);
-  const created = await repo.createDraft({
-    document_no: documentNo,
-    document_title: text(process.process_name),
-    process_name: text(process.process_name),
-    reason: '在MDM流程治理中编制单流程治理JSON',
-    basis_type: '现场实际',
-    basis_description: text(req.body && req.body.basis_description),
-    involves_other_departments: normalized.document.cross_department_handoffs.length > 0,
-    related_departments: normalized.document.cross_department_handoffs
-      .flatMap(item => [item.source_department, item.target_department])
-      .map(text)
-      .filter(name => name && name !== department.name),
-    l1_name: optionalText(process.capability_domain),
-    l2_name: optionalText(process.business_capability),
-    l3_name: optionalText(process.process_name)
-  }, req.session.userId, department.id, null);
-  const draft = created.draft || created;
-  const actor = await currentGovernanceActor(req, 'department_contact');
-  const saved = await repo.saveCanonicalContent(
-    draft,
-    normalized.document,
-    0,
-    req.session.userId,
-    {
-      actor,
-      voidedHandoffs: req.body && req.body.voided_handoffs
-    }
-  );
-  res.status(201).json({ draft: await repo.getDraft(draft.id), content: saved });
-}));
-
-router.post('/drafts', requireAuth, (req, res) => runAction(res, async () => {
-  const repo = await repository();
-  const errors = draftRequiredErrors(req.body || {});
-  if (text(req.body && req.body.basis_type) && !BASIS_TYPES.has(text(req.body.basis_type))) {
-    errors.push({ field: 'basis_type', message: '依据类型必须从系统选项中选择' });
-  }
-  const requestedDeptId = req.body.department_id ? Number(req.body.department_id) : null;
-  const sessionDeptId = req.session.departmentId ? Number(req.session.departmentId) : null;
-  const targetDeptId = requestedDeptId || sessionDeptId;
-  if (!targetDeptId) throw httpError(400, '请先维护人员组织信息后再创建制度结构草稿');
-  if (!await repo.departmentExists(targetDeptId)) errors.push({ field: 'department_id', message: '所属部门不存在' });
-  if (!await hasCurrentPermission(req, 'governance:draft-department')) throw httpError(403, '无权创建制度结构草稿');
-  if (requestedDeptId && requestedDeptId !== sessionDeptId) throw httpError(403, '部门主对接人只能为本人部门创建流程');
-  const allowed = await authorizedDepartmentIds(req);
-  if (!allowed.has(Number(targetDeptId))) throw httpError(403, '无权为该部门创建流程');
-  errors.push(...await taxonomyValidationDetails(repo, req.body || {}, await taxonomyScopeForDepartmentId(targetDeptId)));
-  if (errors.length) throw httpError(422, '校验失败', { error: '校验失败', details: errors });
-  await getDepartmentByIdAsync(targetDeptId);
-  const draft = await repo.createDraft(req.body, req.session.userId, targetDeptId, null);
-  res.status(201).json(draft);
-}));
-
 router.get('/drafts/:id/content', requireAuth, (req, res) => runAction(res, async () => {
   const repo = await repository();
   const draft = await repo.getDraft(req.params.id);
   await assertCanViewDraft(req, repo, draft);
+  assertActiveV7Draft(draft);
   const content = await repo.canonicalContent(draft);
   if (!content.document) {
     throw httpError(409, '该草稿不能无损转换为单流程治理JSON', {
@@ -6266,34 +6074,11 @@ router.get('/drafts/:id/content', requireAuth, (req, res) => runAction(res, asyn
   res.json(content);
 }));
 
-router.put('/drafts/:id/content', requireAuth, (req, res) => runAction(res, async () => {
-  const repo = await repository();
-  const draft = await repo.getDraft(req.params.id);
-  if (text(draft && draft.schema_version) === 'process-governance-v7') {
-    throw httpError(409, 'V7正式草稿正文不能在3000直接修改；请回到3001修改后上传新修订', {
-      error: 'V7正式草稿正文不能在3000直接修改；请回到3001修改后上传新修订',
-      code: 'V7_CONTENT_READ_ONLY'
-    });
-  }
-  await assertCanEditDraftContent(req, repo, draft);
-  const actor = await currentGovernanceActor(req, 'department_contact');
-  const result = await repo.saveCanonicalContent(
-    draft,
-    req.body && (req.body.content || req.body.document),
-    req.body && req.body.expected_revision,
-    req.session.userId,
-    {
-      actor,
-      voidedHandoffs: req.body && req.body.voided_handoffs
-    }
-  );
-  res.json(result);
-}));
-
 router.get('/drafts/:id/export', requireAuth, (req, res) => runAction(res, async () => {
   const repo = await repository();
   const draft = await repo.getDraft(req.params.id);
   await assertCanViewDraft(req, repo, draft);
+  assertActiveV7Draft(draft);
   const content = await repo.canonicalContent(draft);
   if (!content.document) throw httpError(409, '该草稿不能无损导出为单流程治理JSON');
   const filename = `${markdownFileSafe(text(draft.document_no) || `draft-${draft.id}`)}-${PROCESS_GOVERNANCE_SCHEMA_VERSION}.json`;
@@ -6305,565 +6090,15 @@ router.get('/drafts/:id', requireAuth, (req, res) => runAction(res, async () => 
   const repo = await repository();
   const draft = await repo.getDraft(req.params.id);
   await assertCanViewDraft(req, repo, draft);
+  assertActiveV7Draft(draft);
   res.json(await repo.detail(draft.id));
-}));
-
-router.put('/drafts/:id', requireAuth, (req, res) => runAction(res, async () => {
-  const repo = await repository();
-  const draft = await repo.getDraft(req.params.id);
-  await assertCanEditDraftContent(req, repo, draft);
-  const taxonomyErrors = await taxonomyValidationDetails(repo, req.body || {}, await taxonomyScopeForDepartmentId(draft.department_id));
-  if (taxonomyErrors.length) throw httpError(422, '校验失败', { error: '校验失败', details: taxonomyErrors });
-  res.json(await repo.updateDraft(draft, req.body || {}, req.session.userId));
-}));
-
-router.delete('/drafts/:id', requireAuth, (req, res) => runAction(res, async () => {
-  const repo = await repository();
-  const draft = await repo.getDraft(req.params.id);
-  await assertCanEditDraftContent(req, repo, draft);
-  res.json(await repo.deleteDraft(draft, req.session.userId));
-}));
-
-router.put('/drafts/:id/document-profile', requireAuth, (req, res) => runAction(res, async () => {
-  const repo = await repository();
-  const draft = await repo.getDraft(req.params.id);
-  await assertCanEditDraftContent(req, repo, draft);
-  const body = req.body || {};
-  const details = [];
-  if (!text(body.document_title)) details.push({ field: 'document_title', message: '制度名称不能为空' });
-  if (!text(body.purpose)) details.push({ field: 'purpose', message: '目的不能为空' });
-  if (!text(body.scope)) details.push({ field: 'scope', message: '范围不能为空' });
-  if (details.length) throw httpError(422, '校验失败', { error: '校验失败', details });
-  res.json(await repo.saveDocumentProfile(draft, body, req.session.userId));
-}));
-
-router.post('/drafts/:id/terms', requireAuth, (req, res) => runAction(res, async () => {
-  const repo = await repository();
-  const draft = await repo.getDraft(req.params.id);
-  await assertCanEditDraftContent(req, repo, draft);
-  const body = req.body || {};
-  const details = [];
-  if (!text(body.term_name)) details.push({ field: 'term_name', message: '术语名称不能为空' });
-  if (!text(body.definition)) details.push({ field: 'definition', message: '术语定义不能为空' });
-  if (details.length) throw httpError(422, '校验失败', { error: '校验失败', details });
-  res.status(201).json(await repo.createTerm(draft, body, req.session.userId));
-}));
-
-router.put('/terms/:id', requireAuth, (req, res) => runAction(res, async () => {
-  const repo = await repository();
-  const draft = await repo.getDraftByTerm(req.params.id);
-  await assertCanEditDraftContent(req, repo, draft);
-  const body = req.body || {};
-  const details = [];
-  if (!text(body.term_name)) details.push({ field: 'term_name', message: '术语名称不能为空' });
-  if (!text(body.definition)) details.push({ field: 'definition', message: '术语定义不能为空' });
-  if (details.length) throw httpError(422, '校验失败', { error: '校验失败', details });
-  res.json(await repo.updateTerm(draft, Number(req.params.id), body, req.session.userId));
-}));
-
-router.delete('/terms/:id', requireAuth, (req, res) => runAction(res, async () => {
-  const repo = await repository();
-  const draft = await repo.getDraftByTerm(req.params.id);
-  await assertCanEditDraftContent(req, repo, draft);
-  res.json(await repo.deleteTerm(draft, Number(req.params.id), req.session.userId));
-}));
-
-router.post('/drafts/:id/processes', requireAuth, (req, res) => runAction(res, async () => {
-  const repo = await repository();
-  const draft = await repo.getDraft(req.params.id);
-  await assertCanEditDraftContent(req, repo, draft);
-  const body = req.body || {};
-  const details = [];
-  assertNoManualNumber(body, 'process_code', '流程编号');
-  if (!text(body.l1_name)) details.push({ field: 'l1_name', message: 'L1 能力不能为空' });
-  if (!text(body.l2_name)) details.push({ field: 'l2_name', message: 'L2 业务能力不能为空' });
-  if (!text(body.l3_name)) details.push({ field: 'l3_name', message: 'L3 流程不能为空' });
-  if (text(body.process_type) && !PROCESS_TYPES.has(text(body.process_type))) details.push({ field: 'process_type', message: '流程类型必须从系统选项中选择' });
-  await appendProcessTaxonomyValidation(repo, body, details, await taxonomyScopeForDepartmentId(draft.department_id));
-  if (details.length) throw httpError(422, '校验失败', { error: '校验失败', details });
-  res.status(201).json(await repo.createProcess(draft, body, req.session.userId));
-}));
-
-router.put('/processes/:id', requireAuth, (req, res) => runAction(res, async () => {
-  const repo = await repository();
-  const draft = await repo.getDraftByProcess(req.params.id);
-  await assertCanEditDraftContent(req, repo, draft);
-  const body = req.body || {};
-  const details = [];
-  assertNoManualNumber(body, 'process_code', '流程编号');
-  if (!text(body.l1_name)) details.push({ field: 'l1_name', message: 'L1 能力不能为空' });
-  if (!text(body.l2_name)) details.push({ field: 'l2_name', message: 'L2 业务能力不能为空' });
-  if (!text(body.l3_name)) details.push({ field: 'l3_name', message: 'L3 流程不能为空' });
-  if (text(body.process_type) && !PROCESS_TYPES.has(text(body.process_type))) details.push({ field: 'process_type', message: '流程类型必须从系统选项中选择' });
-  await appendProcessTaxonomyValidation(repo, body, details, await taxonomyScopeForDepartmentId(draft.department_id));
-  if (details.length) throw httpError(422, '校验失败', { error: '校验失败', details });
-  res.json(await repo.updateProcess(draft, Number(req.params.id), body, req.session.userId));
-}));
-
-router.delete('/processes/:id', requireAuth, (req, res) => runAction(res, async () => {
-  const repo = await repository();
-  const draft = await repo.getDraftByProcess(req.params.id);
-  await assertCanEditDraftContent(req, repo, draft);
-  res.json(await repo.deleteProcess(draft, Number(req.params.id), req.session.userId));
-}));
-
-router.get('/drafts/:id/markdown', requireAuth, (req, res) => runAction(res, async () => {
-  const repo = await repository();
-  const draft = await repo.getDraft(req.params.id);
-  await assertCanViewDraft(req, repo, draft);
-  const result = await repo.markdownForDraft(draft.id);
-  if (!result) throw httpError(404, '制度结构草稿不存在');
-  res.json(result);
-}));
-
-router.post('/drafts/:id/steps', requireAuth, (req, res) => runAction(res, async () => {
-  const repo = await repository();
-  const draft = await repo.getDraft(req.params.id);
-  await assertCanEditDraftContent(req, repo, draft);
-  const details = [];
-  if (!Number(req.body && req.body.process_id || 0)) details.push({ field: 'process_id', message: '业务行为必须归属一个制度流程' });
-  if (!text(req.body.step_name)) details.push({ field: 'step_name', message: '步骤名称不能为空' });
-  if (details.length) throw httpError(422, '校验失败', { error: '校验失败', details });
-  res.status(201).json(await repo.createStep(draft, req.body || {}, req.session.userId));
-}));
-
-router.put('/steps/:id', requireAuth, (req, res) => runAction(res, async () => {
-  const repo = await repository();
-  const draft = await repo.getDraftByStep(req.params.id);
-  await assertCanEditDraftContent(req, repo, draft);
-  res.json(await repo.updateStep(draft, Number(req.params.id), req.body || {}, req.session.userId));
-}));
-
-router.put('/steps/:id/behavior-detail', requireAuth, (req, res) => runAction(res, async () => {
-  const repo = await repository();
-  const draft = await repo.getDraftByStep(req.params.id);
-  await assertCanEditDraftContent(req, repo, draft);
-  res.json(await repo.saveBehaviorDetail(draft, Number(req.params.id), req.body || {}, req.session.userId));
-}));
-
-router.delete('/steps/:id', requireAuth, (req, res) => runAction(res, async () => {
-  const repo = await repository();
-  const draft = await repo.getDraftByStep(req.params.id);
-  await assertCanEditDraftContent(req, repo, draft);
-  res.json(await repo.deleteStep(draft, Number(req.params.id), {
-    mode: text(req.query && req.query.mode) === 'delete' ? 'delete' : 'void',
-    reason: req.body && req.body.reason,
-    actorUserId: req.session.userId
-  }));
-}));
-
-router.get('/cross-dept-handoffs', requireAuth, (req, res) => runAction(res, async () => {
-  const repo = await repository();
-  const actor = await currentGovernanceActor(req);
-  res.json(await repo.listHandoffQueue(actor, { limit: req.query && req.query.limit }));
-}));
-
-router.get('/cross-dept-handoffs/:id/story', requireAuth, (req, res) => runAction(res, async () => {
-  const repo = await repository();
-  const actor = await currentGovernanceActor(req);
-  const story = await repo.getHandoffStory(req.params.id, actor);
-  if (!story) throw httpError(404, '跨部门承接不存在');
-  res.json(story);
-}));
-
-router.get('/handoff-conflicts', requireAuth, (req, res) => runAction(res, async () => {
-  const repo = await repository();
-  const actor = await currentGovernanceActor(req);
-  res.json(await repo.listHandoffConflictQueue(actor, { limit: req.query && req.query.limit }));
-}));
-
-router.post('/handoff-conflicts/:id/assign', requireAuth, (req, res) => runAction(res, async () => {
-  const roleCodes = await requireCurrentRole(req, 'mdm_lead');
-  const repo = await repository();
-  const conflict = await repo.getHandoffConflictContext(req.params.id);
-  if (!conflict) throw httpError(404, '承接冲突不存在');
-  if (conflict.status !== 'pending_assignment') throw httpError(409, '当前承接冲突不需要分派处理人');
-  const handlerPersonId = Number(req.body && req.body.handler_person_id || 0);
-  if (!handlerPersonId || !await repo.personHasActiveRole(handlerPersonId, 'data_conflict_handler')) {
-    throw httpError(422, '校验失败', {
-      error: '校验失败',
-      details: [{ field: 'handler_person_id', message: '冲突处理人必须是有效的数据冲突处理人' }]
-    });
-  }
-  const actor = await currentGovernanceActor(req, 'mdm_lead');
-  actor.roleCodes = [...roleCodes];
-  res.json(await repo.assignHandoffConflict(conflict, handlerPersonId, actor));
-}));
-
-router.put('/handoff-conflicts/:id/proposal', requireAuth, (req, res) => runAction(res, async () => {
-  const roleCodes = await requireCurrentRole(req, 'data_conflict_handler');
-  const repo = await repository();
-  const conflict = await repo.getHandoffConflictContext(req.params.id);
-  if (!conflict) throw httpError(404, '承接冲突不存在');
-  const actor = await currentGovernanceActor(req, 'data_conflict_handler');
-  actor.roleCodes = [...roleCodes];
-  if (Number(conflict.assigned_handler_person_id || 0) !== Number(actor.personId || 0)) {
-    throw httpError(403, '只能处理本人被分派的承接冲突');
-  }
-  if (!['coordinating', 'pending_department_confirmation'].includes(conflict.status)) {
-    throw httpError(409, '当前承接冲突不能修改协调方案');
-  }
-  const body = req.body || {};
-  const details = [];
-  if (!text(body.origin_position)) details.push({ field: 'origin_position', message: '归口部门立场不能为空' });
-  if (!text(body.counterparty_position)) details.push({ field: 'counterparty_position', message: '外部门立场不能为空' });
-  if (!text(body.proposal_text)) details.push({ field: 'proposal_text', message: '协调方案不能为空' });
-  if (!arrayItems(body.evidence).length) details.push({ field: 'evidence', message: '至少记录一条协调证据' });
-  if (details.length) throw httpError(422, '校验失败', { error: '校验失败', details });
-  res.json(await repo.saveHandoffConflictProposal(conflict, body, actor));
-}));
-
-router.post('/handoff-conflicts/:id/department-confirmation', requireAuth, (req, res) => runAction(res, async () => {
-  const roleCodes = await requireCurrentRole(req, 'department_mdm_reviewer');
-  const repo = await repository();
-  const conflict = await repo.getHandoffConflictContext(req.params.id);
-  if (!conflict) throw httpError(404, '承接冲突不存在');
-  if (conflict.status !== 'pending_department_confirmation') throw httpError(409, '当前承接冲突不等待部门确认');
-  const confirmation = text(req.body && req.body.confirmation);
-  const basis = text(req.body && req.body.basis);
-  if (!['accepted', 'rejected'].includes(confirmation) || !basis) {
-    throw httpError(422, '校验失败', {
-      error: '校验失败',
-      details: [
-        ...(!['accepted', 'rejected'].includes(confirmation)
-          ? [{ field: 'confirmation', message: '部门确认结果无效' }]
-          : []),
-        ...(!basis ? [{ field: 'basis', message: '部门确认依据不能为空' }] : [])
-      ]
-    });
-  }
-  const actor = await currentGovernanceActor(req, 'department_mdm_reviewer');
-  actor.roleCodes = [...roleCodes];
-  res.json(await repo.confirmHandoffConflictProposal(
-    conflict,
-    actor.departmentId,
-    confirmation === 'accepted',
-    basis,
-    actor
-  ));
-}));
-
-router.post('/handoff-conflicts/:id/escalate', requireAuth, (req, res) => runAction(res, async () => {
-  const roleCodes = await requireCurrentRole(req, 'data_conflict_handler');
-  const repo = await repository();
-  const conflict = await repo.getHandoffConflictContext(req.params.id);
-  if (!conflict) throw httpError(404, '承接冲突不存在');
-  const actor = await currentGovernanceActor(req, 'data_conflict_handler');
-  actor.roleCodes = [...roleCodes];
-  if (Number(conflict.assigned_handler_person_id || 0) !== Number(actor.personId || 0)) {
-    throw httpError(403, '只能升级本人被分派的承接冲突');
-  }
-  const basis = text(req.body && req.body.basis);
-  if (!basis) throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'basis', message: '提请项目决策的依据不能为空' }] });
-  res.json(await repo.escalateHandoffConflict(conflict, basis, actor));
-}));
-
-router.post('/handoff-conflicts/:id/decision', requireAuth, (req, res) => runAction(res, async () => {
-  const roleCodes = await requireCurrentRole(req, 'decision_group');
-  const repo = await repository();
-  const conflict = await repo.getHandoffConflictContext(req.params.id);
-  if (!conflict) throw httpError(404, '承接冲突不存在');
-  if (conflict.status !== 'pending_decision') throw httpError(409, '当前承接冲突不等待项目决策');
-  const decision = text(req.body && req.body.decision);
-  const basis = text(req.body && req.body.basis);
-  if (!['continue_handoff', 'not_required', 'return_revision'].includes(decision) || !basis) {
-    throw httpError(422, '校验失败', {
-      error: '校验失败',
-      details: [
-        ...(!['continue_handoff', 'not_required', 'return_revision'].includes(decision)
-          ? [{ field: 'decision', message: '项目决策结论无效' }]
-          : []),
-        ...(!basis ? [{ field: 'basis', message: '项目决策依据不能为空' }] : [])
-      ]
-    });
-  }
-  const actor = await currentGovernanceActor(req, 'decision_group');
-  actor.roleCodes = [...roleCodes];
-  res.json(await repo.decideHandoffConflict(conflict, decision, basis, actor));
-}));
-
-router.post('/steps/:id/cross-dept-handoffs', requireAuth, (req, res) => runAction(res, async () => {
-  const repo = await repository();
-  const draft = await repo.getDraftByStep(req.params.id);
-  await assertCanEditDraftContent(req, repo, draft);
-  const body = req.body || {};
-  const details = [];
-  if (!text(body.target_department)) details.push({ field: 'target_department', message: '承接部门不能为空' });
-  ['target_process_code', 'target_process_name', 'target_behavior_code', 'target_behavior_name'].forEach(field => {
-    if (text(body[field])) details.push({ field, message: '承接流程和业务行为只能由承接部门回写' });
-  });
-  if (details.length) throw httpError(422, '校验失败', { error: '校验失败', details });
-  res.status(201).json(await repo.createHandoff(draft, Number(req.params.id), body, req.session.userId));
-}));
-
-router.put('/cross-dept-handoffs/:id', requireAuth, (req, res) => runAction(res, async () => {
-  const repo = await repository();
-  const draft = await repo.getDraftByHandoff(req.params.id);
-  await assertCanEditDraftContent(req, repo, draft);
-  res.json(await repo.updateHandoff(draft, Number(req.params.id), req.body || {}, req.session.userId));
-}));
-
-router.put('/cross-dept-handoffs/:id/returned-result', requireAuth, (req, res) => runAction(res, async () => {
-  const repo = await repository();
-  const draft = await repo.getDraftByHandoff(req.params.id);
-  const handoff = await repo.getHandoff(req.params.id);
-  await assertCanReturnHandoff(req, repo, draft, handoff);
-  if (!EDITABLE_DRAFT_STATUSES.has(draft.status || 'draft')) throw httpError(409, '当前状态只读，需要退回修改或新建变更版本');
-  const body = req.body || {};
-  const details = [];
-  if (!text(body.target_process_name)) details.push({ field: 'target_process_name', message: '承接流程不能为空' });
-  if (!text(body.target_behavior_name)) details.push({ field: 'target_behavior_name', message: '承接业务行为不能为空' });
-  if (details.length) throw httpError(422, '校验失败', { error: '校验失败', details });
-  res.json(await repo.acceptHandoffReturn(draft, Number(req.params.id), body, req.session.userId));
-}));
-
-router.post('/cross-dept-handoffs/:id/assign-counterparty', requireAuth, (req, res) => runAction(res, async () => {
-  const roleCodes = await requireCurrentRole(req, 'mdm_lead');
-  const repo = await repository();
-  const handoff = await repo.getHandoffContext(req.params.id);
-  const department = await currentDepartmentIdentity(req);
-  const actor = handoffActor(req, roleCodes, department, 'mdm_lead');
-  await assertHandoffParticipant(repo, handoff, actor);
-  if (handoff.status !== 'pending_assignment') throw httpError(409, '当前承接状态不需要分派责任部门');
-  const targetDepartmentId = Number(req.body && req.body.department_id || 0);
-  if (!targetDepartmentId) {
-    throw httpError(422, '校验失败', {
-      error: '校验失败',
-      details: [{ field: 'department_id', message: '责任部门不能为空' }]
-    });
-  }
-  const targetDepartment = await getDepartmentByIdAsync(targetDepartmentId);
-  if (!targetDepartment) throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'department_id', message: '责任部门不存在' }] });
-  res.json(await repo.assignHandoffCounterparty(handoff, {
-    id: Number(targetDepartment.id || targetDepartment.department_id),
-    name: text(targetDepartment.name || targetDepartment.department_name)
-  }, actor));
-}));
-
-router.put('/cross-dept-handoffs/:id/counterparty-response', requireAuth, (req, res) => runAction(res, async () => {
-  const roleCodes = await requireCurrentRole(req, 'department_contact');
-  const repo = await repository();
-  const handoff = await repo.getHandoffContext(req.params.id);
-  const department = await currentDepartmentIdentity(req);
-  const actor = handoffActor(req, roleCodes, department, 'department_contact');
-  await assertHandoffParticipant(repo, handoff, actor);
-  if (handoff.status !== 'pending_counterparty_detail') throw httpError(409, '当前承接状态不能补充外部门承接内容');
-  if (!department || Number(department.id) !== Number(handoff.counterparty_department_id)) {
-    throw httpError(403, '部门主对接人只能补充本部门实际承接内容');
-  }
-  const body = req.body || {};
-  const details = [];
-  if (!text(body.counterparty_process_name)) details.push({ field: 'counterparty_process_name', message: '本部门对应流程不能为空' });
-  if (!text(body.counterparty_behavior_name)) details.push({ field: 'counterparty_behavior_name', message: '本部门对应业务行为不能为空' });
-  if (!text(body.requested_matter || handoff.requested_matter) && !text(body.transfer_data_ref || handoff.transfer_data_ref)) {
-    details.push({ field: 'requested_matter', message: '需要说明传递数据或承接事项' });
-  }
-  if (!text(body.completion_standard || handoff.completion_standard)) {
-    details.push({ field: 'completion_standard', message: '完成标准不能为空' });
-  }
-  if (details.length) throw httpError(422, '校验失败', { error: '校验失败', details });
-  res.json(await repo.saveHandoffCounterpartyResponse(handoff, body, actor));
-}));
-
-router.post('/cross-dept-handoffs/:id/department-decision', requireAuth, (req, res) => runAction(res, async () => {
-  const roleCodes = await requireCurrentRole(req, 'department_mdm_reviewer');
-  const repo = await repository();
-  const handoff = await repo.getHandoffContext(req.params.id);
-  const currentDepartment = await currentDepartmentIdentity(req);
-  const actor = handoffActor(req, roleCodes, currentDepartment, 'department_mdm_reviewer');
-  await assertHandoffParticipant(repo, handoff, actor);
-  const allowedStates = ['pending_origin_review', 'pending_counterparty_scope', 'pending_counterparty_review'];
-  if (!allowedStates.includes(text(handoff.status))) throw httpError(409, '当前承接状态不能记录部门决定');
-  const currentDepartmentId = currentDepartment && Number(currentDepartment.id);
-  const isOrigin = currentDepartmentId === Number(handoff.origin_department_id);
-  const isCounterparty = currentDepartmentId === Number(handoff.counterparty_department_id);
-  if (!isOrigin && !isCounterparty) throw httpError(403, '部门审核员不能代替另一部门作出决定');
-  if (handoff.status === 'pending_origin_review' && !isOrigin) throw httpError(403, '当前应由归口部门审核候选关系');
-  if (handoff.status !== 'pending_origin_review' && !isCounterparty) throw httpError(403, '当前应由外部门审核承接范围或补充结果');
-  const body = req.body || {};
-  if (!['approved', 'returned', 'rejected', 'not_required'].includes(text(body.decision))) {
-    throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'decision', message: '部门决定无效' }] });
-  }
-  if (!text(body.decision_basis)) {
-    throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'decision_basis', message: '决定依据不能为空' }] });
-  }
-  const finalResponsiblePersonId = isOrigin
-    ? handoff.origin_final_responsible_person_id
-    : handoff.counterparty_final_responsible_person_id;
-  if (!finalResponsiblePersonId) throw httpError(409, '部门尚未配置最终责任人，不能记录部门决定');
-  res.json(await repo.recordHandoffDepartmentDecision(handoff, {
-    id: currentDepartmentId,
-    name: currentDepartment.name,
-    final_responsible_person_id: Number(finalResponsiblePersonId)
-  }, body, actor));
-}));
-
-router.post('/cross-dept-handoffs/:id/structure-gate', requireAuth, (req, res) => runAction(res, async () => {
-  const roleCodes = await requireCurrentRole(req, 'mdm_lead');
-  const repo = await repository();
-  const handoff = await repo.getHandoffContext(req.params.id);
-  const department = await currentDepartmentIdentity(req);
-  const actor = handoffActor(req, roleCodes, department, 'mdm_lead');
-  await assertHandoffParticipant(repo, handoff, actor);
-  if (!['pending_structure_gate', 'returned', 'escalated'].includes(text(handoff.status))) {
-    throw httpError(409, '当前承接状态不能执行结构卡口');
-  }
-  const action = text(req.body && req.body.action) || 'confirmed';
-  if (!['confirmed', 'returned', 'escalated'].includes(action)) {
-    throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'action', message: '结构卡口结论无效' }] });
-  }
-  res.json(await repo.runHandoffStructureGate(handoff, { ...(req.body || {}), action }, actor));
-}));
-
-router.post('/drafts/:id/forms', requireAuth, (req, res) => runAction(res, async () => {
-  const repo = await repository();
-  const draft = await repo.getDraft(req.params.id);
-  await assertCanEditDraftContent(req, repo, draft);
-  const details = [];
-  if (!Number(req.body && req.body.step_id || 0)) details.push({ field: 'step_id', message: '表单必须指向业务行为' });
-  if (!text(req.body && req.body.form_name)) details.push({ field: 'form_name', message: '表单名称不能为空' });
-  if (!text(req.body && req.body.main_table_name)) details.push({ field: 'main_table_name', message: '主表名称不能为空' });
-  if (details.length) throw httpError(422, '校验失败', { error: '校验失败', details });
-  res.status(201).json(await repo.createForm(draft, req.body || {}, req.session.userId));
-}));
-
-router.put('/forms/:id', requireAuth, (req, res) => runAction(res, async () => {
-  const repo = await repository();
-  const draft = await repo.getDraftByForm(req.params.id);
-  await assertCanEditDraftContent(req, repo, draft);
-  res.json(await repo.updateForm(draft, Number(req.params.id), req.body || {}, req.session.userId));
-}));
-
-router.post('/forms/:id/tables', requireAuth, (req, res) => runAction(res, async () => {
-  const repo = await repository();
-  const draft = await repo.getDraftByForm(req.params.id);
-  await assertCanEditDraftContent(req, repo, draft);
-  assertNoManualNumber(req.body || {}, 'table_no', '表编号');
-  assertNoManualNumber(req.body || {}, 'table_code', '表编号');
-  if (text(req.body && req.body.table_kind) && text(req.body.table_kind) !== 'detail') throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'table_kind', message: '当前只允许创建明细表' }] });
-  if (!text(req.body && req.body.table_name)) throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'table_name', message: '明细表名称不能为空' }] });
-  res.status(201).json(await repo.createFormTable(draft, Number(req.params.id), req.body || {}, req.session.userId));
-}));
-
-router.put('/form-tables/:id', requireAuth, (req, res) => runAction(res, async () => {
-  const repo = await repository();
-  const draft = await repo.getDraftByFormTable(req.params.id);
-  await assertCanEditDraftContent(req, repo, draft);
-  res.json(await repo.updateFormTable(draft, Number(req.params.id), req.body || {}, req.session.userId));
-}));
-
-router.post('/form-tables/:id/fields', requireAuth, (req, res) => runAction(res, async () => {
-  const repo = await repository();
-  const draft = await repo.getDraftByFormTable(req.params.id);
-  await assertCanEditDraftContent(req, repo, draft);
-  assertNoManualNumber(req.body || {}, 'field_no', '字段编号');
-  assertNoManualNumber(req.body || {}, 'field_code', '字段编号');
-  assertNoWhitespaceFields(req.body || {}, ['field_name']);
-  if (text(req.body && req.body.structure_kind) && text(req.body.structure_kind) !== 'detail') throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'structure_kind', message: '明细表接口只能新增明细字段' }] });
-  assertEnum(req.body || {}, 'field_type', FIELD_TYPES, '字段类型');
-  if (!text(req.body && req.body.field_name)) throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'field_name', message: '明细字段名称不能为空' }] });
-  res.status(201).json(await repo.createFormTableField(draft, Number(req.params.id), { ...(req.body || {}), structure_kind: 'detail' }, req.session.userId));
-}));
-
-router.put('/form-table-fields/:id', requireAuth, (req, res) => runAction(res, async () => {
-  const repo = await repository();
-  const draft = await repo.getDraftByFormTableField(req.params.id);
-  await assertCanEditDraftContent(req, repo, draft);
-  res.json(await repo.updateFormTableField(draft, Number(req.params.id), req.body || {}, req.session.userId));
-}));
-
-router.post('/forms/:id/fields', requireAuth, (req, res) => runAction(res, async () => {
-  const repo = await repository();
-  const draft = await repo.getDraftByForm(req.params.id);
-  await assertCanEditDraftContent(req, repo, draft);
-  assertNoManualNumber(req.body || {}, 'field_no', '字段编号');
-  assertNoManualNumber(req.body || {}, 'field_code', '字段编号');
-  assertNoWhitespaceFields(req.body || {}, ['field_name']);
-  assertEnum(req.body || {}, 'field_type', FIELD_TYPES, '字段类型');
-  if (!text(req.body && req.body.field_name)) throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'field_name', message: '主表字段名称不能为空' }] });
-  res.status(201).json(await repo.createFormTableField(draft, Number(req.params.id), { ...(req.body || {}), structure_kind: 'main' }, req.session.userId));
-}));
-
-router.delete('/forms/:id', requireAuth, (req, res) => runAction(res, async () => {
-  const repo = await repository();
-  const draft = await repo.getDraftByForm(req.params.id);
-  await assertCanEditDraftContent(req, repo, draft);
-  res.json(await repo.deleteForm(draft, Number(req.params.id), req.session.userId));
-}));
-
-router.delete('/form-tables/:id', requireAuth, (req, res) => runAction(res, async () => {
-  const repo = await repository();
-  const draft = await repo.getDraftByFormTable(req.params.id);
-  await assertCanEditDraftContent(req, repo, draft);
-  res.json(await repo.deleteFormTable(draft, Number(req.params.id), req.session.userId));
-}));
-
-router.delete('/form-table-fields/:id', requireAuth, (req, res) => runAction(res, async () => {
-  const repo = await repository();
-  const draft = await repo.getDraftByFormTableField(req.params.id);
-  await assertCanEditDraftContent(req, repo, draft);
-  res.json(await repo.deleteFormTableField(draft, Number(req.params.id), req.session.userId));
-}));
-
-router.put('/form-table-fields/:id/order', requireAuth, (req, res) => runAction(res, async () => {
-  const repo = await repository();
-  const draft = await repo.getDraftByFormTableField(req.params.id);
-  await assertCanEditDraftContent(req, repo, draft);
-  const direction = text(req.body && req.body.direction) === 'down' ? 'down' : 'up';
-  res.json(await repo.moveFormTableField(draft, Number(req.params.id), direction, req.session.userId));
-}));
-
-router.put('/form-fields/:id', requireAuth, (req, res) => runAction(res, async () => {
-  const repo = await repository();
-  const draft = await repo.getDraftByField(req.params.id);
-  await assertCanEditDraftContent(req, repo, draft);
-  res.json(await repo.updateField(draft, Number(req.params.id), req.body || {}, req.session.userId));
-}));
-
-router.post('/drafts/:id/evidence', requireAuth, (req, res) => runAction(res, async () => {
-  const repo = await repository();
-  const draft = await repo.getDraft(req.params.id);
-  await assertCanEditDraftContent(req, repo, draft);
-  assertEnum(req.body || {}, 'evidence_type', EVIDENCE_TYPES, '证据类型');
-  if (!text(req.body.evidence_type) || !text(req.body.description)) throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'evidence', message: '证据类型和说明不能为空' }] });
-  res.status(201).json(await repo.createEvidence(draft, req.body || {}, req.session.userId));
-}));
-
-router.put('/evidence/:id', requireAuth, (req, res) => runAction(res, async () => {
-  const repo = await repository();
-  const draft = await repo.getDraftByEvidence(req.params.id);
-  await assertCanEditDraftContent(req, repo, draft);
-  if (Object.prototype.hasOwnProperty.call(req.body || {}, 'status') && text(req.body.status) === 'verified') {
-    await assertCanVerifyEvidenceStatus(req);
-  }
-  res.json(await repo.updateEvidence(draft, Number(req.params.id), req.body || {}, req.session.userId));
-}));
-
-router.get('/drafts/:id/risks', requireAuth, (req, res) => runAction(res, async () => {
-  const repo = await repository();
-  const draft = await repo.getDraft(req.params.id);
-  await assertCanViewDraft(req, repo, draft);
-  const items = await repo.buildRisks(draft.id);
-  res.json({ summary: { total: items.length }, items });
-}));
-
-router.get('/drafts/:id/edition-diff', requireAuth, (req, res) => runAction(res, async () => {
-  const repo = await repository();
-  const draft = await repo.getDraft(req.params.id);
-  await assertCanViewDraft(req, repo, draft);
-  res.json(await repo.editionDiff(draft));
-}));
-
-router.get('/drafts/:id/outcome-preview', requireAuth, (req, res) => runAction(res, async () => {
-  const repo = await repository();
-  const draft = await repo.getDraft(req.params.id);
-  await assertCanViewDraft(req, repo, draft);
-  res.json({ draft, outcome: await repo.outcomeForDraft(draft), counts: await repo.getCounts(draft.id), risks: await repo.buildRisks(draft.id) });
 }));
 
 router.post('/drafts/:id/submit', requireAuth, requirePermission('governance:submit-department'), (req, res) => runAction(res, async () => {
   const repo = await repository();
   const draft = await repo.getDraft(req.params.id);
+  await assertCanViewDraft(req, repo, draft);
+  assertActiveV7Draft(draft);
   const isV7 = text(draft && draft.schema_version) === 'process-governance-v7';
   let expectedBinding = {};
   if (isV7) {
@@ -6887,6 +6122,8 @@ router.post('/review-tasks/:id/decision', requireAuth, (req, res) => runAction(r
   const task = await repo.getReviewTask(req.params.id);
   if (!task) throw httpError(404, '审核任务不存在');
   const draft = await repo.getDraft(task.draft_id);
+  await assertCanViewDraft(req, repo, draft);
+  assertActiveV7Draft(draft);
   await assertCanReview(req, repo, draft);
   const isV7 = text(draft && draft.schema_version) === 'process-governance-v7';
   let expectedBinding = {};
@@ -6904,6 +6141,7 @@ router.post('/drafts/:id/publish', requireAuth, requirePermission('governance:pu
   const repo = await repository();
   const draft = await repo.getDraft(req.params.id);
   await assertCanViewDraft(req, repo, draft);
+  assertActiveV7Draft(draft);
   assertAdminCannotWrite(await currentRoleCodes(req));
   let options = {
     confirm_complete_rewrite: Boolean(req.body && req.body.confirm_complete_rewrite)

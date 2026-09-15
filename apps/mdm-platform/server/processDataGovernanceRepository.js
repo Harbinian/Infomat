@@ -179,9 +179,10 @@ function versionDocument(row) {
   if (!document || typeof document !== 'object' || Array.isArray(document)) {
     throw repositoryError(409, 'PROCESS_DATA_GOVERNANCE_SOURCE_UNREADABLE', '固定流程版本缺少可读取的结构化内容');
   }
-  if (text(row.schema_version) !== 'process-governance-v7' && text(document.schema_version) !== 'process-governance-v7') {
-    throw repositoryError(409, 'PROCESS_DATA_GOVERNANCE_SOURCE_VERSION_UNSUPPORTED', '当前候选实现只承接process-governance-v7固定版本');
+  if (text(row.schema_version) !== 'process-governance-v7' || text(document.schema_version) !== 'process-governance-v7') {
+    throw repositoryError(409, 'PROCESS_DATA_GOVERNANCE_SOURCE_VERSION_UNSUPPORTED', '数据治理只支持已发布的原生V7流程版本');
   }
+  if (!text(row.content_hash) || digest(document) !== text(row.content_hash)) throw repositoryError(409, 'PROCESS_DATA_GOVERNANCE_SOURCE_CHANGED', '正式流程版本的内容摘要校验失败，请先核查来源完整性');
   return document;
 }
 
@@ -237,6 +238,7 @@ async function queueProcessDataGovernanceCreationTask(executor, processVersionId
   if (!version || !['published', 'superseded'].includes(text(version.status))) {
     throw repositoryError(409, 'PROCESS_DATA_GOVERNANCE_VERSION_NOT_FIXED', '只能为不可变的已发布流程版本建立治理工作包');
   }
+  versionDocument(version);
   const safeActor = actorValue(actor);
   await executor.execute(`
     INSERT INTO process_data_governance_creation_tasks
@@ -278,6 +280,7 @@ function makeProcessDataGovernanceRepository(pool) {
   async function assertPackageSourceBinding(executor, packageDataRow) {
     const version = await getVersion(executor, Number(packageDataRow.process_version_id), false);
     if (!version) throw repositoryError(409, 'PROCESS_DATA_GOVERNANCE_SOURCE_MISSING', '工作包绑定的固定流程版本不存在');
+    if (!['published','superseded'].includes(text(version.status))) throw repositoryError(409, 'PROCESS_DATA_GOVERNANCE_VERSION_NOT_FIXED', '工作包的来源版本已撤回或不再是已发布版本，不能继续办理');
     return { version, document: assertSourceBinding(packageDataRow, version) };
   }
 
@@ -299,8 +302,14 @@ function makeProcessDataGovernanceRepository(pool) {
       return await withTransaction(pool, async connection => {
         const task = await one(connection, 'SELECT * FROM process_data_governance_creation_tasks WHERE process_version_id=? FOR UPDATE', [versionId]);
         if (!task) throw repositoryError(404, 'PROCESS_DATA_GOVERNANCE_TASK_NOT_FOUND', '工作包创建任务不存在');
+        const version = await getVersion(connection, versionId, true);
+        if (!version || !['published', 'superseded'].includes(text(version.status))) {
+          throw repositoryError(409, 'PROCESS_DATA_GOVERNANCE_VERSION_NOT_FIXED', '来源流程版本不是不可变的已发布版本');
+        }
+        const document = versionDocument(version);
         const existing = await one(connection, 'SELECT * FROM process_data_governance_work_packages WHERE process_version_id=?', [versionId]);
         if (existing) {
+          assertSourceBinding(existing, version);
           await connection.execute(`
             UPDATE process_data_governance_creation_tasks
             SET status='completed', completed_work_package_id=?, completed_at=COALESCE(completed_at, CURRENT_TIMESTAMP),
@@ -314,11 +323,6 @@ function makeProcessDataGovernanceRepository(pool) {
           SET status='creating', attempt_count=attempt_count+1, last_error_code=NULL, last_error_message=NULL
           WHERE id=?
         `, [task.id]);
-        const version = await getVersion(connection, versionId, true);
-        if (!version || !['published', 'superseded'].includes(text(version.status))) {
-          throw repositoryError(409, 'PROCESS_DATA_GOVERNANCE_VERSION_NOT_FIXED', '来源流程版本不是不可变的已发布版本');
-        }
-        const document = versionDocument(version);
         const risk = riskFromDocument(document);
         const safeActor = actorValue(actor);
         const sourceHash = text(version.content_hash) || digest(document);
@@ -374,6 +378,27 @@ function makeProcessDataGovernanceRepository(pool) {
     return await materializeCreationTask(processVersionId, actor);
   }
 
+  async function listPublishedVersions() {
+    const result = await rows(pool, `
+      SELECT v.id, v.document_no, v.document_title, v.edition, v.status,
+             v.department_id, d.name AS department_name, v.published_at,
+             p.id AS work_package_id
+      FROM process_design_versions v
+      LEFT JOIN departments d ON d.id=v.department_id
+      LEFT JOIN process_data_governance_work_packages p ON p.process_version_id=v.id
+      WHERE v.status IN ('published', 'superseded') AND v.schema_version='process-governance-v7'
+        AND JSON_UNQUOTE(JSON_EXTRACT(IF(JSON_VALID(v.process_content_json), v.process_content_json, 'null'), '$.schema_version'))='process-governance-v7'
+      ORDER BY v.published_at DESC, v.id DESC
+    `);
+    return result.map(row => ({
+      process_version_id: Number(row.id), document_no: row.document_no,
+      document_title: row.document_title, edition: row.edition, status: row.status,
+      department_id: row.department_id == null ? null : Number(row.department_id),
+      department_name: row.department_name || null, published_at: row.published_at,
+      work_package_id: row.work_package_id == null ? null : Number(row.work_package_id)
+    }));
+  }
+
   async function listWorkPackages(processVersionId) {
     const result = await rows(pool, `
       SELECT p.*, d.name AS owning_department_name,
@@ -392,9 +417,9 @@ function makeProcessDataGovernanceRepository(pool) {
       FROM process_data_governance_work_packages p
       JOIN process_design_versions v ON v.id=p.process_version_id
       LEFT JOIN departments d ON d.id=p.owning_department_id
-      WHERE p.process_version_id=?
+      ${processVersionId ? 'WHERE p.process_version_id=?' : ''}
       ORDER BY p.updated_at DESC, p.id DESC
-    `, [processVersionId]);
+    `, processVersionId ? [processVersionId] : []);
     return result.map(publicPackage);
   }
 
@@ -412,9 +437,9 @@ function makeProcessDataGovernanceRepository(pool) {
       JOIN process_data_governance_work_packages p ON p.id=fr.work_package_id
       JOIN process_design_versions v ON v.id=p.process_version_id
       LEFT JOIN departments d ON d.id=fr.target_department_id
-      WHERE fr.target_department_id=? AND p.process_version_id=? AND fr.status IN (${placeholders})
+      WHERE fr.target_department_id=? ${processVersionId ? 'AND p.process_version_id=?' : ''} AND fr.status IN (${placeholders})
       ORDER BY fr.updated_at DESC, fr.id DESC
-    `, [departmentId, processVersionId, ...statuses]);
+    `, [departmentId, ...(processVersionId ? [processVersionId] : []), ...statuses]);
     return result.map(row => ({ ...publicFactRequest(row), process_version_id: Number(row.process_version_id), package_ref: row.package_ref, package_revision_no: Number(row.package_revision_no), process_name: row.process_name, document_no: row.document_no }));
   }
 
@@ -883,6 +908,7 @@ function makeProcessDataGovernanceRepository(pool) {
     getFactRequestContext,
     getWorkPackageDetail,
     listBusinessFactRequests,
+    listPublishedVersions,
     listWorkbenchItems,
     listWorkPackages,
     materializeCreationTask,

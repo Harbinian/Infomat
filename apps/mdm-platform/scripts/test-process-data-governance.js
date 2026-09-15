@@ -126,11 +126,15 @@ const enabledEnv = {
   PROCESS_DATA_GOVERNANCE_TRIAL_PROCESS_VERSION_ID: '77'
 };
 assert.strictEqual(isProcessDataGovernanceEnabled(enabledEnv), true);
-assert.strictEqual(configuredProcessVersionId(enabledEnv), 77);
+assert.strictEqual(configuredProcessVersionId(enabledEnv), null, 'retired trial configuration never chooses a source');
 assert.strictEqual(isProcessVersionAllowed(77, enabledEnv), true);
-assert.strictEqual(isProcessVersionAllowed(78, enabledEnv), false);
+assert.strictEqual(isProcessVersionAllowed(78, enabledEnv), true);
 assert.strictEqual(assertProcessVersionAllowed(77, enabledEnv), 77);
-assert.throws(() => assertProcessVersionAllowed(78, enabledEnv), error => error.code === 'PROCESS_DATA_GOVERNANCE_SCOPE_DENIED');
-assert.strictEqual(featureStatus(enabledEnv).scope_mode, 'exact_process_version_id');
+assert.strictEqual(assertProcessVersionAllowed(78, enabledEnv), 78);
+for (const value of [null, '', 0, -1, 1.2, '77,78', '*', '1e2', true, Number.MAX_SAFE_INTEGER + 1]) {
+  assert.throws(() => assertProcessVersionAllowed(value, enabledEnv), error => error.code === 'PROCESS_DATA_GOVERNANCE_VERSION_REQUIRED');
+}
+assert.strictEqual(assertProcessVersionAllowed(78, { PROCESS_DATA_GOVERNANCE_ENABLED: '1' }), 78);
+assert.strictEqual(featureStatus(enabledEnv).scope_mode, 'published_v7_versions');
 
 console.log('Process data governance deterministic rule tests passed');

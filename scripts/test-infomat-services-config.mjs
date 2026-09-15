@@ -131,7 +131,7 @@ assert.ok(scriptsReadme.includes('Docker 容器 `infomat-input-baseline-review-m
 assert.ok(scriptsReadme.includes('npm run repair:infomat-mysql'), 'scripts README should document the MySQL repair path');
 
 const mdmReadme = fs.readFileSync(path.join(repoRoot, 'apps', 'mdm-platform', 'README.md'), 'utf8');
-assert.ok(mdmReadme.includes('MDM 和 PMO 从仓库根目录使用固定入口启动'), 'MDM README should document the fixed root starter');
+assert.ok(mdmReadme.includes('npm run start:infomat-services') && mdmReadme.includes('3000独立运维'), 'MDM README should document the fixed root starter');
 assert.ok(mdmReadme.includes('$env:MYSQL_PORT = "3307"'), 'MDM README should show the fixed MySQL port for schema rebuilds');
 
 const roleUsageGuide = fs.readFileSync(path.join(repoRoot, 'apps', 'mdm-platform', 'docs', 'role-based-usage-guide.md'), 'utf8');

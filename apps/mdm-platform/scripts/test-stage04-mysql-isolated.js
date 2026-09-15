@@ -167,10 +167,11 @@ async function runMysqlHttpScenario(context, hooks = {}) {
       await expect('lead',`/api/process-design/drafts/${draftId}/publish`,'POST',formalBinding(draft),503);
       assert.deepEqual(await snapshot(),closedBefore);
       await start({PROCESS_V7_TRIAL_PROCESS_REF:'different_synthetic_process'});
-      await expect('contact','/api/process-v7-preview/cases','POST',{document,source_file_name:'outside.json'},403);
-      await expect('lead',`/api/process-v7-preview/cases/${caseId}/promote`,'POST',{...binding(detail.case),target},403);
-      assert.deepEqual(await snapshot(),closedBefore);
-      pass('closed switches and exact trial scope reject without business writes');
+      const anotherProcess=structuredClone(document);anotherProcess.process.process_ref='another_synthetic_process';
+      const anotherCase=await expect('contact','/api/process-v7-preview/cases','POST',{document:anotherProcess,source_file_name:'another.json'},201);
+      assert.equal(anotherCase.case.process_ref,anotherProcess.process.process_ref);
+      assert.notEqual(anotherCase.case.id,caseId);
+      pass('closed switches reject writes; retired trial setting does not block another authorized process');
       // A synthetic historical V3 row remains readable through the supported version endpoint.
       const v3=require('../server/processGovernanceV2').createEmptyProcessGovernanceDocument({process_name:'合成V3历史版本',owning_department:'合成甲部'});
       const v3Hash=require('../server/processGovernanceV2').normalizeProcessGovernanceDocument(v3).content_hash;

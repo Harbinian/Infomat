@@ -12,6 +12,13 @@ const {
 const { ROLE_GUIDES } = require('../roleDefinitions');
 
 const PAGE_DEFINITIONS = {
+  dataMap: {
+    title:'数据地图',subtitle:'选择流程查看数据关系，或进入有来源依据的字段台账。',
+    workflow:['选择流程或字段上下文','核对来源版本','查看数据关系和字段','按职责处理问题'],
+    sample:'先检查图形来自预览修订还是正式版本，再选择数据对象查看它在哪些业务行为中创建、更新和使用。',
+    pitfall:'预览图及历史字段记录不自动构成已发布的数据治理结论。',
+    doneCriteria:'当前查看内容的来源、版本和数据关系可以定位。',target:'#/dataMap',roles:{}
+  },
   dashboard: {
     title: '统计看板',
     subtitle: '先看全局状态，再进入需要处理的事项。',
@@ -299,7 +306,7 @@ function buildNextActions(req, page, ownedRoles, counts) {
   }
   if (counts.pendingTodos > 0) {
     actions.push({
-      title: `处理当前待办：${counts.pendingTodos} 项`,
+      title: `查看可见待办：${counts.pendingTodos} 项`,
       sample: page.sample,
       target: '#/todos',
       actionLabel: '查看待办',

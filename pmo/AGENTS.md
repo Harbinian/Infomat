@@ -45,7 +45,6 @@ npm run test:pmo-task-data
 - 开发模式默认访问 `http://localhost:5174`。
 - 修改应用前先读 `gantt-react/AGENTS.md` 和 `gantt-react/README.md`。
 - “周会事项”页签只作 PMO 周会模板试运行，数据保存在浏览器本地，不回写 PMO Markdown 真源。
-- 独立 3002 周会行动项服务位于 `apps/weekly-action-service/`，用于服务端本机运行台账；PMO 真源仍以 Markdown 为准，3002 不回写 `tasks.json`。
 - 交付物状态正本在 `pmo/deliverables/DLV-XXX-*.md`，dev 模式运行产物默认写入被忽略的 `artifacts/pmo/deliverables/`。
 
 ## 组织数字化参与度模型

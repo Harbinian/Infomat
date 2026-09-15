@@ -731,6 +731,20 @@ function makeIdentityMysqlRepository(pool) {
       return personRows.map(row => normalizePersonUser(row));
     },
 
+    async listRoster() {
+      const roster = await rows(pool, `
+        SELECT p.person_id, p.employee_no, p.person_name, p.current_department_id,
+               p.employment_status, p.status, p.mobile, p.email,
+               d.name AS department_name, d.code AS department_code
+        FROM person p
+        LEFT JOIN departments d ON d.id=p.current_department_id
+        ORDER BY p.employee_no, p.person_id
+      `);
+      const memberships = await rows(pool, `SELECT m.person_id,o.org_unit_id AS id,o.org_unit_code AS code,o.org_unit_name AS name
+        FROM office_membership m JOIN org_unit o ON o.org_unit_id=m.office_id WHERE m.status='active' AND o.org_type='office' ORDER BY o.org_unit_code`);
+      return roster.map(person => ({...person,offices:memberships.filter(m=>Number(m.person_id)===Number(person.person_id)).map(({person_id,...office})=>office)}));
+    },
+
     async listUserRoleSummaries() {
       const userRows = await rows(pool, `
         SELECT p.person_id AS id, p.person_id, p.person_name AS name, p.employee_no,

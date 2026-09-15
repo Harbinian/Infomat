@@ -2,7 +2,7 @@ const express = require('express');
 const session = require('express-session');
 const path = require('path');
 const fs = require('fs');
-const { assertRuntimeConfig, legacyTestMode, rejectLegacyRoute } = require('./runtimeBoundary');
+const { assertRuntimeConfig, legacyTestMode } = require('./runtimeBoundary');
 assertRuntimeConfig(process.env);
 const { requireAuth } = require('./auth');
 const { securityHeaders, csrfProtection, issueCsrfToken } = require('./security');
@@ -66,12 +66,6 @@ app.use(csrfProtection);
 app.get('/api/csrf-token', requireAuth, issueCsrfToken);
 
 function registerRouteIfExists(basePath, routeName) {
-  const legacyRoutes = new Set(['systems', 'capabilities', 'processes', 'views', 'orgUnit', 'position',
-    'person', 'productFamily', 'product', 'classNode', 'attribute', 'external', 'integration']);
-  if (legacyRoutes.has(routeName) && !legacyTestMode()) {
-    app.use(basePath, requireAuth, rejectLegacyRoute);
-    return;
-  }
   const routePath = path.join(__dirname, 'routes', `${routeName}.js`);
   if (fs.existsSync(routePath)) {
     app.use(basePath, require(routePath));
@@ -84,9 +78,6 @@ registerRouteIfExists('/api/org/accounts', 'accounts');
 registerRouteIfExists('/api/org', 'org');
 registerRouteIfExists('/api/rbac', 'rbac');
 registerRouteIfExists('/api/governance', 'governance');
-registerRouteIfExists('/api/systems', 'systems');
-registerRouteIfExists('/api/capabilities', 'capabilities');
-registerRouteIfExists('/api/processes', 'processes');
 registerRouteIfExists('/api/mappings', 'mappings');
 registerRouteIfExists('/api/data-map', 'dataMap');
 registerRouteIfExists('/api/field-entries', 'fieldEntries');
@@ -95,26 +86,18 @@ registerRouteIfExists('/api/todos', 'todos');
 registerRouteIfExists('/api/conflicts', 'conflicts');
 registerRouteIfExists('/api/terminology', 'terminology');
 registerRouteIfExists('/api/versions', 'versions');
+registerRouteIfExists('/api/publications', 'publications');
+registerRouteIfExists('/api/process-diagrams', 'processDiagrams');
 registerRouteIfExists('/api/import', 'import');
 registerRouteIfExists('/api/export', 'export');
-registerRouteIfExists('/api/views', 'views');
 registerRouteIfExists('/api/process-governance/guidance', 'governanceGuidance');
 registerRouteIfExists('/api/process-governance', 'processGovernance');
-registerRouteIfExists('/api/process-design/editor', 'processDesignEditor');
-registerRouteIfExists('/api/process-design', process.env.PROCESS_GOVERNANCE_READ_MODEL === 'mysql' ? 'processDesignMysql' : 'processDesign');
+registerRouteIfExists('/api/process-design', 'processDesignMysql');
 registerRouteIfExists('/api/process-v7-preview', 'processV7PreviewReview');
 registerRouteIfExists('/api/process-data-governance', 'processDataGovernance');
 registerRouteIfExists('/api/role-workbench', 'roleWorkbench');
 registerRouteIfExists('/api/page-workflows', 'pageWorkflows');
-registerRouteIfExists('/api/org-units', 'orgUnit');
-registerRouteIfExists('/api/positions', 'position');
-registerRouteIfExists('/api/persons', 'person');
-registerRouteIfExists('/api/product-families', 'productFamily');
-registerRouteIfExists('/api/products', 'product');
-registerRouteIfExists('/api/class-nodes', 'classNode');
-registerRouteIfExists('/api/attributes', 'attribute');
-registerRouteIfExists('/api/external', 'external');
-registerRouteIfExists('/api/integration', 'integration');
+registerRouteIfExists('/api/offices', 'offices');
 registerRouteIfExists('/api/quality', 'quality');
 registerRouteIfExists('/api/roles', 'roles');
 registerRouteIfExists('/api/import-rbac', 'importRbac');
