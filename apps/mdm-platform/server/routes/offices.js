@@ -14,4 +14,5 @@ router.post('/tasks/:id/receive',(req,res)=>run(res,async()=>res.json(await offi
 router.post('/tasks/:id/assign',(req,res)=>run(res,async()=>res.json(await officeRepository().assignPerson(req.session,req.params.id,req.body||{}))));
 router.post('/tasks/:id/complete',(req,res)=>run(res,async()=>res.json(await officeRepository().completeTask(req.session,req.params.id,req.body||{}))));
 router.setRepositoryFactory=factory=>{repositoryFactory=factory;};
+router.getOfficeRepository=officeRepository;
 module.exports=router;

@@ -10,6 +10,7 @@ delete process.env.PROCESS_GOVERNANCE_READ_MODEL;
 const express = require('express');
 const db = require('../server/db');
 const roleWorkbenchRouter = require('../server/routes/roleWorkbench');
+require('../server/routes/offices').setRepositoryFactory(()=>({async personalWorkItems(){return [];}}));
 require('../server/todoMysqlRepository').setTodoRepositoryFactory(() => ({ async listTodos() { return []; } }));
 require('../server/routes/processDesignMysql').setProcessDesignRepositoryFactory(() => ({
   async listHandoffQueue() { return { items: [] }; },
@@ -129,8 +130,8 @@ async function main() {
     assert(res.body.user.roleCodes.includes('department_contact'), '应返回 MySQL 身份读模型的部门主对接人角色');
     assert(res.body.roles.some(role => role.code === 'department_contact' && role.owned), '部门主对接人应标记为当前拥有角色');
     assert(
-      res.body.workItems.some(item => item.type === 'process_quality' && item.title.includes('本部门流程治理问题')),
-      '非管理层角色工作台应看到本部门流程治理问题'
+      !res.body.workItems.some(item => item.type === 'process_quality'),
+      '工作台不再投影旧快照质量问题'
     );
     assert(
       !res.body.workItems.some(item => item.type === 'process_quality' && item.title.includes('跨部门流程治理问题')),

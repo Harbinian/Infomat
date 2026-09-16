@@ -106,11 +106,8 @@ assert.ok(
 );
 
 const processDesignMysqlSource = fs.readFileSync(path.join(__dirname, '..', 'server', 'routes', 'processDesignMysql.js'), 'utf8');
-const draftInsertBlocks = [...processDesignMysqlSource.matchAll(/INSERT INTO process_design_drafts([\s\S]*?)`\s*,\s*\[/g)].map(match => match[1]);
-assert.ok(draftInsertBlocks.length >= 2, 'test must inspect every MySQL draft creation path');
-draftInsertBlocks.forEach(block => {
-  assert.match(block, /schema_version/, 'each MySQL draft creation path must write process-governance-v3 explicitly');
-});
+assert.doesNotMatch(processDesignMysqlSource, /INSERT INTO process_design_drafts/, 'formal lifecycle repository must not recreate retired draft creation paths');
+assert.doesNotMatch(processDesignMysqlSource, /normalizeProcessGovernanceDocument|createEmptyProcessGovernanceDocument/, 'V7 runtime must not convert through V3');
 
 const nonEmptyPool = {
   async execute(sql) {

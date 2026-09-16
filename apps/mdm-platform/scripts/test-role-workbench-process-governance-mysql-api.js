@@ -9,6 +9,7 @@ process.env.MDM_IDENTITY_READ_MODEL = 'mysql';
 process.env.PROCESS_GOVERNANCE_READ_MODEL = 'mysql';
 
 const roleWorkbenchRouter = require('../server/routes/roleWorkbench');
+require('../server/routes/offices').setRepositoryFactory(()=>({async personalWorkItems(){return [];}}));
 require('../server/todoMysqlRepository').setTodoRepositoryFactory(() => ({ async listTodos() { return []; } }));
 require('../server/routes/processDesignMysql').setProcessDesignRepositoryFactory(() => ({
   async listHandoffQueue() { return { items: [] }; },
@@ -210,23 +211,8 @@ async function main() {
     }
 
     const workItems = Array.isArray(res.body.workItems) ? res.body.workItems : [];
-    if (!workItems.some(item => item.type === 'process_quality' && item.title.includes('MySQL 质量问题'))) {
-      throw new Error('角色工作台应显示来自 MySQL 流程治理仓储的质量问题');
-    }
-    if (!workItems.some(item => item.type === 'process_mapping_todo' && item.title.includes('MySQL 映射待办'))) {
-      throw new Error('角色工作台应显示来自 MySQL 流程治理仓储的映射待办');
-    }
-    const inputBaselineItem = workItems.find(item => item.type === 'input_baseline_issue' && item.title.includes('MySQL 输入基线待确认问题'));
-    if (!inputBaselineItem) {
-      throw new Error('角色工作台应显示来自输入基线复核仓储的待确认问题');
-    }
-    if (inputBaselineItem.sourceType !== 'input_baseline_issue' || !inputBaselineItem.responsiblePerson || !inputBaselineItem.nextStep) {
-      throw new Error('输入基线待确认工作项应包含统一治理字段');
-    }
-    if (qualityCalls !== 1 || mappingCalls !== 1 || reviewItemCalls !== 1) {
-      throw new Error(`角色工作台应各调用一次治理仓储，实际 quality=${qualityCalls}, mapping=${mappingCalls}, review=${reviewItemCalls}`);
-    }
-
+    if(workItems.some(item=>['process_quality','process_mapping_todo','input_baseline_issue'].includes(item.type)))throw Error('retired work items must not return');
+    if(qualityCalls!==0||mappingCalls!==0||reviewItemCalls!==0)throw Error('retired repositories must not be queried');
     console.log('Role workbench process governance MySQL API test passed');
   } finally {
     await closeServer(server);

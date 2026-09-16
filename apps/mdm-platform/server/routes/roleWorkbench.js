@@ -1,4 +1,9 @@
-const { listPendingTodos, listEscalatedConflicts } = require('../workbenchMysqlSources');
+let processGovernanceRepoPromise = null;
+let processGovernanceRepositoryFactory = null;
+let inputBaselineReviewRepoPromise = null;
+let inputBaselineReviewRepositoryFactory = null;
+let processContextBundleCache = null;
+
 const { checkRuntimeSchema, sendMysqlUnavailable } = require('../mysqlRuntimeSchema');
 const express = require('express');
 const mysql = require('mysql2/promise');
@@ -7,8 +12,8 @@ function legacyDb() { return require('../db'); }
 const { requireAuth, getUserEffectivePermissions } = require('../auth');
 const { mysqlConfigFromEnv } = require('../mysqlConfig');
 const { makeIdentityMysqlRepository } = require('../identityMysqlRepository');
-const { makeProcessGovernanceMysqlRepository } = require('../processGovernanceMysqlRepository');
-const { makeProcessInputBaselineReviewRepository } = require('../processInputBaselineReviewRepository');
+
+
 const { ROLE_GUIDES } = require('../roleDefinitions');
 const {
   isProcessDataGovernanceEnabled
@@ -16,52 +21,11 @@ const {
 
 let identityRepoPromise = null;
 let identityRepositoryFactory = null;
-let processGovernanceRepoPromise = null;
-let processGovernanceRepositoryFactory = null;
-let inputBaselineReviewRepoPromise = null;
-let inputBaselineReviewRepositoryFactory = null;
+
 let processDataGovernanceRepositoryFactory = null;
 const WORKBENCH_CACHE_TTL_MS = 15 * 1000;
 const roleGroupsCache = new Map();
 const workbenchResponseCache = new Map();
-let processContextBundleCache = null;
-const PMO_REVIEW_GATE_ROLES = new Set(['mdm_lead']);
-
-const TODO_TYPE_LABELS = {
-  field_confirm: '字段确认',
-  gold_source: '黄金源确认',
-  terminology: '术语补充',
-  conflict_resolution: '冲突协调',
-  process_quality: '流程治理质量问题',
-  process_mapping_todo: '流程映射待办',
-  input_baseline_issue: '输入基线待确认问题',
-  cross_dept_handoff: '跨部门承接待办',
-  handoff_conflict: '承接冲突待办',
-  field_ledger_gap: '字段台账补全',
-  gold_source_confirmation: '待确认黄金源确认',
-  pmo_review_gate: 'PMO治理评审',
-  process_data_governance_package: '数据生命周期治理工作包',
-  process_data_business_fact: '业务事实补充',
-  general: '一般待办'
-};
-
-const TODO_TARGETS = {
-  field_confirm: '#/todos',
-  gold_source: '#/todos',
-  terminology: '#/terms',
-  conflict_resolution: '#/conflicts',
-  process_quality: '#/processGovernance',
-  process_mapping_todo: '#/processGovernance',
-  input_baseline_issue: '#/processGovernance',
-  cross_dept_handoff: '#/processGovernance?workspace=handoffs',
-  handoff_conflict: '#/processGovernance?workspace=conflicts',
-  field_ledger_gap: '#/todos',
-  gold_source_confirmation: '#/todos',
-  pmo_review_gate: '#/processGovernance?view=qualityCases',
-  process_data_governance_package: '#/processGovernance?workspace=dataGovernance',
-  process_data_business_fact: '#/processGovernance?workspace=dataGovernance',
-  general: '#/todos'
-};
 
 const GOVERNANCE_TYPE_BY_TODO_TYPE = {
   field_confirm: 'field_ledger_gap',
@@ -91,13 +55,6 @@ function useMysqlIdentityReadModel() {
 
 function useMysqlProcessGovernanceReadModel() {
   return String(process.env.PROCESS_GOVERNANCE_READ_MODEL || '').toLowerCase() === 'mysql';
-}
-
-function useInputBaselineReviewMysqlStore() {
-  const rawMode = process.env.PROCESS_INPUT_BASELINE_REVIEW_STORE;
-  if (rawMode == null || rawMode === '') return useMysqlProcessGovernanceReadModel();
-  const mode = String(rawMode).trim().toLowerCase();
-  return !['artifact', 'none', 'off', 'false', '0'].includes(mode);
 }
 
 async function identityRepository() {
@@ -130,26 +87,6 @@ function resetIdentityRepositoryFactory() {
   identityRepoPromise = null;
 }
 
-async function processGovernanceRepository() {
-  if (processGovernanceRepositoryFactory) {
-    return await processGovernanceRepositoryFactory();
-  }
-  if (!processGovernanceRepoPromise) {
-    processGovernanceRepoPromise = (async () => {
-      const pool = mysql.createPool(mysqlConfigFromEnv());
-      const repo = makeProcessGovernanceMysqlRepository(pool);
-      await checkRuntimeSchema(pool, 'processGovernance');
-      return repo;
-    })();
-  }
-  try {
-    return await processGovernanceRepoPromise;
-  } catch (error) {
-    processGovernanceRepoPromise = null;
-    throw error;
-  }
-}
-
 function setProcessGovernanceRepositoryFactory(factory) {
   processGovernanceRepositoryFactory = factory;
   processGovernanceRepoPromise = null;
@@ -158,39 +95,6 @@ function setProcessGovernanceRepositoryFactory(factory) {
 function resetProcessGovernanceRepositoryFactory() {
   processGovernanceRepositoryFactory = null;
   processGovernanceRepoPromise = null;
-}
-
-async function inputBaselineReviewRepository() {
-  if (inputBaselineReviewRepositoryFactory) {
-    return await inputBaselineReviewRepositoryFactory();
-  }
-  if (!inputBaselineReviewRepoPromise) {
-    inputBaselineReviewRepoPromise = (async () => {
-      const pool = mysql.createPool(mysqlConfigFromEnv());
-      const repo = makeProcessInputBaselineReviewRepository(pool);
-      await checkRuntimeSchema(pool, 'inputBaseline');
-      return repo;
-    })();
-  }
-  try {
-    return await inputBaselineReviewRepoPromise;
-  } catch (error) {
-    inputBaselineReviewRepoPromise = null;
-    throw error;
-  }
-}
-
-async function inputBaselineReviewRepositoryOrNull() {
-  if (!inputBaselineReviewRepositoryFactory && !useInputBaselineReviewMysqlStore()) return null;
-  try {
-    return await inputBaselineReviewRepository();
-  } catch (error) {
-    if (process.env.MDM_DB_QUIET !== '1') {
-      console.warn(`input baseline review store unavailable: ${error.message}`);
-    }
-    if (useMysqlProcessGovernanceReadModel()) throw error;
-    return null;
-  }
 }
 
 function setInputBaselineReviewRepositoryFactory(factory) {
@@ -370,26 +274,6 @@ function clearWorkbenchCaches() {
   processContextBundleCache = null;
 }
 
-function activeSnapshot() {
-  return legacyDb().prepare(`
-    SELECT *
-    FROM process_governance_snapshots
-    WHERE status='active'
-    ORDER BY imported_at DESC, id DESC
-    LIMIT 1
-  `).get();
-}
-
-function parseJsonArray(value) {
-  if (!value) return [];
-  try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
 function isPastDue(dueDate) {
   if (!dueDate) return false;
   const parsed = new Date(`${String(dueDate).slice(0, 10)}T23:59:59+08:00`);
@@ -426,460 +310,6 @@ function normalizeWorkItem(item, defaults = {}) {
 
 function normalizeWorkItems(items, defaults = {}) {
   return items.map(item => normalizeWorkItem(item, defaults));
-}
-
-function openInputBaselineReviewItem(row) {
-  const decision = String(row.decision || '').trim();
-  const evidenceStatus = String(row.decision_evidence_status || row.evidence_status || '').trim();
-  if (['confirm_not_issue', 'covered_by_existing_mapping', 'no_action_needed'].includes(decision)) return false;
-  if (['source_verified'].includes(evidenceStatus) && decision === 'confirm_not_issue') return false;
-  return true;
-}
-
-async function loadProcessContexts(mode, workItems, options = {}) {
-  const bundle = await cachedProcessContextBundle(options);
-  if (!bundle) return [];
-
-  const todoA1Codes = new Set(workItems.map(item => item.a1Code).filter(Boolean));
-  const departmentName = String(options.departmentName || '');
-  const canViewAll = Boolean(options.canViewAll);
-
-  const contexts = bundle.a1Rows
-    .filter(row => canViewAll || !departmentName || row.dept_name === departmentName)
-    .filter(row => mode !== 'todo' || todoA1Codes.size === 0 || todoA1Codes.has(row.a1_code))
-    .map(row => {
-      const a1Node = findA1Node(row, bundle);
-      const l3Node = a1Node ? bundle.nodeByKey.get(bundle.parentByTarget.get(a1Node.node_key)) : null;
-      const l2Node = l3Node ? bundle.nodeByKey.get(bundle.parentByTarget.get(l3Node.node_key)) : null;
-      return {
-        capabilityKey: l2Node ? l2Node.node_key : `capability:${row.dept_name || 'default'}`,
-        capabilityLabel: l2Node ? l2Node.name : '流程治理能力',
-        l3Key: l3Node ? l3Node.node_key : `l3:${row.l3_name || row.id}`,
-        l3Label: l3Node ? l3Node.name : (row.l3_name || '未命名流程'),
-        a1Key: a1Node ? a1Node.node_key : `a1:${row.a1_code || row.id}`,
-        a1Label: row.a1_code ? `${row.a1_code} ${row.behavior}` : row.behavior,
-        deptName: row.dept_name || '',
-        systems: parseJsonArray(row.suggested_systems)
-      };
-    });
-
-  if (contexts.length > 0) return contexts.slice(0, mode === 'todo' ? 12 : 30);
-
-  return [{
-    capabilityKey: 'capability:guide',
-    capabilityLabel: '流程治理能力',
-    l3Key: 'l3:guide',
-    l3Label: '角色工作流',
-    a1Key: 'a1:guide',
-    a1Label: '查看角色说明并处理当前事项',
-    deptName: '',
-    systems: []
-  }];
-}
-
-async function cachedProcessContextBundle(options = {}) {
-  if (useMysqlProcessGovernanceReadModel()) {
-    const repo = await processGovernanceRepository();
-    const { a1Rows, nodes, edges } = await repo.getWorkbenchContext(options);
-    const a1Nodes = nodes.filter(node => node.node_type === 'a1');
-    return {
-      a1Rows, a1Nodes,
-      nodeByKey: new Map(nodes.map(node => [node.node_key, node])),
-      a1NodeByName: new Map(a1Nodes.map(node => [node.name, node])),
-      parentByTarget: new Map(edges.map(edge => [edge.target_key, edge.source_key]))
-    };
-  }
-  const now = Date.now();
-  if (
-    processContextBundleCache &&
-    processContextBundleCache.expiresAt > now
-  ) {
-    return processContextBundleCache.value;
-  }
-
-  const snapshot = activeSnapshot();
-  if (!snapshot) return null;
-  const a1Rows = legacyDb().prepare(`
-    SELECT *
-    FROM process_a1_items
-    WHERE snapshot_id=?
-    ORDER BY dept_name, l3_name, a1_code, id
-    LIMIT 80
-  `).all(snapshot.id);
-
-  const nodes = legacyDb().prepare(`
-    SELECT node_key, node_type, name, parent_key, dept_name, domain_name
-    FROM process_governance_nodes
-    WHERE snapshot_id=?
-  `).all(snapshot.id);
-  const edges = legacyDb().prepare(`
-    SELECT source_key, target_key
-    FROM process_governance_edges
-    WHERE snapshot_id=?
-  `).all(snapshot.id);
-
-  const a1Nodes = nodes.filter(node => node.node_type === 'a1');
-  const value = {
-    a1Rows,
-    a1Nodes,
-    nodeByKey: new Map(nodes.map(node => [node.node_key, node])),
-    a1NodeByName: new Map(a1Nodes.map(node => [node.name, node])),
-    parentByTarget: new Map(edges.map(edge => [edge.target_key, edge.source_key]))
-  };
-  processContextBundleCache = {
-    snapshotId: snapshot.id,
-    value,
-    expiresAt: now + WORKBENCH_CACHE_TTL_MS
-  };
-  return value;
-}
-
-function findA1Node(row, bundle) {
-  const code = row.a1_code || '';
-  const exact = code ? bundle.nodeByKey.get(code) : null;
-  if (exact && exact.node_type === 'a1') return exact;
-  const byName = bundle.a1Nodes.find(node => node.name === row.behavior && node.dept_name === row.dept_name);
-  if (byName) return byName;
-  return bundle.a1Nodes.find(node => node.dept_name === row.dept_name && String(node.node_key || '').includes(code || '__none__')) || null;
-}
-
-async function loadTodos(req, canViewAll, permissions) {
-  const params = [];
-  let sql = `
-    SELECT t.*, fd.name as from_dept_name, td.name as to_dept_name,
-           fe.process_governance_a1_code as a1_code
-    FROM todos t
-    LEFT JOIN departments fd ON t.from_dept_id = fd.id
-    LEFT JOIN departments td ON t.to_dept_id = td.id
-    LEFT JOIN field_entries fe ON t.related_field_id = fe.id
-    WHERE t.status='pending'
-  `;
-
-  if (!canViewAll) {
-    sql += ' AND (t.to_dept_id=? OR t.to_dept_id IS NULL)';
-    params.push(req.session.departmentId || -1);
-  }
-
-  sql += " ORDER BY CASE urgency WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END, due_date IS NULL, due_date, t.id LIMIT 20";
-
-  const rows = useMysqlIdentityReadModel()
-    ? (await listPendingTodos(req.session, permissions)).slice(0, 20)
-    : legacyDb().prepare(sql).all(...params);
-  return rows.map(row => ({
-    id: `todo:${row.id}`,
-    type: row.type,
-    title: `${TODO_TYPE_LABELS[row.type] || '待办'}：${row.content}`,
-    roleHint: roleHintForTodo(row.type),
-    urgency: row.urgency,
-    dueDate: row.due_date,
-    target: TODO_TARGETS[row.type] || '#/todos',
-    actionLabel: '处理待办',
-    sample: sampleForTodo(row.type),
-    a1Code: row.a1_code || null,
-    source: row.from_dept_name || '平台',
-    targetDept: row.to_dept_name || null,
-    status: row.status || 'pending',
-    currentStatus: row.status || 'pending',
-    nextStep: sampleForTodo(row.type),
-    department: row.to_dept_name || row.from_dept_name || null,
-    responsiblePerson: fallbackConfirmPerson(row.to_dept_name),
-    confirmPerson: fallbackConfirmPerson(row.to_dept_name)
-  }));
-}
-
-function qualityCaseWorkItem(row) {
-  return {
-    id: `process-quality-case:${row.id}`,
-    type: 'process_quality',
-    title: `${row.severity}：${row.message}`,
-    roleHint: 'department_contact',
-    urgency: row.priority === 'high' || row.severity === 'BLOCK' ? 'high' : 'medium',
-    dueDate: row.due_date || null,
-    target: `#/processGovernance?view=qualityCases&case=${row.id}`,
-    actionLabel: '查看治理问题单',
-    sample: row.suggestion || '先回到来源文件确认问题，完成整改后重新运行流程治理解析和导入。',
-    source: row.source_file,
-    targetDept: row.dept_name || null,
-    area: row.area,
-    sourceLine: row.source_line,
-    status: row.status,
-    currentStatus: row.status,
-    nextStep: row.suggestion || '回到来源文件核验并提交整改结论',
-    department: row.dept_name || row.owner_dept_name || null,
-    ownerDept: row.owner_dept_name || null,
-    responsiblePerson: row.owner_dept_name ? fallbackConfirmPerson(row.owner_dept_name) : fallbackConfirmPerson(row.dept_name),
-    confirmPerson: fallbackConfirmPerson(row.dept_name || row.owner_dept_name)
-  };
-}
-
-function loadProcessQualityFindings(req, canViewAll, currentDepartmentName) {
-  const departmentName = currentDepartmentName || (
-    req.session.departmentId
-      ? (legacyDb().prepare('SELECT name FROM departments WHERE id=?').get(req.session.departmentId) || {}).name
-      : null
-  );
-
-  const params = [];
-  let sql = `
-    SELECT c.id, c.severity, c.area, c.source_file, c.source_line, c.message, c.suggestion,
-           c.dept_name, c.status, c.priority, c.due_date, c.owner_dept_id, d.name AS owner_dept_name
-    FROM process_governance_quality_cases c
-    LEFT JOIN departments d ON d.id = c.owner_dept_id
-    WHERE c.severity IN ('BLOCK','WARN') AND c.status NOT IN ('closed','source_resolved')
-  `;
-
-  if (!canViewAll) {
-    sql += ' AND (c.dept_name=? OR c.owner_dept_id=? OR c.dept_name IS NULL)';
-    params.push(departmentName || '__none__', req.session.departmentId || -1);
-  }
-
-  sql += `
-    ORDER BY CASE c.status WHEN 'reopened' THEN 0 WHEN 'open' THEN 1 WHEN 'assigned' THEN 2 WHEN 'rectifying' THEN 3 ELSE 4 END,
-             CASE c.severity WHEN 'BLOCK' THEN 0 ELSE 1 END,
-             c.due_date IS NULL, c.due_date,
-             c.dept_name IS NULL, c.dept_name, c.area, c.id
-    LIMIT 20
-  `;
-
-  return legacyDb().prepare(sql).all(...params).map(qualityCaseWorkItem);
-}
-
-async function loadProcessQualityFindingsAsync(req, canViewAll, currentDepartmentName) {
-  if (!useMysqlProcessGovernanceReadModel()) {
-    return loadProcessQualityFindings(req, canViewAll, currentDepartmentName);
-  }
-
-  const repo = await processGovernanceRepository();
-  const result = await repo.getQualityCases({
-    userId: req.session.userId,
-    departmentId: req.session.departmentId || -1,
-    canViewAll,
-    departmentName: currentDepartmentName || ''
-  });
-  return (result.items || [])
-    .filter(row => ['BLOCK', 'WARN'].includes(String(row.severity || '').toUpperCase()))
-    .filter(row => !['closed', 'source_resolved'].includes(String(row.status || '')))
-    .slice(0, 20)
-    .map(qualityCaseWorkItem);
-}
-
-function roleHintForMappingTodo(row) {
-  if (row.todo_type === 'cross_dept' || row.todo_type === 'dept_confirm') return 'department_mdm_reviewer';
-  return 'department_contact';
-}
-
-function mappingTodoWorkItem(row) {
-  return {
-    id: `process-mapping-todo:${row.id}`,
-    type: 'process_mapping_todo',
-    title: `${TODO_TYPE_LABELS.process_mapping_todo}：${row.message}`,
-    roleHint: roleHintForMappingTodo(row),
-    urgency: row.priority === 'high' ? 'high' : 'medium',
-    dueDate: row.due_date || null,
-    target: `#/processGovernance?view=mappingTodos&todo=${row.id}`,
-    actionLabel: '查看映射待办',
-    sample: row.suggestion || '先核对来源映射关系，修改源文件后重新导入。',
-    a1Code: row.a1_code || null,
-    source: row.source_file || '流程映射工作库',
-    targetDept: row.target_dept_name || row.dept_name || null,
-    area: row.todo_type,
-    sourceLine: row.source_line,
-    status: row.status,
-    currentStatus: row.status,
-    nextStep: row.suggestion || '核对来源文件并提交处理结论',
-    department: row.target_dept_name || row.dept_name || row.owner_dept_name || null,
-    ownerDept: row.owner_dept_name || null,
-    responsiblePerson: fallbackConfirmPerson(row.target_dept_name || row.dept_name || row.owner_dept_name),
-    confirmPerson: fallbackConfirmPerson(row.target_dept_name || row.dept_name || row.owner_dept_name)
-  };
-}
-
-function loadProcessMappingTodos(req, canViewAll, currentDepartmentName) {
-  const departmentName = currentDepartmentName || (
-    req.session.departmentId
-      ? (legacyDb().prepare('SELECT name FROM departments WHERE id=?').get(req.session.departmentId) || {}).name
-      : null
-  );
-
-  const params = [];
-  let sql = `
-    SELECT t.*, d.name AS owner_dept_name
-    FROM process_mapping_todos t
-    LEFT JOIN departments d ON d.id = t.owner_dept_id
-    WHERE t.status NOT IN ('closed','source_resolved','accepted')
-  `;
-
-  if (!canViewAll) {
-    sql += ' AND (t.dept_name=? OR t.target_dept_name=? OR t.owner_dept_id=? OR t.dept_name IS NULL)';
-    params.push(departmentName || '__none__', departmentName || '__none__', req.session.departmentId || -1);
-  }
-
-  sql += `
-    ORDER BY CASE t.status WHEN 'reopened' THEN 0 WHEN 'open' THEN 1 WHEN 'assigned' THEN 2 WHEN 'rectifying' THEN 3 ELSE 4 END,
-             CASE t.priority WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END,
-             t.due_date IS NULL, t.due_date, t.dept_name, t.id
-    LIMIT 20
-  `;
-
-  return legacyDb().prepare(sql).all(...params).map(mappingTodoWorkItem);
-}
-
-async function loadProcessMappingTodosAsync(req, canViewAll, currentDepartmentName) {
-  if (!useMysqlProcessGovernanceReadModel()) {
-    return loadProcessMappingTodos(req, canViewAll, currentDepartmentName);
-  }
-
-  const repo = await processGovernanceRepository();
-  const result = await repo.getMappingTodos({
-    userId: req.session.userId,
-    departmentId: req.session.departmentId || -1,
-    canViewAll,
-    departmentName: currentDepartmentName || ''
-  }, 20);
-  return (result.items || [])
-    .filter(row => !['closed', 'source_resolved', 'accepted'].includes(String(row.status || '')))
-    .slice(0, 20)
-    .map(mappingTodoWorkItem);
-}
-
-function inputBaselineReviewWorkItem(row, runId) {
-  const stableKey = row.stable_key || row.review_item_id || row.id;
-  const department = row.department || null;
-  const target = `#/processGovernance?view=inputBaselineReview&run=${encodeURIComponent(runId)}&reviewItem=${encodeURIComponent(stableKey)}`;
-  return {
-    id: `input-baseline-review:${runId}:${stableKey}`,
-    type: 'input_baseline_issue',
-    governanceType: 'input_baseline_issue',
-    title: `${TODO_TYPE_LABELS.input_baseline_issue}：${row.content || row.document_name || stableKey}`,
-    roleHint: 'department_contact',
-    urgency: 'medium',
-    dueDate: row.due_date || null,
-    target,
-    actionLabel: '确认输入基线问题',
-    sample: row.suggested_action || '先回到来源文件核验，再确认是否进入流程映射整改或留在问题池。',
-    a1Code: row.a1_code || null,
-    source: row.source_label || row.source_file || row.document_name || '输入基线复核',
-    targetDept: department,
-    department,
-    area: row.issue_type || null,
-    status: row.decision || row.status || 'not_reviewed',
-    currentStatus: row.decision || row.status || 'not_reviewed',
-    nextStep: row.suggested_action || '回到来源文件核验并记录复核结论',
-    responsiblePerson: row.owner || fallbackConfirmPerson(department),
-    confirmPerson: row.owner || fallbackConfirmPerson(department),
-    sourceLine: row.source_anchor || null,
-    reviewRunId: runId,
-    reviewStableKey: stableKey,
-    definitionStatus: row.definition_status || row.decision_definition_status || null,
-    evidenceStatus: row.decision_evidence_status || row.evidence_status || null
-  };
-}
-
-async function loadInputBaselineReviewIssuesAsync(canViewAll, currentDepartmentName) {
-  const repo = await inputBaselineReviewRepositoryOrNull();
-  if (!repo || typeof repo.listRuns !== 'function' || typeof repo.getReviewItems !== 'function') return [];
-  const runs = await repo.listRuns();
-  const run = Array.isArray(runs) && runs.length ? runs[0] : null;
-  if (!run || !run.run_id) return [];
-  const filters = canViewAll || !currentDepartmentName ? {} : { dept: currentDepartmentName };
-  const result = await repo.getReviewItems(run.run_id, filters);
-  return (result.items || [])
-    .filter(openInputBaselineReviewItem)
-    .slice(0, 20)
-    .map(row => inputBaselineReviewWorkItem(row, run.run_id));
-}
-
-function pmoReviewGateWorkItems(roleCodes, currentDepartmentName) {
-  if (!roleCodes.some(code => PMO_REVIEW_GATE_ROLES.has(code))) return [];
-  const department = currentDepartmentName || '双部门样板';
-  return [normalizeWorkItem({
-    id: `pmo-review-gate:${department}`,
-    type: 'pmo_review_gate',
-    governanceType: 'pmo_review_gate',
-    title: `PMO治理评审：更新${department}闭环状态`,
-    roleHint: 'mdm_lead',
-    urgency: 'medium',
-    dueDate: null,
-    target: '#/processGovernance?view=qualityCases',
-    actionLabel: '更新治理周报',
-    sample: '核对新增、关闭、超期、字段台账和待确认黄金源进度；未完成来源文件核验的事项继续留在问题池。',
-    source: 'PMO治理节奏',
-    department,
-    responsiblePerson: fallbackConfirmPerson(department),
-    confirmPerson: fallbackConfirmPerson(department),
-    currentStatus: 'weekly_review',
-    nextStep: '汇总本周治理状态并标出需决策事项'
-  })];
-}
-
-function roleHintForTodo(type) {
-  if (type === 'field_confirm' || type === 'gold_source') return 'department_mdm_reviewer';
-  if (type === 'conflict_resolution') return 'data_conflict_handler';
-  if (type === 'terminology' || type === 'process_quality' || type === 'process_mapping_todo') return 'department_contact';
-  return 'mdm_lead';
-}
-
-function sampleForTodo(type) {
-  if (type === 'field_confirm') return '先打开 A1 业务行为，确认字段是否确实在该流程中产生或消费。';
-  if (type === 'gold_source') return '先查看字段台账和消费系统，再确认维护部门和待确认权威系统。';
-  if (type === 'conflict_resolution') return '先查看双方字段说明和消费场景，再提交协调意见。';
-  if (type === 'terminology') return '先确认术语适用范围，再补充定义和禁用说法。';
-  if (type === 'process_quality') return '先打开流程治理闭环视图，定位来源文件、整改建议和当前责任人。';
-  if (type === 'process_mapping_todo') return '先打开流程映射待办，确认 L3/A1 和来源文件，再决定是否修改源文件。';
-  return '先确认事项来源、责任部门和截止时间，再记录处理结论。';
-}
-
-async function loadEscalatedConflicts(canDecideEscalated) {
-  if (!canDecideEscalated) return [];
-  if (useMysqlIdentityReadModel()) {
-    const rows = await listEscalatedConflicts(canDecideEscalated);
-    return rows.map(row => ({
-      id: `${row.conflict_type}-conflict:${row.id}`,
-      type: 'escalated_conflict',
-      title: `升级事项待终裁：${row.term || row.conflict_field}`,
-      roleHint: 'decision_group',
-      urgency: row.severity === 'blocking' ? 'high' : 'medium',
-      target: `#/conflicts/${row.conflict_type}/${row.id}`,
-      actionLabel: '查看升级事项',
-      sample: '先看流程场景、双方意见和字段差异，再给出决定及后续责任人。'
-    }));
-  }
-
-  const termRows = legacyDb().prepare(`
-    SELECT id, term as title, severity, created_at
-    FROM term_conflicts
-    WHERE status='escalated'
-    ORDER BY id DESC
-    LIMIT 10
-  `).all().map(row => ({
-    id: `term-conflict:${row.id}`,
-    type: 'escalated_conflict',
-    title: `升级事项待终裁：${row.title}`,
-    roleHint: 'decision_group',
-    urgency: row.severity === 'blocking' ? 'high' : 'medium',
-    target: `#/conflicts/term/${row.id}`,
-    actionLabel: '查看升级事项',
-    sample: '先看 A1、字段台账和双方意见，再给出终裁结论和后续责任人。'
-  }));
-
-  const fieldRows = legacyDb().prepare(`
-    SELECT id, conflict_field, severity, created_at
-    FROM field_conflicts
-    WHERE status='escalated'
-    ORDER BY id DESC
-    LIMIT 10
-  `).all().map(row => ({
-    id: `field-conflict:${row.id}`,
-    type: 'escalated_conflict',
-    title: `升级字段冲突待终裁：${row.conflict_field}`,
-    roleHint: 'decision_group',
-    urgency: row.severity === 'blocking' ? 'high' : 'medium',
-    target: `#/conflicts/field/${row.id}`,
-    actionLabel: '查看升级事项',
-    sample: '先看字段差异、流程场景和消费方，再给出终裁结论。'
-  }));
-
-  return [...termRows, ...fieldRows];
 }
 
 function fallbackActions(ownedRoles) {
@@ -1042,8 +472,6 @@ function buildSankey(activeRoles, contexts, workItems) {
   return { nodes: Array.from(nodes.values()), links: Array.from(links.values()) };
 }
 
-async function loadDirectProcessGovernanceWorkItems() { return []; }
-
 async function loadProcessDataGovernanceWorkItems(identity) {
   if (!isProcessDataGovernanceEnabled()) return [];
   try {
@@ -1079,13 +507,8 @@ router.get('/', requireAuth, (req, res) => {
     const currentDepartmentName = identity.user.departmentName;
     const cacheKey = workbenchResponseCacheKey({ mode, identity, roleCodes, permSet });
     const body = await getOrBuildWorkbenchResponse(cacheKey, async () => {
-      const [todos, qualityFindings, mappingTodos, inputBaselineIssues, escalated, directProcessGovernance, processDataGovernance, v7WorkItems] = await Promise.all([
-        Promise.resolve().then(() => loadTodos(req, canViewAll, permSet)),
-        loadProcessQualityFindingsAsync(req, canViewAll, currentDepartmentName),
-        loadProcessMappingTodosAsync(req, canViewAll, currentDepartmentName),
-        loadInputBaselineReviewIssuesAsync(canViewAll, currentDepartmentName),
-        Promise.resolve().then(() => loadEscalatedConflicts(canDecideEscalated)),
-        loadDirectProcessGovernanceWorkItems(identity),
+      const [officeWorkItems, processDataGovernance, v7WorkItems] = await Promise.all([
+        useMysqlIdentityReadModel() ? require('./offices').getOfficeRepository().personalWorkItems(req.session) : [],
         loadProcessDataGovernanceWorkItems(identity),
         useMysqlProcessGovernanceReadModel() ? require('./processV7PreviewReview').listV7WorkbenchItems({
           userId: identity.user.id, personId: identity.user.personId, departmentId: identity.user.departmentId,
@@ -1094,18 +517,15 @@ router.get('/', requireAuth, (req, res) => {
         }) : []
       ]);
       const activeRoles = roleCodes.includes('admin') ? ownedRoles.filter(role => role.code === 'admin') : ownedRoles;
-      const pmoReviewGates = pmoReviewGateWorkItems(roleCodes, currentDepartmentName);
+
       const visibleWorkItems = normalizeWorkItems(
-        [...v7WorkItems, ...processDataGovernance, ...directProcessGovernance, ...escalated, ...inputBaselineIssues, ...qualityFindings, ...mappingTodos, ...todos, ...pmoReviewGates],
+        [...officeWorkItems, ...v7WorkItems, ...processDataGovernance],
         { department: currentDepartmentName }
       );
       const pendingWorkItems = roleCodes.includes('admin') ? [] : visibleWorkItems.filter(item => canActOnWorkbenchItem(item, permSet));
       const guidanceItems = guidanceItemsForRoles(activeRoles);
       const workItems = mode === 'all' ? [...pendingWorkItems, ...guidanceItems] : pendingWorkItems;
-      const contexts = await loadProcessContexts(mode, pendingWorkItems, {
-        canViewAll,
-        departmentName: currentDepartmentName
-      });
+      const contexts = [];
       const nextActions = buildNextActions(pendingWorkItems, activeRoles);
       const sankeyWorkItems = mode === 'all' ? [] : pendingWorkItems;
 
@@ -1122,17 +542,18 @@ router.get('/', requireAuth, (req, res) => {
         summary: {
           priorityCount: nextActions.length,
           actionableCount: pendingWorkItems.length,
-          pendingTodos: todos.length,
-          escalatedConflicts: escalated.length,
+          pendingTodos: officeWorkItems.length,
+          escalatedConflicts: 0,
           processContexts: contexts.length,
           governance: {
-            inputBaselineIssues: inputBaselineIssues.length,
+            inputBaselineIssues: 0,
             fieldLedgerGaps: pendingWorkItems.filter(item => item.governanceType === 'field_ledger_gap').length,
             goldSourceConfirmations: pendingWorkItems.filter(item => item.governanceType === 'gold_source_confirmation').length,
             processQuality: pendingWorkItems.filter(item => item.governanceType === 'process_quality').length,
-            pmoReviewGates: pmoReviewGates.length,
-            crossDepartmentHandoffs: directProcessGovernance.filter(item => item.type === 'cross_dept_handoff').length,
-            handoffConflicts: directProcessGovernance.filter(item => item.type === 'handoff_conflict').length,
+            pmoReviewGates: 0,
+            crossDepartmentHandoffs: 0,
+            handoffConflicts: 0,
+            officeTasks: officeWorkItems.length,
             v7Tasks: v7WorkItems.length,
             processDataGovernance: processDataGovernance.filter(item => item.type === 'process_data_governance_package').length,
             businessFactRequests: processDataGovernance.filter(item => item.type === 'process_data_business_fact').length,

@@ -1,6 +1,6 @@
 # 旧功能退役验证
 
-2026-09-15已删除独立SQLite业务路由和V1至V3在线编制入口。`test:retired-capabilities`验证旧接口不可访问、旧草稿不能通过共享接口流转、V7身份与版本读取继续有效。历史迁移及恢复脚本保留用于旧记录追溯，不授权写入正式数据库。
+2026-09-15已删除独立SQLite业务路由和V1至V3在线编制入口。`test:retired-capabilities`验证旧接口不可访问、旧草稿不能通过共享接口流转、V7身份与版本读取继续有效。历史迁移及恢复脚本保留用于旧记录追溯，不授权写入正式数据库。`test:role-workbench-mysql`同时验证工作台不再查询旧快照、映射及输入基线事项；`test:offices`覆盖同一任务在负责人、办理人个人待办中的移交及办结消失。浏览器回归为`node scripts/test-stage05-browser.js`，使用真实Edge和独立MySQL验证V7办理、待办跳转及未提交输入保护。
 
 # apps/mdm-platform/scripts 说明
 
