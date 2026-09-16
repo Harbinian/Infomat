@@ -100,7 +100,8 @@ function main() {
 
   const processSource = fs.readFileSync(path.join(__dirname, '../server/routes/processDesignMysql.js'), 'utf8');
   assert.ok(processSource.includes("'governance:publish'"));
-  assert.ok(processSource.includes('RESPONSIBILITY_CHAIN_INCOMPLETE'));
+  assert.ok(processSource.includes('V7_FORMAL_BLOCKING_ISSUES'));
+  assert.ok(processSource.includes('SESSION_AUTHORIZATION_CHANGED'));
   assert.ok(!processSource.includes("'admin:access'"));
 
   console.log('Fixed MDM role access contract test passed');

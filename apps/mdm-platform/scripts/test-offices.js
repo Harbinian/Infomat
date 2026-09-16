@@ -47,11 +47,17 @@ async function officeChecks({pool,fixture,expect,request}) {
   const created=await expect('lead','/api/offices/tasks','POST',payload,201);
   await expect('lead','/api/offices/tasks','POST',payload,409);
   const taskURL='/api/offices/tasks/'+created.id;
+  const personal = async who => (await expect(who,'/api/role-workbench?mode=todo','GET')).workItems.filter(item=>item.type==='office_work');
+  assert.ok((await personal('contact')).some(item=>item.id==='office-task:'+created.id && item.actionLabel==='分配办公室成员'));
+  assert.equal((await personal('outsider')).length,0);
+  assert.equal((await personal('admin')).length,0);
   await expect('reviewA',taskURL+'/assign','POST',{assignee_person_id:85,expected_revision:1},403);
   await expect('admin',taskURL+'/assign','POST',{assignee_person_id:85,expected_revision:1},403);
   await expect('contact',taskURL+'/assign','POST',{assignee_person_id:86,expected_revision:1},422);
   await expect('contact',taskURL+'/assign','POST',{assignee_person_id:85,expected_revision:1});
   await expect('contact',taskURL+'/assign','POST',{assignee_person_id:85,expected_revision:1},409);
+  assert.ok(!(await personal('contact')).some(item=>item.id==='office-task:'+created.id));
+  assert.ok((await personal('reviewB')).some(item=>item.id==='office-task:'+created.id && item.target==='#/officeWorkbench?office_id='+officeA.org_unit_id));
   await expect('contact','/api/todos/'+created.id+'/done','POST',{},409);
   await assert.rejects(require('../server/todoMysqlRepository').makeTodoMysqlRepository(pool).deleteTodo(created.id,{actor_user_id:82}),e=>e.code==='OFFICE_TASK_REQUIRES_WORKBENCH');
   await expect('contact',taskURL+'/complete','POST',{note:'不能代办',expected_revision:2},403);
@@ -61,6 +67,7 @@ async function officeChecks({pool,fixture,expect,request}) {
   assert.match((await repo.preview(moved)).errors.map(e=>e.message).join(''),/办结/);
   await expect('reviewB',taskURL+'/complete','POST',{note:'合成材料核对完成，结果已记录。',expected_revision:2});
   await expect('reviewB',taskURL+'/complete','POST',{note:'重复完成',expected_revision:2},409);
+  assert.ok(!(await personal('reviewB')).some(item=>item.id==='office-task:'+created.id));
   const completed=(await expect('contact','/api/offices/workbench?office_id='+officeA.org_unit_id,'GET')).tasks.find(t=>Number(t.id)===Number(created.id));
   assert.equal(completed.status,'done');assert.match(completed.completion_json,/结果已记录/);assert.equal(completed.owning_department_name,'合成甲部');
   assert.equal(completed.due_date,'2026-10-01');assert.ok(Number(completed.done_epoch)>0);

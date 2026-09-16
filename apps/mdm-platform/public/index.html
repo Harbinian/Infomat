@@ -1457,43 +1457,10 @@
     </section>
 
     <div id="appContent" style="display: none;">
-      <nav class="tabs" id="tabs" aria-label="主导航">
-        <div class="workspace-nav-group">
-          <div class="workspace-nav-title">工作台</div>
-          <button type="button" class="tab on" data-tab="roleWorkbench">我的工作台</button>
-          <button type="button" class="tab" data-tab="officeWorkbench">办公室工作台</button>
-          <button type="button" class="tab" data-tab="dashboard" data-permissions="governance:read-global,governance:read-department,governance:read-assigned-context,governance:read-escalated-context">治理活跃与统计</button>
-        </div>
-        <div class="workspace-nav-group">
-          <div class="workspace-nav-title">组织与人员</div>
-          <button type="button" class="tab" data-tab="orgUnits" data-permissions="identity:read">组织架构</button>
-          <button type="button" class="tab" data-tab="persons" data-permissions="identity:read">花名册</button>
-        </div>
-        <div class="workspace-nav-group">
-          <div class="workspace-nav-title">流程与数据</div>
-          <details id="processNavigation" class="workspace-nav-process">
+      <nav class="tabs" id="tabs" aria-label="主导航"><div class="workspace-nav-group"><div class="workspace-nav-title">我的工作</div><button type="button" class="tab on" data-tab="roleWorkbench">我的工作台</button><button type="button" class="tab" data-tab="officeWorkbench">办公室工作台</button></div><div class="workspace-nav-group"><div class="workspace-nav-title">流程治理</div><details id="processNavigation" class="workspace-nav-process">
             <summary class="tab" data-tab="processGovernance" data-permissions="governance:read-global,governance:read-department,governance:read-assigned-context,governance:read-escalated-context">流程治理</summary>
             <div class="workspace-subnav" id="pgSubtabs" aria-label="流程治理工作区"></div>
-          </details>
-          <button type="button" class="workspace-link" data-parent-tab="processGovernance" data-workspace="dataGovernance">数据治理</button>
-          <button type="button" class="tab" data-tab="dataMap" data-permissions="governance:read-global,governance:read-department,governance:read-assigned-context">数据地图</button>
-          <button type="button" class="tab" data-tab="publications" data-permissions="identity:read,governance:read-global">主数据发布</button>
-          <button type="button" class="tab" data-tab="terms" data-permissions="governance:read-global,governance:read-department">术语词典</button>
-        </div>
-        <div class="workspace-nav-group">
-          <div class="workspace-nav-title">协同与质量</div>
-          <button type="button" class="tab" data-tab="roleGuide">角色与责任</button>
-          <button type="button" class="tab" data-tab="conflicts" data-permissions="governance:read-global,governance:read-assigned-context,governance:read-escalated-context">冲突管理</button>
-          <button type="button" class="tab" data-tab="quality" data-permissions="governance:read-global,governance:read-department,governance:quality-audit">数据质量</button>
-          <button type="button" class="tab" data-tab="todos" data-permissions="governance:assign-work,governance:draft-department,governance:review-department,governance:quality-audit">待办收到</button>
-          <button type="button" class="tab" data-tab="reviews" data-permissions="governance:submit-department,governance:review-department,governance:structure-gate,governance:quality-audit">评审记录</button>
-          <button type="button" class="tab" data-tab="mySubmissions" data-permissions="governance:draft-department,governance:submit-department">报送管理</button>
-        </div>
-        <div class="workspace-nav-group">
-          <div class="workspace-nav-title">系统管理</div>
-          <button type="button" class="tab" data-tab="rbac" data-permissions="identity:manage-account">账号与授权</button>
-        </div>
-      </nav>
+          </details></div><div class="workspace-nav-group"><div class="workspace-nav-title">数据治理</div><button type="button" class="workspace-link" data-parent-tab="processGovernance" data-workspace="dataGovernance">数据治理</button></div><div class="workspace-nav-group"><div class="workspace-nav-title">成果查阅</div><button type="button" class="tab" data-tab="dataMap" data-permissions="governance:read-global,governance:read-department,governance:read-assigned-context">数据地图</button><button type="button" class="tab" data-tab="publications" data-permissions="identity:read,governance:read-global">主数据发布</button></div><details class="workspace-nav-group" id="auxiliaryNavigation"><summary class="workspace-nav-title">管理与辅助</summary><button type="button" class="tab" data-tab="orgUnits" data-permissions="identity:read">组织架构</button><button type="button" class="tab" data-tab="persons" data-permissions="identity:read">花名册</button><button type="button" class="tab" data-tab="roleGuide">角色与责任</button><button type="button" class="tab" data-tab="terms" data-permissions="governance:read-global,governance:read-department">术语词典</button><button type="button" class="tab" data-tab="conflicts" data-permissions="governance:read-global,governance:read-assigned-context,governance:read-escalated-context">冲突管理</button><button type="button" class="tab" data-tab="quality" data-permissions="governance:read-global,governance:read-department,governance:quality-audit">数据质量</button><button type="button" class="tab" data-tab="todos" data-permissions="governance:assign-work,governance:draft-department,governance:review-department,governance:quality-audit">待办收到</button><button type="button" class="tab" data-tab="dashboard" data-permissions="governance:read-global,governance:read-department,governance:read-assigned-context,governance:read-escalated-context">治理活跃与统计</button><button type="button" class="tab" data-tab="rbac" data-permissions="identity:manage-account">账号与授权</button></details></nav>
 
       <!-- Role Workbench -->
       <section class="panel role-workbench wb-task-first" id="roleWorkbench">
@@ -1661,10 +1628,7 @@
       </section>
 
       <!-- My Submissions -->
-      <section class="panel" id="mySubmissions">
-        <div class="toolbar"><h2>报送管理</h2><button class="btn secondary" style="margin-left: auto;" onclick="loadMySubmissions()">刷新</button></div>
-        <div id="mySubmissionsList"></div>
-      </section>
+
 
       <!-- Data Map -->
       <section class="panel compact-panel" id="dataMap">
@@ -1717,32 +1681,7 @@
       </section>
 
       <!-- Capabilities (admin only) -->
-      <section class="panel" id="capabilities">
-        <div class="split">
-          <div>
-            <h2>申报业务能力</h2>
-            <div class="form-group"><label>能力名称<input id="capName"></label></div>
-            <div class="form-group"><label>能力层级<select id="capLevel"><option value="L1">L1</option><option value="L2">L2</option><option value="L3">L3</option></select></label></div>
-            <div class="form-group"><label>所属部门<select id="capDept"></select></label></div>
-            <div class="toolbar"><button class="btn primary" id="createCapBtn">申报业务能力</button></div>
-            <h2 style="margin-top: 48px;">申报业务流程</h2>
-            <div class="form-group"><label>流程名称<input id="procName"></label></div>
-            <div class="form-group"><label>所属能力<select id="procCap"></select></label></div>
-            <div class="form-group"><label>所属部门<select id="procDept"></select></label></div>
-            <div class="toolbar"><button class="btn primary" id="createProcBtn">申报业务流程</button></div>
-          </div>
-          <div>
-            <div class="toolbar"><h2>业务能力列表</h2><button class="btn secondary" style="margin-left: auto;" id="refreshCapsBtn">刷新列表</button></div>
-            <div class="table-container"><table><thead><tr><th>ID</th><th>名称</th><th>层级</th><th>部门</th><th>状态</th><th>操作</th></tr></thead><tbody id="capRows"></tbody></table></div>
-            <div class="toolbar" style="margin-top: 48px;"><h2>业务流程列表</h2><button class="btn secondary" style="margin-left: auto;" id="refreshProcsBtn">刷新列表</button></div>
-            <div class="table-container"><table><thead><tr><th>ID</th><th>名称</th><th>所属能力</th><th>部门</th><th>状态</th><th>操作</th></tr></thead><tbody id="procRows"></tbody></table></div>
-            <div id="capPreviewWrap" style="margin-top: 24px; display: none;">
-              <h2>关系预览</h2>
-              <div class="chart" id="capPreviewChart" style="height: 300px;"></div>
-            </div>
-          </div>
-        </div>
-      </section>
+
 
       <!-- Todos -->
       <section class="panel compact-panel" id="todos">
@@ -1774,10 +1713,7 @@
       </section>
 
       <!-- Reviews -->
-      <section class="panel" id="reviews">
-        <div class="toolbar"><h2>评审记录</h2><button class="btn secondary" style="margin-left: auto;" id="refreshReviewsBtn">刷新</button></div>
-        <div class="table-container"><table><thead><tr><th>映射</th><th>流程</th><th>当前步骤</th><th>任务</th><th>状态</th><th>意见</th><th>操作</th></tr></thead><tbody id="reviewRows"></tbody></table></div>
-      </section>
+
 
       <!-- Terms -->
       <section class="panel compact-panel" id="terms">
@@ -1837,22 +1773,7 @@
       </section>
 
       <!-- Business Map (Sankey) -->
-      <section class="panel" id="businessMap">
-        <div class="toolbar">
-          <h2>业务地图</h2>
-          <div class="toolbar-right">
-            <select id="sankeyDept" multiple style="width: 180px; height: 36px; padding: 6px;">
-            </select>
-            <select id="sankeyLevel" style="width: 120px; height: 36px; padding: 0 12px;">
-              <option value="L1,L2,L3">全部能力层级</option>
-              <option value="L1">仅 L1</option>
-              <option value="L1,L2">L1 + L2</option>
-            </select>
-          </div>
-        </div>
-        <div class="notice" id="sankeyMeta" style="margin-bottom: 16px;"></div>
-        <div class="chart" id="sankeyChart" style="height: 600px;"></div>
-      </section>
+
 
       <!-- Process Governance -->
       <section class="panel" id="processGovernancePanel">
@@ -2297,23 +2218,7 @@
       </section>
 
       <!-- Products Panel -->
-      <section class="panel compact-panel" id="products">
-        <div class="compact-head"><div class="compact-title"><h2>产品主数据</h2><p>优先查看产品族、产品清单和生命周期状态。</p></div></div>
-        <div class="compact-toolbar">
-          <input id="prodSearch" placeholder="搜索编码或型号..." style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;width:200px">
-          <button class="btn" id="prodSearchBtn">查询</button>
-          <button class="btn secondary" id="prodPfNewBtn">+ 新增产品族</button>
-          <button class="btn secondary" id="prodNewBtn">+ 新增产品</button>
-        </div>
-        <h2>产品族</h2>
-        <div class="tw" style="margin-bottom:24px"><table><thead><tr>
-          <th>编码</th><th>型号名称</th><th>机型代码</th><th>大类</th><th>产品类型</th><th>状态</th><th>操作</th>
-        </tr></thead><tbody id="pfTableBody"></tbody></table></div>
-        <h2>产品列表</h2>
-        <div class="tw"><table><thead><tr>
-          <th>编码</th><th>产品族</th><th>版次</th><th>中类</th><th>小类</th><th>生命周期</th><th>操作</th>
-        </tr></thead><tbody id="prodTableBody"></tbody></table></div>
-      </section>
+
 
       <!-- Quality Panel -->
       <section class="panel compact-panel" id="quality">
@@ -5839,7 +5744,7 @@ async function downloadNativeDiagram() {
       if (tab === 'mySubmissions') await loadMappings();
       if (tab === 'todos') await loadTodos();
       if (tab === 'conflicts') await loadConflicts();
-      if (tab === 'reviews') await loadReviews();
+      if (tab === 'reviews') ;
       if (tab === 'terms') await loadTerms();
       if (tab === 'processGovernance') return;
     }
@@ -5937,9 +5842,9 @@ async function downloadNativeDiagram() {
 
     async function loadDepartments() {
       state.departments = await api('/api/org/departments');
-      if ($('capDept')) fillSelect($('capDept'), state.departments);
+      if ($('capDept')) ;
       if ($('dataMapContextDept')) fillSelect($('dataMapContextDept'), state.departments);
-      if ($('procDept')) fillSelect($('procDept'), state.departments);
+      if ($('procDept')) ;
 
     }
 
@@ -5950,30 +5855,13 @@ async function downloadNativeDiagram() {
 
     function isIsolatedLegacyPage(params) {
 
-      return ['capabilities', 'businessMap', 'processes', 'products'].indexOf(params.tab) >= 0 ||
+      return ['capabilities', 'businessMap', 'processes', 'products', 'reviews', 'mySubmissions'].indexOf(params.tab) >= 0 ||
         ['orgUnit', 'position', 'person', 'productFamily', 'product', 'process'].indexOf(params.type) >= 0;
     }
 
     function renderLegacyUnavailable() {
       $('detailPage').classList.add('on');
-      $('detailContent').innerHTML = '<div class="notice">此历史功能入口已暂停，已有资料保留。请联系项目负责人确认后续承接范围。</div>';
-    }
-
-    async function loadCatalog() {
-      if (state.legacyTestMode !== true) return;
-      state.departments = await api('/api/org/departments');
-      state.capabilities = await api('/api/capabilities');
-      state.processes = await api('/api/processes');
-
-      if ($('capDept')) fillSelect($('capDept'), state.departments);
-      if ($('dataMapContextDept')) fillSelect($('dataMapContextDept'), state.departments);
-      if ($('procDept')) fillSelect($('procDept'), state.departments);
-
-      try {  } catch (error) {  }
-      if ($('procCap')) fillSelect($('procCap'), state.capabilities, 'name');
-      await loadTermGovernanceProcesses();
-
-      renderCapsAndProcs();
+      $('detailContent').innerHTML = '<div class="notice">此旧功能已停用，历史资料保留。请从左侧进入V7流程治理或查看现有成果。</div>';
     }
 
     async function loadTermGovernanceProcesses() {
@@ -6017,65 +5905,6 @@ async function downloadNativeDiagram() {
         var label = row.name + (row.dept_name ? '（' + row.dept_name + '）' : '');
         return '<option value="' + Number(row.id) + '">' + safeText(label) + '</option>';
       }).join('');
-    }
-
-    function renderCapsAndProcs() {
-      var canDelete = hasPermission('governance:draft-department');
-      $('capRows').innerHTML = state.capabilities.map(function(row) {
-        var rowId = Number(row.id);
-        return '<tr style="cursor:pointer;" onclick="renderCapPreview(' + rowId + ');' +
-          "var rows=this.parentElement.querySelectorAll('tr');rows.forEach(function(r){r.style.background='';});this.style.background='#fefafa';" +
-          '">' +
-          '<td>' + rowId + '</td><td>' + safeText(row.name) + '</td><td>' + safeText(row.level) + '</td><td>' + safeText(row.dept_name) + '</td><td>' + statusTag(row.status) + '</td>' +
-          '<td><button class="btn success" onclick="event.stopPropagation();reviewCap(' + rowId + ',\'approve\')">通过</button> ' +
-          '<button class="btn danger" onclick="event.stopPropagation();reviewCap(' + rowId + ',\'reject\')">驳回</button>' +
-          (canDelete ? ' <a href="#" onclick="event.stopPropagation();deleteCapability(' + rowId + ');return false" style="color:#e53935;">删除</a>' : '') + '</td></tr>';
-      }).join('') || '<tr><td colspan="6" class="empty">暂无数据</td></tr>';
-
-      $('procRows').innerHTML = state.processes.map(function(row) {
-        var rowId = Number(row.id);
-        return '<tr><td>' + rowId + '</td><td>' + safeText(row.name) + '</td><td>' + safeText(row.cap_name) + '</td><td>' + safeText(row.dept_name) + '</td><td>' + statusTag(row.status) + '</td><td><button class="btn secondary" onclick="navigateTo(\'detail\',{tab:\'processes\',type:\'process\',id:' + rowId + '})">详情</button> <button class="btn success" onclick="reviewProc(' + rowId + ',\'approve\')">通过</button> <button class="btn danger" onclick="reviewProc(' + rowId + ',\'reject\')">驳回</button>' +
-          (canDelete ? ' <a href="#" onclick="deleteProcess(' + rowId + ');return false" style="color:#e53935;">删除</a>' : '') + '</td></tr>';
-      }).join('') || '<tr><td colspan="6" class="empty">暂无数据</td></tr>';
-    }
-
-    async function createCapability() {
-      var name = $('capName').value.trim();
-      if (!name) return alert('请输入能力名称');
-      await api('/api/capabilities', { method:'POST', body:JSON.stringify({ name: name, level: $('capLevel').value, owner_dept_id: Number($('capDept').value) }) });
-      await loadCatalog();
-    }
-
-    async function createProcess() {
-      var name = $('procName').value.trim();
-      if (!name) return alert('请输入流程名称');
-      if (!$('procCap').value) return alert('请选择所属能力');
-      await api('/api/processes', { method:'POST', body:JSON.stringify({ name: name, capability_id: Number($('procCap').value), owner_dept_id: Number($('procDept').value) }) });
-      await loadCatalog();
-    }
-
-    async function reviewCap(id, action) {
-      await api('/api/capabilities/' + id + '/review', { method:'POST', body:JSON.stringify({ action: action }) });
-      await loadCatalog();
-    }
-
-    async function reviewProc(id, action) {
-      await api('/api/processes/' + id + '/review', { method:'POST', body:JSON.stringify({ action: action }) });
-      await loadCatalog();
-    }
-
-    function deleteCapability(id) {
-      if (!confirm('确定删除能力 #' + id + ' 吗？子能力也将被删除，关联流程会保留但不再挂接此能力。')) return;
-      fetch('/api/capabilities/' + id, { method: 'DELETE' }).then(function(r) { return r.json(); }).then(function(d) {
-        if (d.error) { alert('删除失败：' + d.error); } else { loadCatalog(); }
-      });
-    }
-
-    function deleteProcess(id) {
-      if (!confirm('确定删除流程 #' + id + ' 吗？相关映射、字段、审批记录和待办将被删除。')) return;
-      fetch('/api/processes/' + id, { method: 'DELETE' }).then(function(r) { return r.json(); }).then(function(d) {
-        if (d.error) { alert('删除失败：' + d.error); } else { loadCatalog(); }
-      });
     }
 
     async function loadMappings() {
@@ -6193,7 +6022,7 @@ async function downloadNativeDiagram() {
     async function selectMapping(id) {
       var detail = await api('/api/mappings/' + id);
       window.selectedMappingId = id;
-      renderReviews(detail);
+      ;
     }
 
     async function createMapping() {
@@ -6233,34 +6062,17 @@ async function downloadNativeDiagram() {
     }
 
     // ===== My Submissions list (L1) =====
-    async function loadMySubmissions() {
-      await loadMappings();
-      var mappings = state.mappings;
-      if (hasPermission('governance:read-department') && !hasPermission('governance:read-global')) {
-        mappings = mappings.filter(function(m) { return m.submitted_by === state.user.id; });
-      }
-      mappings.sort(function(a, b) { return String(b.created_at).localeCompare(String(a.created_at)); });
-      var container = $('mySubmissionsList');
-      if (!container) return;
-      if (mappings.length === 0) {
-        container.innerHTML = '<div class="empty">暂无报送记录，去 <a onclick="navigateTo(\'list\',{tab:\'capabilities\'})">新建报送</a> 开始</div>';
-        return;
-      }
-      container.innerHTML = '<div class="table-container"><table><thead><tr><th>ID</th><th>流程</th><th>部门</th><th>状态</th><th>提交时间</th><th>操作</th></tr></thead><tbody>' + mappings.map(function(row) {
-        var rowId = Number(row.id);
-        return '<tr><td>' + rowId + '</td><td>' + safeText(row.process_name) + '</td><td>' + safeText(row.owner_dept_name) + '</td><td>' + statusTag(row.status) + '</td><td>' + safeText(row.submitted_at || row.created_at) + '</td><td><button class="btn secondary" onclick="navigateTo(\'detail\',{tab:\'mySubmissions\',type:\'mapping\',id:' + rowId + '})">查看</button>' + (hasPermission('governance:submit-department') && row.status === 'draft' ? '<button class="btn primary" style="margin-left:4px;" onclick="submitMapping(' + rowId + ')">提交</button>' : '') + (hasPermission('governance:draft-department') && row.status === 'draft' ? ' <a href="#" onclick="deleteMapping(' + rowId + ');return false" style="color:#e53935;margin-left:4px;">删除</a>' : '') + '</td></tr>';
-      }).join('') + '</tbody></table></div>';
-    }
+
 
     function deleteMapping(id) {
       if (!confirm('确定删除映射 #' + id + ' 吗？只能删除草稿。')) return;
       fetch('/api/mappings/' + id, { method: 'DELETE' }).then(function(r) { return r.json(); }).then(function(d) {
-        if (d.error) { alert('删除失败：' + d.error); } else { loadMySubmissions(); }
+        if (d.error) { alert('删除失败：' + d.error); } else { ; }
       });
     }
 
     // ===== Load Reviews =====
-    async function loadReviews() { await loadMappings(); await renderReviews(); }
+
 
     // ===== Todos =====
     async function loadTodos() {
@@ -6335,25 +6147,6 @@ async function downloadNativeDiagram() {
     }
 
     // ===== Reviews =====
-    async function renderReviews(detail) {
-      var details = detail ? [detail] : await Promise.all(state.mappings.slice(0, 30).map(function(row) { return api('/api/mappings/' + row.id).catch(function() { return null; }); }));
-      var rows = details.filter(Boolean).flatMap(function(mapping) { return (mapping.approvalTasks || []).map(function(task) { return { mapping: mapping, task: task }; }); });
-      $('reviewRows').innerHTML = rows.map(function(r) {
-        return '<tr><td>' + Number(r.mapping.id) + '</td><td>' + safeText(r.mapping.process_name) + '</td><td>' + Number(r.mapping.current_step) + '</td><td>' + safeText(r.task.step_name) + '</td><td>' + statusTag(r.task.status) + '</td><td>' + safeText(r.task.opinion) + '</td><td><button class="btn secondary" onclick="openReview(' + Number(r.mapping.id) + ',' + Number(r.task.step) + ')">处理</button></td></tr>';
-      }).join('') || '<tr><td colspan="7" class="empty">暂无数据</td></tr>';
-    }
-
-    function openReview(mappingId, step) {
-      state.activeReview = { mappingId: mappingId, step: step };
-      $('opinionModal').classList.add('on');
-    }
-
-    async function review(action) {
-      var r = state.activeReview;
-      await api('/api/mappings/' + r.mappingId + '/review', { method:'POST', body:JSON.stringify({ step: r.step, action: action, opinion: $('modalOpinion').value }) });
-      $('opinionModal').classList.remove('on');
-      await loadMappings();
-    }
 
     // ===== Terms =====
     async function loadTerms() {
@@ -6523,132 +6316,6 @@ async function downloadNativeDiagram() {
     function layerColor(layer, index) {
       var colors = LAYER_COLORS[layer] || LAYER_COLORS[2];
       return colors[index % colors.length];
-    }
-
-    async function loadSankeyData() {
-      var deptEl = document.getElementById('sankeyDept');
-      var levelEl = document.getElementById('sankeyLevel');
-      var deptIds = deptEl && deptEl.selectedOptions
-        ? Array.from(deptEl.selectedOptions).map(function(o) { return o.value; })
-        : [];
-      var levels = levelEl ? levelEl.value : 'L1,L2,L3';
-      var params = new URLSearchParams();
-      if (deptIds.length > 0) params.set('dept_ids', deptIds.join(','));
-      params.set('cap_levels', levels);
-      return await api('/api/views/sankey?' + params.toString());
-    }
-
-    function populateSankeyDeptFilter() {
-      var deptEl = document.getElementById('sankeyDept');
-      if (!deptEl || state.departments.length === 0) return;
-
-      var signature = state.departments.map(function(d) { return d.id + ':' + d.name; }).join('|');
-      if (deptEl.dataset.departmentSignature === signature) return;
-
-      var selected = Array.from(deptEl.selectedOptions || []).map(function(o) { return o.value; });
-      deptEl.innerHTML = state.departments.map(function(d) {
-        var isSelected = selected.indexOf(String(d.id)) !== -1 ? ' selected' : '';
-        return '<option value="' + Number(d.id) + '"' + isSelected + '>' + safeText(d.name) + '</option>';
-      }).join('');
-      deptEl.dataset.departmentSignature = signature;
-    }
-
-    async function renderBusinessMap() {
-      var chartDom = document.getElementById('sankeyChart');
-      if (!chartDom) return;
-
-      populateSankeyDeptFilter();
-
-      try {
-        var data = await loadSankeyData();
-        document.getElementById('sankeyMeta').textContent =
-          data.nodes.length + ' 个节点，' + data.links.length + ' 条关系';
-
-        if (data.nodes.length === 0) {
-          chartDom.innerHTML = '<div class="empty">暂无已发布的映射数据，无法生成业务地图</div>';
-          return;
-        }
-
-        if (!window.echarts) { chartDom.innerHTML = '<div class="empty">ECharts 加载失败</div>'; return; }
-
-        var existing = echarts.getInstanceByDom(chartDom);
-        if (existing) existing.dispose();
-
-        var chart = echarts.init(chartDom);
-
-        var nodeLabels = {};
-        data.nodes.forEach(function(n) { nodeLabels[n.name] = n.label || n.name; });
-
-        // Assign colors per node
-        var nodeColors = {};
-        var layerCounters = {1:0,2:0,3:0,4:0};
-        data.nodes.forEach(function(n) {
-          var idx = layerCounters[n.layer]++;
-          nodeColors[n.name] = layerColor(n.layer, idx);
-        });
-
-        var nodes = data.nodes.map(function(n) {
-          return { name: n.name, itemStyle: { color: nodeColors[n.name] } };
-        });
-
-        chart.setOption({
-          tooltip: {
-            trigger: 'item',
-            triggerOn: 'mousemove',
-            formatter: function(p) {
-              if (p.dataType === 'edge') {
-                return safeText(nodeLabels[p.data.source] || p.data.source) + ' → ' + safeText(nodeLabels[p.data.target] || p.data.target);
-              }
-              var node = data.nodes.find(function(n) { return n.name === p.name; });
-              if (!node) return safeText(p.name);
-              var labels = {1:'部门',2:'业务能力',3:'业务流程',4:'应用系统'};
-              return safeText(node.label || p.name) + '<br/><span style="color:#888;font-size:12px;">' + safeText(labels[node.layer] || '') + '</span>';
-            }
-          },
-          series: [{
-            type: 'sankey',
-            left: 20, right: 160, top: 20, bottom: 20,
-            data: nodes,
-            links: data.links,
-            orient: 'horizontal',
-            nodeWidth: 16,
-            nodeGap: 10,
-            draggable: false,
-            layoutIterations: 64,
-            label: {
-              position: 'right',
-              formatter: function(params) {
-                var node = data.nodes.find(function(n) { return n.name === params.name; });
-                return node ? (node.label || node.name) : params.name;
-              },
-              fontSize: 12,
-              color: '#374151',
-              fontFamily: 'PingFang SC,sans-serif',
-              overflow: 'truncate',
-              width: 140
-            },
-            lineStyle: { color: 'gradient', opacity: 0.3, curveness: 0.5 },
-            emphasis: { focus: 'adjacency', lineStyle: { opacity: 0.7 } }
-          }]
-        });
-
-        // Click handler: navigate to process detail
-        chart.off('click');
-        chart.on('click', function(params) {
-          if (params.dataType === 'node') {
-            var node = data.nodes.find(function(n) { return n.name === params.name; });
-            if (node && node.type === 'process') {
-              navigateTo('detail', { tab: 'businessMap', type: 'process', id: node.id });
-            }
-          }
-        });
-
-        if (sankeyResizeHandler) { window.removeEventListener('resize', sankeyResizeHandler); }
-        sankeyResizeHandler = function() { chart.resize(); };
-        window.addEventListener('resize', sankeyResizeHandler);
-      } catch (e) {
-        chartDom.innerHTML = '<div class="empty">加载失败：' + safeText(e.message || '未知错误') + '</div>';
-      }
     }
 
     var pgSankeyResizeHandler = null;
@@ -9236,110 +8903,6 @@ async function downloadNativeDiagram() {
 
     var sankeyCache = null;
 
-    async function renderCapPreview(capId) {
-      var wrap = document.getElementById('capPreviewWrap');
-      var chartDom = document.getElementById('capPreviewChart');
-      if (!wrap || !chartDom) return;
-
-      if (!capId) { wrap.style.display = 'none'; return; }
-
-      try {
-        var cap = state.capabilities.find(function(c) { return c.id === capId; });
-        if (!cap) { wrap.style.display = 'none'; return; }
-
-        // Show loading indicator
-        wrap.style.display = 'block';
-        chartDom.innerHTML = '<div class="empty">加载中...</div>';
-
-        // Fetch full sankey data with caching
-        if (!sankeyCache) { sankeyCache = await api('/api/views/sankey'); }
-        var data = sankeyCache;
-
-        // Build parent lookup map once for O(1) ancestry checks
-        var capParentMap = {};
-        state.capabilities.forEach(function(c) { capParentMap[c.id] = c.parent_id; });
-
-        // Find all descendant capability keys (if hierarchy exists)
-        var selectedCapKeys = new Set();
-        selectedCapKeys.add('capability:' + capId);
-        state.capabilities.forEach(function(c) {
-          var pid = c.parent_id;
-          while (pid) {
-            if (pid === capId) { selectedCapKeys.add('capability:' + c.id); break; }
-            pid = capParentMap[pid] || null;
-          }
-        });
-
-        // Keep selected capability links, then extend one hop from matching processes to systems.
-        var processKeys = new Set();
-        data.links.forEach(function(l) {
-          if (selectedCapKeys.has(l.source) && l.target.indexOf('process:') === 0) {
-            processKeys.add(l.target);
-          }
-        });
-        var filteredLinks = data.links.filter(function(l) {
-          return selectedCapKeys.has(l.source) || selectedCapKeys.has(l.target) || processKeys.has(l.source);
-        });
-        var relevantNodes = new Set();
-        filteredLinks.forEach(function(l) {
-          relevantNodes.add(l.source);
-          relevantNodes.add(l.target);
-        });
-        var filteredNodes = data.nodes.filter(function(n) {
-          return relevantNodes.has(n.name);
-        });
-
-        if (filteredNodes.length === 0) {
-          wrap.style.display = 'block';
-          chartDom.innerHTML = '<div class="empty">该能力暂无已发布的映射</div>';
-          return;
-        }
-
-        wrap.style.display = 'block';
-        var existing = echarts.getInstanceByDom(chartDom);
-        if (existing) existing.dispose();
-        var chart = echarts.init(chartDom);
-
-        var nodeColors = {};
-        var nodeLabels = {};
-        var layerCounters = {1:0,2:0,3:0,4:0};
-        filteredNodes.forEach(function(n) {
-          var idx = layerCounters[n.layer]++;
-          nodeColors[n.name] = layerColor(n.layer, idx);
-          nodeLabels[n.name] = n.label || n.name;
-        });
-
-        chart.setOption({
-          tooltip: { trigger: 'item', triggerOn: 'mousemove',
-            formatter: function(p) {
-              return p.dataType === 'edge' ? nodeLabels[p.data.source] + ' → ' + nodeLabels[p.data.target] : (nodeLabels[p.name] || p.name);
-            }
-          },
-          series: [{
-            type: 'sankey',
-            left: 10, right: 10, top: 10, bottom: 10,
-            data: filteredNodes.map(function(n) {
-              return { name: n.name, itemStyle: { color: nodeColors[n.name] } };
-            }),
-            links: filteredLinks,
-            orient: 'horizontal',
-            nodeWidth: 12,
-            nodeGap: 6,
-            draggable: false,
-            layoutIterations: 32,
-            label: { position: 'right', fontSize: 10, color: '#4b5563',
-              formatter: function(params) { return nodeLabels[params.name] || params.name; },
-              fontFamily: 'PingFang SC,sans-serif', overflow: 'truncate', width: 100 },
-            lineStyle: { color: 'gradient', opacity: 0.3, curveness: 0.5 },
-            emphasis: { focus: 'adjacency', lineStyle: { opacity: 0.6 } }
-          }]
-        });
-      } catch (e) {
-        console.error('capPreview:', e);
-        wrap.style.display = 'none';
-      }
-    }
-
     // ===== Main render dispatcher =====
     function renderListPanel(tab) {
       document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('on'); });
@@ -9355,25 +8918,22 @@ async function downloadNativeDiagram() {
       }
       switch (tab) {
         case 'roleWorkbench': renderRoleWorkbench(); break;
-        case 'officeWorkbench': runPageTask(loadOfficeWorkbench, '办公室工作台加载失败'); break;
+        case 'officeWorkbench': runPageTask(function() { return loadOfficeWorkbench(parseHash().query.office_id); }, '办公室工作台加载失败'); break;
         case 'dashboard': runPageTask(loadDashboardData, '统计看板加载失败'); break;
         case 'roleGuide': renderRoleGuide(); break;
-        case 'mySubmissions': runPageTask(loadMySubmissions, '我的报送加载失败'); break;
+
         case 'dataMap': runPageTask(loadDataMapContexts, '数据地图加载失败'); runPageTask(loadNativeDiagramCases, '流程列表加载失败'); break;
         case 'todos': runPageTask(loadTodos, '待办加载失败'); break;
-        case 'reviews': runPageTask(loadReviews, '评审记录加载失败'); break;
+
         case 'terms': runPageTask(loadTerms, '术语加载失败'); break;
         case 'conflicts': runPageTask(loadConflicts, '冲突列表加载失败'); break;
-        case 'capabilities': runPageTask(loadCatalog, '能力目录加载失败'); break;
-        case 'businessMap': renderBusinessMap(); break;
+
+
         case 'processGovernance': runPageTask(function() { return renderProcessGovernance(); }, '流程治理加载失败'); break;
         case 'orgUnits': runPageTask(loadOrgUnits, '组织架构加载失败'); break;
         case 'persons': runPageTask(loadPersons, '人员列表加载失败'); break;
         case 'publications': runPageTask(loadPublications, '发布记录加载失败'); break;
-        case 'products':
-          runPageTask(loadProductFamilies, '产品族加载失败');
-          runPageTask(loadProducts, '产品列表加载失败');
-          break;
+
         case 'quality':
           runPageTask(loadQualityDashboard, '数据质量看板加载失败');
           runPageTask(loadGoldenSourceProgress, '黄金源进度加载失败');
@@ -9708,6 +9268,131 @@ async function downloadNativeDiagram() {
     }
 
     // ===== Event bindings =====
+    document.addEventListener('click', function(event) {
+      var pdgPackageButton = event.target.closest('[data-pdg-open-package]');
+      if (pdgPackageButton) {
+        event.preventDefault();
+        confirmPdgDiscard(function() {
+          location.hash = '#/processGovernance?workspace=dataGovernance&package=' + encodeURIComponent(pdgPackageButton.dataset.pdgOpenPackage);
+        });
+        return;
+      }
+      var pdgFactButton = event.target.closest('[data-pdg-open-fact]');
+      if (pdgFactButton) {
+        event.preventDefault();
+        confirmPdgDiscard(function() {
+          location.hash = '#/processGovernance?workspace=dataGovernance&factRequest=' + encodeURIComponent(pdgFactButton.dataset.pdgOpenFact);
+        });
+        return;
+      }
+      var pdgDetailButton = event.target.closest('[data-pdg-detail-id]');
+      if (pdgDetailButton) {
+        event.preventDefault();
+        confirmPdgDiscard(function() {
+          state.processDataGovernance.selectedDetailId = Number(pdgDetailButton.dataset.pdgDetailId);
+          renderPdgPackageModal(state.processDataGovernance.detail);
+        });
+        return;
+      }
+      var pdgCloseFactButton = event.target.closest('[data-pdg-close-fact]');
+      if (pdgCloseFactButton) {
+        event.preventDefault();
+        runPageTask(function() { return runPdgAction(function() { return closePdgFactRequest(Number(pdgCloseFactButton.dataset.pdgCloseFact)); }, ['fact-close:' + pdgCloseFactButton.dataset.pdgCloseFact]); }, '业务事实问题关闭失败');
+        return;
+      }
+      if (event.target.closest('#pdgReconcileBtn')) {
+        event.preventDefault();
+        runPageTask(reconcilePdgWorkPackage, '试点工作包建立失败');
+        return;
+      }
+      if (event.target.closest('#pdgRefreshBtn')) {
+        event.preventDefault();
+        runPageTask(function() { return runPdgAction(pdgReloadCurrent); }, '数据生命周期治理工作包刷新失败');
+        return;
+      }
+      if (event.target.closest('#pdgGenerateCandidatesBtn')) {
+        event.preventDefault();
+        runPageTask(function() { return runPdgAction(generatePdgCandidates); }, '待治理明细生成失败');
+        return;
+      }
+      if (event.target.closest('#pdgSaveDecisionBtn')) {
+        event.preventDefault();
+        runPageTask(function() { return runPdgAction(savePdgDecision, ['pdgDecisionStatus','pdgDecisionConclusion','pdgUnifiedObjectId','pdgResponsibleDepartment','pdgDecisionBasis']); }, 'MDM治理结论保存失败');
+        return;
+      }
+      if (event.target.closest('#pdgCreateFactBtn')) {
+        event.preventDefault();
+        runPageTask(function() { return runPdgAction(createPdgFactRequest, ['pdgFactDepartment','pdgFactType','pdgFactQuestion','pdgFactReason']); }, '业务事实问题发送失败');
+        return;
+      }
+      if (event.target.closest('#pdgRespondFactBtn')) {
+        event.preventDefault();
+        runPageTask(function() { return runPdgAction(respondPdgFactRequest, ['pdgBusinessAnswer','pdgBusinessEvidence']); }, '业务事实答复提交失败');
+        return;
+      }
+      if (event.target.closest('#pdgCompleteBtn')) {
+        event.preventDefault();
+        runPageTask(function() { return runPdgAction(completePdgWorkPackage, ['pdgCompleteBasis'], true); }, '工作包完成审核失败');
+        return;
+      }
+      if (event.target.closest('#pdgModalClose') || event.target === $('pdgModalMask')) {
+        event.preventDefault();
+        closePdgModal();
+        return;
+      }
+      var pgTaskButton = event.target.closest('[data-pg-task-entry]');
+      if (pgTaskButton) {
+        event.preventDefault();
+        location.hash = processGovernanceTaskEntryHash(pgTaskButton.dataset.pgTaskEntry || '');
+        return;
+      }
+      var targetButton = event.target.closest('[data-wb-target]');
+      if (targetButton) {
+        event.preventDefault();
+        openWorkbenchTarget(targetButton.dataset.wbTarget);
+        return;
+      }
+      var modeButton = event.target.closest('#roleWorkbenchMode [data-mode]');
+      if (modeButton) {
+        event.preventDefault();
+        state.roleWorkbench.mode = modeButton.dataset.mode || 'todo';
+        renderRoleWorkbench();
+        return;
+      }
+      var activityDay = event.target.closest('[data-activity-date]');
+      if (activityDay) {
+        event.preventDefault();
+        var targetId = activityDay.dataset.activityTarget || '';
+        var payload = targetId === 'roleWorkbenchActivityHeatmap' ? state.activity.roleWorkbench : state.activity.dashboard;
+        var detailId = targetId === 'roleWorkbenchActivityHeatmap' ? 'roleWorkbenchActivityDetail' : 'dashboardActivityDetail';
+        var day = payload && Array.isArray(payload.dates)
+          ? payload.dates.find(function(item) { return item.date === activityDay.dataset.activityDate; })
+          : null;
+        renderActivityDayDetail(day, payload, detailId);
+        return;
+      }
+      var evidenceRow = event.target.closest('[data-pg-l3][data-pg-a1]');
+      if (evidenceRow) {
+        event.preventDefault();
+        selectProcessGovernanceEvidence(evidenceRow.dataset.pgL3 || '', evidenceRow.dataset.pgA1 || '', evidenceRow.dataset.pgRecordId || '');
+        return;
+      }
+      var processDesignDelete = event.target.closest('[data-process-design-delete]');
+
+      var processDesignVoid = event.target.closest('[data-process-design-void]');
+
+      var processDesignEdit = event.target.closest('[data-process-design-edit]');
+
+      var processDesignDraftOpen = event.target.closest('[data-process-design-draft-open]');
+
+      var processDesignVersionOpen = event.target.closest('[data-process-design-version-open]');
+
+      var processDesignDraftDelete = event.target.closest('[data-process-design-draft-delete]');
+
+      var processDesignStepNav = event.target.closest('[data-process-design-step-nav]');
+
+    });
+
     $('tabs').addEventListener('click', function(event) {
       var button = event.target.closest('.tab, .workspace-link');
       if (!button || !$('tabs').contains(button) || button.tagName === 'SUMMARY') return;
@@ -9768,14 +9453,14 @@ async function downloadNativeDiagram() {
         location.reload();
       }, '退出未完成，当前输入仍保留，请稍后重试');
     };
-    $('createCapBtn').onclick = createCapability;
-    $('createProcBtn').onclick = createProcess;
-    if ($('refreshCapsBtn')) $('refreshCapsBtn').onclick = loadCatalog;
-    if ($('refreshProcsBtn')) $('refreshProcsBtn').onclick = loadCatalog;
+    ;
+    ;
+    if ($('refreshCapsBtn')) ;
+    if ($('refreshProcsBtn')) ;
     if ($('refreshTodosBtn')) $('refreshTodosBtn').onclick = loadTodos;
     if ($('todoStatus')) $('todoStatus').onchange = loadTodos;
     if ($('todoType')) $('todoType').onchange = loadTodos;
-    if ($('refreshReviewsBtn')) $('refreshReviewsBtn').onclick = function() { loadReviews(); };
+    if ($('refreshReviewsBtn')) ;
     if ($('saveTermBtn')) $('saveTermBtn').onclick = saveTerm;
     if ($('refreshTermsBtn')) $('refreshTermsBtn').onclick = loadTerms;
     if ($('termStatus')) $('termStatus').onchange = loadTerms;
@@ -9795,8 +9480,8 @@ async function downloadNativeDiagram() {
     });
 
     $('modalClose').onclick = function() { $('opinionModal').classList.remove('on'); };
-    $('modalApprove').onclick = function() { review('approve'); };
-    $('modalReject').onclick = function() { review('reject'); };
+    $('modalApprove').onclick = function() { ; };
+    $('modalReject').onclick = function() { ; };
     $('detailBackBtn').onclick = function() {
       var route = parseHash();
       var backTab = route.tab === 'processes' ? 'businessMap' : (route.tab || 'dashboard');
@@ -9804,10 +9489,10 @@ async function downloadNativeDiagram() {
     };
 
     if (document.getElementById('sankeyDept')) {
-      document.getElementById('sankeyDept').onchange = renderBusinessMap;
+      ;
     }
     if (document.getElementById('sankeyLevel')) {
-      document.getElementById('sankeyLevel').onchange = renderBusinessMap;
+      ;
     }
     if (document.getElementById('pgRiskFilter')) {
       document.getElementById('pgRiskFilter').onchange = renderProcessGovernance;
@@ -10785,78 +10470,10 @@ async function downloadNativeDiagram() {
     });
 
     // ── Products Tab ──
-    async function loadProductFamilies() {
-      var data = await api('/api/product-families?limit=100');
-      document.getElementById('pfTableBody').innerHTML = (data.rows || []).map(function(r) {
-        return '<tr><td><code>' + escHtml(r.product_family_code) + '</code></td><td>' + escHtml(r.model_name) + '</td><td>' + escHtml(r.model_code) + '</td><td>' + escHtml(r.class_major) + '</td><td>' + escHtml(r.product_type || '-') + '</td><td>' + escHtml(r.status) + '</td><td>' +
-          '<a href="#" onclick="navigateTo(\'detail\',{tab:\'products\',type:\'productFamily\',id:\'' + escHtml(r.product_family_code) + '\'});return false">详情</a>' +
-          (hasPermission('governance:draft-department') ? '<a href="#" onclick="navigateTo(\'form\',{tab:\'products\',type:\'productFamily\',id:\'' + escHtml(r.product_family_code) + '\',action:\'edit\'});return false" style="margin-left:8px;">编辑</a>' : '') +
-          (hasPermission('governance:draft-department') && r.status === 'draft' ? '<a href="#" onclick="activatePf(\'' + escHtml(r.product_family_code) + '\');return false" style="margin-left:8px;">激活</a>' : '') +
-          (hasPermission('governance:draft-department') ? '<a href="#" onclick="deletePf(\'' + escHtml(r.product_family_code) + '\');return false" style="color:#e53935;margin-left:8px;">删除</a>' : '') + '</td></tr>';
-      }).join('') || '<tr><td colspan="7" style="text-align:center">暂无产品族</td></tr>';
-    }
-
-    async function deletePf(code) {
-      if (!confirm('确定删除产品族 ' + code + ' 吗？下属产品、属性值和分类关系将被删除。')) return;
-      try {
-        var res = await api('/api/product-families/' + encodeURIComponent(code), { method: 'DELETE' });
-        if (res.success) { alert('已删除，级联：' + JSON.stringify(res.cascaded)); loadProductFamilies(); loadProducts(); }
-        else alert('删除失败：' + (res.error || '未知错误'));
-      } catch (e) { alert('删除失败'); }
-    }
-
-    async function loadProducts() {
-      var search = document.getElementById('prodSearch').value;
-      var params = 'limit=100';
-      if (search) params += '&search=' + encodeURIComponent(search);
-      var data = await api('/api/products?' + params);
-      document.getElementById('prodTableBody').innerHTML = (data.rows || []).map(function(r) {
-        return '<tr><td><code>' + escHtml(r.product_code) + '</code></td><td>' + escHtml(r.model_name || '-') + '</td><td>' + escHtml(r.revision || '-') + '</td><td>' + escHtml(r.class_mid || '-') + '</td><td>' + escHtml(r.class_minor || '-') + '</td><td><span class="badge">' + escHtml(r.lifecycle_state) + '</span></td><td>' +
-          '<a href="#" onclick="navigateTo(\'detail\',{tab:\'products\',type:\'product\',id:\'' + escHtml(r.product_code) + '\'});return false">详情</a>' +
-          (hasPermission('governance:draft-department') ? '<a href="#" onclick="navigateTo(\'form\',{tab:\'products\',type:\'product\',id:\'' + escHtml(r.product_code) + '\',action:\'edit\'});return false" style="margin-left:8px;">编辑</a>' : '') +
-          (hasPermission('governance:publish') && r.lifecycle_state === 'draft' ? '<a href="#" onclick="releaseProduct(\'' + escHtml(r.product_code) + '\');return false" style="margin-left:8px;">发布</a> ' : '') +
-          (hasPermission('governance:publish') && r.lifecycle_state === 'released' ? '<a href="#" onclick="obsoleteProduct(\'' + escHtml(r.product_code) + '\');return false" style="margin-left:8px;">废止</a>' : '') +
-          (hasPermission('governance:draft-department') ? '<a href="#" onclick="deleteProduct(\'' + escHtml(r.product_code) + '\');return false" style="color:#e53935;margin-left:8px;">删除</a>' : '') + '</td></tr>';
-      }).join('') || '<tr><td colspan="7" style="text-align:center">暂无产品</td></tr>';
-    }
-
-    async function deleteProduct(code) {
-      if (!confirm('确定删除产品 ' + code + ' 吗？关联属性值、分类关系和替代引用将被清理。')) return;
-      try {
-        var res = await api('/api/products/' + encodeURIComponent(code), { method: 'DELETE' });
-        if (res.success) { alert('已删除，级联：' + JSON.stringify(res.cascaded)); loadProducts(); }
-        else alert('删除失败：' + (res.error || '未知错误'));
-      } catch (e) { alert('删除失败'); }
-    }
-
-    async function activatePf(code) {
-      try {
-        var res = await api('/api/product-families/' + encodeURIComponent(code) + '/activate', { method: 'POST' });
-        if (res.success) loadProductFamilies();
-        else alert('激活失败：' + (res.error || '未知错误'));
-      } catch (e) { alert('激活失败'); }
-    }
-
-    async function releaseProduct(code) {
-      try {
-        var res = await api('/api/products/' + encodeURIComponent(code) + '/release', { method: 'POST' });
-        if (res.success) loadProducts();
-        else alert('发布失败：' + (res.error || '未知错误'));
-      } catch (e) { alert('发布失败'); }
-    }
-
-    async function obsoleteProduct(code) {
-      if (!confirm('确认废止该产品？')) return;
-      try {
-        var res = await api('/api/products/' + encodeURIComponent(code) + '/obsolete', { method: 'POST' });
-        if (res.success) loadProducts();
-        else alert('废止失败：' + (res.error || '未知错误'));
-      } catch (e) { alert('废止失败'); }
-    }
 
     document.addEventListener('DOMContentLoaded', function() {
       var s3 = document.getElementById('prodSearchBtn');
-      if (s3) s3.addEventListener('click', loadProducts);
+      if (s3) ;
       var pfBtn = document.getElementById('prodPfNewBtn');
       if (pfBtn) pfBtn.addEventListener('click', function() {
         navigateTo('form', { tab: 'products', type: 'productFamily', id: 'new', action: 'new' });

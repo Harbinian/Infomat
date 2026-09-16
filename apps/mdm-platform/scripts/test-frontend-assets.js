@@ -14,9 +14,11 @@ async function main() {
   [
     '角色工作台',
     '统计看板',
-    '报送管理',
+    '我的工作',
+    '成果查阅',
+    '管理与辅助',
     '待办收到',
-    '评审记录',
+
     '术语词典',
     '冲突管理',
     '流程治理',
@@ -41,7 +43,6 @@ async function main() {
     '/api/terminology/types',
     '/api/import/field-entries',
     '/api/export/excel',
-    '/api/views/sankey',
     '/api/process-governance/sankey',
     '/api/process-governance/a1',
     '/api/process-governance/cross-dept',
@@ -152,7 +153,6 @@ async function main() {
     '本页工作流',
     "role.group === 'project'",
     "role.group === 'basic'",
-    'data.nodes.find(function(n) { return n.name === params.name; })',
     'template.xlsx'
   ].forEach(needle => assert.ok(html.includes(needle), `missing frontend hook ${needle}`));
 
@@ -315,15 +315,10 @@ async function main() {
     'list navigation must not use bare hash ids because they trigger anchor auto-scroll'
   );
 
-  assert.ok(html.includes('function populateSankeyDeptFilter()'), 'business map should populate the department filter through a stable helper');
-  assert.ok(html.includes('deptEl.dataset.departmentSignature'), 'department filter should avoid clearing selected departments on every render');
-  assert.ok(html.includes('formatter: function(params) {'), 'sankey node labels should render display labels while keeping stable node keys');
-  assert.ok(html.includes('nodeLabels[p.data.source]'), 'sankey edge tooltip should show display labels for stable node keys');
-  const businessSankeyTooltipStart = html.indexOf('formatter: function(p) {');
-  const businessSankeyTooltip = html.slice(businessSankeyTooltipStart, businessSankeyTooltipStart + 600);
-  assert.ok(!businessSankeyTooltip.includes('return nodeLabels[p.data.source] +'), 'business sankey edge tooltip must escape service-provided labels');
-  assert.ok(businessSankeyTooltip.includes('safeText(nodeLabels[p.data.source]'), 'business sankey edge tooltip should escape source labels');
-  assert.ok(businessSankeyTooltip.includes('safeText(node.label || p.name'), 'business sankey node tooltip should escape node labels');
+  for (const id of ['capabilities','businessMap','products','reviews','mySubmissions']) {
+    assert.ok(!html.includes('id="'+id+'"'), 'retired panel must be removed: '+id);
+  }
+  assert.ok(html.includes('id="auxiliaryNavigation"'), 'auxiliary navigation is collapsed separately');
 
   assert.ok(fs.existsSync(templatePath), 'public/template.xlsx should exist');
   const workbook = new ExcelJS.Workbook();

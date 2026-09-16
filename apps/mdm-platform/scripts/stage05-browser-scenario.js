@@ -66,7 +66,7 @@ module.exports = async function stage05BrowserScenario(page, fixture) {
   await page.context().clearCookies();
   await page.goto(fixture.baseURL);
   await login('contact');
-  await page.getByRole('button',{name:'流程治理',exact:true}).click();
+  await page.locator('#processNavigation > summary').click();
   await page.locator('[data-pg-view="v7Preview"]').first().count();
   await page.goto(fixture.baseURL+'/#/processGovernance?workspace=v7Preview');
   await page.locator('#pgCreateV7PreviewBtn').waitFor({state:'visible'});

@@ -73,6 +73,26 @@ function makeOfficeRepository(pool) {
     return {versionId,behaviorRef};
   }
   return {
+    async personalWorkItems(session) {
+      const actor = await currentActor(pool, session);
+      if (actor.admin) return [];
+      const [rows] = await pool.execute(`SELECT t.id,t.content,t.urgency,DATE_FORMAT(t.due_date,'%Y-%m-%d') AS due_date,
+        a.office_id,a.assignee_person_id,o.org_unit_name AS office_name,d.name AS department_name
+        FROM mdm_todo_office_assignments a JOIN mdm_todos t ON t.id=a.todo_id
+        JOIN org_unit o ON o.org_unit_id=a.office_id JOIN departments d ON d.id=o.department_id
+        WHERE t.status='pending' AND o.status='active' AND (
+          (a.assignee_person_id IS NULL AND o.manager_person_id=?) OR
+          (a.assignee_person_id=? AND EXISTS(SELECT 1 FROM office_membership m
+            WHERE m.office_id=a.office_id AND m.person_id=? AND m.status='active')))
+        ORDER BY t.urgency='high' DESC,t.due_date IS NULL,t.due_date,t.id`,
+        [actor.personId,actor.personId,actor.personId]);
+      return rows.map(row => ({id:'office-task:'+row.id,type:'office_work',title:row.content,
+        urgency:row.urgency,dueDate:row.due_date,department:row.department_name,
+        source:row.office_name,canAct:true,currentStatus:'pending',
+        target:'#/officeWorkbench?office_id='+row.office_id,
+        actionLabel:row.assignee_person_id?'办理办公室任务':'分配办公室成员',
+        nextStep:row.assignee_person_id?'填写办理结果并办结':'为任务选择本办公室成员'}));
+    },
     async workbench(session,officeId) {
       const actor=await currentActor(pool,session);
       const [offices]=await pool.execute(officeSelect+(actor.canReadAll?'':` AND (o.manager_person_id=? OR EXISTS(SELECT 1 FROM office_membership m WHERE m.office_id=o.org_unit_id AND m.person_id=? AND m.status='active'))`)+' ORDER BY d.name,o.org_unit_code',actor.canReadAll?[]:[actor.personId,actor.personId]);
