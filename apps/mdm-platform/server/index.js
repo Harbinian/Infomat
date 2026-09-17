@@ -45,7 +45,13 @@ app.use((req, res, next) => {
 });
 app.use('/app', require('./frontend').frontendRouter());
 app.use(express.static(path.join(__dirname, '../public')));
+app.use('/api/analysis', express.json({ limit: '256kb' }));
 app.use(express.json({ limit: '2mb' }));
+app.use('/api/analysis', (error, req, res, next) => {
+  if (!error) return next();
+  res.set('Cache-Control', 'no-store').status(error.type === 'entity.too.large' ? 413 : 400).json({
+    code: error.type === 'entity.too.large' ? 'DEFINITION_ANALYSIS_PAYLOAD_TOO_LARGE' : 'DEFINITION_ANALYSIS_JSON_INVALID', error: '分析请求格式无效或超出允许大小。' });
+});
 
 app.use(session({
   name: config.name,
@@ -86,6 +92,7 @@ registerRouteIfExists('/api/data-map-definitions', 'dataMapDefinitions');
 registerRouteIfExists('/api/data-map-facts', 'dataMapFacts');
 registerRouteIfExists('/api/v7-mappings', 'v7Mappings');
 registerRouteIfExists('/api/design-handoffs', 'designHandoffs');
+registerRouteIfExists('/api/analysis', 'analysis');
 registerRouteIfExists('/api/field-entries', 'fieldEntries');
 registerRouteIfExists('/api/field-identities', 'fieldIdentities');
 registerRouteIfExists('/api/todos', 'todos');

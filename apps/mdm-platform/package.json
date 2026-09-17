@@ -4,6 +4,7 @@
   "description": "MDM Platform",
   "main": "server/index.js",
   "scripts": {
+    "test:analysis-api": "node scripts/test-analysis-runs.js --p14",
     "test:handoff-analysis-rules": "node scripts/test-handoff-analysis-rules.js",
     "test:handoff-analysis": "node scripts/test-design-handoffs.js --p12",
     "test:v7-analysis-rules": "node -r ./scripts/testHelpers/blockRealMysql.js --test scripts/test-v7-analysis-rules.js",

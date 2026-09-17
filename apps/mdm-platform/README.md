@@ -633,3 +633,25 @@ npm run smoke:process-governance-mysql
 返回新增、持续、证据变化、本轮未再检出、不可比较、待人工匹配六类结果，以及前后运行、manifest摘要、发现/尝试ID、证据键和覆盖摘要。只比较每个步骤最后一次尝试；旧尝试保留。规则版本没有显式兼容映射、解析器或AI配置改变、部门或步骤输入/规则范围变化时保守标不可比较。当前未提供兼容映射编辑或人工匹配写入入口。相同规则的可比范围完整覆盖后才允许新增或本轮未再检出；其他范围缺口仍单独保留。失败、取消、未结束运行不能得出问题消失结论。局部对象/字段或交接字段对被删除时标不可比较，不据删除认定整改。身份含内容摘要、未知算法、重复逻辑主体或缺证据时待人工匹配。
 
 固定来源摘要或证据位置变化可标证据变化，因此正常重排可能改变证据状态，但不制造整批新增发现。`comparison_complete=false`表示仍有不可比较、人工匹配或覆盖缺口；空结果也不能掩盖这些缺口。本轮未再检出不等于已整改，不生成待办、不关闭问题、不改变审批链。新方法不写数据库；无需DDL、回填或旧数据转换，移除入口即可回退，P09—P12数据和原读取接口保持兼容。
+
+### P14分析接口与可见范围
+
+P14在同源 `/api/analysis` 注册受限分析API，P13所述“未开放HTTP”是该步骤当时的状态。接口使用现有会话、CSRF、有效人员身份、权限和来源范围；全员摘要尚未开放。管理员即使兼有结构核对权限仍只读。当前仅接受P11/P12确定性规则运行，创建与入队在同一事务提交；独立worker仍须按既有命令显式启动，HTTP服务不会自动启动worker。
+
+| 方法及路径（相对 `/api/analysis`） | 用途和响应范围 |
+|---|---|
+| GET `/capabilities` | 当前创建资格、允许来源类型、摘要字段清单；`public_summary_enabled=false` |
+| GET `/sources?kind=…&offset=0&limit=50`、`/sources/:kind/:id` | 五类固定来源：v7_source、definition、mapping、handoff、template；返回固定标识、版本、摘要及来源元数据，不返回正文或模板原值 |
+| POST `/materials/references`、`/materials/uploads` | 复用P07的预览修订/已发布版本引用或单个V7 JSON上传；后者使用multipart的file和request_id，4 MiB上限；模板接收继续用P04入口，其他格式留P18 |
+| POST `/runs` | P09固定输入合同加P11/P12准入；同request_id同内容返回原创建结果，异内容409；失败不留孤立运行。重新运行另给request_id及rerun_of_run_id |
+| GET `/runs`、`/runs/:id/summary` | 仅run_id、status、revision_no、created_at、started_at、finished_at六个字段；不含标题、材料名称、人员或发现数量 |
+| GET `/runs/:id` | 固定输入元数据、规则和解析器版本、步骤尝试及覆盖缺口；不展开发现、原文或人员身份 |
+| POST `/runs/:id/cancel` | request_id与expected_revision；沿用P10取消，兼容未入队P09运行，旧修订409 |
+| GET `/runs/:id/findings`、`/runs/:id/findings/:findingId` | 当前有权范围内的发现内容、尝试/步骤、稳定标识和证据ID；保留待核实及issue_id为空，不成为正式问题 |
+| GET `/runs/:id/evidence/:evidenceId` | 复核运行、证据归属、固定引用及当前范围后返回定位摘录；JSON Pointer可解析原文，document_anchor仅保留已声明定位，不伪造提取结果 |
+| GET `/runs/:id/diff/:otherId` | 双方全部来源授权后返回P13差异及覆盖缺口；不据未检出关闭问题 |
+| GET `/runs/:id/export` | JSON附件analysis-export-v1；固定运行、发现及证据定位元数据，不含原文摘录、原始字节、创建人、内部会话或队列信息；不接受扩大导出范围的查询参数 |
+
+每层读取均重新核对当前身份及所有固定来源。运行包含任一无权材料时，整条运行不可读；不把部分可见误写成全量结果。列表在授权过滤后分页，offset只计可见记录，limit为1—100、默认50，offset最多10000；不输出全库总数、隐藏数量或基于隐藏ID的游标。依赖/摘要异常返回明确错误，不能理解为旧问题消失。部分运行仍返回既有结果和缺口。所有响应禁止缓存；资源不存在和无数据范围统一404，动作权限不足沿用auth的403，身份失效401，冲突409，超限413，依赖不可用503，JSON格式错误400。错误不回显正文、SQL或堆栈。
+
+JSON请求上限256 KiB；材料只写P07私有MySQL来源，不写public、frontend或可下载目录。API不提供客户端回填分析结果、启动worker、正式问题/待办写入或全员明细入口。没有新增表、DDL、回填、角色或审批状态。旧仓储接口和P09—P13记录保持，回退可移除本路由及投影模块，已创建队列按P10规则处理。正式库迁移、正式运行、人工体验和业务验收仍须单独完成。
