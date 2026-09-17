@@ -48,6 +48,7 @@ function runDbAction(res, action) {
 
 function runAsyncAction(res, action) {
   return action().catch(error => {
+    if (error.code === 'DEFINITION_ANALYSIS_ISSUE_LEGACY_ACTION_BLOCKED') return res.status(404).json({ error: '资源不存在或此入口不可访问。', code: 'DEFINITION_ANALYSIS_RESOURCE_UNAVAILABLE' });
     if (sendMysqlUnavailable(res, error)) return;
     console.error(error);
     return res.status(500).json({ error: '服务器错误' });

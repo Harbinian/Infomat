@@ -4,7 +4,10 @@
   "description": "MDM Platform",
   "main": "server/index.js",
   "scripts": {
+    "manage:analysis-tasks": "node scripts/manage-analysis-tasks.js",
+    "test:analysis-tasks": "node scripts/test-analysis-runs.js --p17",
     "test:analysis-api": "node scripts/test-analysis-runs.js --p14",
+    "test:analysis-workbench": "node scripts/test-analysis-runs.js --p14 --p15",
     "test:handoff-analysis-rules": "node scripts/test-handoff-analysis-rules.js",
     "test:handoff-analysis": "node scripts/test-design-handoffs.js --p12",
     "test:v7-analysis-rules": "node -r ./scripts/testHelpers/blockRealMysql.js --test scripts/test-v7-analysis-rules.js",
@@ -184,7 +187,9 @@
     "migrate:analysis-runs": "node scripts/manage-analysis-runs.js",
     "test:analysis-comparison": "node -r ./scripts/testHelpers/blockRealMysql.js --test scripts/test-analysis-comparison.js",
     "test:analysis-comparison-mysql": "node scripts/test-analysis-runs.js --p13",
-    "test:analysis-runs": "node scripts/test-analysis-runs.js"
+    "test:analysis-runs": "node scripts/test-analysis-runs.js",
+    "manage:analysis-issues": "node scripts/manage-analysis-issues.js",
+    "test:analysis-issues": "node scripts/test-analysis-runs.js --p16"
   },
   "dependencies": {
     "ajv": "^8.20.0",

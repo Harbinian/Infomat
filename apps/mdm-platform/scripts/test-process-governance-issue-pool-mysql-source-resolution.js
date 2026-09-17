@@ -49,8 +49,10 @@ function sourceRow() {
 async function main() {
   const captured = { exactLookupCount: 0, issue: null, point: null };
   const fakePool = {
+    async getConnection() { return { execute: this.execute.bind(this), async beginTransaction() {}, async commit() {}, async rollback() {}, release() {} }; },
     async execute(sql, params = []) {
       const text = normalized(sql);
+      if (text.startsWith('SELECT CAST(issue_id AS CHAR) issue_id FROM process_governance_issues WHERE issue_key=')) return [[], []];
       if (text.startsWith('SELECT id FROM process_governance_snapshots')) {
         return [[{ id: 77 }], []];
       }

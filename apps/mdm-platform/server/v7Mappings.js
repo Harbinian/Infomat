@@ -61,6 +61,7 @@ module.exports=function({transaction,actor,scope,entityScope,version,request}){
     return {o,f};
   }
   return {
+    ...require('./analysisIssues')({transaction,actor,scope,entityScope,version,request,loadSource,target,unpack,mappingSelect}),
     ...require('./analysisApi')({transaction,actor,scope,entityScope,version,request,loadSource,target,unpack,mappingSelect}),
     ...require('./analysisRuns')({transaction,actor,scope,entityScope,version,request,loadSource,target,unpack,mappingSelect}),
     ...require('./analysisQueue')({transaction,actor,scope,entityScope,version,request,loadSource,target,unpack,mappingSelect}),
