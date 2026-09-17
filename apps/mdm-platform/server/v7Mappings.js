@@ -62,6 +62,7 @@ module.exports=function({transaction,actor,scope,entityScope,version,request}){
   }
   return {
     ...require('./analysisRuns')({transaction,actor,scope,entityScope,version,request,loadSource,target,unpack,mappingSelect}),
+    ...require('./analysisQueue')({transaction,actor,scope,entityScope,version,request,loadSource,target,unpack,mappingSelect}),
     ...require('./designHandoffs')({transaction,actor,scope,entityScope,version,request,loadSource,target,unpack,mappingSelect,bindings}),
     v7MappingCapabilities(session){return tx(async db=>{const who=await actor(db,session);scope(who,who.departmentId);return {person_id:who.personId,department_id:who.departmentId,can_write:writable(who)};});},
     listV7Sources(session,{after=null}={}){return tx(async db=>{

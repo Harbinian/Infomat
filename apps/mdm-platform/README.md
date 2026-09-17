@@ -1,8 +1,56 @@
 # MDM 平台
 
+## 确定性 V7 材料检查（P11）
+
+P11 将共享 V7 纯校验器接入独立分析 worker，规则集合及解析器版本固定为 `v7-deterministic-v1`，parser_key 为 `v7_deterministic`。规则目录、适用前提和不适用条件见 `server/v7AnalysisRules.js` 的 catalog；对应正常、缺陷及边界样本见 `scripts/test-v7-analysis-rules.js`。现有 Schema 仅作为技术兼容合同，不是业务真源。
+
+调用既有 `createAnalysisRun` 时，inputs 仅接受 P07 `v7_source` 固定引用；每步只处理一个 input_key，可在一个运行中列出多步。check_scope 和步骤 check_ids 从下表启用编号中选择，parser_versions 固定为 `{ "v7_deterministic": "v7-deterministic-v1" }`，rule_version 使用同一版本，ai_metadata 必须为空。再通过 `enqueueAnalysis` 显式入队，由获准隔离环境中的 `analysis:worker` 执行。未知规则、解析器版本、非 V7 输入、AI 及禁用规则均拒绝入队；没有新建分析 HTTP 接口或界面。
+
+| 编号 | 检查依据和输出边界 |
+|---|---|
+| v7.format | 现有 Schema 类型、枚举及格式约束；无法解析的固定上传材料记录解析失败及原字节摘要引用 |
+| v7.required | 仅检查 Schema 明确 required 属性；不把允许的空文本、空字段数组推定为业务缺项 |
+| v7.duplicate | Schema 通过后使用共享校验器检查重复技术标识、字段或关系定义；不合并同名业务对象 |
+| v7.local_integrity | Schema 通过后检查共享局部引用和关系约束；保留原技术合同的自环限制，合法多节点返回回路不判错 |
+| v7.field_binding | 共享校验器核对明确引用的对象字段、所属对象及类型；未声明引用不自行要求绑定 |
+| v7.isolated | 结构与引用校验均通过且多于一个行为时检查未连关系的行为；只输出待核实，单节点不判错 |
+| v7.exit | 结构与引用校验均通过时检查 decision、parallel_split 未声明出口；action、parallel_join 和未知类型不据此判错 |
+| v7.branch_condition | 结构与引用校验均通过时检查 condition、loop 关系的空条件说明；只输出待核实，不推断互斥或穷尽性 |
+| v7.unreachable（禁用） | 当前 V7 没有明确入口及开始/结束语义，不能从入度、顺序或名称推断可达性 |
+
+worker 在令牌事务内重新读取固定来源、有效身份、范围及摘要，只把本步骤的材料交给独立计算线程。计算线程不接收数据库或治理接口；终止线程不会阻塞心跳。运行时记录 worker、规则、共享校验器及 Schema 的源码摘要。证据定位回原固定 JSON，语义身份采用局部稳定标识及属性，不采用数组下标、标题或 finding_id。相同输入重跑保存独立实例及历史，对照键与结果摘要保持一致；顺序变化不会单独改变发现身份。缺标识时仅以材料内容摘要定位技术缺陷，不据此认定跨版本业务身份。
+
+结构不合法时后续共享引用检查保留为未覆盖；共享校验失败时图规则保留为未覆盖。解析失败采用明确的 declared_anchor，不伪造可解析位置。结果超出既有 256 条证据/发现或请求容量时明确失败 `RESULT_LIMIT_EXCEEDED`，不截断后宣称完成。每个发现仍为 pending_verification、issue_id=NULL；succeeded 只表示计划检查已执行，不表示材料无问题或业务已验收。
+
+验证入口为 `npm.cmd run test:v7-analysis-rules`（纯合成规则测试）和 `npm.cmd run test:v7-analysis-worker -- --output <仓库artifacts内全新目录>`（自有 MySQL、随机端口夹具及真实子进程）。P11 不增加表、迁移或回填，不改写 V7、台账、审批、问题和待办；P10 替身队列继续兼容。回退到仅支持 P10 的 worker 前须先停止 P11 worker 并处理相应运行，不能让旧进程办理 P11 队列。正式运行及业务验收尚未开启。
+
+## 独立分析工作进程（P10）
+
+P10 在 P09 上增加 MySQL 持久化队列和独立 Node 工作进程。运行必须由具备既有 `governance:structure-gate` 权限的当前身份显式调用 `enqueueAnalysis` 入队；仅接受尚无尝试的 queued 运行。已有运行不自动入队，不回填或转换原记录。P10 的 `p10-stub-v1` 替身适配器继续保留，明确测试成功、暂时失败、输入无效、挂起和部分覆盖；替身结果不代表业务规则分析。P11 新增的真实材料检查见上一节。没有分析 HTTP 接口、正式工作进程、AI 外发、问题分派或问题关闭。
+
+队列保存原提交人的 person/account/auth_version、固定运行引用、策略及事件。入队、领取和步骤写入继续核对有效身份、权限、各项来源范围和摘要；管理员保持治理只读。工作进程仅办理分析队列，P10 适配器接收步骤元数据，P11 另接收已复核的固定材料；均不接收数据库或正式治理接口。自动中断记录沿用原提交人作为代办身份，并用 queue_events 的 worker_id、generation、event_type 和 UTC 时间标明系统执行，不表示该人员作出业务决定。
+
+领取使用事务锁和 `SKIP LOCKED`；每次生成随机令牌，数据库仅保存摘要。心跳只能延长有效租约，不能越过当前步骤的硬超时。开始、完成、恢复和取消均受事务保护；旧令牌、过期租约或已取消运行拒绝迟到写入。已入队运行不能通过 P09 begin/complete/非取消 finish 入口绕过令牌。成功步骤保持不变，重试追加尝试；默认最多 3 次，只有暂时故障、超时或进程中断可以重试。无效输入不重试，partial 保留明确缺口，运行按实际覆盖结束为 succeeded、partial 或 failed，不能据缺口认为旧问题消失。
+
+在应用目录使用以下命令。所有命令要求显式 `MYSQL_HOST/PORT/USER/PASSWORD/DATABASE`，并核对 `--target`；不得将 Secret 放入命令、日志或说明。命令不加载 `.env`。本地测试必须使用自有隔离 MySQL，正式实例仍需另行授权。
+
+| 动作 | 命令与结果 |
+|---|---|
+| 检查迁移 | `npm.cmd run migrate:analysis-queue -- --target <host:port/database>`；默认 dry-run；也可显式 `--inspect` |
+| 执行获准迁移 | `npm.cmd run migrate:analysis-queue -- --apply --target <host:port/database>` |
+| 启动 | `npm.cmd run analysis:worker -- start --target <host:port/database>`；前台独立进程，输出本次 worker_id，默认单 worker，重复启动返回 ANALYSIS_WORKER_BUSY |
+| 状态 | `npm.cmd run analysis:worker -- status --target <host:port/database>`；输出队列状态计数和最近 worker 心跳，不输出身份、输入正文或令牌 |
+| 停止 | `npm.cmd run analysis:worker -- stop --worker-id <启动时的UUID> --target <host:port/database>`；仅请求该实例停止；根据 stopped_at 和进程退出确认完成 |
+| 中断恢复 | `npm.cmd run analysis:worker -- recover --target <host:port/database>`；只回收已过期租约，保留成功步骤和所有尝试；重新 start 后继续。正常 worker 也自动回收，不抢占有效租约 |
+| 隔离验证 | `npm.cmd run test:analysis-worker -- --output <仓库artifacts内全新目录>` |
+
+迁移键 `2026-09-17-analysis-queue-v1`，只增加 `data_map_analysis_queue`、`data_map_analysis_queue_events`、`data_map_analysis_workers` 三表；worker 启动只检查结构，绝不执行 DDL。中断迁移先 inspect 再 apply 续建。仅本次创建且逐表确认为空时可按 events、queue、workers 顺序补偿；已有数据时保留表，按获准备份恢复。旧 P09 未入队运行继续兼容原入口；已入队运行必须先停止 worker、核对活动租约和恢复条件，不应切回不识别令牌门槛的旧执行器。
+
+默认租约 15 秒、步骤超时 120 秒、重试间隔 1 秒；策略在入队时固定。停止正在执行的替身会将当前尝试记为 WORKER_STOPPED，允许在剩余次数内恢复；硬中断由租约过期恢复。status 中历史 worker 的 stopped_at 为空不一定仍存活，应结合 heartbeat_at 判断。事件和日志不记录令牌、SQL、材料正文或错误堆栈。部署凭据的最小数据库授权、正式实例启动和人工业务验收不属于本步本地实现。
+
 ## 分析运行与证据存储（P09）
 
-P09 提供 MySQL 持久化基础，入口为定义仓储的 `createAnalysisRun`、`getAnalysisRun`、`beginAnalysisAttempt`、`completeAnalysisAttempt`、`finishAnalysisRun`。本步未挂载分析 HTTP 接口、页面或 worker。后续工作进程接入前，P10 必须补齐领取令牌、租约、心跳与过期提交隔离；当前仓储不能作为已有调度能力使用。
+P09 提供 MySQL 持久化基础，入口为定义仓储的 `createAnalysisRun`、`getAnalysisRun`、`beginAnalysisAttempt`、`completeAnalysisAttempt`、`finishAnalysisRun`。P09 本身不提供调度；P10 工作进程及已入队运行的令牌门槛见上一节。分析 HTTP 接口和页面尚未接入。
 
 运行固定输入引用、来源阶段、台账/映射/设计关系版本、检查范围、步骤输入及检查项、解析器和规则版本。输入支持 `v7_source`、`definition`、`mapping`、`handoff`、`template`，分别引用 P07 来源、P02 定义版本、P07 映射修订、P08 设计关系修订和 P02 模板批次。V7 正文仍由原固定来源保存，分析表仅保存引用和摘要元数据。原始字节摘要与内容摘要分别登记算法；模板单元格摘要使用 `sha256-template-cells-v1`，不冒充原件字节摘要。
 
@@ -567,3 +615,21 @@ npm run smoke:process-governance-mysql
 花名册搜索支持回车，中文输入法组合输入期间不触发查询。冲突显示实际字段与部门名称；名称缺失时明确标注待补充。状态、系统生成的旧待办文案和时间仅调整展示，不改写原始值。
 
 导航分工：侧边栏负责模块与流程工作区切换。“流程治理”展开预览核对、跨部门承接待办、承接冲突待办和历史流程草稿；“数据治理”保留独立入口。主屏不再显示第二套流程工作区标签，保留当前对象的筛选、详情、视图选项及办理操作。原有工作区URL和深链接继续有效；浏览器前进、后退和任务跳转均按同一路由更新侧边栏选中项，切换前保留未提交修改保护。
+
+### P12：固定交接关系检查
+
+交接详情页按确定缺陷、待业务核对和本轮未覆盖范围展示关系检查，可定位同一修订的两端流程、对象、字段版本和证据。GET /api/design-handoffs/:id（含version查询）增量返回relationship_checks；旧响应字段、保存状态和审批权限保持。页面计算只读，不创建运行、不自动确认、不调用模型。
+
+独立worker新增handoff_deterministic解析器和handoff-deterministic-v1规则集，每步骤一个固定handoff输入；沿用P09存储和P10领取令牌。完整规则清单见server/handoffAnalysisRules.js。格式、枚举及同字段版次与“无需转换”声明的明确矛盾为确定缺陷；其余缺失说明、身份及标识对应保持待核实。不同平台对象不合并，多个接收方分别登记。枚举仅顺序变化不判冲突，未知值不当作确定差异。
+
+单位比例仅有文字规则，适用范围没有结构化确认，用户尚未确认主链框架及完整输入，因此结果明确保留未覆盖。转换说明齐备也不证明执行正确或真实接收。handoff.coverage负责记录缺口说明，相关实际检查仍留在coverage.missing；不把未执行检查伪装成已覆盖。现有P08实时修订影响仍单独显示，不改固定历史运行。无新表、迁移、回填或正式动作；旧运行及P10/P11适配器继续保留。回退前须停止worker并处理P12队列，旧worker不能接管新解析器。
+
+### P13：跨运行发现对照
+
+仓储新增只读方法 `compareAnalysisRuns(session, beforeRunId, afterRunId)`，在同一事务中复核两个运行的当前身份、部门及材料范围、固定来源和结果摘要，再调用 `server/analysisComparison.js`。本步未注册HTTP路由或新增页面；分析API属于P14范围。
+
+对照算法 `analysis-diff-v1` 使用部门范围、规则语义标识、材料逻辑身份和对象/字段语义标识计算匹配键。每次运行仍保留独立finding_id；旧comparison_key及全部证据不改写。标题、文件名、输入键、步骤名和数组下标不决定身份。来源阶段不跨越合并；独立上传批次或模板批次缺少显式谱系时不能推断为同一材料。
+
+返回新增、持续、证据变化、本轮未再检出、不可比较、待人工匹配六类结果，以及前后运行、manifest摘要、发现/尝试ID、证据键和覆盖摘要。只比较每个步骤最后一次尝试；旧尝试保留。规则版本没有显式兼容映射、解析器或AI配置改变、部门或步骤输入/规则范围变化时保守标不可比较。当前未提供兼容映射编辑或人工匹配写入入口。相同规则的可比范围完整覆盖后才允许新增或本轮未再检出；其他范围缺口仍单独保留。失败、取消、未结束运行不能得出问题消失结论。局部对象/字段或交接字段对被删除时标不可比较，不据删除认定整改。身份含内容摘要、未知算法、重复逻辑主体或缺证据时待人工匹配。
+
+固定来源摘要或证据位置变化可标证据变化，因此正常重排可能改变证据状态，但不制造整批新增发现。`comparison_complete=false`表示仍有不可比较、人工匹配或覆盖缺口；空结果也不能掩盖这些缺口。本轮未再检出不等于已整改，不生成待办、不关闭问题、不改变审批链。新方法不写数据库；无需DDL、回填或旧数据转换，移除入口即可回退，P09—P12数据和原读取接口保持兼容。
