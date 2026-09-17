@@ -1,5 +1,4 @@
-// Persistence boundary for P09. These methods are not mounted on HTTP and do
-// not claim jobs or execute rules. P10 must add worker fencing before using them.
+// Persistence boundary. Enrolled P10 runs require the internal fenced transaction.
 const { failure, id, parse, json, digest, lastId } = require('./dataMapDefinitionValues');
 const { MIGRATION_KEY } = require('./analysisRunSchema');
 const { columns } = require('./analysisInputReferences');
@@ -64,8 +63,13 @@ module.exports = function (helpers) {
     await db.execute('UPDATE data_map_analysis_runs SET revision_no=revision_no+1 WHERE run_id=?', [run.run_id]);
     return run.revision_no + 1;
   };
+  async function queueGuard(db, runId, cancelling = false) {
+    if (helpers.workerTransaction || cancelling) return;
+    const [marker] = await db.execute('SELECT migration_key FROM schema_migrations WHERE migration_key=?', [require('./analysisQueueSchema').MIGRATION_KEY]);
+    if (marker.length && (await db.execute('SELECT run_id FROM data_map_analysis_queue WHERE run_id=? FOR UPDATE', [runId]))[0].length) throw code('WORKER_TOKEN_REQUIRED', 409);
+  }
   async function results(db, run) {
-    const [attempts] = await db.execute(`SELECT *,${cast(['attempt_id', 'run_id', 'actor_person_id', 'completed_by_person_id'])},${times(['started_at', 'finished_at'])} FROM data_map_analysis_attempts WHERE run_id=? ORDER BY attempt_id FOR SHARE`, [run.run_id]);
+    const [attempts] = await db.execute(`SELECT *,${cast(['attempt_id', 'run_id', 'actor_person_id', 'completed_by_person_id'])},${times(['started_at', 'finished_at'])} FROM data_map_analysis_attempts WHERE run_id=? ORDER BY data_map_analysis_attempts.attempt_id FOR SHARE`, [run.run_id]);
     for (const a of attempts) {
       const [evidenceRows] = await db.execute(`SELECT *,${cast(['evidence_id', 'run_id', 'attempt_id'])} FROM data_map_analysis_evidence WHERE run_id=? AND attempt_id=? ORDER BY evidence_id FOR SHARE`, [run.run_id, a.attempt_id]);
       const [findingRows] = await db.execute(`SELECT *,${cast(['finding_id', 'run_id', 'attempt_id', 'issue_id'])} FROM data_map_analysis_findings WHERE run_id=? AND attempt_id=? ORDER BY finding_id FOR SHARE`, [run.run_id, a.attempt_id]);
@@ -95,6 +99,15 @@ module.exports = function (helpers) {
     return attempts;
   }
   return {
+    compareAnalysisRuns(session, beforeRunId, afterRunId) { return tx(async db => {
+      const who = await actor(db, session), loaded = new Map();
+      // Stable lock order prevents reverse comparisons from deadlocking.
+      for (const runId of [...new Set([id(beforeRunId), id(afterRunId)])].sort((a, b) => BigInt(a) < BigInt(b) ? -1 : 1)) {
+        const { run, inputs } = await load(db, who, runId);
+        loaded.set(runId, { ...run, attempts: await results(db, run), documents: Object.fromEntries([...inputs].map(([key, value]) => [key, value.document])) });
+      }
+      return require('./analysisComparison').compareAnalysisSnapshots(loaded.get(id(beforeRunId)), loaded.get(id(afterRunId)));
+    }); },
     createAnalysisRun(session, payload) { return tx(async db => {
       keys(payload, ['request_id', 'inputs', 'check_scope', 'parser_versions', 'rule_version', 'steps', 'ai_metadata', 'rerun_of_run_id']);
       if (Buffer.byteLength(json(payload)) > 262144) throw code('PAYLOAD_TOO_LARGE', 413);
@@ -147,6 +160,7 @@ module.exports = function (helpers) {
     beginAnalysisAttempt(session, payload) { return tx(async db => {
       keys(payload, ['request_id', 'run_id', 'expected_revision', 'step_key']);
       const who = await actor(db, session, 'governance:structure-gate'), { run } = await load(db, who, payload.run_id);
+      await queueGuard(db, run.run_id);
       return request(db, who, 'analysis_begin', payload, async () => {
         writableRevision(run, payload);
         const s = run.steps.find(s => s.step_key === key(payload.step_key));
@@ -162,6 +176,7 @@ module.exports = function (helpers) {
       keys(payload, ['request_id', 'run_id', 'expected_revision', 'attempt_id', 'status', 'checked_ids', 'error_code', 'evidence', 'findings']);
       if (Buffer.byteLength(json(payload)) > 1048576) throw code('PAYLOAD_TOO_LARGE', 413);
       const who = await actor(db, session, 'governance:structure-gate'), { run, inputs } = await load(db, who, payload.run_id);
+      await queueGuard(db, run.run_id);
       return request(db, who, 'analysis_complete', payload, async () => {
         writableRevision(run, payload);
         const [[attempt]] = await db.execute('SELECT step_key,attempt_no,status FROM data_map_analysis_attempts WHERE run_id=? AND attempt_id=? FOR UPDATE', [run.run_id, id(payload.attempt_id)]);
@@ -218,6 +233,7 @@ module.exports = function (helpers) {
     finishAnalysisRun(session, payload) { return tx(async db => {
       keys(payload, ['request_id', 'run_id', 'expected_revision', 'status']);
       const who = await actor(db, session, 'governance:structure-gate'), { run } = await load(db, who, payload.run_id);
+      await queueGuard(db, run.run_id, payload.status === 'cancelled');
       return request(db, who, 'analysis_finish', payload, async () => {
         writableRevision(run, payload);
         await results(db, run);

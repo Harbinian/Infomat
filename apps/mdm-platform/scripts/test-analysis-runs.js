@@ -193,6 +193,7 @@ async function main() {
       const r = await repo.createAnalysisRun(lead, payload()); await rejects(finish(r, 'succeeded'), 'DEFINITION_ANALYSIS_RUN_COVERAGE_CONFLICT'); await finish(r, 'failed');
       assert.equal((await get(r)).status, 'failed');
     });
+    if (process.argv.includes('--p13')) await require('./testHelpers/analysisComparisonVerification')({ repo, lead, pool, run, historical, payload, begin, completion, finish, get, check, save });
     await check('database unique keys, same-run references and pending-only findings block invalid direct writes', async () => {
       const a = historical.attempts[0], f = a.findings[0];
       await assert.rejects(pool.execute("INSERT INTO data_map_analysis_steps(run_id,step_key,status,attempt_no) VALUES (?,'read','queued',0)", [run.run_id]), e => e.code === 'ER_DUP_ENTRY');

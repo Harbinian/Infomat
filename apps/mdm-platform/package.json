@@ -4,6 +4,13 @@
   "description": "MDM Platform",
   "main": "server/index.js",
   "scripts": {
+    "test:handoff-analysis-rules": "node scripts/test-handoff-analysis-rules.js",
+    "test:handoff-analysis": "node scripts/test-design-handoffs.js --p12",
+    "test:v7-analysis-rules": "node -r ./scripts/testHelpers/blockRealMysql.js --test scripts/test-v7-analysis-rules.js",
+    "test:v7-analysis-worker": "node scripts/test-v7-analysis-worker.js",
+    "test:analysis-worker": "node scripts/test-analysis-worker.js",
+    "migrate:analysis-queue": "node scripts/manage-analysis-queue.js",
+    "analysis:worker": "node scripts/analysis-worker.js",
     "test:data-map-management": "node scripts/test-data-map-management.js",
     "test:data-map-facts": "node scripts/test-data-map-facts.js",
     "migrate:data-map-facts": "node scripts/manage-data-map-facts.js",
@@ -174,6 +181,8 @@
     "migrate:design-handoffs": "node scripts/manage-design-handoffs.js",
     "test:design-handoffs": "node scripts/test-design-handoffs.js",
     "migrate:analysis-runs": "node scripts/manage-analysis-runs.js",
+    "test:analysis-comparison": "node -r ./scripts/testHelpers/blockRealMysql.js --test scripts/test-analysis-comparison.js",
+    "test:analysis-comparison-mysql": "node scripts/test-analysis-runs.js --p13",
     "test:analysis-runs": "node scripts/test-analysis-runs.js"
   },
   "dependencies": {

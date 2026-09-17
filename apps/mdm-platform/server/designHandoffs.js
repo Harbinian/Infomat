@@ -106,7 +106,7 @@ module.exports=function({transaction,actor,scope,entityScope,version,request,loa
   return {
     handoffCapabilities(session){return tx(async db=>{const w=await actor(db,session);scope(w,w.departmentId);return {person_id:w.personId,department_id:w.departmentId,can_write:writable(w)};});},
     handoffSourceContext(session,sid){return tx(async db=>{const w=await actor(db,session),s=await loadSource(db,w,sid);if(s.validation_status!=='valid')throw failure('DEFINITION_V7_SOURCE_INVALID',409);return {source_id:s.source_id,source_kind:s.source_kind,source_ref:s.source_ref,process:s.document.process,behaviors:s.document.behaviors.map(b=>({behavior_ref:b.behavior_ref,behavior_name:b.behavior_name,actor_description:b.current_actor_role})),mappings:await bindings(db,w,s)};});},
-    getDesignHandoff(session,hid,query={}){return tx(async db=>detail(db,await actor(db,session),hid,query.version||null));},
+    getDesignHandoff(session,hid,query={}){return tx(async db=>{const r=await detail(db,await actor(db,session),hid,query.version||null);return {...r,relationship_checks:require('./handoffAnalysisRules').inspect(r)};});},
     listDesignHandoffs(session,q={}){return tx(async db=>{
       const w=await actor(db,session);scope(w,w.departmentId);const args=[],where=[];
       if(q.after){where.push('h.handoff_id>?');args.push(id(q.after));}

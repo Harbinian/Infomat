@@ -4,6 +4,18 @@
 
 # apps/mdm-platform/scripts 说明
 
+### P11 确定性 V7 规则
+
+`npm.cmd run test:v7-analysis-rules` 使用合成 JSON 检查正常、缺陷、合法回路、不同节点类型、字段绑定、来源不足、顺序稳定性、限额及计算线程取消；预加载 blockRealMysql，不连接数据库。`npm.cmd run test:v7-analysis-worker -- --output <仓库artifacts内全新目录>` 使用自有 tmpfs MySQL、随机端口 HTTP 夹具、合成固定上传和真实独立 worker，验证固定版本与证据保存、重复运行身份、缺口、权限及原资产保护。输出结果 JSON、规则目录、worker 源码摘要和清理记录；finally 仅关闭自有资源。
+
+`server/v7AnalysisRules.js` 为纯规则目录及实现，`v7AnalysisThread.js` 为可终止计算线程；复用 P07/P09/P10，无 P11 数据迁移。启用边界、每步单个固定 V7 输入、manifest 字段及禁用不可达规则见应用 README 的 P11 节。正式环境、AI 和业务认定没有因此开启。
+
+### P10 独立分析工作进程
+
+`npm.cmd run test:analysis-worker -- --output <仓库artifacts内全新目录>` 使用自有 tmpfs MySQL、合成身份与台账；复用的夹具会启动自有随机端口 HTTP，测试只启动并停止自己创建的 Node 子进程。验证迁移、两个进程竞争、单实例启动、心跳、租约、超时、重领、迟到提交、取消竞争、有限重试、部分成功、身份失效、事务和备份恢复。输出 results.json、worker-events.json、cleanup.json 等，不写原件、正式库、3000/3001/5173/63805，不创建常驻任务。
+
+`migrate:analysis-queue` 支持默认 dry-run 及显式 inspect/apply；`analysis:worker` 支持 start/status/stop/recover。所有操作要求准确 `--target <host:port/database>` 与显式 MYSQL 环境一致。只有迁移 apply 执行 DDL，start 只检查结构；stop 必须提供从本次启动取得的 `--worker-id`，不扫描或批量结束进程。命令、重试策略、旧记录兼容与补偿见 [应用README](../README.md#独立分析工作进程p10)。保留 p10-stub-v1，P11 增加 v7-deterministic-v1；正式运行尚未开启。
+
 ### P09 分析运行与证据存储
 
 在应用目录执行 `npm.cmd run test:analysis-runs -- --output <仓库artifacts内全新目录>`。输入为脚本内的合成身份、模板单元格、台账、V7 来源及设计关系，复用 Docker 已有 `mysql:8.4` 镜像和项目自有 tmpfs MySQL/随机回环 HTTP 夹具，不安装依赖、不读外部原件或私有配置。本步无需构建前端或打开浏览器；夹具仅为准备受支持的合成预览及发布版本而调用自有 HTTP，不开启分析 worker。
@@ -316,3 +328,16 @@ npm run test:stage06-mysql-isolated
 5. 不在本目录提交日志、数据库、Excel 临时文件或生成缓存。
 
 前端体验定向回归：`node scripts/test-frontend-ux.js`，覆盖只读／本部门／跨部门操作入口、指引与待办分离、中文状态与已知旧提示模板，以及搜索回车的输入法保护；使用内存替身，不访问数据库。
+
+### P12 交接关系验证
+
+- npm.cmd run test:handoff-analysis-rules：仅合成固定快照，预加载真实MySQL阻断，检查同名不同身份、组合标识、缺映射、格式/枚举/版次矛盾、单位转换说明、合法多接收方和未知主链边界。
+- npm.cmd run test:handoff-analysis -- --output <本批次新证据目录>：复用test-design-handoffs.js的自有tmpfs MySQL、合成身份、随机端口和Edge夹具，额外运行真实独立worker并检查固定证据、权限、重跑、缺口及两端定位。可用--no-browser只查后端，但不能据此声称界面已验证。只清理本次明确归属的资源。
+- 无外部原件、正式数据库、3001操作、模型调用或真实通知。证据和截图写入指定artifacts目录。
+
+### P13跨运行对照验证
+
+- `npm.cmd run test:analysis-comparison`：纯合成快照及真实P11规则输出，预加载blockRealMysql；不连接数据库、不启动服务、不读外部材料、不调用模型。
+- `npm.cmd run test:analysis-comparison-mysql -- --output <本批次下的新证据目录>`：复用P09隔离存储测试，并启用P13仓储验证。建立自有唯一标签、tmpfs及随机回环端口的MySQL和合成HTTP夹具，finally仅清理本次资源；不启动worker、浏览器或正式服务。输出P09回归results.json及P13的p13-results.json、p13-comparisons.json，包含历史保留、权限、完整性、并发与不修改正式问题/待办的核对。
+
+`server/analysisComparison.js`只接收已授权且已校验完整性的运行快照；生产调用方使用仓储compareAnalysisRuns，不直接接受客户端提交的快照。P13未开放HTTP对照接口。
