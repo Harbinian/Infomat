@@ -1,8 +1,8 @@
 const assert = require('assert');
 const { makeProcessGovernanceIssuePoolRepository } = require('../server/processGovernanceIssuePoolRepository');
 
-const procedurePath = 'docs/norms/项目管理部业务资料/GLTX-XM-08-A沈阳、总部工装业务联合管理程序/GLTX-XM-08-A沈阳、总部工装业务联合管理程序2.28/GLTX-XM-08-A沈阳、总部工装业务联合管理程序3.9.docx.md.md';
-const formPath = 'docs/norms/项目管理部业务资料/GLTX-XM-08-A沈阳、总部工装业务联合管理程序/GLTX-XM-08-A沈阳、总部工装业务联合管理程序2.28/GLTX-XM-08-A-01《工装技术条件评审表》.xlsx.json.json';
+const procedurePath = 'docs/norms/项目管理部业务资料/GLTX-XM-08-A沈阳、总部工装业务联合管理程序/GLTX-XM-08-A沈阳、总部工装业务联合管理程序2.28/GLTX-XM-08-A沈阳、总部工装业务联合管理程序3.9.docx.md';
+const formPath = 'docs/norms/项目管理部业务资料/GLTX-XM-08-A沈阳、总部工装业务联合管理程序/GLTX-XM-08-A沈阳、总部工装业务联合管理程序2.28/GLTX-XM-08-A-01《工装技术条件评审表》.xlsx.json';
 
 function normalized(sql) {
   return String(sql || '').replace(/\s+/g, ' ').trim();
@@ -38,10 +38,10 @@ function sourceRow() {
     source_snapshot_id: 77,
     evidence_required: 1,
     evidence_raw_text: '',
-    evidence_source_label: 'GLTX-XM-08-A-01《工装技术条件评审表》.xlsx.json.json 第5.9.1条',
+    evidence_source_label: 'GLTX-XM-08-A-01《工装技术条件评审表》.xlsx.json 第5.9.1条',
     evidence_source_anchor: 'GLTX-XM-08-A §5.9.1',
     evidence_source_file: formPath,
-    evidence_document_name: 'GLTX-XM-08-A-01《工装技术条件评审表》.xlsx.json.json',
+    evidence_document_name: 'GLTX-XM-08-A-01《工装技术条件评审表》.xlsx.json',
     source_documents: `GLTX-XM-08||${formPath}`
   };
 }
@@ -49,8 +49,10 @@ function sourceRow() {
 async function main() {
   const captured = { exactLookupCount: 0, issue: null, point: null };
   const fakePool = {
+    async getConnection() { return { execute: this.execute.bind(this), async beginTransaction() {}, async commit() {}, async rollback() {}, release() {} }; },
     async execute(sql, params = []) {
       const text = normalized(sql);
+      if (text.startsWith('SELECT CAST(issue_id AS CHAR) issue_id FROM process_governance_issues WHERE issue_key=')) return [[], []];
       if (text.startsWith('SELECT id FROM process_governance_snapshots')) {
         return [[{ id: 77 }], []];
       }
@@ -112,12 +114,12 @@ async function main() {
   assert.strictEqual(result.summary.issue_count, 1);
   assert.strictEqual(captured.exactLookupCount, 1, 'MySQL issue pool generation should perform exact source lookup from evidence anchor');
   assert.ok(captured.issue.where_text.includes('源文件编号：GLTX-XM-08-A'));
-  assert.ok(captured.issue.where_text.includes('制度或表单名称：GLTX-XM-08-A沈阳、总部工装业务联合管理程序3.9.docx.md.md'));
+  assert.ok(captured.issue.where_text.includes('制度或表单名称：GLTX-XM-08-A沈阳、总部工装业务联合管理程序3.9.docx.md'));
   assert.ok(captured.issue.where_text.includes('大概位置：第5.9.1条'));
-  assert.ok(!captured.issue.where_text.includes('GLTX-XM-08-A-01《工装技术条件评审表》.xlsx.json.json'));
+  assert.ok(!captured.issue.where_text.includes('GLTX-XM-08-A-01《工装技术条件评审表》.xlsx.json'));
   const evidence = JSON.parse(captured.point.evidence_json);
   assert.strictEqual(evidence.source_file_no, 'GLTX-XM-08-A');
-  assert.ok(evidence.source_document_name.includes('GLTX-XM-08-A沈阳、总部工装业务联合管理程序3.9.docx.md.md'));
+  assert.ok(evidence.source_document_name.includes('GLTX-XM-08-A沈阳、总部工装业务联合管理程序3.9.docx.md'));
   assert.ok(!evidence.source_document_name.includes('GLTX-XM-08-A-01'));
   console.log('Process governance issue pool MySQL source resolution test passed');
 }

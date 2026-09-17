@@ -111,6 +111,7 @@ function makeOfficeRepository(pool) {
           LEFT JOIN person p ON p.person_id=a.assignee_person_id LEFT JOIN process_design_versions v ON v.id=a.process_version_id
           LEFT JOIN departments d ON d.id=v.department_id WHERE a.office_id=? ORDER BY t.status='pending' DESC,t.created_at DESC`,[selected.id]);
         tasks=tasks.map(({source_json,...task})=>{let behaviorName='';if(source_json&&task.behavior_ref){const document=typeof source_json==='string'?JSON.parse(source_json):source_json;behaviorName=(document.behaviors||[]).find(b=>b.behavior_ref===task.behavior_ref)?.behavior_name||'';}return {...task,behavior_name:behaviorName};});
+        tasks=await require('./officeAnalysisTasks').decorate(pool,actor,tasks,selected.manager_person_id);
       }
       let versions=[],unallocated=[];
       if(actor.canRoute) {

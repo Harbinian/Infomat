@@ -347,3 +347,23 @@ npm run test:stage06-mysql-isolated
 `npm.cmd run test:analysis-api -- --output <同批次下不存在的新证据目录>`复用test-analysis-runs.js的P09存储夹具，增加testHelpers/analysisApiVerification.js。建立自有标签tmpfs MySQL、随机回环HTTP端口及合成身份；P14检查完成后恢复内存备份，再继续原P09回归。finally只清理本次MySQL及HTTP，不连接正式库，不启动worker、浏览器或3001，不发送通知或模型请求。
 
 验证来源选择/接收、创建入队原子性、并发幂等、409、取消及P09兼容、分层响应、当前来源范围变化、匿名/无权/失效身份、管理员多角色只读、ID越权、部分结果、差异、上传/JSON限额、CSRF、静态路径与导出范围。输出results.json、p14-results.json、p14-projections.json、p14-partial-and-diff.json及夹具日志。P13的HTTP未开放说明为历史状态；P14现已注册受限路由，正式开启和业务验收不能由测试代替。
+
+### P15分析检查台验证
+
+`npm.cmd run test:analysis-workbench -- --output <同批次下不存在的新证据目录>` 运行 P14 HTTP、P15 Edge 及原P09存储回归。执行前运行 `npm.cmd run build:frontend`。复用自有tmpfs MySQL与随机回环HTTP夹具，P15扩展仅启动本次自有Edge和独立worker，所有身份、材料和写入均为合成隔离数据。finally停止自有worker和浏览器，恢复内存备份，再继续旧记录保护检查；无正式数据库、现有服务、模型或通知调用。
+
+新增 `testHelpers/analysisWorkbenchVerification.js` 覆盖页面创建/取消、真实worker、部分覆盖、两端与字段证据、对照和过滤导出、刷新深链接、返回筛选、图形箭头/间距/缩放/空图、Edge 1699×828及390×844、错误输入保护、身份重登、旧异步、只读/越权及静态泄露检查。输出 p15-browser-results.json、p15-worker-result.json、p15-filtered-export.json、p15-geometry.json、PNG截图、worker事件和清理记录。错误注入与真实API场景分别记录；浏览器自动化不替代人工业务验收。
+
+`npm.cmd --prefix frontend test` 同时检查视图默认尝试过滤、空结果导出、证据裁剪及服务端目录生成请求，保留原前端测试。
+
+## P16 分析发现确认及问题关联
+
+- `npm.cmd run manage:analysis-issues -- --target 127.0.0.1:<隔离端口>/<隔离库>`：默认dry-run；另支持`--inspect`和显式`--apply`。仅从已明确提供的MySQL环境变量读取目标，不加载私有.env、不启动服务、不运行旧问题生成器。apply只创建两张增量关系/审查表及迁移标记，不回填旧数据；MySQL DDL中断后先inspect，再按原结构续建。
+- `npm.cmd run test:analysis-issues -- --output <artifacts下全新目录>`：P09隔离套件加P16专项；合成数据下验证迁移/CLI、并发确认、幂等、证据/范围/来源、创建及多发现关联、旧入口封堵、备份恢复和Edge界面。测试会创建自有带标记tmpfs MySQL、随机端口HTTP、独立worker及浏览器；结束关闭自有资源，不使用3000、3001、5173或共享库。备份只在内存，输出JSON、日志和截图不含测试口令。
+- 旧问题仓储读取/写入保护采用事务连接；来源解析单元测试的替身相应提供事务生命周期。旧未关联问题仍可读写；关联问题通过受限新API读取，旧写入保持拒绝。真实关闭授权与P17待办闭环不在本步开启。
+
+### P17问题办公室待办
+
+- `npm.cmd run manage:analysis-tasks -- --target host:port/database`：默认dry-run，支持显式 `--inspect`、`--dry-run` 或 `--apply`。只从显式环境变量取得连接，不加载私有.env；apply只增量创建问题—办公室待办关系及迁移标记，不回填。复用现有办公室及P16问题依赖，漂移拒绝；不自动调用其他迁移。
+- `npm.cmd run test:analysis-tasks -- --output <artifacts下全新目录>`：P09隔离夹具及P17专项，使用自有带标签tmpfs MySQL、随机回环HTTP、合成组织/花名册导入及Edge。验证CLI/DDL中断与续建、事务回滚、交办幂等、权限、来源快照、成员失效、普通待办兼容、任务done不关闭问题、输入保护及内存备份恢复。结束只清理本次资源，不启动worker、模型或真实通知。
+- 本步未确定新来源问题的复核关闭主体及依据，正向正式复核、关闭和重开未实施；测试证明拒绝门槛，不能表述为闭环业务验收。后续仍使用P17完成该缺口。

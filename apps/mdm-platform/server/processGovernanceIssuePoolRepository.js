@@ -1525,6 +1525,9 @@ async function mysqlRun(pool, sql, params = []) {
 }
 
 function makeProcessGovernanceIssuePoolRepository(pool) {
+  return require('./analysisIssueLegacyGuard').wrap(pool, makeRawMysqlIssuePoolRepository);
+}
+function makeRawMysqlIssuePoolRepository(pool) {
   async function addEvent(issueId, pointId, eventType, actor = {}, note = '', payload = null) {
     await mysqlRun(pool, `
       INSERT INTO process_governance_issue_events
@@ -1544,6 +1547,8 @@ function makeProcessGovernanceIssuePoolRepository(pool) {
 
   async function upsertIssue(row, batchId) {
     const issue = issueShape(row, batchId);
+    const [existing] = await mysqlQuery(pool, 'SELECT CAST(issue_id AS CHAR) issue_id FROM process_governance_issues WHERE issue_key=? FOR UPDATE', [issue.issue_key]);
+    if (existing) await require('./analysisIssueLegacyGuard').guard(pool, existing.issue_id);
     await mysqlRun(pool, `
       INSERT INTO process_governance_issues (
         issue_key, batch_id, primary_dept_name, owner_dept_name, source_layer, source_type,

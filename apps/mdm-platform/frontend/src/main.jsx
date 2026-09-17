@@ -7,9 +7,10 @@ import { TemplateImport } from './TemplateImport.jsx';
 import { ObjectManagement } from './ObjectManagement.jsx';
 import { FactChecks } from './FactChecks.jsx';
 import { DesignHandoffs } from './DesignHandoffs.jsx';
+import { AnalysisWorkbench } from './AnalysisWorkbench.jsx';
 import { V7Mappings } from './V7Mappings.jsx';
 
-const pages = { '/app/': '我的工作台', '/app/workbench': '我的工作台', '/app/identity': '当前身份', '/app/template-import':'模板导入', '/app/objects':'对象与字段', '/app/fact-checks':'事实核对', '/app/design-handoffs':'设计交接', '/app/v7-mappings':'V7 来源映射' };
+const pages = { '/app/analysis': '分析检查台', '/app/': '我的工作台', '/app/workbench': '我的工作台', '/app/identity': '当前身份', '/app/template-import':'模板导入', '/app/objects':'对象与字段', '/app/fact-checks':'事实核对', '/app/design-handoffs':'设计交接', '/app/v7-mappings':'V7 来源映射' };
 const normalizedPath = () => window.location.pathname.replace(/\/$/, '') || '/';
 function currentPath() { return normalizedPath() === '/app' ? '/app/' : normalizedPath(); }
 
@@ -65,6 +66,9 @@ function Login({ api, expired, onLoggedIn, onLegacy }) {
 
 function App() {
   const guard = useInputProtection();
+  const [analysisDraft,setAnalysisDraft] = useState(null);
+  const [,setAnalysisDirty] = useUnsavedInput();
+  useEffect(()=>{setAnalysisDirty(Boolean(analysisDraft?.dirty));},[analysisDraft]);
   const [importDraft,setImportDraft] = useState(null);
   const [objectDraft,setObjectDraft] = useState(null);
   const [factDraft,setFactDraft] = useState(null);
@@ -105,7 +109,7 @@ function App() {
         window.history.go(historyIndex.current - nextIndex);
         return;
       }
-      historyIndex.current = nextIndex; setImportDraft(null); setObjectDraft(null); setFactDraft(null); setMappingDraft(null); setHandoffDraft(null); setPath(currentPath());
+      historyIndex.current = nextIndex; setImportDraft(null); setObjectDraft(null); setFactDraft(null); setMappingDraft(null); setHandoffDraft(null); setAnalysisDraft(null); setPath(currentPath());
     };
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
@@ -142,7 +146,7 @@ function App() {
     if (path !== target) {
       setImportDraft(null);
       setObjectDraft(null);
-      setFactDraft(null); setMappingDraft(null); setHandoffDraft(null);
+      setFactDraft(null); setMappingDraft(null); setHandoffDraft(null); setAnalysisDraft(null);
       historyIndex.current += 1;
       window.history.pushState({ mdmIndex: historyIndex.current }, '', target); setPath(target);
     }
@@ -154,13 +158,13 @@ function App() {
     setRequestState({ busy: true, error: null });
     try {
       await api.request('/api/org/logout', { method: 'POST' });
-      api.resetSession(); setImportDraft(null); setObjectDraft(null); setFactDraft(null); setMappingDraft(null); setHandoffDraft(null); setSession({ state: 'anonymous', user: null });
+      api.resetSession(); setImportDraft(null); setObjectDraft(null); setFactDraft(null); setMappingDraft(null); setHandoffDraft(null); setAnalysisDraft(null); setSession({ state: 'anonymous', user: null });
     } catch (error) { if (error.name !== 'AbortError') setRequestState({ busy: false, error, action: 'logout' }); }
     finally { if (id === requestId.current) setRequestState(state => ({ ...state, busy: false })); }
   }
   if (session.state === 'loading') return <main className="startup"><StatusPanel kind="loading" title="正在核对登录状态…">请稍候。</StatusPanel></main>;
   if (session.state === 'error') return <main className="startup"><StatusPanel kind="error" title="暂时无法读取身份" onRetry={() => refresh(true)}>{requestState.error?.message}</StatusPanel><a href="/" onClick={legacy}>返回原入口</a></main>;
-  if (session.state !== 'ready') return <Login api={api} expired={session.state === 'expired'} onLegacy={legacy} onLoggedIn={user => { ++requestId.current; setRequestState({ busy: false, error: null }); setSession({ state: 'ready', user }); }} />;
+  if (session.state !== 'ready') return <Login api={api} expired={session.state === 'expired'} onLegacy={legacy} onLoggedIn={user => { if (analysisDraft?.owner !== `${user.personId}:${user.departmentId}`) setAnalysisDraft(null); ++requestId.current; setRequestState({ busy: false, error: null }); setSession({ state: 'ready', user }); }} />;
 
   const user = session.user;
   const roles = user.rbacRoles || [];
@@ -179,12 +183,13 @@ function App() {
       <a href="/app/fact-checks" aria-current={path === '/app/fact-checks' ? 'page' : undefined} onClick={e=>navigate(e,'/app/fact-checks')}>事实核对</a>
       <a href="/app/design-handoffs" aria-current={path === '/app/design-handoffs' ? 'page' : undefined} onClick={e=>navigate(e,'/app/design-handoffs')}>设计交接</a>
       <a href="/app/v7-mappings" aria-current={path === '/app/v7-mappings' ? 'page' : undefined} onClick={e=>navigate(e,'/app/v7-mappings')}>V7 来源映射</a>
+      <a href="/app/analysis" aria-current={path === '/app/analysis' ? 'page' : undefined} onClick={e=>navigate(e,'/app/analysis')}>分析检查台</a>
       <div className="nav-footer"><p>现有业务办理</p><a href="/" onClick={legacy}>进入原入口 ↗</a></div>
     </aside>
     <main id="main" className="workspace">
       <div className="page-heading"><div><p className="eyebrow">MDM / {pages[path] || '页面'}</p><h1 ref={heading} tabIndex={-1}>{pages[path] || '未找到页面'}</h1></div><button className="secondary" disabled={requestState.busy} onClick={() => refresh()}>{requestState.busy ? '正在核对…' : '刷新身份'}</button></div>
       {requestState.error && <StatusPanel kind="error" title="操作未完成" onRetry={requestState.action === 'logout' ? logout : () => refresh()}>{requestState.error.message}</StatusPanel>}
-      {path === '/app/design-handoffs' ? <DesignHandoffs key={`${user.personId}:${user.departmentId}`} api={api} draft={handoffDraft} setDraft={setHandoffDraft}/> : path === '/app/v7-mappings' ? <V7Mappings key={`${user.personId}:${user.departmentId}`} api={api} draft={mappingDraft} setDraft={setMappingDraft}/> : path === '/app/fact-checks' ? <FactChecks key={`${user.personId}:${user.departmentId}`} api={api} draft={factDraft} setDraft={setFactDraft}/> : path === '/app/objects' ? <ObjectManagement key={`${user.personId}:${user.departmentId}`} api={api} draft={objectDraft} setDraft={setObjectDraft}/> : path === '/app/template-import' ? <TemplateImport api={api} draft={importDraft} setDraft={setImportDraft}/> : path === '/app/identity' ? <>
+      {path === '/app/analysis' ? <AnalysisWorkbench key={`${user.personId}:${user.departmentId}`} api={api} draft={analysisDraft?.owner === `${user.personId}:${user.departmentId}` ? analysisDraft : null} setDraft={value=>setAnalysisDraft(value ? {...value,owner:`${user.personId}:${user.departmentId}`} : null)}/> : path === '/app/design-handoffs' ? <DesignHandoffs key={`${user.personId}:${user.departmentId}`} api={api} draft={handoffDraft} setDraft={setHandoffDraft}/> : path === '/app/v7-mappings' ? <V7Mappings key={`${user.personId}:${user.departmentId}`} api={api} draft={mappingDraft} setDraft={setMappingDraft}/> : path === '/app/fact-checks' ? <FactChecks key={`${user.personId}:${user.departmentId}`} api={api} draft={factDraft} setDraft={setFactDraft}/> : path === '/app/objects' ? <ObjectManagement key={`${user.personId}:${user.departmentId}`} api={api} draft={objectDraft} setDraft={setObjectDraft}/> : path === '/app/template-import' ? <TemplateImport api={api} draft={importDraft} setDraft={setImportDraft}/> : path === '/app/identity' ? <>
         <section className="card"><h2>当前账号与归属</h2><p className="muted">以下信息来自当前登录身份；角色和访问范围由服务端核对。</p>
           <dl className="identity-grid"><div><dt>姓名</dt><dd>{user.personName || user.name || '未填写'}</dd></div><div><dt>工号</dt><dd>{user.employeeNo || '未填写'}</dd></div><div><dt>所属部门</dt><dd>{user.departmentName || '待明确'}</dd></div><div><dt>账号状态</dt><dd>{user.accountStatus === 'active' ? '有效' : '请核对账号状态'}</dd></div></dl>
         </section>

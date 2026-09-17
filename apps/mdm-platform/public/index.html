@@ -2381,6 +2381,7 @@ function openOfficeTask(mode,id) {
   Object.assign(publicationImport,{dirty:false,busy:false,mode:'office',requestId:crypto.randomUUID()});
   const dialog=createPublicationDialog(title);
   let form=task?'<p style="white-space:pre-wrap">'+escHtml(task.content)+'</p>':'';
+  if(task?.analysis_task)form+='<section aria-label="问题办理上下文"><details><summary>查看本次办理说明</summary><p style="white-space:pre-wrap;overflow-wrap:anywhere">'+escHtml(task.analysis_task.instruction)+'</p></details><p>绑定问题修订 '+escHtml(task.analysis_task.source_revision)+'；仅提供本次办理说明。办结此任务不会关闭问题，问题复核权待明确。</p></section>';
   if(mode==='create'||mode==='receive') {
     const offices=data.offices.filter(o=>o.status==='active'&&o.department_id&&(!task?.to_dept_id||Number(o.department_id)===Number(task.to_dept_id)));
     form+='<label>承接办公室<select id="officeTarget">'+offices.map(o=>'<option value="'+Number(o.id)+'">'+escHtml(o.department_name+' / '+o.name)+'</option>').join('')+'</select></label>';
@@ -2395,6 +2396,19 @@ function openOfficeTask(mode,id) {
   $('publicationDialogBody').addEventListener('change',function(){publicationImport.dirty=true;});
   if($('officeTarget')&&Array.from($('officeTarget').options).some(o=>Number(o.value)===Number(data.selected_office_id)))$('officeTarget').value=data.selected_office_id;
   dialog.showModal();
+  if(task?.analysis_task)($('officeCompletionNote')||$('officeAssignee'))?.focus();
+}
+async function resumeAnalysisOfficeTask() {
+  if(!officeWorkbench.suspended)return;
+  const saved=officeWorkbench.suspended;
+  if(Number(state.user?.personId||state.user?.id)!==saved.actor){showToast('原账号的未保存办理输入仍保留在内存，当前身份不能读取。','warning');return;}
+  try {
+    const current=await api('/api/offices/workbench?office_id='+encodeURIComponent(saved.office));
+    const task=current.tasks.find(t=>Number(t.id)===Number(officeWorkbench.task?.id));
+    if(!task?.analysis_task||!(officeWorkbench.mode==='assign'?current.can_assign:Number(task.assignee_person_id)===current.actor_person_id))throw new Error('当前任务范围或办理关系已变化，原输入保留，需重新核对权限。');
+    officeWorkbench.suspended=null;$('publicationDialog').showModal();
+    publicationMessage('已恢复原账号的未保存输入。任务修订仍按原提交值核对，未自动应用。');
+  }catch(error){showToast(error.message||'原输入已保留，当前暂不能恢复办理。','warning');}
 }
 function renderOfficeBehaviorOptions(){const version=officeWorkbench.data.versions.find(v=>Number(v.id)===Number($('officeTaskVersion').value));$('officeTaskBehavior').innerHTML='<option value="">整个流程</option>'+(version?.behaviors||[]).map(b=>'<option value="'+escHtml(b.ref)+'">'+escHtml(b.name)+'</option>').join('');}
 async function saveOfficeTask() {
@@ -4859,6 +4873,10 @@ async function downloadNativeDiagram() {
 
     function handleUnauthorized(path, silentUnauthorized) {
       csrfToken = '';
+      if(publicationImport.mode==='office'&&officeWorkbench.task?.analysis_task&&$('publicationDialog')?.open){
+        officeWorkbench.suspended={actor:Number(officeWorkbench.data.actor_person_id),office:officeWorkbench.task.office_id};
+        $('publicationDialog').close();
+      }
       if (hasV7Edits()) {
         v7Edits.message = '登录已失效，未提交输入仍保留在当前页面。请使用原账号重新登录；关闭或刷新页面前先保留意见。';
         renderV7EditNotice();
@@ -5807,6 +5825,7 @@ async function downloadNativeDiagram() {
       startPolling();
       if (options.checkPassword) checkPasswordStatus();
       addPasswordChangeButton();
+      await resumeAnalysisOfficeTask();
     }
 
     async function login() {

@@ -25,3 +25,21 @@
 .v7-form input:focus-visible,.v7-form textarea:focus-visible { outline:3px solid #81b2e5; outline-offset:2px; }
 
 .handoff-endpoints{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.handoff-endpoint,.handoff-pair{min-width:0;border:1px solid var(--border,#d7e0e8);border-radius:8px;padding:16px;margin:12px 0;overflow-wrap:anywhere}.handoff-form-body{border:0;min-width:0;padding:0}.handoff-operations{display:flex;flex-wrap:wrap;gap:14px}.handoff-operations label{display:flex;gap:6px;align-items:center}.handoff-pair input[type=checkbox],.handoff-operations input[type=checkbox]{width:auto}.handoff-choice{text-align:left;overflow-wrap:anywhere}@media(max-width:700px){.handoff-endpoints{grid-template-columns:minmax(0,1fr)}}
+.analysis-workbench { min-width:0; }
+.analysis-workbench fieldset { border:0; padding:0; margin:0; min-width:0; }
+.analysis-workbench select,.analysis-workbench input,.analysis-workbench textarea { width:100%; min-width:0; max-width:100%; }
+.analysis-workbench label { display:block; min-width:0; }
+.analysis-workbench p,.analysis-workbench li,.analysis-workbench strong { overflow-wrap:anywhere; }
+.analysis-filters { display:grid; grid-template-columns:2fr 1fr 1fr 1fr; gap:12px; }
+.analysis-json { white-space:pre-wrap; overflow-wrap:anywhere; max-height:380px; overflow:auto; background:#f4f7fa; padding:14px; font-size:13px; }
+.analysis-graph-scroll { overflow:auto; max-height:430px; max-width:100%; border:1px solid #d8e2ec; border-radius:8px; }
+.analysis-graph svg { display:block; margin:auto; }
+.analysis-finding { border-top:1px solid #d8e2ec; padding:18px 0; }
+.analysis-workbench .import-actions { flex-wrap:wrap; }
+.analysis-workbench .import-actions label { flex:1; }
+@media(max-width:760px) { .analysis-filters { grid-template-columns:1fr; } .analysis-workbench .card { padding:16px; } }
+.analysis-workbench .analysis-graph .import-actions button { width:auto; }
+.analysis-workbench .analysis-graph .import-actions output { min-width:3em; text-align:center; }
+
+.finding-review-evidence { display: flex; align-items: center; gap: 0.6rem; margin: 0.65rem 0; }
+.finding-review-evidence input[type=checkbox] { width: auto; flex: 0 0 auto; }

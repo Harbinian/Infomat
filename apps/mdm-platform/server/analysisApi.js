@@ -60,7 +60,11 @@ module.exports = function (helpers) {
     analysisCapabilities(session) { return transaction(async db => {
       const who = await reader(db, session);
       return { can_create: !who.readOnly && who.permissions.has('governance:structure-gate'), visibility: 'existing_source_scope',
-        public_summary_enabled: false, summary_fields: SUMMARY_FIELDS, material_kinds: ['v7_json'], source_kinds: Object.keys(sourceTables), export_formats: ['json'] };
+        public_summary_enabled: false, summary_fields: SUMMARY_FIELDS, material_kinds: ['v7_json'], source_kinds: Object.keys(sourceTables), export_formats: ['json'],
+        adapters: [['v7_source', require('./v7AnalysisRules')], ['handoff', require('./handoffAnalysisRules')]].map(([kind, rules]) => ({
+          kind, parser_key: rules.PARSER, rule_version: rules.VERSION, check_ids: rules.CHECKS,
+          catalog: rules.catalog.map(r => pick(r, ['rule_id', 'title', 'enabled', 'prerequisite', 'not_applicable']))
+        })) };
     }); },
     listAnalysisSources(session, query = {}) { return transaction(async db => {
       const who = await reader(db, session), kind = query.kind || 'v7_source';

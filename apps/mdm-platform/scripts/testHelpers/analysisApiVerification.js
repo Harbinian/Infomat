@@ -5,6 +5,9 @@ module.exports = async function (ctx) {
   const { repo, lead, pool, run, historical, payload, fixture, source, published, preview, template, fieldMap, handoff, field, begin, completion, finish, get, check, save, expect, backup, restore } = ctx;
   const uuid = () => crypto.randomUUID(), root = '/api/analysis', runPath = root + '/runs/' + run.run_id;
   const ownChecks = [], test = async (name, fn) => { await check('P14 ' + name, fn); ownChecks.push(name); };
+  // Include the queue tables in the backup so a following UI/worker extension
+  // cannot inherit orphan queue rows after restoring the older run IDs.
+  await require('../../server/analysisQueueMigration').applyAnalysisQueue(pool);
   const dump = backup(), clients = {};
   async function http(who, url, method = 'GET', body, headers = {}) {
     const c = clients[who] || {};
@@ -31,7 +34,6 @@ module.exports = async function (ctx) {
     check_scope: { description: 'P14合成运行', check_ids: ['v7.required'] }, rule_version: rules.VERSION,
     parser_versions: { [rules.PARSER]: rules.VERSION }, steps: [{ step_key: 'check', input_keys: ['source'], check_ids: ['v7.required'], parser_key: rules.PARSER }], ai_metadata: null, rerun_of_run_id: null });
   try {
-    await require('../../server/analysisQueueMigration').applyAnalysisQueue(pool);
     for (const who of ['lead', 'contact', 'outsider', 'adminMulti', 'reviewB']) await login(who);
     await test('anonymous, no permission and expired sessions fail closed', async () => {
       await ok('anonymous', runPath, undefined, undefined, 401);

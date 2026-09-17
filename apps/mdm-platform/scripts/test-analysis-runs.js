@@ -1,5 +1,5 @@
 // P09 storage tests on owned tmpfs MySQL and synthetic identities/materials.
-// --output must be a new directory under artifacts. No worker or browser starts.
+// --output must be a new directory under artifacts. --p15/--p16 own Edge and worker lifetimes.
 const fs = require('node:fs'), path = require('node:path'), crypto = require('node:crypto'), assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');
 const { withStage05Fixture } = require('./test-stage05-mysql-isolated');
@@ -195,6 +195,9 @@ async function main() {
     });
     if (process.argv.includes('--p13')) await require('./testHelpers/analysisComparisonVerification')({ repo, lead, pool, run, historical, payload, begin, completion, finish, get, check, save });
     if (process.argv.includes('--p14')) await require('./testHelpers/analysisApiVerification')({ repo, lead, contact, pool, run, historical, payload, fixture, source, published, preview, template, fieldMap, handoff, field, begin, completion, finish, get, check, save, expect, backup, restore });
+    if (process.argv.includes('--p16')) await require('./testHelpers/analysisIssueVerification')({ repo, lead, contact, pool, run, historical, payload, fixture, source, mapping, fieldMap, handoff, field, begin, completion, finish, get, check, save, expect, backup, restore, output });
+    if (process.argv.includes('--p17')) await require('./testHelpers/analysisTaskVerification')({ repo, lead, contact, pool, run, historical, payload, fixture, source, mapping, fieldMap, handoff, field, begin, completion, finish, get, check, save, expect, backup, restore, output });
+    if (process.argv.includes('--p15')) await require('./testHelpers/analysisWorkbenchVerification')({ repo, lead, pool, run, historical, fixture, source, mapping, fieldMap, handoff, get, check, save, backup, restore, output });
     await check('database unique keys, same-run references and pending-only findings block invalid direct writes', async () => {
       const a = historical.attempts[0], f = a.findings[0];
       await assert.rejects(pool.execute("INSERT INTO data_map_analysis_steps(run_id,step_key,status,attempt_no) VALUES (?,'read','queued',0)", [run.run_id]), e => e.code === 'ER_DUP_ENTRY');
@@ -244,7 +247,7 @@ async function main() {
       assert.deepEqual(await get(run), historical);
     });
     assert((await inspectAnalysisRuns(pool)).ready);
-    save('results.json', { passed: true, step: 'P09', checks, formal_environment: false, worker_started: false, human_acceptance: false });
+    save('results.json', { passed: true, step: process.argv.includes('--p17') ? 'P17' : process.argv.includes('--p16') ? 'P16' : process.argv.includes('--p15') ? 'P15' : 'P09', checks, formal_environment: false, worker_started: process.argv.includes('--p15') || process.argv.includes('--p16'), human_acceptance: false });
   }, { evidenceDir: output }); }
   finally { for (const [k, v] of Object.entries(oldFlags)) { if (v === undefined) delete process.env[k]; else process.env[k] = v; } }
 }

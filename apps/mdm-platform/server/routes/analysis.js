@@ -34,6 +34,19 @@ router.post('/runs/:id/cancel', requirePermission('governance:structure-gate'), 
   if (Object.hasOwn(q.body, 'run_id')) throw Object.assign(new Error(), { code: 'DEFINITION_ANALYSIS_PROPERTY_INVALID', statusCode: 400 });
   return r.cancelAnalysis(q.session, { ...q.body, run_id: q.params.id });
 }));
+router.get('/issue-targets', run((q, r) => r.analysisIssueTargets(q.session, q.query.after)));
+router.get('/issues/:issueId', run((q, r) => r.getAnalysisIssue(q.session, q.params.issueId)));
+router.get('/issues/:issueId/tasks', run((q, r) => r.getAnalysisIssueTasks(q.session, q.params.issueId)));
+router.post('/issues/:issueId/tasks', requirePermission('governance:assign-work'), run((q, r) => {
+  if (Object.hasOwn(q.body, 'issue_id')) throw Object.assign(new Error(), { code: 'DEFINITION_ANALYSIS_PROPERTY_INVALID', statusCode: 400 });
+  return r.dispatchAnalysisIssueTask(q.session, { ...q.body, issue_id: q.params.issueId });
+}));
+router.post('/issues/:issueId/review', run((q, r) => r.reviewAnalysisIssueTask(q.session, q.params.issueId)));
+router.get('/runs/:id/findings/:findingId/review', run((q, r) => r.getFindingReview(q.session, q.params.id, q.params.findingId)));
+router.post('/runs/:id/findings/:findingId/review', requirePermission('governance:structure-gate'), run((q, r) => {
+  if (Object.hasOwn(q.body, 'run_id') || Object.hasOwn(q.body, 'finding_id')) throw Object.assign(new Error(), { code: 'DEFINITION_ANALYSIS_PROPERTY_INVALID', statusCode: 400 });
+  return r.decideAnalysisFinding(q.session, { ...q.body, run_id: q.params.id, finding_id: q.params.findingId });
+}));
 router.get('/runs/:id/diff/:otherId', run((q, r) => r.compareAnalysisRuns(q.session, q.params.id, q.params.otherId)));
 router.get('/runs/:id/summary', run((q, r) => r.readAnalysis(q.session, q.params.id, 'summary')));
 router.get('/runs/:id/findings', run((q, r) => r.readAnalysis(q.session, q.params.id, 'findings', q.query)));

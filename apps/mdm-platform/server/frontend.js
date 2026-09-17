@@ -9,7 +9,7 @@ function frontendRouter(dist = path.resolve(__dirname, '../frontend/dist')) {
   router.use('/assets', express.static(path.join(dist, 'assets'), {
     dotfiles: 'deny', index: false, immutable: true, maxAge: '1y', fallthrough: true
   }));
-  router.get(['/', '/workbench', '/identity', '/template-import', '/objects', '/fact-checks', '/v7-mappings', '/design-handoffs'], (req, res, next) => {
+  router.get(['/', '/workbench', '/identity', '/template-import', '/objects', '/fact-checks', '/v7-mappings', '/design-handoffs', '/analysis'], (req, res, next) => {
     const index = path.join(dist, 'index.html');
     if (!fs.existsSync(index)) {
       return res.status(503).type('text').send('新入口尚未构建，请使用原入口。');
