@@ -341,3 +341,9 @@ npm run test:stage06-mysql-isolated
 - `npm.cmd run test:analysis-comparison-mysql -- --output <本批次下的新证据目录>`：复用P09隔离存储测试，并启用P13仓储验证。建立自有唯一标签、tmpfs及随机回环端口的MySQL和合成HTTP夹具，finally仅清理本次资源；不启动worker、浏览器或正式服务。输出P09回归results.json及P13的p13-results.json、p13-comparisons.json，包含历史保留、权限、完整性、并发与不修改正式问题/待办的核对。
 
 `server/analysisComparison.js`只接收已授权且已校验完整性的运行快照；生产调用方使用仓储compareAnalysisRuns，不直接接受客户端提交的快照。P13未开放HTTP对照接口。
+
+### P14分析HTTP验证
+
+`npm.cmd run test:analysis-api -- --output <同批次下不存在的新证据目录>`复用test-analysis-runs.js的P09存储夹具，增加testHelpers/analysisApiVerification.js。建立自有标签tmpfs MySQL、随机回环HTTP端口及合成身份；P14检查完成后恢复内存备份，再继续原P09回归。finally只清理本次MySQL及HTTP，不连接正式库，不启动worker、浏览器或3001，不发送通知或模型请求。
+
+验证来源选择/接收、创建入队原子性、并发幂等、409、取消及P09兼容、分层响应、当前来源范围变化、匿名/无权/失效身份、管理员多角色只读、ID越权、部分结果、差异、上传/JSON限额、CSRF、静态路径与导出范围。输出results.json、p14-results.json、p14-projections.json、p14-partial-and-diff.json及夹具日志。P13的HTTP未开放说明为历史状态；P14现已注册受限路由，正式开启和业务验收不能由测试代替。
