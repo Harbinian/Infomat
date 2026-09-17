@@ -413,6 +413,8 @@ function makeDataMapMysqlRepository(pool) {
   }
 
   return {
+    // Optional additive contract; legacy routes remain unchanged and no DDL runs.
+    definitions() { return require('./dataMapDefinitionRepository').makeDataMapDefinitionRepository(pool); },
     async initSchema() {
       for (const statement of splitSqlStatements(mdmMysqlSchemaSql())) {
         await pool.execute(statement);

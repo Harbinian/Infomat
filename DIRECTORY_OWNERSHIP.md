@@ -51,7 +51,8 @@ scripts/AGENTS.md
 | `apps/structured-output-service/` | 局域网单流程治理编制工具 | `package.json`、`server.js`、`public/`、`scripts/` | 默认监听`0.0.0.0:3001`供公司局域网用户直接访问；按 `docs/contracts/process-governance-v7.schema.json` 导出单流程未审核JSON并兼容导入v1至v7及历史多候选结构化JSON；页面内编辑会话区分未应用修改与未下载修改，并在切换、下载和替换前保护用户输入；可只读读取流程映射、花名册和 `docs/work-role-data.json` 做候选提示 | 不保存用户内容和图坐标，不写回 `docs/norms/`、花名册或工作角色真源，不调用3000，不依赖DeepSeek、MDM-AI助手或认证网关，不替代受控发布流程 |
 | `apps/information-collection-service/` | 内部信息表收集服务 | `package.json`、`server/`、`public/`、`scripts/`、`docs/` | 4000 管理端设计并发布收集任务，4001 填报端保存本人草稿和答卷；只读复用 `person`、`user_accounts`、`departments`，业务数据写入 `collection_*` 表，附件写入仓库外受控目录 | 不修改 MDM 身份、角色或治理业务表；不自动继承 3000 权限；不向浏览器持久化答案或附件 |
 | `apps/mdm-platform/server/` | MDM 后端实现 | Express 路由、当前MySQL运行schema与历史/测试SQLite兼容实现 | 修改时同步平台测试 | 不直接依赖 PMO 页面内嵌数据 |
-| `apps/mdm-platform/public/` | MDM 前端 | 单文件前端和静态资源 | 仅放平台运行所需前端资源 | 不放 PMO 驾驶舱截图 |
+| `apps/mdm-platform/public/` | MDM 旧前端及共享本地资产 | 既有页面和本地图形资源 | 保留未迁移模块及资源路径兼容 | 不放 PMO 驾驶舱截图 |
+| `apps/mdm-platform/frontend/` | MDM 新前端 | React + Vite 源码、独立锁文件及构建配置 | P01提供同源访问骨架；后续按模块迁移，dist为被忽略的公开构建产物 | 不共用 PMO 业务代码、配置或5173服务，不公开业务材料及服务端源码 |
 | `apps/mdm-platform/scripts/` | 平台内脚本和测试 | 平台数据库、平台路由 | 脚本应说明是否写数据库，测试应使用隔离库 | 不放仓库级 parser |
 | `apps/mdm-platform/data/` | 历史和测试用本地数据目录 | 历史/测试SQLite文件 | 只用于受控兼容验证或隔离测试，不作为正式运行入口 | 不作为仓库真源，不提交数据库，不替代当前MySQL运行配置 |
 

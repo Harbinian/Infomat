@@ -4,6 +4,61 @@
 
 # apps/mdm-platform/scripts 说明
 
+### P09 分析运行与证据存储
+
+在应用目录执行 `npm.cmd run test:analysis-runs -- --output <仓库artifacts内全新目录>`。输入为脚本内的合成身份、模板单元格、台账、V7 来源及设计关系，复用 Docker 已有 `mysql:8.4` 镜像和项目自有 tmpfs MySQL/随机回环 HTTP 夹具，不安装依赖、不读外部原件或私有配置。本步无需构建前端或打开浏览器；夹具仅为准备受支持的合成预览及发布版本而调用自有 HTTP，不开启分析 worker。
+
+输出包括迁移、固定输入、合成运行和证据、旧记录摘要、备份恢复以及最终结果 JSON。验证首次/重复/中断迁移、空表补偿、结构漂移、同事务回滚、唯一键/外键、三类来源、权限范围、重复请求、步骤重试、主动重跑、终态保护和历史引用。备份仅在内存使用，不将口令或 dump 写入证据目录；finally 按具体 ID 和唯一标签清理自有 HTTP/MySQL。
+
+`npm.cmd run migrate:analysis-runs -- --target <host:port/database>` 默认 dry-run；可显式选择 `--inspect`、`--dry-run` 或 `--apply`，三者互斥。维护入口复用 P02 的准确目标与显式环境变量校验，不加载 `.env`。只有 `--apply` 增加本步八表和迁移标记，无旧记录回填；补偿/恢复和 P10 工作进程边界见 [应用README](../README.md#分析运行与证据存储p09)。正式实例操作仍需另获授权。
+
+### P08 设计交接关系
+
+从应用目录执行 `npm.cmd run build:frontend`，再执行 `npm.cmd run test:design-handoffs -- --output <仓库artifacts内全新目录>`。输入为脚本内合成的两个相邻流程、对象与字段映射及身份；依赖现有Docker的mysql:8.4镜像、Playwright和Microsoft Edge。复用自有tmpfs MySQL、随机回环HTTP与明确空闲的浏览器控制端口，排除业务端口；不读私有配置、外部业务原件或正式数据。`--no-browser` 只验证后端，不能报告页面通过。
+
+检查覆盖三表首次/重复迁移、部分DDL、空增量补偿、结构漂移、维护CLI、组合标识、同名异身份、缺映射/部分来源、未确认目标、转换依据、目标必填字段、部门范围、管理员只读、幂等/并发、事务故障、不可变历史、字段修订影响、快照及引用完整性、内存备份恢复和数值分页。Edge检查实际填写/保存/确认、字段位置和焦点、证据与对象跳转、401重新登录、明确注入403/409/503/断网、取消切换/刷新/放弃及旧响应保护，并检查1699×828和390×844布局。输出 results.json、browser-results.json、PNG、migration.json、complete-design.json、field-impact.json、protected-records.json、backup-restore.json；失败记录保留。finally只关闭本次持有的Edge/HTTP资源并按容器ID和唯一标签清理自有库。
+
+`npm.cmd run migrate:design-handoffs -- --target <host:port/database>` 默认只读dry-run；显式 `--inspect`、`--dry-run`、`--apply` 互斥，使用与目标完全一致的 `MYSQL_HOST/PORT/USER/PASSWORD/DATABASE`。不读 `.env`，不连接默认库，无启动DDL。兼容、补偿和恢复条件见 [应用README](../README.md#设计交接关系p08)。正式实例迁移、开启及业务验收分别需要授权和证据。
+
+### P07 固定 V7 来源与映射
+
+先执行 `npm.cmd run build:frontend`，再执行 `npm.cmd run test:v7-mappings -- --output <仓库artifacts内全新目录>`。复用项目的自有 tmpfs MySQL、合成身份、随机回环 HTTP 和 Microsoft Edge；已有 Docker 镜像及 Playwright/Edge 必须可用，不安装新依赖。`--no-browser` 仅运行后端检查，不能据此宣称浏览器通过。测试在隔离库通过现有公开 API 准备预览与已发布 V7，P07 操作前后比较九张 V7/审核表摘要，证明映射不改写这些表；不操作真实 3000/3001、正式库或外部材料。
+
+测试覆盖失败来源登记、原始字节/内容摘要、同名对象分离、字段改名、数组重排、历史来源、父映射修订、重复/并发/事务失败、权限及管理员只读、部门卡口、来源变化、DDL 中断/漂移/补偿和内存备份恢复。Edge 检查来源登记、字段映射、证据定位、失败输入保护、实际401重登、注入403/409/503/断网、过期响应、1699×828及390×844布局。结果保存于指定目录的 results.json、browser-results.json、PNG、migration.json、v7-read-only-proof.json、backup-restore.json；失败时保留 failure.json/PNG。测试结束只关闭自有浏览器与 HTTP，并核对本次容器 ID/标签后清理。
+
+`npm.cmd run migrate:v7-mappings -- --target <host:port/database>` 默认 dry-run；可选 `--inspect`、`--dry-run`、`--apply`，要求既有 `MYSQL_HOST/PORT/USER/PASSWORD/DATABASE` 与目标一致。无 `.env` 加载、默认数据库连接或启动 DDL。兼容与恢复边界见 [应用 README](../README.md#固定-v7-来源与台账映射p07)。
+
+### P06 台账事实核对
+
+`npm.cmd run test:data-map-facts -- --output <仓库artifacts内全新目录>` 使用本地 Docker、已有 Playwright 和 Microsoft Edge，要求先执行 `npm.cmd run build:frontend`。复用 `withStage05Fixture` 的自有 tmpfs MySQL、合成账号和随机回环 HTTP；不读取私有配置或共享模板，不操作 3000、3001、5173、63805、正式数据库或实际权限。本步为测试夹具增加内存备份/恢复能力的传递，未改变旧调用方行为。
+
+测试覆盖迁移缺失拒绝、inspect/dry-run/显式apply CLI、重复迁移、部分DDL失败与空表补偿、结构漂移、请求幂等、事务故障、并发、越权和管理员只读，以及字段问题发起、缺证据、答复、修订、过期意见拒绝、重新核对和完成核对。完整数据库备份仅在内存中用于本次自有库恢复校验；不输出口令、不保存数据库dump。浏览器检查定向上下文、返回办理位置、输入保护、真实401重登、注入的403/409/503/断网、旧异步返回及1699×828/390×844视口。输出 results.json、迁移证据、完整合成办理历史、截图及失败记录；finally 只关闭本次持有的 Edge/HTTP 句柄和核对归属的容器。
+
+`npm.cmd run migrate:data-map-facts -- --target <host:port/database>` 默认 dry-run；显式 `--inspect`、`--dry-run`、`--apply` 三者互斥。使用现有 `MYSQL_HOST/PORT/USER/PASSWORD/DATABASE`，拒绝缺配置或目标不一致；不加载 `.env`，不自动连接默认库。apply 仅建两张增量表及迁移标记，不回填旧事实。具体兼容、补偿和业务边界见 [应用README](../README.md#台账事实核对p06)。正式迁移、真实人员体验和业务验收需分别取得证据。
+
+### P05 对象与字段管理真实链路
+
+`npm.cmd run test:data-map-management -- --output <仓库artifacts内全新目录>` 在已构建前端上验证对象新增、字段补充、保存修订、刷新读取、固定版本、单字段/组合标识、来源回查和停用影响。服务端覆盖权限与部门范围、多角色admin只读、CSRF、无删除入口、空值/枚举、父对象、幂等、事务回滚、并发及已审核状态拒绝；Edge覆盖当前面板唯一新增入口、焦点、中文长文、取消切换/返回/刷新/停用、真实401重登、显式注入的403/409/503/断网、旧响应和1699×828/390×844布局。
+
+前置为 `npm.cmd run build:frontend`、本地Docker、已安装的Playwright和Microsoft Edge。脚本复用withStage05Fixture，只创建本轮带唯一标签的tmpfs MySQL、合成身份及随机回环HTTP端口；不加载私有配置、不访问原模板或正式库、不操作业务端口。缺P02迁移先验证503，再显式迁移自有库。输出results.json、截图、失败记录和应用日志；finally关闭本轮浏览器、HTTP及按归属核对的容器。浏览器通过本轮BrowserServer句柄管理，退出等待有上限；超时只结束该句柄持有的实例，避免清理被浏览器退出阻塞。新实现对P02仓储的改动以 `test:data-map-definitions-mysql` 回归，模板消费方以 `test:master-data-template-import` 回归。测试不代表真实人员体验或业务验收。
+
+### P04 模板导入真实链路
+
+`npm.cmd run test:master-data-template-import -- --output <仓库artifacts内全新目录>` 验证同源上传预览、重新校验、管理员只读、部门范围、CSRF、重复/并发提交、显式新修订、孤立字段、409及部分写入失败回滚；用真实Edge从页面导入合成模板，再查询对象、字段和源单元格。输入保护覆盖取消返回/刷新/换文件、401重登、403/409/503/网络故障及旧异步响应；HTTP故障注入和真实后端失败分别记录。
+
+此入口先要求本地前端构建，复用已安装Playwright及Microsoft Edge，不下载浏览器；调用既有withStage05Fixture创建带唯一归属标签的tmpfs MySQL、合成账号和随机回环HTTP服务，应用账户只有数据读写权。隔离库显式应用P02迁移，缺迁移先验证503。故障测试只在自有库创建并删除本次触发器；finally关闭本次Edge/HTTP及容器，不读取私有配置、共享原件，不连接正式库或操作3000/3001/5173/63805。输出results.json、截图、应用日志；失败保留failure.json，重跑使用新的证据子目录。
+
+P02仓储事务复用的兼容回归仍为 `test:data-map-definitions-mysql`，P03纯解析仍为 `test:master-data-template`。本步接口、去重、旧数据及维护边界见[应用README的P04说明](../README.md#模板导入预览与确认p04)。人工中文输入法、真实人员体验及正式上线不在隔离测试结论内。
+
+### P03 指定主数据模板解析
+
+| 命令 | 输入与输出 | 副作用及执行条件 |
+|---|---|---|
+| `npm.cmd run preview:master-data-template -- --input <原件.xlsx> --output <artifacts内全新目录>` | 只读指定原件；输出完整JSON、中文Markdown预览和前后摘要 | 输出父目录必须存在且真实路径位于仓库artifacts内；不覆盖已有目录，不写原件、数据库或应用公开目录，不访问外链。退出0为无错误预览，2为有逐项错误的预览，1为命令或文件失败 |
+| `npm.cmd run test:master-data-template` | 内存生成的合成XLSX及恶意文件边界；Node测试报告 | 预加载blockRealMysql；不读取共享原件、私有配置或连接数据库，不启动服务、不发通知。CLI保护测试仅在本次独有artifacts目录创建合成结果并按准确路径清理 |
+
+解析器、限制、公式与来源兼容说明见[应用README的P03说明](../README.md#指定主数据模板只读解析p03)。此命令仅产生本地核对材料；HTTP身份、权限、来源登记和确认入库由P04接续，不能将退出0解释为业务入库或认定完成。
+
 办公室管理使用`migrate:offices:inspect|apply -- --target host:port/database`，要求显式MySQL配置。检查旧`org_unit`兼容性，只增加可空部门关系、`office_membership`、`mdm_todo_office_assignments`及迁移记录；不推断历史办公室归属、负责人或成员。应用与数据回退边界见[应用README](../README.md)。`test:offices`在本轮新建MySQL与真实HTTP中验证增量迁移、旧数据保留、手工发布、多办公室成员、负责人分配、办理人办结、重复请求、修订冲突及旧待办接口保护。`node scripts/test-offices.js --serve`保留该合成实例供浏览器验证；按回车或创建输出中的stopFile结束并清理本轮实例，不操作已有3000、3001或数据库。
 
 手工发布新增`migrate:publications:inspect|apply`，须显式传入MySQL环境变量和`--target host:port/database`。apply仅创建空的`mdm_publications`和迁移记录，拒绝同名异构表，不改写历史业务数据；应用回退可保留新增表及发布记录。`test:publications`在本轮新建的带归属标记MySQL容器中验证文件导入、目录更新、版本、并发、重复提交、权限和下载，结束后移除本轮容器，不访问已有数据库或私有配置。
@@ -13,6 +68,32 @@
 > 状态：应用内脚本导航  
 > 生效日期：2026-06-10  
 > 范围：只服务 `apps/mdm-platform/` 的数据库、路由、前端资产和流程治理承接测试。
+
+### P02 定义版本维护与隔离验证
+
+命令均从应用目录执行，不读取私有.env；正式目标不在一般开发执行授权内。
+
+| 命令 | 输入和输出 | 副作用及执行条件 |
+|---|---|---|
+| `npm.cmd run migrate:data-map-definitions:inspect -- --target host:port/database` | 显式MYSQL_HOST/PORT/DATABASE/USER/PASSWORD；返回结构漂移、待建表、首次捕获、旧路径变化和待人工处理清单 | 只读检查，连接参数必须齐备且目标完全匹配，不使用默认数据库 |
+| `npm.cmd run migrate:data-map-definitions:dry-run -- --target host:port/database` | 同inspect，使用相同检查逻辑 | 不执行DDL或数据写入；ready不代替changed/unresolved逐项核对 |
+| `npm.cmd run migrate:data-map-definitions:apply -- --target host:port/database` | 同一显式目标；返回迁移后检查结果 | 必须先核对dry-run和备份恢复；只补缺少的增量表、首版快照和迁移标记，结构漂移拒绝，原台账不改写 |
+| `npm.cmd run test:data-map-definitions-mysql -- --output <artifacts内全新JSON路径>` | 本机Docker、已有mysql:8.4镜像；生成19组检查结果、目标归属、前后清单及备份摘要 | 只创建带唯一标签的tmpfs MySQL及随机回环端口，合成身份/材料；不拉镜像，不启动3000/3001/5173，结束核对归属后清理本轮容器 |
+
+迁移模块不在启动链路注册。七张增量表、旧字段兼容、错误码及回退条件见[应用README的P02说明](../README.md#对象字段定义版本基础p02)。迁移创建人员未知时使用NULL和legacy来源，不虚构历史操作者；新增审查仍必须记录有效人员。重复apply不吸收旧接口后续改动、不清空unresolved。测试中的备份只在内存中使用，证据只保存SHA-256，不记录合成数据库口令。该测试不等于正式实例、HTTP业务链路或人工业务验收。
+
+### P01 独立前端入口
+
+以下命令从应用目录执行。仅覆盖工程骨架、身份和访问边界，不代表新业务模块或人工验收完成。
+
+| 命令 | 输入和输出 | 副作用及执行条件 |
+|---|---|---|
+| `npm.cmd run build:frontend` | frontend源码及独立lockfile；输出frontend/dist | 先在frontend执行npm ci；只生成公开JS/CSS/HTML，不读.env、不启动应用或连接数据库；构建纳入runtimeVersion摘要 |
+| `npm.cmd run dev:frontend` | 必须显式提供MDM_ISOLATED_BACKEND | 随机回环Vite端口，只代理明确的自有隔离后端；拒绝业务端口，无默认正式3000、无宽泛CORS；Ctrl+C关闭本进程 |
+| `npm.cmd run test:frontend-shell` | 请求客户端/开发边界测试及已生成dist | Node纯逻辑测试、临时回环HTTP路由和公开资产检查；不连接数据库；finally关闭本次监听 |
+| `npm.cmd run test:frontend-shell-browser -- --output <全新目录>` | artifacts内全新目录，拒绝覆盖已有目录 | 复用withStage05Fixture及freshMysql；本机Docker和已有mysql:8.4镜像、已安装Playwright与Edge；不拉镜像、不下载浏览器，不读取私有配置 |
+
+浏览器入口只在新建、唯一标记、tmpfs、随机回环端口的MySQL中初始化结构、合成账号和会话，通过真实HTTP验证新旧入口、CSRF、失效、退出及404边界；403/409/503和断网由浏览器明确注入，长名称/空角色是界面替身，不作为真实权限测试。补测真实Vite代理连接该隔离后端，保持前后端同源访问。检查1699×828和390×844、100%缩放、输入保护、焦点、控制台及横向溢出；截图和JSON写入指定目录，不保存密码、Cookie或会话令牌。最终关闭自有Edge/Vite/HTTP进程，按容器ID和标记核对后清理，不操作已有容器或正式服务。外部强制中断时按本轮精确资源归属核对，不批量清理。
 
 本目录脚本属于 MDM 平台应用内工具。跨 `docs/`、`pmo/` 和多个应用的仓库级脚本应放在仓库根 `scripts/`。
 

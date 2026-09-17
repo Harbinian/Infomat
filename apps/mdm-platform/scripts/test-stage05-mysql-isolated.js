@@ -18,7 +18,7 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function withStage05Fixture(action, options = {}) {
   const evidenceDir = options.evidenceDir || path.resolve(appRoot, '../../artifacts/mdm-3000-launch/stage05-20260910');
-  await withFreshMysql(async ({ pool, port, password, owner }) => {
+  await withFreshMysql(async ({ pool, port, password, owner, backup, restore }) => {
     const identity = require('../server/identityMysqlRepository').makeIdentityMysqlRepository(pool);
     await identity.initSchema();
     const design = require('../server/routes/processDesignMysql');
@@ -61,7 +61,7 @@ async function withStage05Fixture(action, options = {}) {
     await pool.execute("GRANT SELECT,INSERT,UPDATE,DELETE ON stage04_isolated.* TO 'stage05_runtime'@'%'");
     const server = http.createServer(); server.listen(0,'127.0.0.1'); await once(server,'listening');
     const appPort = server.address().port; await new Promise(resolve=>server.close(resolve));
-    assert.ok(![3000,3001,3306,3307,5173].includes(appPort));
+    assert.ok(![3000,3001,3306,3307,5173,63805].includes(appPort));
     const env = isolatedEnvironment({NODE_ENV:'test',HOST:'127.0.0.1',PORT:String(appPort),MDM_ACCESS_MODE:'http-local',MDM_SESSION_STORE:'mysql',
       MYSQL_HOST:'127.0.0.1',MYSQL_PORT:String(port),MYSQL_USER:'stage05_runtime',MYSQL_PASSWORD:password,MYSQL_DATABASE:'stage04_isolated',
       MDM_IDENTITY_READ_MODEL:'mysql',PROCESS_GOVERNANCE_READ_MODEL:'mysql',SESSION_SECRET:crypto.randomBytes(32).toString('hex'),
@@ -87,7 +87,7 @@ async function withStage05Fixture(action, options = {}) {
       }
       fs.mkdirSync(evidenceDir,{recursive:true});
       const fixture={baseURL,loginPassword,document,evidenceDir,actors:actors.map(([name])=>name)};
-      await action({pool,owner,fixture,expect,request});
+      await action({pool,owner,fixture,expect,request,backup,restore});
     } finally {
       if(child.exitCode===null){const ended=once(child,'exit');child.send('mdm:stop',()=>{});const timer=setTimeout(()=>child.kill(),17000);await ended;clearTimeout(timer);}
       // Only synthetic application logs; credentials/session cookies are never logged.
