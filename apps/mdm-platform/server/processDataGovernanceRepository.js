@@ -919,6 +919,7 @@ function makeProcessDataGovernanceRepository(pool) {
 }
 
 module.exports = {
+  readFixedPublishedVersion: getVersion,
   makeProcessDataGovernanceRepository,
   parseJson,
   publicDetail,

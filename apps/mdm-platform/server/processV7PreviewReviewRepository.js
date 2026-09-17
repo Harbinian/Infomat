@@ -1153,6 +1153,13 @@ function makeProcessV7PreviewReviewRepository(pool) {
   };
 }
 
-module.exports = {
-  makeProcessV7PreviewReviewRepository
-};
+// Read one immutable revision, including history, without replacing the current
+// case/review pointers. Callers must apply current identity and scope checks.
+async function readFixedPreviewRevision(executor, caseId, revisionId) {
+  return one(executor, `SELECT r.*, CAST(c.owning_department_id AS CHAR) scope_department_id,
+    d.name owning_department_name FROM process_v7_preview_revisions r
+    JOIN process_v7_preview_cases c ON c.id=r.case_id
+    LEFT JOIN departments d ON d.id=c.owning_department_id
+    WHERE r.case_id=? AND r.id=? FOR SHARE`, [caseId,revisionId]);
+}
+module.exports = { makeProcessV7PreviewReviewRepository, readFixedPreviewRevision };

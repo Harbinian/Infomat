@@ -24,7 +24,7 @@ async function withFreshMysql(action, { stage = '04' } = {}) {
     assert.equal(inspected.HostConfig.Tmpfs['/var/lib/mysql'],'rw,size=1073741824');
     const binding=inspected.NetworkSettings.Ports['3306/tcp'][0];
     assert.equal(binding.HostIp,'127.0.0.1');
-    const port=Number(binding.HostPort); assert.ok(![3000,3001,3306,3307,5173].includes(port));
+    const port=Number(binding.HostPort); assert.ok(![3000,3001,3306,3307,5173,63805].includes(port));
     pool=mysql.createPool({host:'127.0.0.1',port,user:'root',password,connectionLimit:4,connectTimeout:1000});
     let ready=false;
     for(let i=0;i<180;i++) {try {await pool.execute('SELECT 1');ready=true;break;}catch{await sleep(500);}}

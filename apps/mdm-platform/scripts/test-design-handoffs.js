@@ -1,0 +1,139 @@
+// P08 real owned MySQL/API/Edge verification. Synthetic materials and identities only.
+// --output must name a new directory under artifacts. --no-browser checks backend only.
+const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto'),assert=require('node:assert/strict');
+const {execFileSync}=require('node:child_process');
+const {withStage05Fixture}=require('./test-stage05-mysql-isolated');
+const {applyDefinitions}=require('../server/dataMapDefinitionMigration');
+const {applyV7Mappings}=require('../server/v7MappingMigration');
+const {applyDesignHandoffs,inspectDesignHandoffs}=require('../server/designHandoffMigration');
+const {makeDataMapDefinitionRepository}=require('../server/dataMapDefinitionRepository');
+const {isolatedEnvironment}=require('./testHelpers/isolatedProcess');
+const {digest}=require('../server/dataMapDefinitionValues');
+const arg=process.argv.indexOf('--output');assert(arg>=0&&process.argv[arg+1]);const output=path.resolve(process.argv[arg+1]);assert(output.startsWith(path.resolve(__dirname,'../../../artifacts')+path.sep)&&!fs.existsSync(output));fs.mkdirSync(output,{recursive:true});
+const root='/api/design-handoffs',defs='/api/data-map-definitions',uuid=()=>crypto.randomUUID(),checks=[];
+function runtime(){try{return require('playwright');}catch{return require(path.join(process.env.APPDATA,'npm/node_modules/@playwright/cli/node_modules/playwright'));}}
+async function check(name,fn){await fn();checks.push(name);console.log('PASS '+name);}
+const conversionChecks=()=>Object.fromEntries(['field','format','enum','unit','version'].map(k=>[k,{mode:'same',rule:'',basis:'合成对照表：'+k+' 两端一致；单位为件，枚举不适用。'}]));
+async function main(){await withStage05Fixture(async({pool,fixture,expect,request,backup,restore})=>{
+  const get=(p='',who='lead',status=200)=>expect(who,root+p,'GET',undefined,status);
+  const post=(body,who='lead',status=200)=>expect(who,root,'POST',body,status);
+  const save=b=>expect('contact',defs+'/save','POST',{request_id:uuid(),...b});
+  const repo=makeDataMapDefinitionRepository(pool),session={personId:82,accountId:182,authVersion:1};
+  let browserServer,browser,page,object,field,field2,other,a,b,c,record,full,changedField,different;
+  const pw=runtime();
+  const body=(definition,h=null,revision=0)=>({request_id:uuid(),handoff_id:h,expected_revision:revision,definition});
+  async function source(name,objectId,objectVid,fields,status='confirmed'){
+    const d=structuredClone(fixture.document);d.process.process_ref='process_'+Buffer.from(name).toString('hex');d.process.process_name='合成'+name+'流程';
+    d.data_objects=[{data_ref:'data_item',data_name:'同名合成对象',description:'本地设计验证对象',information_type:'business_conclusion',fields:fields.map((f,i)=>({field_ref:'field_'+i,field_name:'字段'+i,field_type:'文本',definition:'合成字段说明'})),behavior_links:[],source_relations:[],lifecycle:{applicability:'pending_confirmation',entry_state:{business_validity:'pending_confirmation',custody:'pending_confirmation',identifiability_applicability:'pending_confirmation',identifiability:'pending_confirmation'},routes:[],analysis:{analyzer_version:'',source_fingerprint:'',status:'not_analyzed'},decision_reason:'',decision_notes:''}}];
+    const s=await repo.registerV7Source(session,{request_id:uuid(),source_kind:'uploaded_material',original_name:'合成'+name+'.json'},Buffer.from(JSON.stringify(d)));
+    const meta=await repo.getV7Source(session,s.source_id);assert.equal(meta.validation_status,'valid',JSON.stringify(meta.validation));
+    const base={request_id:uuid(),source_digest:meta.content_digest,local_object_ref:'data_item',local_field_ref:null,object_version_id:objectVid,field_version_id:null,expected_revision:0,status,basis:'合成固定来源与台账人工对照'};
+    const om=await repo.saveV7Mapping(session,s.source_id,base),fm=[];for(const [i,f] of fields.entries())fm.push(await repo.saveV7Mapping(session,s.source_id,{...base,request_id:uuid(),local_field_ref:'field_'+i,field_version_id:f.version_id}));
+    return {...s,om,fm,base,objectId,document:d};
+  }
+  const snapshots=async()=>{const tables=['data_map_v7_sources','data_map_v7_mappings','data_map_v7_mapping_versions','data_map_definition_versions','process_v7_preview_cases','process_v7_preview_revisions','process_v7_preview_review_items','process_v7_preview_events','process_design_drafts','process_design_versions'];const result={};for(const t of tables)result[t]=digest((await pool.query('SELECT * FROM '+t))[0]);return result;};
+  try{
+    await check('no startup DDL; missing increment returns 503',async()=>{await get('','lead',503);assert.equal((await pool.execute("SELECT TABLE_NAME FROM information_schema.tables WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='data_map_design_handoffs'"))[0].length,0);});
+    const db=await pool.getConnection();try{await applyDefinitions(db);await applyV7Mappings(db);
+    object=await save({entity_type:'object',definition:{name:'同名合成对象',business_meaning:'用于相邻流程交接'}});
+    other=await save({entity_type:'object',definition:{name:'同名合成对象',business_meaning:'另外的独立业务身份'}});
+    field=await save({entity_type:'field',object_id:object.entity_id,object_version_id:object.version_id,definition:{name:'订单编号',business_meaning:'合成订单识别号',data_type:'text',required:true,enum_values:[]}});
+    field2=await save({entity_type:'field',object_id:object.entity_id,object_version_id:object.version_id,definition:{name:'行号',business_meaning:'合成订单行号',data_type:'text',required:true,enum_values:[]}});
+    a=await source('交付',object.entity_id,object.version_id,[field,field2]);b=await source('接收',object.entity_id,object.version_id,[field,field2]);c=await source('未核对',other.entity_id,other.version_id,[],'candidate');
+    changedField=await save({entity_type:'field',object_id:other.entity_id,object_version_id:other.version_id,definition:{name:'订单编号',data_type:'integer',enum_values:['甲','乙']}});
+      different=await source('异格式',other.entity_id,other.version_id,[changedField]);
+
+      const existingBeforeMigration=await snapshots();
+      await check('inspect, interrupted DDL, empty increment compensation, repeat migration and strict drift detection',async()=>{
+        const before=await inspectDesignHandoffs(db);assert.equal(before.missing.length,3);
+        await assert.rejects(applyDesignHandoffs({execute:(sql,args)=>{if(sql.startsWith('CREATE TABLE IF NOT EXISTS data_map_design_handoff_versions'))throw Error('SYNTHETIC_DDL_FAILURE');return db.execute(sql,args);},query:(...a)=>db.query(...a)}),/SYNTHETIC_DDL_FAILURE/);
+        assert.equal((await inspectDesignHandoffs(db)).missing.length,2);assert.equal(Number((await db.execute('SELECT COUNT(*) n FROM data_map_design_handoffs'))[0][0].n),0);await db.execute('DROP TABLE data_map_design_handoffs');
+        assert((await applyDesignHandoffs(db)).ready);assert((await applyDesignHandoffs(db)).ready);
+        await db.execute('ALTER TABLE data_map_design_handoffs ADD COLUMN synthetic_drift INT');assert((await inspectDesignHandoffs(db)).drift.length);await assert.rejects(applyDesignHandoffs(db),e=>e.code==='DEFINITION_HANDOFF_SCHEMA_DRIFT');await db.execute('ALTER TABLE data_map_design_handoffs DROP COLUMN synthetic_drift');
+        assert.deepEqual(await snapshots(),existingBeforeMigration);
+        fs.writeFileSync(path.join(output,'migration.json'),JSON.stringify({existing_records_preserved:true,existing_before:existingBeforeMigration,before,after:await inspectDesignHandoffs(db),interrupted_recovered:true,empty_compensation:true,drift_rejected:true},null,2));
+      });
+    }finally{db.release();}
+    await check('CLI explicit owned target inspect, default dry-run and apply',async()=>{const cfg=pool.pool.config.connectionConfig,env=isolatedEnvironment({MYSQL_HOST:cfg.host,MYSQL_PORT:String(cfg.port),MYSQL_USER:cfg.user,MYSQL_PASSWORD:cfg.password,MYSQL_DATABASE:cfg.database});for(const mode of ['--inspect',null,'--apply'])assert(JSON.parse(execFileSync(process.execPath,[path.join(__dirname,'manage-design-handoffs.js'),...(mode?[mode]:[]),'--target',cfg.host+':'+cfg.port+'/'+cfg.database],{env,encoding:'utf8',windowsHide:true,timeout:30000})).ready);});
+    full={title:'合成订单交付至接收',claim_status:'human_confirmed',source:{mapping_version_id:a.om.mapping_version_id,behavior_ref:'behavior_prepare',operations:['produce','modify','deliver']},target:{mapping_version_id:b.om.mapping_version_id,behavior_ref:'behavior_receive',operations:['receive','use']},identifier_kind:'composite',identity_rule:'订单编号与行号按相同顺序逐项相等；不能按名称识别。',identity_basis:'合成两端表单及编号规则第 1 节',delivery_condition:'订单与行号齐备后交付合成接收表。',reception_requirement:'按组合编号匹配并逐项检查字段后登记接收；此处未执行实际接收。',evidence:[{side:'source',locator:'合成交付登记表第 1 行',note:'交付字段和编号规则'},{side:'target',locator:'合成接收登记表第 1 行',note:'接收字段和编号核对要求'}],pairs:[0,1].map(i=>({source_mapping_version_id:a.fm[i].mapping_version_id,target_mapping_version_id:b.fm[i].mapping_version_id,identifier:true,checks:conversionChecks()}))};
+    const protectedBefore=await snapshots();
+    await check('explicit complete path stores fixed process/behavior/object/field identities and composite order',async()=>{record=await post(body(full));const r=await get('/'+record.handoff_id);assert.equal(r.effective_confirmed,true);assert.equal(r.source.process_ref,a.document.process.process_ref);assert.equal(r.target.behavior_ref,'behavior_receive');assert.equal(r.source.object_id,object.entity_id);assert.equal(r.pairs[0].source.field_id,field.entity_id);assert.equal(r.pairs[1].target.field_id,field2.entity_id);assert.equal(r.actor_person_id,'82');assert(r.created_at.endsWith('Z'));fs.writeFileSync(path.join(output,'complete-design.json'),JSON.stringify(r,null,2));});
+    await check('same name is not identity; target confirmation, absent mapping, partial source and unsupported fields are explicit',async()=>{
+      let d={...full,claim_status:'analysis_pending',target:{...full.target,mapping_version_id:c.om.mapping_version_id},pairs:[],identity_rule:null,identity_basis:null};
+      const r=await post(body(d)),detail=await get('/'+r.handoff_id);for(const code of ['OBJECT_IDENTITY_MISMATCH','MAPPING_UNCONFIRMED','FIELD_MAPPING_MISSING','IDENTIFIER_INCOMPLETE'])assert(detail.issues.some(i=>i.code===code));await post(body({...d,claim_status:'human_confirmed'}),'lead',409);
+      d={...full,target:null,pairs:[],evidence:full.evidence.filter(e=>e.side==='source'),claim_status:'material_declared'};const partial=await post(body(d));assert((await get('/'+partial.handoff_id)).issues.some(i=>i.code==='ENDPOINT_MISSING'));await post(body({...d,claim_status:'human_confirmed'}),'lead',409);
+      await post(body({...full,target:{...full.target,mapping_version_id:'999999'}}),'lead',404);await post(body({...full,target:{...full.target,behavior_ref:'wrong'}}),'lead',400);
+      await post(body({...full,pairs:[{...full.pairs[0],target_mapping_version_id:a.fm[0].mapping_version_id}]}),'lead',409);
+      await post(body({...full,officially_published:true}),'lead',400);
+    });
+    await check('unit, enum, format and version conversion needs explicit rule and evidence',async()=>{
+      for(const dim of ['unit','enum','format','version','field']){const d=structuredClone(full);d.pairs[0].checks[dim]={mode:'convert',rule:'明确两端差异及转换表达式',basis:''};await post(body(d),'lead',409);d.claim_status='analysis_pending';const r=await post(body(d));assert((await get('/'+r.handoff_id)).issues.some(i=>i.location==='pairs.0.'+dim));}
+      const d=structuredClone(full);d.pairs[0].checks.unit={mode:'convert',rule:'合成演练：来源千件乘以 1000 后写入目标件；不执行运算或同步。',basis:'合成单位对照规则第 2 节'};const r=await post(body(d));assert((await get('/'+r.handoff_id)).effective_confirmed);
+      await post(body({...full,identifier_kind:'single'}),'lead',409);
+      const omitted={...full,identifier_kind:'single',pairs:[full.pairs[0]]};await post(body(omitted),'lead',409);const omittedDraft=await post(body({...omitted,claim_status:'analysis_pending'}));assert((await get('/'+omittedDraft.handoff_id)).issues.some(i=>i.code==='TARGET_REQUIRED_FIELD_MISSING'));
+      const differentDef={...full,identifier_kind:'single',target:{...full.target,mapping_version_id:different.om.mapping_version_id},pairs:[{...full.pairs[0],target_mapping_version_id:different.fm[0].mapping_version_id}]};await post(body(differentDef),'lead',409);differentDef.claim_status='analysis_pending';const difference=await post(body(differentDef));assert((await get('/'+difference.handoff_id)).issues.some(i=>i.code==='CONVERSION_CONFLICT'));
+    });
+    await check('identity, CSRF, administrator multi-role, both endpoint scopes and list redaction',async()=>{
+      const anonymous=await pw.request.newContext({baseURL:fixture.baseURL});try{assert.equal((await anonymous.get(root)).status(),401);await anonymous.post('/api/org/login',{data:{loginName:'SYNTHETIC_lead',password:fixture.loginPassword}});assert.equal((await anonymous.post(root,{data:body(full)})).status(),403);}finally{await anonymous.dispose();}
+      await pool.execute("INSERT INTO person_roles(person_id,role_id,scope_type,authorization_basis,effective_from) SELECT 88,role_id,'global','P08 synthetic',CURRENT_DATE FROM roles WHERE role_code='mdm_lead'");assert.equal((await get('/capabilities','adminMulti')).can_write,false);await post(body(full),'adminMulti',403);await post(body(full),'contact',403);await get('/'+record.handoff_id,'outsider',403);assert.equal((await get('','outsider')).items.length,0);
+      await assert.rejects(repo.saveDesignHandoff({...session,authVersion:999},body(full)),e=>e.statusCode===401);
+      await pool.execute('UPDATE data_map_v7_sources SET scope_department_id=92 WHERE source_id=?',[b.source_id]);await get('/'+record.handoff_id,'contact',403);assert(!(await get('','contact')).items.some(r=>r.handoff_id===record.handoff_id));await pool.execute('UPDATE data_map_v7_sources SET scope_department_id=91 WHERE source_id=?',[b.source_id]);
+    });
+    await check('idempotency, optimistic concurrency, immutable revisions and transactional failure',async()=>{
+      const requestBody=body({...full,claim_status:'material_declared'},record.handoff_id,1);const r=await post(requestBody);assert.deepEqual(await post(requestBody),r);await post({...requestBody,definition:{...requestBody.definition,title:'different'}},'lead',409);
+      const concurrent=await Promise.all([1,2].map(()=>request('lead',root,'POST',body(full,record.handoff_id,2))));assert.deepEqual(concurrent.map(r=>r.status).sort(),[200,409]);
+      const before=await get('/'+record.handoff_id);await pool.query("CREATE TRIGGER p08_failure BEFORE INSERT ON data_map_design_handoff_refs FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='SYNTHETIC_HANDOFF_FAILURE'");await post(body(full,record.handoff_id,3),'lead',503);await pool.query('DROP TRIGGER p08_failure');assert.deepEqual(await get('/'+record.handoff_id),before);const history=await get('/'+record.handoff_id+'/history');assert.equal(history.items.length,3);assert.equal(history.items[2].handoff_version_id,record.handoff_version_id);
+    });
+    await check('backup restore validates immutable snapshots and indexed references',async()=>{
+      const before=await get('/'+record.handoff_id),dump=backup();await pool.execute("UPDATE data_map_design_handoff_versions SET snapshot_json=JSON_SET(snapshot_json,'$.title','SYNTHETIC_CORRUPTION') WHERE handoff_version_id=?",[before.handoff_version_id]);await get('/'+record.handoff_id,'lead',409);restore(dump);assert.deepEqual(await get('/'+record.handoff_id),before);
+      await pool.execute('DELETE FROM data_map_design_handoff_refs WHERE handoff_version_id=? LIMIT 1',[before.handoff_version_id]);await get('/'+record.handoff_id,'lead',409);restore(dump);assert.deepEqual(await get('/'+record.handoff_id),before);fs.writeFileSync(path.join(output,'backup-restore.json'),JSON.stringify({restored:true,sha256:crypto.createHash('sha256').update(dump).digest('hex'),backup_persisted:false}));
+    });
+    if(!process.argv.includes('--no-browser')){
+      const net=require('node:net');let port;for(let i=0;i<20;i++){const s=net.createServer(),p=crypto.randomInt(42000,49000);if(await new Promise(r=>{s.once('error',()=>r(false));s.listen(p,'127.0.0.1',()=>r(true));})){await new Promise(r=>s.close(r));port=p;break;}}assert(port);
+      browserServer=await pw.chromium.launchServer({channel:'msedge',headless:true,host:'127.0.0.1',port});browser=await pw.chromium.connect(browserServer.wsEndpoint());const context=await browser.newContext({viewport:{width:1699,height:828},deviceScaleFactor:1});page=await context.newPage();page.setDefaultTimeout(15000);
+      const pageErrors=[],consoleErrors=[];page.on('pageerror',e=>pageErrors.push(e.message));page.on('console',e=>{if(e.type()==='error')consoleErrors.push(e.text());});
+      const button=n=>page.getByRole('button',{name:n,exact:true}),label=n=>page.getByLabel(n,{exact:true}),idle=()=>page.waitForFunction(()=>!document.body.textContent.includes('正在处理设计交接…'));
+      const login=async()=>{await page.locator('#login-name').fill('SYNTHETIC_lead');await page.locator('#login-password').fill(fixture.loginPassword);await button('登录').click();await page.getByRole('heading',{name:'设计交接关系',exact:true}).waitFor();await idle();};
+      const dismiss=async fn=>{const d=page.waitForEvent('dialog'),a=fn();await(await d).dismiss();await a;};
+      const overflow=async()=>{assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);assert.equal(await page.evaluate(()=>visualViewport.scale),1);};
+      const shot=async name=>{await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:path.join(output,name),fullPage:true});};
+      let uiId;
+      await check('Edge creates one explicit adjacent-process path with field conversion controls and focus',async()=>{
+        await page.goto(fixture.baseURL+'/app/design-handoffs');await login();await button('新增设计交接关系').click();assert(await label('交接名称').evaluate(e=>e===document.activeElement));await label('交接名称').fill('页面合成订单设计交接');
+        for(const [name,s,behavior,operations] of [['来源',a,'behavior_prepare',['产生','修改','交付']],['目标',b,'behavior_receive',['使用','接收']]]){await label(name+'固定来源').selectOption(s.source_id);await idle();await label(name+'对象映射').selectOption(s.om.mapping_version_id);await label(name+'行为').selectOption(behavior);for(const operation of operations)await label(name+operation).check();}
+        await label('标识类型').selectOption('single');await label('两端标识对应规则').fill('页面合成：订单编号相等时视为同一业务对象。');await label('标识核对依据').fill('合成字段说明第 1 节');await button('新增当前交接字段对应').click();assert(await label('来源字段 1').evaluate(e=>e===document.activeElement));await label('来源字段 1').selectOption(a.fm[0].mapping_version_id);await label('目标字段 1').selectOption(b.fm[0].mapping_version_id);await label('标识字段 1').check();await page.getByText('字段、格式、枚举、单位和版本核对',{exact:true}).click();
+        for(const dim of ['字段含义','格式','枚举','单位','版本']){await label(dim+'对应 1').selectOption('same');await label(dim+'核对依据 1').fill('页面合成对照表：'+dim+' 一致。');}
+        await button('新增当前交接字段对应').click();await label('来源字段 2').selectOption(a.fm[1].mapping_version_id);await label('目标字段 2').selectOption(b.fm[1].mapping_version_id);await page.getByText('字段、格式、枚举、单位和版本核对',{exact:true}).nth(1).click();for(const dim of ['字段含义','格式','枚举','单位','版本']){await label(dim+'对应 2').selectOption('same');await label(dim+'核对依据 2').fill('页面合成对照表：'+dim+' 一致。');}
+        await label('交付条件').fill('编号填写完整，依合成表单交付。');await label('接收要求').fill('核验订单编号后登记接收。'+('中文长文显示核对。'.repeat(12)));
+        for(const side of ['来源','目标']){await label(side+'证据位置').fill('合成'+side+'表第 1 行');await label(side+'证据说明').fill('明确字段含义、编号及交接位置。');}
+        await label('单位核对依据 1').fill('');await button('人工确认设计关系').click();await idle();await page.getByRole('alert').filter({hasText:'对应尚缺明确核对依据'}).waitFor();assert.equal(await label('交接名称').inputValue(),'页面合成订单设计交接');await label('单位核对依据 1').fill('页面合成单位一致的核对依据。');
+        await dismiss(()=>page.getByRole('link',{name:'当前身份',exact:true}).click());await dismiss(()=>page.reload().catch(()=>{}));assert((await label('接收要求').inputValue()).startsWith('核验订单编号'));await overflow();await shot('edit-desktop.png');
+      });
+      await check('Edge 403/409/503/network, real 401 re-login and cancellation retain visible input',async()=>{
+        for(const status of [403,409,503]){await page.route('**'+root,r=>r.fulfill({status,contentType:'application/json',body:JSON.stringify({code:'SYNTHETIC_FAILURE'})}),{times:1});await button('保存设计关系').click();await idle();assert((await label('接收要求').inputValue()).startsWith('核验订单编号'));}
+        await page.route('**'+root,r=>r.abort(),{times:1});await button('保存设计关系').click();await idle();assert((await label('接收要求').inputValue()).startsWith('核验订单编号'));await dismiss(()=>button('取消本次输入').click());
+        await pool.execute('UPDATE user_accounts SET auth_version=auth_version+1 WHERE account_id=182');await button('保存设计关系').click();await page.getByRole('heading',{name:'请重新登录',exact:true}).waitFor();await login();assert((await label('接收要求').inputValue()).startsWith('核验订单编号'));await expect('lead','/api/org/login','POST',{loginName:'SYNTHETIC_lead',password:fixture.loginPassword});
+        await page.setViewportSize({width:390,height:844});await overflow();await shot('edit-mobile.png');await button('人工确认设计关系').click();await idle();uiId=new URL(page.url()).searchParams.get('handoff');assert(uiId);assert((await get('/'+uiId)).effective_confirmed);
+      });
+      await check('Edge history, source/field/object navigation, late response suppression and responsive rendering',async()=>{
+        await page.setViewportSize({width:1699,height:828});await button('查看交接历史').click();await idle();assert.equal(await page.getByRole('link',{name:'来源字段固定版本',exact:true}).first().getAttribute('href'),defs+'/version/'+field.version_id);await overflow();await shot('confirmed-desktop.png');await page.setViewportSize({width:390,height:844});await overflow();await shot('confirmed-mobile.png');
+        await page.getByRole('link',{name:'查看对象与版本',exact:true}).first().click();await page.getByRole('link',{name:'查看设计交接及修订影响',exact:true}).waitFor();await page.getByRole('link',{name:'查看设计交接及修订影响',exact:true}).click();await page.getByRole('heading',{name:'设计交接关系',exact:true}).waitFor();await idle();assert(new URL(page.url()).searchParams.get('entity_id')===object.entity_id);
+        let release;const gate=new Promise(r=>{release=r;});await page.route('**'+root+'/'+record.handoff_id,async route=>{const response=await route.fetch();await gate;await route.fulfill({response}).catch(()=>{});},{times:1});await page.locator('.handoff-choice').filter({hasText:'交接 '+record.handoff_id+' ·'}).click();await page.locator('.handoff-choice').filter({hasText:'交接 '+uiId+' ·'}).click();await idle();release();await page.unrouteAll({behavior:'wait'});assert(await page.getByRole('heading',{name:'页面合成订单设计交接',exact:true}).isVisible());assert.deepEqual(pageErrors,[]);assert.deepEqual(consoleErrors.filter(e=>!/Failed to load resource:.*(401|403|409|503|net::ERR_FAILED)/.test(e)),[]);
+      });
+      fs.writeFileSync(path.join(output,'browser-results.json'),JSON.stringify({browser:'Microsoft Edge',zoom:1,viewports:[[1699,828],[390,844]],pageErrors,consoleErrors,human_acceptance:false},null,2));
+    }
+    await check('field revisions list impacted relations while historical versions and original mappings remain fixed',async()=>{
+      const r=await get('/'+record.handoff_id),v=await save({entity_type:'field',entity_id:field.entity_id,expected_revision:1,object_id:object.entity_id,object_version_id:object.version_id,definition:{name:'修订后的订单编号'}});assert.equal(v.entity_id,field.entity_id);
+      const after=await get('/'+record.handoff_id);assert.equal(after.pairs[0].source.field_version_id,field.version_id);assert.equal(after.pairs[0].source.name,'订单编号');assert.equal(after.snapshot_digest,r.snapshot_digest);assert(after.issues.some(i=>i.code==='DEFINITION_VERSION_ADVANCED'));assert.equal(after.effective_confirmed,false);
+      const impact=await get('?entity_type=field&entity_id='+field.entity_id);assert(impact.items.some(i=>i.handoff_id===record.handoff_id));fs.writeFileSync(path.join(output,'field-impact.json'),JSON.stringify({new_version:v,items:impact.items.map(i=>({handoff_id:i.handoff_id,issues:i.issues})),old_snapshot_unchanged:true},null,2));
+      const activeSession={...session,authVersion:process.argv.includes('--no-browser')?1:2};await repo.saveV7Mapping(activeSession,a.source_id,{...a.base,request_id:uuid(),expected_revision:1});assert((await get('/'+record.handoff_id)).issues.some(i=>i.code==='MAPPING_REVISED'));assert.equal((await get('/'+record.handoff_id+'?version='+record.handoff_version_id)).source.mapping_version_id,a.om.mapping_version_id);
+    });
+    await check('relation creation does not change protected process or source records; pagination is stable',async()=>{
+      const protectedAfter=await snapshots();for(const table of Object.keys(protectedBefore).filter(t=>!['data_map_definition_versions','data_map_v7_mappings','data_map_v7_mapping_versions'].includes(t)))assert.equal(protectedAfter[table],protectedBefore[table]);fs.writeFileSync(path.join(output,'protected-records.json'),JSON.stringify({before:protectedBefore,after:protectedAfter,explicit_test_changes:['field definition revision','source object mapping revision']},null,2));
+      for(let i=0;i<52;i++)await repo.saveDesignHandoff({...session,authVersion:process.argv.includes('--no-browser')?1:2},body({...full,claim_status:'analysis_pending',title:'分页合成交接 '+i}));let after=null,ids=[];do{const r=await get(after?'?after='+after:'');ids.push(...r.items.map(x=>x.handoff_id));after=r.next;}while(after);assert.equal(new Set(ids).size,ids.length);assert.equal(ids.length,Number((await pool.execute('SELECT COUNT(*) n FROM data_map_design_handoffs'))[0][0].n));assert.deepEqual(ids,[...ids].sort((a,b)=>Number(a)-Number(b)));
+    });
+    fs.writeFileSync(path.join(output,'results.json'),JSON.stringify({passed:true,step:'P08',checks,formal_environment:false,human_acceptance:false},null,2));
+  }catch(e){if(page)await page.screenshot({path:path.join(output,'failure.png'),fullPage:true}).catch(()=>{});fs.writeFileSync(path.join(output,'failure.json'),JSON.stringify({message:e.message,checks},null,2));throw e;}
+  finally{async function bounded(p){let timer;try{return await Promise.race([p,new Promise((_,r)=>{timer=setTimeout(()=>r(Error('close timeout')),10000);})]);}finally{clearTimeout(timer);}}const cleanup={owned_browser_pid:browserServer?.process().pid||null};if(browser)await bounded(browser.close()).catch(()=>{});if(browserServer){try{await bounded(browserServer.close());cleanup.graceful=true;}catch{await bounded(browserServer.kill());cleanup.forced_owned_only=true;}assert(browserServer.process().exitCode!==null||browserServer.process().signalCode!==null);}fs.writeFileSync(path.join(output,'browser-cleanup.json'),JSON.stringify(cleanup));}
+},{evidenceDir:output});}
+main().catch(e=>{console.error(e);if(e.inspection)console.error(JSON.stringify(e.inspection));process.exitCode=1;});

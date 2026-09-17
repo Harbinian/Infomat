@@ -43,6 +43,7 @@ app.use((req, res, next) => {
   }
   next();
 });
+app.use('/app', require('./frontend').frontendRouter());
 app.use(express.static(path.join(__dirname, '../public')));
 app.use(express.json({ limit: '2mb' }));
 
@@ -80,6 +81,11 @@ registerRouteIfExists('/api/rbac', 'rbac');
 registerRouteIfExists('/api/governance', 'governance');
 registerRouteIfExists('/api/mappings', 'mappings');
 registerRouteIfExists('/api/data-map', 'dataMap');
+registerRouteIfExists('/api/master-data-template', 'masterDataTemplate');
+registerRouteIfExists('/api/data-map-definitions', 'dataMapDefinitions');
+registerRouteIfExists('/api/data-map-facts', 'dataMapFacts');
+registerRouteIfExists('/api/v7-mappings', 'v7Mappings');
+registerRouteIfExists('/api/design-handoffs', 'designHandoffs');
 registerRouteIfExists('/api/field-entries', 'fieldEntries');
 registerRouteIfExists('/api/field-identities', 'fieldIdentities');
 registerRouteIfExists('/api/todos', 'todos');

@@ -1,5 +1,77 @@
 # MDM 平台
 
+## 分析运行与证据存储（P09）
+
+P09 提供 MySQL 持久化基础，入口为定义仓储的 `createAnalysisRun`、`getAnalysisRun`、`beginAnalysisAttempt`、`completeAnalysisAttempt`、`finishAnalysisRun`。本步未挂载分析 HTTP 接口、页面或 worker。后续工作进程接入前，P10 必须补齐领取令牌、租约、心跳与过期提交隔离；当前仓储不能作为已有调度能力使用。
+
+运行固定输入引用、来源阶段、台账/映射/设计关系版本、检查范围、步骤输入及检查项、解析器和规则版本。输入支持 `v7_source`、`definition`、`mapping`、`handoff`、`template`，分别引用 P07 来源、P02 定义版本、P07 映射修订、P08 设计关系修订和 P02 模板批次。V7 正文仍由原固定来源保存，分析表仅保存引用和摘要元数据。原始字节摘要与内容摘要分别登记算法；模板单元格摘要使用 `sha256-template-cells-v1`，不冒充原件字节摘要。
+
+`queued/running/succeeded/partial/failed/cancelled` 是运行状态。计划步骤独立保存状态，每次尝试追加记录，保存已检查与未覆盖的检查项、错误码、操作者、开始及结束 UTC 时间。失败或部分完成后的重试保留旧尝试及发现；已成功步骤不能由重试覆盖。仅所有计划步骤成功时可结束为 `succeeded`；部分结果和未运行步骤仍明确可见。终态运行拒绝迟到写入；取消会结束仍在运行的尝试，保留此前结果。
+
+请求复用 P02 的人员、动作、UUID 和请求摘要幂等回执。同键同请求返回原结果，同键异请求返回冲突；新的 UUID 创建新的运行。主动重跑另带已结束的 `rerun_of_run_id`，输入仍须明确提供并重新核对；步骤重试只在同一未结束运行内增加 `attempt_no`。运行锁、`expected_revision`、回执与结果同事务提交，失败全部回滚。
+
+证据必须引用本运行及本步骤的固定输入，并给出 JSON Pointer 或文档锚点。JSON Pointer 实际检查能否定位；文档锚点标为 `declared_anchor`，只证明保存了声明，不证明原文已经核验。发现另存规则、主体输入引用、语义定位和对照算法版本；标题和数组下标不承担对照身份。每个运行/尝试有自己的发现实例，初始均为 `pending_verification`（待核实），`issue_id` 强制为空。缺少证据的发现可保存待核实，不能转为正式问题或关闭旧问题。P16 如接入既有问题库，须另外补齐有权确认和本字段约束的兼容迁移。
+
+仓储写入复用 `governance:structure-gate`，每次重新核对当前身份、管理员只读边界以及所有引用的读取范围。读取同样核对固定摘要及来源范围，依赖关闭或内容变化时返回明确错误，不把结果缺失解释为问题消失。`DEFINITION_ANALYSIS_*` 表示输入、覆盖范围、并发、状态、完整性及迁移错误，保留 P02/P07 的身份和引用错误。AI 只预留 provider、model、model_version、prompt_version、prompt_sha256、adapter_version，可为空；本步无模型调用或正式结论写入。
+
+迁移键 `2026-09-17-analysis-runs-v1`，增加八张 `data_map_analysis_*` 表，依赖 P02/P07/P08。`npm.cmd run migrate:analysis-runs -- --target <host:port/database>` 默认只读 dry-run；支持互斥 `--inspect`、`--dry-run`、`--apply`，要求明确且匹配的 `MYSQL_HOST/PORT/USER/PASSWORD/DATABASE`，不读 `.env`、不在启动时执行 DDL。无历史回填，不改原台账、V7、设计关系、正式问题、工作包或待办。
+
+正式执行前须另获授权并备份。MySQL DDL 中断后先 inspect，再续建缺失表；只可对本次创建且逐表确认为空的增量表按 `finding_evidence → finding_inputs → findings → evidence → attempts → steps → inputs → runs` 逆序补偿。已有记录时保留表，使用获准的完整备份恢复；旧代码回退可保留增量表。本步可复验入口和副作用见 [scripts/README.md](scripts/README.md#p09-分析运行与证据存储)。交付口径为本地实现和合成数据隔离验证，正式实例未迁移、未开启，业务尚未验收。
+
+## 设计交接关系（P08）
+
+`/app/design-handoffs` 用于维护相邻流程之间的一条设计交接。先在 P07 登记固定来源并明确对象、字段映射，再选择来源和目标流程行为，标明对象在各位置的产生、使用、修改、交付或接收用途。页面复用既有名称、人员角色描述和版本，不根据同名对象、行为顺序或部门名称自动连接或指派。对象和字段详情中的“查看设计交接及修订影响”可定位当前及历史修订引用。
+
+每条关系保存两端固定来源、流程与行为引用、对象和字段版本、映射修订、单字段或组合标识的有序对应、交付条件、接收要求、两端证据位置，以及字段含义、格式、枚举、单位和版本的核对说明。每个维度明确选择待核实、无需转换或需要转换，并保留依据；需要转换时还须记录转换规则。这里只保存规则，不执行转换或系统同步。
+
+`material_declared` 展示“材料声明”，`analysis_pending` 展示“分析待定”，`human_confirmed` 展示“人工确认”。前两种状态可保留缺一端来源、缺字段、未确认映射或缺转换依据的关系；至少有一端明确对象映射和行为。人工确认要求全部待核实项解决，包括目标必填字段、目标未映射字段、标识对应及两端来源有效性。此确认仅核对设计关系，不认定主数据、审核流程或证明实际接收。人员和时间由服务端记录，不接受上传内容冒充确认人。
+
+关系修订只追加版本和引用记录。台账字段修订、对象映射修订或来源变化不会改写旧关系；读取时重新计算待核实项，保留原确认记录并停止把旧关系展示为当前有效确认。部门或权限变化后重新校验两端及所有字段，列表省略无权关系，不显示其标题和数量；依赖暂不可用时显示部分结果，不能视为不存在关系。
+
+API 前缀 `/api/design-handoffs`：GET `capabilities`、`sources/:id`（选项上下文）、根清单、`:id`、`:id?version=<固定关系版本>`、`:id/history`；POST 根路径保存设计关系。清单可按 `entity_type=object|field&entity_id=<稳定ID>` 查询修订影响，`after` 数值分页每页50条，历史使用 `before` 每页50条。写入参数为 `request_id`、`handoff_id`（新建为NULL）、`expected_revision`（新建为0）和 `definition`。内部引用以固定 `mapping_version_id` 为准，稳定ID、名称和来源摘要由服务端反查。字段对应最多32组，证据最多32项；未声明属性拒绝。
+
+写入复用 `governance:structure-gate`、当前有效身份及两端台账/来源范围；管理员多角色仍只读。不增加角色、办公室关系或正式审批权限。修订、幂等回执及引用同事务写入，409不自动采用新版本或重放。`DEFINITION_HANDOFF_*` 表示输入、映射、未核实、版本完整性及迁移错误；保留 P02/P07 错误，400/401/403/404/409/503含义沿用既有合同，不暴露SQL或受限正文。页面只在内存保留输入，重新登录后复核两端范围，失败、取消离开和旧响应不会静默覆盖可见输入。
+
+迁移键 `2026-09-17-design-handoffs-v1`，新增 `data_map_design_handoffs`、`data_map_design_handoff_versions`、`data_map_design_handoff_refs`，依赖 P07。无启动DDL、旧数据回填或自动生成关系，不改旧V7、工作包、问题或待办状态。`npm.cmd run migrate:design-handoffs -- --target <host:port/database>` 默认 dry-run，支持互斥的 `--inspect`、`--dry-run`、`--apply`，要求明确目标环境变量，不加载 `.env`。正式执行须另获授权并备份；DDL中断先inspect再续建，仅本次新增且确认空表可按 refs、versions、handoffs 逆序补偿；有历史时保留增量表，采用获准备份恢复，不能清空重建。回退旧代码可以保留三表。
+
+可复验入口见 [scripts/README.md](scripts/README.md#p08-设计交接关系)。交付仅为本地实现及合成数据隔离技术验证，正式环境未迁移、未开启，真实业务交接和人工体验尚未验收。
+
+## 固定 V7 来源与台账映射（P07）
+
+新入口 `/app/v7-mappings` 用于登记固定来源、核对来源证据，并把 V7 局部对象和字段明确关联到 P05 台账固定版本。支持 `uploaded_material`（独立材料批次，版本1）、`preview_revision`（案例及修订 ID）和 `published_version`（包括被替代但曾发布的原生 V7 版本）。各类标识互斥；预览和材料的正式版本 ID 为空。引用预览、正式版本分别受既有功能开关及当前部门范围约束；登记不执行预览提升、正式发布或工作包创建。
+
+MDM 具备 `governance:structure-gate` 的人员可登记及核对映射，仓储重新验证有效身份、权限和来源/台账范围。管理员兼有其他角色仍只读。独立材料的访问范围固定为登记人的当前部门，仅是访问控制范围，不据此认定材料的业务归口。现有预览和发布来源按其归口部门或全局读取权限访问；本模块不扩大参与部门的既有最小上下文权限。
+
+使用时先登记来源，检查校验结果，选择一个局部对象或字段，再填写并读取台账版本 ID。页面展示精确名称、稳定 ID 和固定版本供人工核对；可从 P05 的版本历史取得版本 ID。`candidate` 展示为“映射建议待核实”，`confirmed` 仅表示人工已核对对应关系，均不授予主数据认定或流程发布状态。字段须绑定同一个固定对象版本，并引用该局部对象的映射修订；确认字段前须先确认对象映射。父映射改变后，字段原记录保留并显示需重新核对。未映射项保持待核实，同名、改名或数组顺序均不触发自动匹配。
+
+API 前缀 `/api/v7-mappings`：GET `capabilities`、`sources`、`sources/:id`、`sources/:id/evidence?object=<ref>&field=<ref>`、`sources/:id/mappings/:mappingId/history`；POST `uploads`（multipart 文件和请求 UUID）、`sources`（固定引用）、`sources/:id/mappings`（局部引用、对象/字段固定版本、状态、依据、来源摘要及 `expected_revision`，首次为0）。对象/字段稳定 ID 从版本反查，不能由客户端伪造。请求 UUID 绑定人员、动作、完整内容；同请求重试不产生新修订，内容不一致返回409。清单每页100条、历史每页50条；单个来源最多1000个对象与字段，原始上传上限4 MiB。
+
+原始上传字节仅在内存参与解析和 `sha256-raw-bytes` 摘要；不保存原文件副本。系统另保存解析内容快照及 `sha256-v7-stable-json-v1` 摘要，算法沿用 V7 稳定键序列化，数组顺序会影响完整内容摘要。已有预览/正式版本没有上传字节时，原始字节摘要明确为不可用。无效 UTF-8/JSON 记录 `parse_failed`，无效 V7 记录 `validation_failed`；两者没有可映射节点。共享纯校验器及有效部门卡口在确认时重算；`ACTOR_DEPARTMENT_UNRESOLVED` 不可由人工映射解除。来源摘要或父映射变化会阻止沿用确认，不改写原 V7、审核记录或台账历史版本。
+
+迁移新增 `data_map_v7_sources`、`data_map_v7_mappings`、`data_map_v7_mapping_versions`，无旧记录回填或状态转换。映射头、不可变修订、幂等回执同事务提交；P05 停用影响在新表存在时统计历史映射版本。`npm.cmd run migrate:v7-mappings -- --target <host:port/database>` 默认 dry-run，支持显式 `--inspect`、`--dry-run` 或 `--apply`，要求 P02 已迁移及准确目标环境变量，不读取 `.env`，应用启动不做 DDL。正式执行须另获授权并备份。DDL 中断后先 inspect 再续建；只有本次确认新增、为空且无引用的表才可人工按引用逆序补偿，有历史数据时保留并通过获准备份恢复。回退旧代码可保留增量表，不清空历史。
+
+错误码以 `DEFINITION_V7_*` 标识解析、固定引用、映射状态、父映射、来源摘要、修订、完整性及迁移问题；保留既有 `DEFINITION_*` 身份、台账和幂等错误。400 输入不合法，401 身份失效，403 无权，404 来源/定位不存在，409 版本、来源或状态冲突，413 超限，503 迁移、既有功能开关或依赖不可用。响应不返回 SQL、堆栈或受限材料。输入仅在页面内存保存；失败、取消切换及重新登录保留原输入和提交时版本，恢复身份后重新核对访问范围，409 不自动更新或重放。
+
+验证入口及输出见 [scripts/README.md](scripts/README.md#p07-固定-v7-来源与映射)。当前交付口径是本地实现和隔离验证，正式服务未开启，人工体验与业务验收另行确认。
+
+## 台账事实核对（P06）
+
+本地新入口 `/app/fact-checks` 承接对象、字段的定向事实问题。MDM 从对象或字段详情选择需要核对的内容，保存草稿、明确部门及可选人员后发出；目标部门具备编制权限的人员答复具体事实并提供文件、页码、表格或单元格等证据定位。缺少证据时须明确说明，MDM 可要求补充。台账修订继续使用 P05 的本部门编制权限，MDM 的结构核对权限不授予代写部门材料的能力。
+
+答复、重新核对及核对结论绑定对象和字段固定版本、内容摘要、选定范围、人员、时间、理由与证据。页面可定位台账并返回同一办理位置。相关内容变化后旧意见保留，但不能直接核对完成；MDM 明确查看新旧内容并重新发起后，业务人员须针对新内容再次答复。没有涉及选定范围的修改和枚举允许值重排不使意见自动失效；组合标识顺序不在本步可核对字段范围内。
+
+`checked` 只表示指定事实核对完成。当前来源、建议权威来源继续分别保存在定义中，核对依据保存在办理历史；新对象、字段正式认定的有权主体及审批依据仍待确认，最终治理结论保持空值。接口拒绝正式认定、关闭正式问题和发布动作，不信任上传材料中的审核状态。不新增正式问题库、办公室分配或通知，也不建立流程工作包。
+
+API 前缀为 `/api/data-map-facts`：GET `capabilities`、`targets`、根清单、`:id`；POST 根创建草稿、`:id/edit|send|answer|more_info|rebind|check`。创建需要 `subject_version_id`、`object_version_id`、白名单 `focus[]`、具体 `question`、目标部门及可空人员、请求 UUID；后续写入另需 `expected_revision`。发起和核对复用 `governance:structure-gate` 与来源范围；答复复用 `governance:draft-department`，核对当前目标部门及指定人员。admin 即使兼有这些权限仍只读。无权读取返回 404，跨部门收件人仅得到明确发出的固定内容，不得到整对象、原模板或未发出的草稿历史。
+
+新增 `data_map_fact_requests` 和 `data_map_fact_events` 两张表，保留 P02 对象、字段、定义版本、来源、ID及审查记录。请求当前状态和追加历史在同一事务写入，核对完成时同事务追加原 `data_map_definition_events.fact_checked`；并发、幂等及失败回滚复用现有仓储约束。清单及组织选择每页100条，历史每页50条，返回续读位置。没有旧记录回填或审批状态转换；P05 停用影响统计在新表存在时增加定向事实请求数量，无新迁移时原管理能力仍可用。
+
+迁移入口为 `npm.cmd run migrate:data-map-facts -- --target <host:port/database>`，默认只做 dry-run；可显式加 `--inspect` 或 `--apply`。要求显式提供既有 MySQL 环境变量及完全匹配的目标，且 P02 迁移已完成；不加载私有 `.env`，应用启动不执行 DDL。正式实例仍须另获授权并先备份。MySQL DDL 失败后先 inspect 再续建，不能假设整体回滚；仅对本次确认新增且为空、无后续引用的表考虑人工补偿，已有记录须保留并通过获准备份恢复。旧代码回退可保留新表，不删除历史。
+
+新增错误以 `DEFINITION_FACT_*` 区分目标缺失/无效、核对范围或证据缺失、状态/修订/来源/完整性冲突以及迁移缺失。400 表示输入问题，401 身份失效，403 无写权限或正式动作未开启，404 无可披露请求，409 并发、来源或状态冲突，503 迁移或依赖不可用；不返回 SQL、堆栈或受限原文。表单只在页面内存保留，失败或取消离开保留输入；重新登录后先核对身份和事项访问权限，409 不自动采用新修订或重放写入。
+
+验证命令为 `npm.cmd run test:data-map-facts -- --output <仓库artifacts内新目录>`，前置及证据说明见 [scripts/README.md](scripts/README.md)。这属于本地实现和隔离验证，不表示正式环境已开启或业务已验收。
+
 ## V7精简后的工作入口
 
 - **我的工作**：个人待办与办公室工作台。个人待办只汇总当前办公室分配、V7核对与正式流转、数据治理工作包及定向事实问题。
@@ -48,7 +120,7 @@
 
 ## 边界和入口
 
-`apps/mdm-platform/` 只负责 MDM 平台应用本身：Express 路由、MySQL 目标 schema、单文件前端、应用内脚本和平台使用说明。
+`apps/mdm-platform/` 只负责 MDM 平台应用本身：Express 路由、MySQL 目标 schema、新旧前端、应用内脚本和平台使用说明。
 
 不在本目录维护流程输入基线、PMO 驾驶舱或仓库级数据转换脚本：
 
@@ -256,10 +328,111 @@ $env:MDM_DB_PATH="$env:TEMP\mdm-platform-baseline.db"
 
 ## 技术栈
 
-- 前端：单文件 HTML（原生 JS + CSS，参考演示文件视觉风格）
+- 前端：目标为独立 `frontend/` 内的 React + Vite（JavaScript）；现有 `public/index.html` 保留，逐模块迁移并验证后再切换。
 - 后端：Express.js + MySQL（正式运行路径按 MySQL-only；遗留 SQLite 代码只作为测试隔离和待删除实现保留）
 - 认证：bcryptjs + express-session
 - 导入/导出：multer + exceljs
+
+### 2026-09-16 前后端分离合同（P00）
+
+P00冻结技术合同和维护边界；P01已实现独立前端及同源访问骨架，尚未迁移业务模块或部署。Express + MySQL 保留；前端负责交互和输入反馈，身份、权限、数据范围、版本、并发、审批及审计仍由后端独立执行。
+
+依据当前 `pmo/gantt-react/package-lock.json`，锁定 React/React DOM `19.2.6`、Vite `8.0.14`、`@vitejs/plugin-react` `6.0.2`。P01 使用精确版本并生成独立 lockfile，不复用 PMO 配置、业务代码或5173服务，不附加 UI、全局状态或第二套图形框架。当前 Node `25.2.1`、npm `11.6.2` 满足锁文件所列 Node `^20.19.0 || >=22.12.0` 约束；构建验证属于P01，这不是生产运行时升级决定。
+
+Express现按同源 `/app/` 提供 `frontend/dist/`；注册 `/app/`、`/app/workbench`、`/app/identity`、P04新增的 `/app/template-import` 和P05新增的 `/app/objects` 页面，未构建时返回503。旧入口与 `/api/` 保留原行为，共用现有会话、CSRF和身份 API；缺失资产、上传路径及未知页面返回404，不回退为前端首页。开发代理必须显式指定自有隔离后端，禁止默认指向正式3000。代码接入不代表正式服务已重启或开启新入口；迁移及切换由后续获准步骤执行。
+
+旧页保留本地 `public/echarts.min.js` 和既有引用；新前端可复用同源 `/echarts.min.js`，不使用CDN。构建目录只含公开前端资产，不含业务材料、用户数据、密钥及服务端源码。前端构建纳入运行源码摘要；`dist/`和`node_modules/`被忽略，不提交生成物。
+
+### 新前端构建与验证（P01）
+
+从应用目录执行 `npm.cmd --prefix frontend ci --ignore-scripts --no-audit --no-fund` 安装独立锁文件依赖，执行 `npm.cmd run build:frontend` 写入 `frontend/dist/`。构建不启动服务、不连接数据库，也不读取 `.env`。服务器部署仍须另有授权，不因构建自动启动或切换3000。
+
+`npm.cmd run test:frontend-shell` 验证请求/CSRF/错误处理、开发代理边界、构建公开文件清单和同源页面路由，使用临时回环HTTP服务，不连接数据库。真实隔离验证使用 `npm.cmd run test:frontend-shell-browser -- --output <artifacts内全新证据目录>`，条件和副作用见 [scripts/README.md](scripts/README.md)。
+
+开发时先启动属于本轮的隔离后端，再在同一个PowerShell终端设置 `$env:MDM_ISOLATED_BACKEND` 为该实例返回的完整 `http://127.0.0.1:<端口>`，执行 `npm.cmd run dev:frontend`。Vite默认随机回环端口，也可用 `npm.cmd --prefix frontend run dev -- --port <已核对空闲端口>`；开发后端和前端都拒绝3000、3001、3306、3307、5173、63805。配置只代理现有API、根入口及本地标志/图形资源，不开启宽泛CORS、不默认使用正式后端；开发服务没有启动业务数据库的能力。原页面的完整体验以同源Express构建入口为验证口径。
+
+新页面目前提供账号登录、当前身份、导航、加载/空/失败反馈及登录表单未提交输入保护。工作台按钮转到原有办理页面，不生成模拟待办，不改变既有权限/审批链。401重新登录，403核对权限，409重新核对，503显式重试；请求失败不自动重放写操作。账号要求修改密码时提示使用原入口。业务页面与其编辑保护须在所属后续步骤分别实现和验证。
+
+本次合同、功能基线和验证记录位于仓库下被忽略的 `artifacts/mdm-3000-upgrade-20260916/p00-20260916-120151/contract.md`、`execution.md` 和 `evidence/`，仅作为实现记录，不是业务真源。跨任务接续须提供该批次执行记录，不能只凭步骤“已完成”推进。
+
+### 对象、字段定义版本基础（P02）
+
+P02已实现仓储和显式迁移；P04接入模板导入HTTP及页面，P05接入对象与字段管理。正式数据库操作未执行。入口是现有 `makeDataMapMysqlRepository(pool).definitions()`，不由应用启动执行DDL。对象和字段继续使用 `data_map_objects.id`、`data_map_fields.id`；新增key采用随机UUID，不按名称合并。旧ID、key、台账记录、身份记录及系统关系在迁移中保持原样。
+
+增量结构由 `server/dataMapDefinitionSchema.js` 定义：不可变定义版本、当前指针、追加审查事件、来源文件元数据、单元格原值、模板编号映射和幂等请求，共七张表。版本含完整旧记录快照、独立内容摘要及快照摘要，字段绑定固定对象版本。单字段/组合标识引用同一对象固定版本下的字段版本；模板局部编号只在来源批次内有效。对象来源、字段来源、权威来源建议和治理结论分别保存。
+
+仓储提供 `saveDefinition`、`getCurrent`、`getVersion`、`recordReview`、`registerSource`、`addSourceMapping`、`getSource`。所有入口复核有效会话与读取范围；写入同时校验既有动作权限和当前部门。管理员含多角色仍不得写入。草稿保存复用 `governance:draft-department`；审查仅复用 `governance:structure-gate` 记录 `fact_checked` 或 `needs_more_info`，要求固定版本、修订号和依据。尚未确认的新正式认定/审批动作一律拒绝；不调用旧身份确认接口，不创建工作包、问题或待办，不调用AI。
+
+已有记录编辑必须传入 `expected_revision`，所有写入必须传入请求UUID。同操作者、动作和请求UUID的相同内容返回第一次结果；不同内容报 `DEFINITION_IDEMPOTENCY_CONFLICT`。版本与基础记录、当前指针、事件及请求结果在一个事务中写入；历史版本无修改/删除入口，读取时校验内容摘要。字段仅允许编辑draft，inactive/archived对象拒绝新编辑。源记录被旧路径改动时返回 `DEFINITION_LEGACY_SOURCE_CHANGED`，重复迁移只报告差异，不覆盖旧版本；需要后续明确核对、吸收变更，不能用重跑迁移绕过。
+
+新增仓储的BIGINT为十进制字符串，时间为UTC ISO-8601；原接口类型保持兼容。必填性和枚举允许值以新定义中的 `required: boolean|null`、`enum_values: array|null` 表达；NULL表示未知，[]表示明确无项。可对应的名称、含义、类型、格式、长度和枚举同步原台账列；明确布尔必填性同步nullable。旧nullable不支持NULL，未知时保留兼容值，不能据此认定新定义已补齐。旧默认confidence/confirmed及无法解释的枚举原文只保存在原值快照，不转成确认事实。legacy版本的创建时间为实际捕获时间，创建人员为NULL，明确表示历史操作者未知；新手工版本与审查人员取当前有效身份。
+
+来源登记保存原始字节SHA-256及长度；没有原始字节时标记 `unavailable`，不以重序列化内容替代。文件内容摘要和定义内容摘要分开。来源原值保持类型、工作表和单元格定位；公式文本/缓存只作为JSON保存。P02不解析文件、不执行公式、不保存原件文件副本；P03的只读解析说明见下文。来源仅登记时，旧导入批次标为partial，不能当作业务导入成功。
+
+维护者应先获目标授权并准备可恢复备份，显式提供五个MySQL环境变量和完全匹配的 `--target host:port/database`，依次运行 `migrate:data-map-definitions:inspect`、`migrate:data-map-definitions:dry-run`；核对drift、missing、backfill、changed和unresolved后才执行apply。脚本不加载私有配置，没有默认目标；结构、约束、引擎或排序规则不兼容即拒绝。ready仅表示结构和首次捕获已就绪，changed/unresolved仍须逐项处理。缺对象归属或归口部门的旧记录保留并列清单，不创建通用对象或推断归属。
+
+MySQL DDL分表提交，失败后保留已建表，重跑先核对结构再补齐；旧数据捕获及迁移标记在独立事务内完成。代码回退可停止使用definitions入口并保留所有增量表，旧读取继续工作。数据补偿仅能在核对本次新增表为空且无引用后，按反向依赖顺序处理；已有版本或来源数据时应保留或按获准备份恢复，不提供无条件清表入口。本次隔离测试分别验证了空表补偿、保留增量表的旧代码路径及整库备份恢复；正式实例仍须单独预检和恢复演练。命令和隔离条件见 [scripts/README.md](scripts/README.md)。
+
+### 指定主数据模板只读解析（P03）
+
+`server/masterDataTemplate.js` 使用现有ExcelJS解析 `INF-MDM-DAT-00001` 的“主数据清单”，返回对象、字段、原列、逐单元格来源和逐项问题。模板结构、允许选项和示例识别来自本次指定原件，记录在 `masterDataTemplateProfile.json`；该文件只定义解析规则，不提供业务归属或主数据认定。按表头定位区段，允许增行和列顺序变化；未知列、缺列和无法识别的表外记录保留原值并报错。原模板旧部门列表只提示核对，不限制当前有效组织。
+
+解析结果固定 `preview_only=true`、`persisted=false`，来源批次及平台对象/版本ID均为NULL。源摘要使用原始上传字节SHA-256，原值、规范化值和单元格位置分开保存；日期保留原类型和ISO值，纯零占位数字格式保留前导零，无法无损解释的代码要求人工修正。富文本、超链接和Excel错误保留原始结构，超链接不访问。公式只保存文本、共享公式引用及缓存；业务必填公式没有有效缓存时报错，派生检查公式仅提示，任何缓存均不代替独立校验。
+
+示例须匹配已核对的完整示例内容；修改过的示例作为待核对记录保留。局部编号和派生公式构成的预留行不计业务数量。字段只通过明确局部编号关联，重复编号、孤立字段、必填缺项、非法选项、标识冲突、待定事项缺少闭环信息和实例待脱敏均有错误定位。同名对象不合并；组合标识保留候选字段，但模板缺少组号及顺序，后续必须显式核对。模板“枚举”格式不提供该字段业务允许值，仍为NULL。明显联系方式或身份号码即使声称已脱敏，也要求人工复核；规则未检出不代表数据已安全。
+
+命令 `npm.cmd run preview:master-data-template -- --input <原件.xlsx> --output <仓库artifacts内全新目录>` 只读原件，核对前后摘要后生成 `preview.json`、`preview.md` 和 `source-integrity.json`。JSON含本地核对所需原值，应按源材料权限保管；Markdown不展示字段实例值。输出父目录必须已存在，已有结果不覆盖。退出0表示得到无错误预览（也可能为空模板），退出2表示已生成含校验错误的预览，退出1表示文件或命令失败。预览成功不表示已导入或具备提交权限。
+
+限制为5MB原文件、32MB实际解压内容、1000个ZIP条目、8个工作表、每表5000行/64列、全簿100000个非空单元格、每个原值JSON不超过16KB。超限拒绝而非截断。宏、外部工作簿链接、嵌入内容及XML实体声明拒绝；不执行宏、公式重算或外链读取。`TEMPLATE_*`错误码定位解析及校验问题，400为无效输入，413为超限。规则变化阻止通过校验；版本文字差异保留预览并提示核对，不按单一文件摘要拒绝全部新版材料。
+
+P03解析器自身没有HTTP入口、台账写入或迁移；P04通过下述独立适配层接入。确认时重新用原始字节校验，在现有身份/部门范围内导入，不能直接信任预览JSON或将其视为正式结论。运行 `npm.cmd run test:master-data-template` 验证合成工作簿及文件边界，不连接数据库或启动服务。
+
+### 模板导入预览与确认（P04）
+
+新前端 `/app/template-import` 提供选择文件、检查对象/字段/逐单元格来源、返回源文件修正、明确确认导入和重新查询结果。记录默认新建独立实体；如需修订已有记录，逐条选择“明确关联已有对象/字段的新修订”，填写已有台账的平台编号并核对名称和修订号，然后重新检查。关联字段必须属于该次明确关联的对象。文件编号如OBJ-001不用于平台身份匹配，同名和相同内容不自动覆盖已有台账。
+
+新增同源API位于 `/api/master-data-template`：
+
+| 方法与路径 | 输入及结果 |
+|---|---|
+| GET `/capabilities` | 服务端校验有效身份、当前部门及 `governance:draft-department`；admin即使兼具编制角色也拒绝 |
+| POST `/preview` | multipart中仅一个file和一个options JSON；options含links数组，返回P03预览、归口部门、规范关联及preview_digest；不写业务数据 |
+| POST `/confirm` | 同一原始文件、links、preview_digest、客户端UUID request_id及明确的confirm=true；服务端重新解析，成功返回batch_id、稳定实体/版本映射及pending_verification |
+| GET `/source/:id` | 按批次部门权限重新读取文件摘要、源单元格原值与局部编号映射 |
+| GET `/definition/:type/:id`、`/version/:id` | 按既有读权限及范围返回当前或固定定义版本；type仅object/field |
+
+links每项为 `{record_type, source_row, entity_id, expected_revision}`，只包含明确修订的行；没有该行关联即新建。预览摘要绑定原字节、解析器/模板版本、身份、部门和关联，用于检查预览与确认的一致性，不替代后端权限或校验。变化后必须重新检查，409不自动套用新版本。写入复用现有会话和CSRF，不读取私有配置、不使用客户端提供的部门或定义JSON决定事实。
+
+整批确认在一个MySQL事务中复用P02保存与校验：登记来源、新建本次导入上下文、保存对象/字段及定义版本、原值映射、事件、请求幂等及回执；任何失败整批回滚。原始字节SHA-256、解析器/模板版本和当前部门共同去重。同请求同内容返回原结果，不同内容返回409；不同请求命中已完成同批次时返回原批次，不重复建档；同一文件配另一关联方案返回TEMPLATE_BATCH_PLAN_CONFLICT。只有P02来源登记而未完成导入的批次返回TEMPLATE_SOURCE_INCOMPLETE，不猜测补全。文件内容变化创建新来源批次，只有明确关联的实体增加版本。
+
+P04无DDL、角色、权限项或正式审批链变更。复用P02七张增量表；未关联旧对象、旧字段、空归属字段及历史版本保持原样。显式修订保留原ID、key、既有上下文和历史版本；旧路径读写兼容，旧基础记录被其他入口改动时继续返回DEFINITION_LEGACY_SOURCE_CHANGED。定义版本物理source_kind仍使用P02的manual，表示用户明确保存；实际模板来源写在definition.source和来源表中，不冒充无来源手工事实。导入追加definition_saved事件，不追加事实核对或正式认定；主数据、权威来源、组合标识和治理结论不自动确认，也不创建正式流程工作包、问题或待办。
+
+上传仅在内存解析，不保存原件文件副本；数据库保留可追溯原值。P03的5MB文件、ZIP解压及单元格限制继续生效，另校验台账名称/字段长度及64KB定义上限，拒绝截断。错误包络为 `{error,code,field_errors?}`，沿用DEFINITION_*及TEMPLATE_*，401为失效身份、403为无权、409为预览/版本/幂等/批次冲突、413为超限、503为迁移或依赖不可用。错误不返回SQL或堆栈。
+
+文件和关联仅在当前页面内存保留；取消更换、取消返回/刷新、请求失败均保留输入，明确更换才应用新文件。401后保留字节但废止预览，重新登录后须重新检查；换身份时隐藏上一身份材料并要求明确放弃或回到原身份。浏览器检查使用Edge100%、1699×828及390×844；`npm.cmd run test:master-data-template-import -- --output <artifacts内全新目录>` 使用自有隔离MySQL、合成身份和真实HTTP/Edge，结束清理本次资源。代码及隔离通过不表示正式3000已开启或人工业务已验收。
+
+### 对象与字段管理（P05）
+
+`/app/objects` 提供对象清单、对象详情、字段明细、保存修订、版本回查及停用确认。模板导入回执可跳转到对应对象。对象信息按“对象是什么、从哪里来、谁维护、怎样使用、规则与待确认事项”分组；模板原始列值仍可从源单元格回查。来源补充与原模板定位分别保存，不改写原件或覆盖来源批次。维护部门、岗位、建议权威来源和待确认主体均是待核实说明，不因此改变组织归属、账号权限或治理结论。
+
+新增对象归属当前有效部门，不由客户端选定其他部门。新增字段直接引用明确父对象的稳定ID和当前固定版本；服务端首次为该对象建立 `manual` 字段维护上下文，事务失败时一起回滚。修订旧字段保留其原上下文、父对象、稳定ID和历史版本。字段来源独立填写，必填支持待确认/必填/非必填；枚举NULL与空数组分别表示未知和明确无项。单字段标识与组合标识由用户明确选取字段固定版本；组合成员的顺序和组ID保持，不从名称或模板行序推断。
+
+新增同源API前缀为 `/api/data-map-definitions`：
+
+| 方法与路径 | 行为与门槛 |
+|---|---|
+| GET `/capabilities`、`/objects?search=&after=` | 返回当前编制资格、表单说明和授权对象清单；每页100条，next明确指向后续页 |
+| GET `/detail/:type/:id?after=` | 当前定义及所属字段；字段按其原上下文范围过滤，每页100条。旧基础记录变化或缺定义版本时拒绝，不自动补快照 |
+| GET `/history/:type/:id?before=`、`/version/:id`、`/source/:id` | 分页版本索引、不可变历史快照、来源批次和源单元格；仍由服务端验证读取范围 |
+| POST `/save` | entity_type、definition补丁、request_id；修订另含entity_id和expected_revision；字段另含object_id和object_version_id。新增部门和上下文由服务端决定。嵌套补丁保留其他已知值和原始来源定位 |
+| GET `/impact/:type/:id` | 返回当前修订、相关引用数量和impact_digest；不改变数据 |
+| POST `/retire/:type/:id` | request_id、expected_revision、impact_digest、confirm=true及非空reason；锁定后重算影响，变化返回409，确认后追加版本和definition_saved审计事件 |
+
+写入继续要求 `governance:draft-department`、有效身份、本部门范围、CSRF、状态和并发检查；admin即使兼具编制角色仍只读。可修订和停用的对象状态为draft/active，字段仅draft；已提交、确认或冲突字段沿用原办理流程。本页不授予正式确认、撤销审核或发布权限。错误包络沿用 `{error,code}`；新增DEFINITION_PARENT_INACTIVE、DEFINITION_PROPERTY_INVALID、DEFINITION_RETIRE_CONFIRM_REQUIRED、DEFINITION_IMPACT_CHANGED，其他错误复用既有DEFINITION_*。401/403/409/503分别表示身份、权限、冲突和依赖问题，不回传SQL或堆栈。
+
+对象停用使用既有inactive，字段停用使用既有archived；不增加DDL或状态枚举。停用保留全部记录、审查事件、来源和固定引用，不级联改写字段；停用对象下禁止新增或修订字段，原有字段仍可查阅。影响清单覆盖现有字段、固定定义引用、标识组、系统关系、冲突、质量问题、来源映射和事实核对记录；后续新增引用模块时须同步扩展。无删除、重建或自动恢复入口。既有P02迁移和恢复边界保持，旧字段缺父对象等不能自动推断的记录继续保留原读取方式并等待明确处理。
+
+输入仅保存在页面内存。保存失败、取消离开/刷新/切换/停用均保留输入；401后同身份重登可继续，身份或部门变化时隐藏旧输入。409不自动覆盖新版，用户先保留修改，再重新读取核对。请求UUID在未改内容的重试中复用；输入变化产生新UUID。版本选择和对象切换废止旧异步响应，不持久化表单或身份数据。运行 `npm.cmd run test:data-map-management -- --output <artifacts内全新目录>` 做隔离MySQL、真实API及Edge验证；正式开启、人工输入法体验及业务验收仍需独立完成。
 
 ## 常用命令
 
