@@ -74,12 +74,12 @@
       order: 3,
       role: '编制人',
       action: '根据核对意见修改唯一草稿，重新执行技术检查，并下载最终待核对文件。',
-      handoff: '最终待核对v7文件'
+      handoff: '最终待核对v8文件'
     }),
     Object.freeze({
       order: 4,
       role: 'MDM工作组',
-      action: '核对结构错误、待定项、文件名和SHA-256，接收v7文件及JSON之外的核对记录。',
+      action: '核对结构错误、待定项、文件名和SHA-256，接收v8文件及JSON之外的核对记录。',
       handoff: '受控接收；暂不导入3000'
     })
   ]);

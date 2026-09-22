@@ -929,7 +929,7 @@ async submitDraft(draft, note, actorUserId, options = {}) {
             });
           }
           return await transactionRepository.submitDraft(
-            { id: locator.draftId, schema_version: 'process-governance-v7' },
+            { id: locator.draftId, schema_version: storedDraft.schema_version },
             note,
             actorUserId,
             {
@@ -1101,7 +1101,7 @@ async publishDraft(draft, note, actorUserId, options = {}) {
             });
           }
           return await transactionRepository.publishDraft(
-            { id: locator.draftId, schema_version: 'process-governance-v7' },
+            { id: locator.draftId, schema_version: storedDraft.schema_version },
             note,
             actorUserId,
             {

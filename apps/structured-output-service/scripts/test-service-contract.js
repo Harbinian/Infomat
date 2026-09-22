@@ -34,7 +34,7 @@ const processV3SchemaPath = path.join(repoRoot, 'docs', 'contracts', 'process-go
 const processV4SchemaPath = path.join(repoRoot, 'docs', 'contracts', 'process-governance-v4.schema.json');
 const processSchemaPath = path.join(repoRoot, 'docs', 'contracts', 'process-governance-v5.schema.json');
 const processV6SchemaPath = path.join(repoRoot, 'docs', 'contracts', 'process-governance-v6.schema.json');
-const processV7SchemaPath = path.join(repoRoot, 'docs', 'contracts', 'process-governance-v7.schema.json');
+const processV7SchemaPath = path.join(repoRoot, 'docs', 'contracts', 'process-governance-v8.schema.json');
 const legacySchemaPath = path.join(repoRoot, 'docs', 'contracts', 'document-structured-output.schema.json');
 const Migration = require(path.join(appRoot, 'public', 'process-governance-migration.js'));
 const { buildGraphModel } = require(processDiagramPath);
@@ -487,8 +487,8 @@ async function testApi() {
     const health = await getJson(baseUrl, '/api/health');
     assert.equal(health.response.status, 200);
     assert.equal(health.body.status, 'ok');
-    assert.equal(health.body.schema_version, 'process-governance-v7');
-    assert.equal(health.body.release_status, 'released');
+    assert.equal(health.body.schema_version, 'process-governance-v8');
+    assert.equal(health.body.release_status, 'candidate');
     assert.equal(Object.prototype.hasOwnProperty.call(health.body, 'deepseek'), false);
 
     const retiredTabulatorScript = await fetch(`${baseUrl}/vendor/tabulator.min.js`);
@@ -507,7 +507,7 @@ async function testApi() {
     assert.match(await editSessionManagerAsset.text(), /mergeAllowedPatch/);
 
     const schema = await getJson(baseUrl, '/api/schema');
-    assert.equal(schema.body.properties.schema_version.const, 'process-governance-v7');
+    assert.equal(schema.body.properties.schema_version.const, 'process-governance-v8');
     assert.equal(Object.prototype.hasOwnProperty.call(schema.body.properties, 'cross_department_handoffs'), false);
     const behaviorSchema = schema.body.$defs.behavior;
     assert.deepEqual(behaviorSchema.properties.actor_assignment_mode.enum, [
@@ -552,12 +552,12 @@ async function testApi() {
     const versionHistory = await getJson(baseUrl, '/api/version-history');
     assert.equal(versionHistory.response.status, 200);
     assert.equal(versionHistory.response.headers.get('cache-control'), 'no-store');
-    assert.equal(versionHistory.body.current_version, 'process-governance-v7');
-    assert.equal(versionHistory.body.current_status, 'released');
-    assert.equal(versionHistory.body.versions.at(-1).status, 'released');
-    assert.equal(versionHistory.body.versions.at(-1).released_on, '2026-08-21');
+    assert.equal(versionHistory.body.current_version, 'process-governance-v8');
+    assert.equal(versionHistory.body.current_status, 'candidate');
+    assert.equal(versionHistory.body.versions.at(-1).status, 'candidate');
+    assert.equal(versionHistory.body.versions.at(-1).candidate_on, '2026-09-22');
     assert.deepEqual(versionHistory.body.versions.map(item => item.version), [
-      'process-governance-v1', 'process-governance-v2', 'process-governance-v3', 'process-governance-v4', 'process-governance-v5', 'process-governance-v6', 'process-governance-v7'
+      'process-governance-v1', 'process-governance-v2', 'process-governance-v3', 'process-governance-v4', 'process-governance-v5', 'process-governance-v6', 'process-governance-v7', 'process-governance-v8'
     ]);
     const v7History = versionHistory.body.versions.find(item => item.version === 'process-governance-v7');
     assert.equal(v7History.schema_revisions.length, 2, 'v7 history must contain the two known schema revisions');
@@ -572,12 +572,12 @@ async function testApi() {
     assert.equal(supportedLegacyV7Revisions.length, 1, 'v7 history must identify exactly one supported legacy schema revision');
     const currentV7Revision = currentV7Revisions[0];
     const earlyV7Revision = supportedLegacyV7Revisions[0];
-    assert.equal(currentV7Revision.schema_digest, PROCESS_GOVERNANCE_SCHEMA_DIGEST);
+    assert.notEqual(currentV7Revision.schema_digest, PROCESS_GOVERNANCE_SCHEMA_DIGEST, 'V8 must have its own digest');
     assert.equal(currentV7Revision.schema_digest, 'e1d5b33ba80393c0d02c1a48540dca5a67947295c66a7d1f0fbf7e20a25eaacb');
     assert.equal(currentV7Revision.introduced_on, '2026-08-24');
     assert.equal(currentV7Revision.source_commit, '624d469d23630d0e01674ad90de7bb0789a3c51f');
     assert.equal(currentV7Revision.validation_profile, null);
-    assert.equal(health.body.schema_digest, currentV7Revision.schema_digest, 'current health digest must match the current v7 schema revision');
+    assert.equal(health.body.schema_digest, PROCESS_GOVERNANCE_SCHEMA_DIGEST, 'current health digest must match V8');
     assert.equal(earlyV7Revision.schema_digest, 'eca657ed7a3d46b7b6d362f69e1188281210073144f5f26b74ec59da8b3a6e9c');
     assert.equal(earlyV7Revision.introduced_on, '2026-08-21');
     assert.equal(earlyV7Revision.source_commit, '440c09f265621651eb39c2aeb763d1bb5fa1e287');
@@ -598,9 +598,9 @@ async function testApi() {
     const template = await getJson(baseUrl, '/api/template');
     assert.equal(template.response.status, 200);
     assert.equal(template.response.headers.get('cache-control'), 'no-store');
-    assert.equal(template.body.schema_version, 'process-governance-v7');
+    assert.equal(template.body.schema_version, 'process-governance-v8');
     assert.equal(template.body.schema_digest, PROCESS_GOVERNANCE_SCHEMA_DIGEST);
-    assert.equal(template.body.data.schema_version, 'process-governance-v7');
+    assert.equal(template.body.data.schema_version, 'process-governance-v8');
     assert.equal(Object.prototype.hasOwnProperty.call(template.body.data, 'cross_department_handoffs'), false);
     assert.equal(typeof template.body.data.export_meta.package_ref, 'string');
     assert.equal(typeof template.body.data.process.process_ref, 'string');
@@ -846,6 +846,7 @@ async function testApi() {
     assert.ok(brokenValidation.body.errors.some(error => /不在当前文件中/.test(error.message)));
 
     const earlyV7 = Migration.migrateDocument(createV5Draft())[0];
+    earlyV7.schema_version = 'process-governance-v7';
     earlyV7.data_objects.forEach(dataObject => {
       delete dataObject.fields;
       dataObject.behavior_links.forEach(link => { delete link.updated_field_refs; });
@@ -895,7 +896,7 @@ async function testApi() {
     assert.ok(controlNodeValidation.body.errors.some(error =>
       error.path === '/data_objects/0/behavior_links/0/behavior_ref'
       && error.rule_code === 'DATA_RELATION_ACTION_BEHAVIOR_REQUIRED'
-      && /控制节点/.test(error.message)
+      && /判断节点仅允许使用/.test(error.message)
     ));
 
     const externalTarget = createDraft();
@@ -1746,11 +1747,11 @@ async function testFrontendContract() {
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
   const serverSource = fs.readFileSync(serverPath, 'utf8');
 
-  assert.ok(html.includes("const EXPECTED_EXPORT_SCHEMA_VERSION = 'process-governance-v7'"));
+  assert.ok(html.includes("const EXPECTED_EXPORT_SCHEMA_VERSION = 'process-governance-v8'"));
   assert.ok(html.includes('const MAX_IMPORT_BYTES = 10 * 1024 * 1024;'));
   assert.ok(html.includes('if (file.size > MAX_IMPORT_BYTES)'));
   assert.ok(html.includes("new TextDecoder('utf-8', { fatal: true })"));
-  assert.ok(html.includes("fetch('/api/template?version=process-governance-v7', { cache: 'no-store' })"));
+  assert.ok(html.includes("fetch('/api/template?version=process-governance-v8', { cache: 'no-store' })"));
   assert.equal(html.includes('needsCandidateFieldUpgrade ? { valid: true, errors: [] }'), false);
   assert.ok(html.includes("validationProfile: 'early-v7-data-fields'"));
   assert.ok(html.includes('<script src="import-compatibility.js"></script>'));
@@ -1789,7 +1790,7 @@ async function testFrontendContract() {
     false,
     'download validation must remain strict and must not use the import-only compatibility classifier'
   );
-  assert.ok(html.includes("const behaviors = (currentDocument()?.behaviors || []).filter(item => item.node_type === 'action');"));
+  assert.ok(html.includes("lookup === 'dataBehaviors' && item.node_type === 'decision'"));
   assert.ok(html.includes('<script src="process-governance-migration.js"></script>'));
   assert.ok(html.includes('<script src="governance-workflow.js"></script>'));
   assert.ok(html.includes('<script src="legacy-cross-department-diagnostics.js"></script>'));

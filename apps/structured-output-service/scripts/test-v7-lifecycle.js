@@ -92,7 +92,7 @@ function testMigration() {
     const second = Migration.migrateDocument(source)[0];
     assert.deepEqual(source, snapshot, `${version} migration must not modify the source object`);
     assert.deepEqual(first, second, `${version} migration must be deterministic`);
-    assert.equal(first.schema_version, 'process-governance-v7');
+    assert.equal(first.schema_version, 'process-governance-v8');
     assert.equal(first.data_objects[0].lifecycle.applicability, 'pending_confirmation');
     assert.equal(first.data_objects[0].lifecycle.routes.length, 0);
     assert.equal(first.data_objects[0].lifecycle.analysis.status, 'not_analyzed');

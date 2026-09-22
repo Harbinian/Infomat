@@ -2823,7 +2823,7 @@
       {
         title: '7. 评审与交接',
         action: '编制人处理结构阻断并核对业务提示，下载最终待核对文件后重新导入；业务核对记录和结构预审问题处理记录在JSON之外分别保存。',
-        completion: '结构错误为零，往返内容和稳定引用一致，文件名及SHA-256已核对；当前v7文件仍不得直接导入3000。'
+        completion: '结构错误为零，往返内容和稳定引用一致，文件名及SHA-256已核对；当前v8文件仍不得直接导入3000。'
       }
     ];
     const COMPACT_TASK_HELP = Object.freeze([
@@ -2856,10 +2856,10 @@
           ['当前候选流程', '本次页面正在编制的一条流程。历史多候选文件导入后，每条候选流程分别显示、分别修改、分别下载，不形成审核状态。'],
           ['单流程结构化文件规则', 'process-governance-v8规定一份JSON只包含一个流程，并固定流程、行为、关系、数据对象、生命周期、表单、术语和迁移归档的结构。'],
           ['源文件', '用户从“文件”入口选择的原始JSON。3001只读取源文件并在页面内存中处理，不修改或覆盖源文件。'],
-          ['来源版本', '源文件声明的结构版本。v1至v6和历史格式导入后只在当前页面内存中迁移为v7。'],
+          ['来源版本', '源文件声明的结构版本。v1至v7和历史格式导入后只在当前页面内存中迁移为v8。'],
           ['源文件SHA-256', '按源文件实际字节计算的摘要，用于确认两次核对的源文件是否相同；摘要不代表内容已经审核。'],
-          ['阶段草稿', '第一至第四轮主动下载的未审核v7文件，阶段依次为流程骨架、动作与异常、数据与表单、跨部门核对。阶段下载不是审核节点。'],
-          ['最终待核对文件', '第7步完成技术检查后下载的未审核v7文件。它仍需业务事实核对和独立结构预审，不能表述为正式流程。'],
+          ['阶段草稿', '第一至第四轮主动下载的未审核v8文件，阶段依次为流程骨架、动作与异常、数据与表单、跨部门核对。阶段下载不是审核节点。'],
+          ['最终待核对文件', '第7步完成技术检查后下载的未审核v8文件。它仍需业务事实核对和独立结构预审，不能表述为正式流程。'],
           ['文件交接摘要', '最近一次下载的文件名、时间、阶段、结构版本和SHA-256。摘要只在当前页面显示，不写入下载JSON。'],
           ['迁移归档', '旧版文件中无法作为v7活动字段继续编辑、但需要保留追溯的只读内容。迁移归档不参与当前流程计算、评分或绘图。']
         ]
@@ -2888,7 +2888,7 @@
         terms: [
           ['待治理数据对象', '3001页面简称“数据对象”，用于记录流程创建、更新或使用的信息线索。它不等于已经确认的主数据、参考数据或权威来源。'],
           ['信息类型', '数据对象在当前流程中的内容类型，包括待确认、业务信息、业务结论、业务状态、标识符、文件或附件、其他信息输出。'],
-          ['数据行为关系', '业务行为对数据对象执行创建、更新、使用或待确认操作的关系，是当前v7记录数据输入输出关系的活动位置。'],
+          ['数据行为关系', '业务行为对数据对象执行创建、更新、使用或待确认操作的关系；判断节点仅允许使用数据作为判断依据，是当前v8记录数据输入输出关系的活动位置。'],
           ['创建、更新、使用、待确认', '创建表示业务行为形成数据；更新表示业务行为改变数据；使用表示业务行为读取或依赖数据；待确认表示操作和方向尚无足够事实。'],
           ['来源线索', '当前流程使用的数据来自其他流程或外部位置时记录的部门、流程、行为、数据名称和可用时间线索。来源线索不等于权威来源认定。'],
           ['表单或记录', '流程中实际使用的纸质表单、电子表单、台账或业务记录。页面只记录结构和处理关系，不据此推断数据库表。'],
@@ -3552,7 +3552,7 @@
         }
         const validation = await validateGraphDocument(planned.document);
         if (!globalThis.ImportCompatibility.allowsPreservedLifecycleErrors(source, planned.document, validation)) {
-          formFieldBatchError.textContent = `完整候选未通过v7结构检查：${(validation.errors || []).slice(0, 3).map(item => `${validationErrorLocation(item)}：${item.message}`).join('；')}`;
+          formFieldBatchError.textContent = `完整候选未通过v8结构检查：${(validation.errors || []).slice(0, 3).map(item => `${validationErrorLocation(item)}：${item.message}`).join('；')}`;
           return false;
         }
         const liveSession = currentFormFieldBatchSession();
@@ -5445,7 +5445,7 @@
             ? `<select id="governanceCandidateSelect" data-governance-candidate>${candidateOptions}</select>`
             : '<strong>尚未新建或导入流程</strong>'}
           <div class="governance-context">
-            <span class="context-badge version">v7</span>
+            <span class="context-badge version">v8 候选</span>
             <span class="context-badge" title="导入来源：${escapeAttribute(origin)}">${escapeHtml(origin)}</span>
             ${hasUnapplied ? '<span class="context-badge dirty">有未应用修改</span>' : ''}
             ${entry?.dirty ? '<span class="context-badge dirty">有未下载修改</span>' : fileState ? `<span class="context-badge ${escapeAttribute(fileState.className)}">${escapeHtml(fileState.label)}</span>` : ''}
@@ -5481,11 +5481,11 @@
     function renderGovernanceDrawer() {
       const phases = [
         ['工作准备', '部门负责人确认编制人和业务核对人。业务核对人确认制度、表单、台账和实际做法的核对范围。MDM工作组确认3001运行版本和结构版本。'],
-        ['选择编制路线', '编制人可以在3001直接新建或导入v1至v7文件；也可以使用MDM-AI助手完成v5填报和预审，再手工导入3001转换为v7。AI路线形成的v5预审记录不能替代最终v7独立结构预审。'],
+        ['选择编制路线', '编制人可以在3001直接新建或导入v1至v7文件；也可以使用MDM-AI助手完成v5填报和预审，再手工导入3001转换为v7。AI路线形成的v5预审记录不能替代最终v8独立结构预审。'],
         ['四轮编制与阶段下载', '第一轮处理流程边界和骨架；第二轮处理逐动作说明、完成标准和异常路径；第三轮处理数据对象、表单和字段；第四轮核对跨部门事实和待定事项。每轮下载阶段草稿，但不锁定后续步骤。'],
         ['部门事实初核', '业务核对人核对全部流程事实。跨部门内容由归口部门和承接部门分别确认本方事实。未确认内容保持待定，并在JSON之外记录证据、确认主体和关闭条件。'],
-        ['最终v7独立结构预审', 'MDM工作组或Codex检查最终v7的结构错误、字段归位、对象拆分和生命周期结构。编制人关闭硬性结构错误；保留建议原值时，在外部问题处理记录中说明理由。'],
-        ['重新导入、最终下载和交接', '编制人重新导入整改后的文件，核对版本、数量、内容、稳定引用和往返完整性，再分别交接最终v7、结构预审问题处理记录和部门业务核对记录。'],
+        ['最终v8独立结构预审', 'MDM工作组或Codex检查最终v8的结构错误、字段归位、对象拆分和生命周期结构。编制人关闭硬性结构错误；保留建议原值时，在外部问题处理记录中说明理由。'],
+        ['重新导入、最终下载和交接', '编制人重新导入整改后的文件，核对版本、数量、内容、稳定引用和往返完整性，再分别交接最终v8、结构预审问题处理记录和部门业务核对记录。'],
         ['当前停止边界', '3000的V7受控承接候选和数据库迁移方案已准备，但迁移尚未执行、运行时默认关闭，真实单流程试点仍待验收。3001不与3000通信；只有另行批准的精确单流程范围才能进入3000受控预览、审核和发布，正式发布后也只允许配置的固定process_version_id进入后续工作包。v7文件不得直接导入或自动降级。']
       ];
       governanceDrawerContent.innerHTML = `${renderRoleOperationSequence(true)}<div class="governance-drawer-list">${phases.map((phase, index) => `
@@ -5669,7 +5669,7 @@
               <article class="tool-help-card"><h3>下载和继续编制</h3><p>阶段下载和最终下载都会执行技术检查。下载后继续修改不会被锁定；下次只能重新导入已下载文件恢复业务内容。</p></article>
               <article class="tool-help-card"><h3>结构错误和业务提示</h3><p>结构错误和业务提示不阻止草稿下载。下载保留当前原值，不会自动修正问题；编制人和业务核对人仍须在交接前逐项处理或记录确认责任。</p></article>
               <article class="tool-help-card"><h3>没有数据、表单或跨部门位置</h3><p>确实不适用时保持为空，不为满足检查虚构内容。页面没有识别到跨部门位置，只表示现有字段没有形成固定跨部门行为，不代表业务实际不涉及跨部门。</p></article>
-              <article class="tool-help-card"><h3>交接时核对</h3><p>交出人与接收人核对文件名、阶段、结构版本和SHA-256。最终v7、结构预审问题处理记录和业务核对记录分别保存，不嵌入同一JSON。</p></article>
+              <article class="tool-help-card"><h3>交接时核对</h3><p>交出人与接收人核对文件名、阶段、结构版本和SHA-256。最终v8、结构预审问题处理记录和业务核对记录分别保存，不嵌入同一JSON。</p></article>
             </div>`
           )}
           ${section(
@@ -5690,7 +5690,7 @@
         return `<section class="start-hero">
           <div class="eyebrow">3001 · process-governance-v8</div>
           <h2>${compactTaskUiEnabled() ? '按四项任务完成一条流程的编制、核对和交接准备' : '按七步完成一条流程的编制、核对和交接准备'}</h2>
-          <p>v7已发布，当前在实际使用中继续验证。编制人维护当前唯一流程文件；业务核对人确认流程事实；MDM工作组检查结构。3001不保存草稿，也不记录审核结论。</p>
+          <p>v8为候选版本，支持判断节点使用数据作为判断依据。编制人维护当前唯一流程文件；业务核对人确认流程事实；MDM工作组检查结构。3001不保存草稿，也不记录审核结论。</p>
           ${renderRoleOperationSequence()}
           <div class="start-actions">
             <button class="button primary" data-action="start-new-process" data-global-action>新建流程</button>
@@ -6263,7 +6263,7 @@
       activeEditorSection = 'export';
       return `${compactTaskUiEnabled() ? '<div class="item-actions"><button class="button secondary small" data-action="switch-governance-step" data-step="cross-department">返回跨部门事实核对</button></div><details class="section"><summary class="button small">下载阶段草稿</summary><div class="section-body item-actions"><button class="button small" data-action="review-download-stage" data-step="skeleton">第1轮：流程骨架</button><button class="button small" data-action="review-download-stage" data-step="action">第2轮：动作与异常</button><button class="button small" data-action="review-download-stage" data-step="data">第3轮：数据与表单</button><button class="button small" data-action="review-download-stage" data-step="cross-department">第4轮：跨部门核对</button></div></details>' : ''}${renderStepIntro('handoff')}${renderExportCheck()}${section(
         '最终交接卡',
-        '最终v7、结构预审问题处理记录和部门业务核对记录必须分别保存。页面只生成并摘要当前v7文件。',
+        '最终v8、结构预审问题处理记录和部门业务核对记录必须分别保存。页面只生成并摘要当前v8文件。',
         `<div class="next-stage-grid">
           <section class="next-stage-card next"><h3>技术状态</h3><p>结构错误必须关闭。业务待定不阻止下载，但应在外部核对记录中写明证据、确认主体和关闭条件。</p></section>
           <section class="next-stage-card future"><h3>外部材料</h3><p>准备结构预审问题处理记录和部门业务核对记录。3001不会生成、保存或嵌入这些记录。</p></section>
@@ -6412,7 +6412,7 @@
       return `
         <div id="versionsPanel" role="tabpanel" aria-labelledby="versionsTab">
           ${section('v1至v7升级历史', '版本说明来自仓库受控文件，只供查阅，不改变当前草稿。', historyBody)}
-          ${section('当前文件迁移摘要', '旧文件导入后统一在页面内存中转换为v7，导入源文件始终保持原样。', migrationBody)}
+          ${section('当前文件迁移摘要', '旧文件导入后统一在页面内存中转换为v8，导入源文件始终保持原样。', migrationBody)}
         </div>`;
     }
 
@@ -6968,7 +6968,7 @@
             ${renderLifecycleStateFields(`data_objects.${dataIndex}.lifecycle.entry_state`, '这条数据进入本流程时的状态', lifecycle.entry_state)}
             <div class="cross-department-list">${routes || '<div class="inline-note">尚未记录生命周期路径。可以先核对入口状态；没有依据的内容保留待确认。</div>'}</div>
           </details>
-          <p class="boundary"><strong>边界：</strong>当前v7文件记录未审核的单流程事实和建议，暂不能直接导入3000。生命周期缺口属于业务提示，不阻止草稿下载。</p>
+          <p class="boundary"><strong>边界：</strong>当前v8文件记录未审核的单流程事实和建议，暂不能直接导入3000。生命周期缺口属于业务提示，不阻止草稿下载。</p>
         </div>
       </section>`;
     }
@@ -6986,7 +6986,7 @@
         const behaviorRef = text(choiceSession?.patch?.behaviorRef);
         return `
           <div class="graph-property-panel">
-            <h3>选择关联行为</h3>
+            <h3>选择关联节点</h3><p class="technical-note">判断节点只支持“使用”，表示判断依据；创建和更新请关联实际执行步骤。</p>
             <p class="technical-note">数据模式只编辑数据关系，业务行为仍是只读端点。</p>
             <label>业务行为<select data-graph-data-behavior>${optionHtml(dataBehaviorOptions(true, behaviorRef), behaviorRef)}</select></label>
             <div class="item-actions">
@@ -7007,6 +7007,7 @@
           <div class="graph-property-panel">
             <h3>${escapeHtml(behavior?.behavior_name || '业务行为')} · 数据操作</h3>
             <p class="technical-note">业务行为是只读端点。需要修改行为时可转到“流程骨架”。</p>
+            ${behavior?.node_type === 'decision' ? '<p class="inline-warning">判断节点仅允许“使用”数据作为判断依据。创建、更新和待确认操作请关联实际执行步骤；不合法的选择保留在未应用输入中。</p>' : ''}
             <div class="check-grid">${DATA_OPERATIONS.map(option => `
               <label class="check-row"><input type="checkbox" data-graph-data-operation value="${option.value}" ${operations.includes(option.value) ? 'checked' : ''}>${option.label}</label>`).join('')}</div>
             ${operations.includes('update') ? `<div class="update-fields-summary" data-focus-key="data_objects.${currentDocument().data_objects.indexOf(dataObject)}.behavior_links.updated_field_refs">
@@ -9867,8 +9868,8 @@
         <div class="next-stage-grid" aria-label="下载后的处理说明">
           <section class="next-stage-card next">
             <span class="next-stage-badge">下一步</span>
-            <h3>完成部门事实核对后，保存最终v7文件</h3>
-            <p>3001不记录现场核对记录。请分别保存最终v7、结构预审问题处理记录和部门业务核对记录。3000的V7受控承接候选默认关闭，数据库迁移尚未执行，真实单流程试点仍待验收；只有另行批准的精确单流程范围才能进入受控预览和审核，正式发布后也只允许配置的固定process_version_id进入后续工作包。</p>
+            <h3>完成部门事实核对后，保存最终v8文件</h3>
+            <p>3001不记录现场核对记录。请分别保存最终v8、结构预审问题处理记录和部门业务核对记录。3000的V7受控承接候选默认关闭，数据库迁移尚未执行，真实单流程试点仍待验收；只有另行批准的精确单流程范围才能进入受控预览和审核，正式发布后也只允许配置的固定process_version_id进入后续工作包。</p>
           </section>
           <section class="next-stage-card future">
             <span class="next-stage-badge">后续规划</span>
@@ -11866,6 +11867,8 @@
         showStatus('数据操作没有产生变化，无需应用。', 'success');
         return true;
       }
+      const operationErrors = globalThis.GraphEditCommands.dataOperationHardErrors(currentDocument(), graphSelection.dataRef, graphSelection.behaviorRef, merged.mergedEntity.operations, (currentDocument().data_objects.find(item => item.data_ref === graphSelection.dataRef)?.behavior_links || []).filter(link => link.behavior_ref === graphSelection.behaviorRef).map(link => link.link_ref));
+      if (operationErrors.length) { showStatus(operationErrors.join('；'), 'error'); return false; }
       if (merged.mergedEntity.operations.includes('update') && !list(merged.mergedEntity.updatedFieldRefs).length) {
         editSessionManager.setCanApply(false);
         showStatus('选择“更新”时，必须先选择本次实际改变的字段。', 'error');
@@ -11887,6 +11890,7 @@
       if (applied) {
         editSessionManager.reset();
         openDataEdgeSession(dataRef, behaviorRef);
+        render();
         refreshUnappliedIndicators();
       }
       return applied;
@@ -12340,8 +12344,10 @@
       }
       if (action === 'open-flow-behavior') {
         const ref = text(element.dataset.ref);
+        setActiveGovernanceStep('skeleton', 'diagram');
+        if (compactTaskUiEnabled()) return openReviewTarget({ kind: 'behavior', ref }, true);
         openEntityEditSession('behavior', ref);
-        return setActiveGovernanceStep('skeleton', 'diagram');
+        return render();
       }
       if (action === 'delete-data-object') return deleteGraphObject('data', activeDataRef);
       if (action === 'focus-legacy-diagnostic') return focusExportWarning(element);
@@ -13520,11 +13526,11 @@
         if (failedTargetIndex >= 0) {
           const failedTarget = targetValidations[failedTargetIndex];
           const firstError = failedTarget.errors?.[0];
-          throw new Error(firstError ? `${validationErrorLocation(firstError)}：${firstError.message}` : '迁移副本未通过v7结构校验');
+          throw new Error(firstError ? `${validationErrorLocation(firstError)}：${firstError.message}` : '迁移副本未通过v8结构校验');
         }
         if (!targetBatch.allowed) throw new Error('迁移没有生成可安装的流程候选');
         const repairableRelationshipErrorCount = targetBatch.repairableErrorCount;
-        const normalizationSummaries = parsed.schema_version === EXPECTED_EXPORT_SCHEMA_VERSION
+        const normalizationSummaries = ['process-governance-v7', EXPECTED_EXPORT_SCHEMA_VERSION].includes(parsed.schema_version)
           ? migratedDocuments.map(data => globalThis.ImportCompatibility.summarizeNormalization(parsed, data))
           : migratedDocuments.map(() => null);
         const normalizationChangeCount = normalizationSummaries.reduce(
@@ -13582,7 +13588,7 @@
                 : `v7文件已导入并发现${normalizationChangeCount}项规范化差异。请展开逐项核对；当前内容尚未下载。`
             : migrated
               ? '历史结构化文件已导入当前页面，当前内容标记为未下载。'
-              : 'v7结构化文件已导入当前页面。',
+              : 'v8结构化文件已导入当前页面。',
           'success'
         );
       } catch (error) {
@@ -14097,6 +14103,15 @@
         || /^forms\.\d+\.areas\.\d+\.items\.\d+\.item_type$/.test(target.dataset.bind)
       )) {
         render();
+        if (/^behaviors\.\d+\.node_type$/.test(target.dataset.bind) || /^data_objects\.\d+\.behavior_links\.\d+\.(behavior_ref|operation)$/.test(target.dataset.bind)) {
+          const documentValue = currentDocument();
+          const issues = (documentValue.data_objects || []).flatMap(dataObject => (dataObject.behavior_links || []).flatMap(link => {
+            const behavior = documentValue.behaviors.find(item => item.behavior_ref === link.behavior_ref);
+            if (!behavior || behavior.node_type === 'action' || (behavior.node_type === 'decision' && link.operation === 'use')) return [];
+            return [`${dataObject.data_name || dataObject.data_ref} → ${behavior.behavior_name || behavior.behavior_ref}（${link.operation}）：判断节点仅允许使用数据，其他操作请关联实际执行步骤；并行控制节点不支持数据关系`];
+          }));
+          if (issues.length) showStatus(`关系及输入已保留，请修正：${issues.join('；')}`, 'error');
+        }
       }
     });
 

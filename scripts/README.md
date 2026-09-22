@@ -1,5 +1,9 @@
 # scripts 目录说明
 
+## V8 候选兼容说明（2026-09-22）
+
+共享纯校验模块 `process-governance/v7-validator.js` 同时导出 V7 与 V8 入口，由 3001 和 3000 按文件版本分派。V8 仅放行 decision + use，V7 历史语义不变。模块不写文件、不连接数据库。验证命令：`node apps/structured-output-service/scripts/test-v8-decision-data.js`；3000 接收隔离回归见其 README 的 V8 章节。
+
 本目录放仓库级自动化脚本：输入通常跨 `docs/`、`pmo/` 或 `apps/mdm-platform/`，输出也可能回写生成快照或校验报告。只服务单个应用的脚本应留在对应应用目录，例如 `apps/mdm-platform/scripts/`。
 
 修改本目录脚本前先读 `AGENTS.md`。涉及命令、输入、输出、副作用、启动规则或验证口径变化时，必须同步更新本 README。

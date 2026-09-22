@@ -85,7 +85,7 @@
           ref: behaviorRef,
           kind: 'behavior',
           label: wrap(behavior.behavior_name, 11),
-          subtitle: behavior.node_type === 'action' ? '业务行为（只读端点）' : '流程节点（只读端点）'
+          subtitle: behavior.node_type === 'action' ? '业务行为（只读端点）' : behavior.node_type === 'decision' ? '判断节点（只读端点）' : '流程节点（只读端点）'
         },
         position: { x: side === 'right' ? 720 : 120, y }
       });
@@ -99,7 +99,7 @@
           dataRef: selected.data_ref,
           behaviorRef,
           kind: 'data-relation',
-          label: ordered.map(operation => OPERATION_LABEL[operation] || operation).join(' / '),
+          label: ordered.map(operation => operation === 'use' && behavior.node_type === 'decision' ? '判断依据' : OPERATION_LABEL[operation] || operation).join(' / '),
           operations: ordered.join(','),
           curveStyle: 'straight',
           arrowMode: ordered.includes('pending_confirmation') ? 'pending'

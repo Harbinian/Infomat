@@ -39,7 +39,7 @@ async function run() {
       const second = Migration.migrateDocument(source)[0];
       assert.deepEqual(source, sourceSnapshot, `${version} migration must not modify its source object`);
       assert.deepEqual(first, second, `${version} migration must be deterministic`);
-      assert.equal(first.schema_version, 'process-governance-v7');
+      assert.equal(first.schema_version, 'process-governance-v8');
       const targetValidation = await validate(baseUrl, first);
       assert.equal(targetValidation.valid, true, `${version} target: ${JSON.stringify(targetValidation.errors)}`);
       assert.deepEqual(

@@ -72,6 +72,10 @@ function sampleDocument() {
     to_behavior_ref: 'behavior_process_review',
     condition: ''
   }];
+  if (process.env.TEST_PROCESS_FORMAT === 'process-governance-v8') {
+    document.schema_version = 'process-governance-v8';
+
+  }
   return document;
 }
 
@@ -783,6 +787,7 @@ async function main() {
     { userId: 10, personId: 10, departmentId: 1 }
   );
   assert.strictEqual(insertedRevisionParams[5], candidateRevisionProjection.contentHash, '新修订摘要必须从事务内重新投影的正文生成');
+  assert.strictEqual(insertedRevisionParams[3], candidateRevisionDocument.schema_version, '接收修订必须保存实际格式版本');
   assert.deepStrictEqual(JSON.parse(insertedRevisionParams[6]), candidateRevisionDocument, '新修订正文必须来自事务内重新校验的document');
   assert.strictEqual(insertedRevisionItem.behavior_name, '工艺人员复核产品制造大纲', '调用方伪造的核对项不得写入');
   assert.strictEqual(updatedRevisionCaseParams[0], candidateRevisionProjection.processName, '调用方伪造的流程名称不得写入');
@@ -1696,6 +1701,27 @@ async function main() {
     assert.deepStrictEqual(reviewCompleteRepository.calls.at(-1).slice(0, 5), [
       'promoteCase', 1, projected.contentHash, 'create', 'V7-TEST-001'
     ]);
+    const basisDocument = JSON.parse(JSON.stringify(document));
+    basisDocument.schema_version = 'process-governance-v8';
+    basisDocument.behaviors.push({ ...basisDocument.behaviors[0], behavior_ref: 'decision_basis', node_type: 'decision', behavior_name: '是否具备合格证明', actor_assignment_mode: 'company_wide', current_actor_role: '全公司' });
+    basisDocument.data_objects.push({
+      data_ref: 'data_decision_basis', data_name: '软件合格证明', description: '', information_type: 'file_attachment', fields: [],
+      behavior_links: [{ link_ref: 'link_decision_basis', behavior_ref: 'decision_basis', operation: 'use', updated_field_refs: [] }],
+      source_relations: [],
+      lifecycle: require('../../structured-output-service/public/process-governance-migration').pendingLifecycle()
+    });
+    previewRouter.setProcessV7PreviewRepositoryFactory(() => repository);
+    const basisReceived = await request(baseUrl, 'contact', '/api/process-v7-preview/cases', {
+      method: 'POST', body: JSON.stringify({ source_file_name: 'decision-use-v8.json', document: basisDocument })
+    });
+    assert.strictEqual(basisReceived.response.status, 201, JSON.stringify(basisReceived.body));
+    assert.strictEqual(basisReceived.body.preview_only, true);
+    basisDocument.data_objects.at(-1).behavior_links[0].operation = 'create';
+    const invalidBasis = await request(baseUrl, 'contact', '/api/process-v7-preview/cases', {
+      method: 'POST', body: JSON.stringify({ source_file_name: 'invalid-decision-create-v8.json', document: basisDocument })
+    });
+    assert.strictEqual(invalidBasis.response.status, 422, '3000 must reject decision + create');
+
   } finally {
     delete process.env.PROCESS_V7_PREVIEW_ENABLED;
     delete process.env.PROCESS_V7_FORMAL_ENABLED;

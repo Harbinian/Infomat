@@ -456,6 +456,13 @@
         const index = next.behaviors.findIndex(existing => existing.behavior_ref === item.behavior_ref);
         if (index < 0) return resultError('OBJECT_NOT_FOUND', '业务行为不存在');
         if (!NODE_TYPES.has(item.node_type)) return resultError('INVALID_NODE_TYPE', '节点类型无效');
+        if (next.behaviors[index].node_type !== item.node_type && item.node_type !== 'action') {
+          const impacts = array(next.data_objects).flatMap(data => array(data.behavior_links)
+            .filter(link => link.behavior_ref === item.behavior_ref && !(next.schema_version === 'process-governance-v8' && item.node_type === 'decision' && link.operation === 'use'))
+            .map(link => `${data.data_name || data.data_ref}（${link.operation}，${link.link_ref}）`));
+          array(next.forms).forEach(form => array(form.behavior_links).filter(link => link.behavior_ref === item.behavior_ref).forEach(link => impacts.push(`${form.form_name || form.form_ref}（表单处理，${link.link_ref}）`)));
+          if (impacts.length) return resultError('NODE_TYPE_RELATION_CONFLICT', `节点类型未修改：${impacts.join('；')}与所选节点类型不兼容。判断节点仅允许使用数据；请先将其他关系关联到实际执行步骤。原关系和未应用输入均保留`);
+        }
         next.behaviors[index] = item;
         return resultOk(next, { selected: { kind: 'behavior', ref: item.behavior_ref } });
       }

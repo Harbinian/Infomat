@@ -148,7 +148,7 @@ function passingTechnical() {
 }
 
 assert.equal(RULE.id, 'structure-learning-score-v5');
-assert.equal(RULE.label, '结构化学习评分 v5（process-governance-v7）');
+assert.equal(RULE.label, '结构化学习评分 v5（process-governance-v8）');
 assert.equal(
   RULE.dimensions.reduce((sum, item) => sum + item.max, 0),
   100,

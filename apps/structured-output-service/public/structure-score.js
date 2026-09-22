@@ -26,7 +26,7 @@
 
   const RULE = Object.freeze({
     id: 'structure-learning-score-v5',
-    label: '结构化学习评分 v5（process-governance-v7）',
+    label: '结构化学习评分 v5（process-governance-v8）',
     dimensions: Object.freeze([
       Object.freeze({
         key: 'technical',
@@ -160,7 +160,7 @@
     ]),
     acceptance: Object.freeze([
       '业务部门逐项确认页面展示的是当前真实流程事实。',
-      '当前文件符合process-governance-v7结构，稳定引用和导出回读检查通过。',
+      '当前文件符合其声明版本的结构，稳定引用和导出回读检查通过。',
       '表单、字段和稳定引用在导入、修改、导出和重新导入后没有丢失。',
       '当场不能确认的事项另行记录缺少的依据和确认主体，不在JSON中伪造结论。'
     ])

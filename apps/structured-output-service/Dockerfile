@@ -14,5 +14,5 @@ ARG APP_COMMIT=unknown
 ENV NODE_ENV=production STRUCTURED_OUTPUT_HOST=0.0.0.0 STRUCTURED_OUTPUT_PORT=3001 STRUCTURED_OUTPUT_APP_COMMIT=${APP_COMMIT}
 USER node
 EXPOSE 3001
-HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 CMD node -e "fetch('http://127.0.0.1:3001/api/health',{signal:AbortSignal.timeout(4000)}).then(async r=>{const h=await r.json();if(!r.ok||h.status!=='ok'||h.schema_version!=='process-governance-v7'||h.release_status!=='released')process.exit(1)}).catch(()=>process.exit(1))"
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 CMD node -e "fetch('http://127.0.0.1:3001/api/health',{signal:AbortSignal.timeout(4000)}).then(async r=>{const h=await r.json();if(!r.ok||h.status!=='ok'||h.schema_version!=='process-governance-v8'||h.release_status!=='candidate')process.exit(1)}).catch(()=>process.exit(1))"
 CMD ["node", "server.js"]
