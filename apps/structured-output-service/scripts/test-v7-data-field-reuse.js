@@ -65,12 +65,12 @@ function run() {
   assertValid(blankV7, 'blank v7 template');
   assert.deepEqual(
     blankV7RoundTrip,
-    blankV7Snapshot,
+    { ...blankV7Snapshot, schema_version: Migration.TARGET_VERSION },
     'a valid blank v7 template must survive the download preflight migration without any change'
   );
   assert.equal(
     JSON.stringify(blankV7RoundTrip),
-    JSON.stringify(blankV7Snapshot),
+    JSON.stringify({ ...blankV7Snapshot, schema_version: Migration.TARGET_VERSION }),
     'a valid blank v7 template must pass the exact download round-trip comparison'
   );
   assert.deepEqual(blankV7, blankV7Snapshot, 'blank v7 migration must not modify the source template');
@@ -113,6 +113,7 @@ function run() {
   assertValid(separated, 'type conflict migration');
 
   const previewV7 = JSON.parse(JSON.stringify(reused));
+  previewV7.schema_version = 'process-governance-v7';
   previewV7.data_objects[0].lifecycle.applicability = 'not_applicable';
   previewV7.data_objects[0].lifecycle.decision_reason = 'reference_only';
   delete previewV7.data_objects[0].fields;
@@ -136,6 +137,7 @@ function run() {
   );
 
   const updateFieldPreview = JSON.parse(JSON.stringify(reused));
+  updateFieldPreview.schema_version = 'process-governance-v7';
   updateFieldPreview.behaviors.push({
     behavior_ref: 'behavior_update_supplier',
     node_type: 'action',
@@ -176,6 +178,7 @@ function run() {
   assertValid(normalizedUpdateField, 'selected update field validation');
 
   const duplicateUpdateField = JSON.parse(JSON.stringify(normalizedUpdateField));
+  duplicateUpdateField.schema_version = 'process-governance-v7';
   const keptField = duplicateUpdateField.data_objects[0].fields[0];
   duplicateUpdateField.data_objects[0].fields.push({
     ...keptField,

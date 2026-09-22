@@ -13,8 +13,8 @@ async function main() {
   };
   const health = await (await get('/api/health')).json();
   assert.equal(health.status, 'ok');
-  assert.equal(health.schema_version, 'process-governance-v7');
-  assert.equal(health.release_status, 'released');
+  assert.equal(health.schema_version, 'process-governance-v8');
+  assert.equal(health.release_status, 'candidate');
   assert.notEqual(health.app_commit, 'unknown');
   assert.equal((await get('/api/schema')).headers.get('x-infomat-schema-digest'), health.schema_digest);
   await get('/');

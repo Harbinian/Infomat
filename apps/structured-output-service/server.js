@@ -216,7 +216,10 @@ function createEmptyProcessGovernanceV7Document() {
 }
 
 function createEmptyProcessGovernanceDocument() {
-  return createEmptyProcessGovernanceV7Document();
+  const document = createEmptyProcessGovernanceV7Document();
+  document.schema_version = 'process-governance-v8';
+  document.migration.source_schema_version = 'process-governance-v8';
+  return document;
 }
 
 function normalizeLine(line) {

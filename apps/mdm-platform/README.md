@@ -1,5 +1,11 @@
 # MDM 平台
 
+## V8 接收兼容候选（2026-09-22）
+
+既有 `/api/process-v7-preview` 与正式流程办理入口兼容 `process-governance-v7`、`process-governance-v8`，路由名称和权限不变。共享校验器只在 V8 放行判断节点 `decision + use`，V7 历史语义不变。预览修订、提升草稿及发布版本保留实际版本标识和原生正文，不降级为 V7。程序文件导出也识别同一版本正文。
+
+本次未修改或连接正式数据库，未开启接收或发布开关，未迁移历史记录。隔离验证使用模拟仓储及 HTTP 身份夹具：`npm.cmd run test:process-governance`；V8 变体设置 `TEST_PROCESS_FORMAT=process-governance-v8` 后运行 `node scripts/test-process-v7-preview-review.js`，其中覆盖 `decision + use` 接收和 `decision + create` 拒绝。后续数据治理工作包、办公室材料库及独立 V7 分析模块的版本范围不在本次接收修改内。
+
 ## 确定性 V7 材料检查（P11）
 
 P11 将共享 V7 纯校验器接入独立分析 worker，规则集合及解析器版本固定为 `v7-deterministic-v1`，parser_key 为 `v7_deterministic`。规则目录、适用前提和不适用条件见 `server/v7AnalysisRules.js` 的 catalog；对应正常、缺陷及边界样本见 `scripts/test-v7-analysis-rules.js`。现有 Schema 仅作为技术兼容合同，不是业务真源。

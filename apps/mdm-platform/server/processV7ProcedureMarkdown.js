@@ -25,7 +25,7 @@ function escapeMarkdown(value) {
 }
 function processV7ProcedureMarkdown(version) {
   const document=version.document;
-  if (version.schema_version!=='process-governance-v7' || document?.schema_version!=='process-governance-v7') throw new Error('PROCEDURE_V7_REQUIRED');
+  if (!['process-governance-v7', 'process-governance-v8'].includes(version.schema_version) || document?.schema_version!==version.schema_version) throw new Error('PROCEDURE_V7_REQUIRED');
   const list=value=>Array.isArray(value)?value:[];
   const names=new Map();
   const register=(items,key,name)=>list(items).forEach(item=>{if(item[key])names.set(item[key],item[name]||item[key]);});
