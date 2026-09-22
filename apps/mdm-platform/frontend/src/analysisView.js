@@ -2,7 +2,7 @@
 export const statuses = { queued: '排队中', running: '分析中', succeeded: '本轮检查完成', partial: '部分完成', failed: '分析失败', cancelled: '已取消' };
 export const types = { definite_defect: '确定的登记矛盾', business_question: '待业务核对', not_covered: '未覆盖', material_constraint: '材料技术约束' };
 export const stages = { uploaded_material: '独立上传材料', preview_revision: 'V7 预览修订', published_version: '正式已发布版本', handoff: '固定设计交接', definition: '固定台账版本', template: '模板批次', mapping: '固定来源映射' };
-export const labelSource = s => `${stages[s.source_kind || s.kind] || s.kind} · ${s.original_name || '固定引用 ' + s.ref_id}`;
+export const labelSource = s => `${s.source_kind==='pdf_material'?'PDF 固定证据':s.source_kind==='word_material'?'DOCX 固定证据':s.source_kind==='excel_material'?'Excel 固定证据':stages[s.source_kind || s.kind] || s.kind} · ${s.original_name || '固定引用 ' + s.ref_id}`;
 export function filterFindings(items, run, filter) {
   const latest = new Map();
   for (const a of run.attempts) if (!latest.has(a.step_key) || latest.get(a.step_key).attempt_no < a.attempt_no) latest.set(a.step_key, a);
@@ -11,6 +11,14 @@ export function filterFindings(items, run, filter) {
     (!filter.q || [f.message, f.rule_id, f.semantic_locator].join(' ').toLocaleLowerCase().includes(filter.q.toLocaleLowerCase())));
 }
 export function createPayload(adapter, ref, description, requestId) {
+  if (adapter.parser_key === 'ai_offline') {
+    const base = adapter.base_adapter;
+    return { request_id: requestId, inputs: [{ input_key: 'source', kind: 'v7_source', ref_id: ref }],
+      check_scope: { description, check_ids: [...base.check_ids, ...adapter.check_ids] }, rule_version: adapter.rule_version,
+      parser_versions: { [base.parser_key]: base.rule_version, [adapter.parser_key]: adapter.rule_version },
+      steps: [{ step_key: 'deterministic', input_keys: ['source'], check_ids: base.check_ids, parser_key: base.parser_key },
+        { step_key: 'offline_opinions', input_keys: ['source'], check_ids: adapter.check_ids, parser_key: adapter.parser_key }], ai_metadata: adapter.ai_metadata, rerun_of_run_id: null };
+  }
   return { request_id: requestId, inputs: [{ input_key: 'source', kind: adapter.kind, ref_id: ref }],
     check_scope: { description, check_ids: adapter.check_ids }, rule_version: adapter.rule_version,
     parser_versions: { [adapter.parser_key]: adapter.rule_version }, steps: [{ step_key: 'check', input_keys: ['source'], check_ids: adapter.check_ids, parser_key: adapter.parser_key }], ai_metadata: null, rerun_of_run_id: null };

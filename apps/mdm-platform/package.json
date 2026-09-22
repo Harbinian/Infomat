@@ -4,6 +4,10 @@
   "description": "MDM Platform",
   "main": "server/index.js",
   "scripts": {
+    "test:ai-offline": "node --test scripts/test-ai-offline.js",
+    "test:ai-offline-integration": "node scripts/test-analysis-runs.js --p19 --p14",
+    "manage:analysis-ai": "node scripts/manage-analysis-ai.js",
+    "manage:analysis-closure": "node scripts/manage-analysis-closure.js",
     "manage:analysis-tasks": "node scripts/manage-analysis-tasks.js",
     "test:analysis-tasks": "node scripts/test-analysis-runs.js --p17",
     "test:analysis-api": "node scripts/test-analysis-runs.js --p14",
@@ -189,7 +193,16 @@
     "test:analysis-comparison-mysql": "node scripts/test-analysis-runs.js --p13",
     "test:analysis-runs": "node scripts/test-analysis-runs.js",
     "manage:analysis-issues": "node scripts/manage-analysis-issues.js",
-    "test:analysis-issues": "node scripts/test-analysis-runs.js --p16"
+    "test:analysis-issues": "node scripts/test-analysis-runs.js --p16",
+    "test:word-evidence": "node scripts/test-word-evidence.js",
+    "test:excel-evidence": "node scripts/test-excel-evidence.js",
+    "test:excel-evidence-integration": "node scripts/test-analysis-runs.js --p18",
+    "manage:excel-evidence": "node scripts/manage-excel-evidence.js",
+    "test:word-evidence-integration": "node scripts/test-analysis-runs.js --p18-word",
+    "manage:word-evidence": "node scripts/manage-word-evidence.js",
+    "test:pdf-evidence": "node scripts/test-pdf-evidence.js",
+    "test:pdf-evidence-integration": "node scripts/test-analysis-runs.js --p18-pdf",
+    "manage:pdf-evidence": "node scripts/manage-pdf-evidence.js"
   },
   "dependencies": {
     "ajv": "^8.20.0",
@@ -200,7 +213,9 @@
     "express": "^4.18.2",
     "express-session": "^1.17.3",
     "multer": "^2.1.1",
-    "mysql2": "^3.22.5"
+    "mysql2": "^3.22.5",
+    "pdfjs-dist": "5.4.624",
+    "saxes": "5.0.1"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"

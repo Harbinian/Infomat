@@ -53,6 +53,21 @@ module.exports = function (helpers) {
         const [refs] = await db.execute('SELECT CAST(mapping_version_id AS CHAR) ref FROM data_map_design_handoff_refs WHERE handoff_version_id=? FOR SHARE', [ref]);
         for (const r of refs) await current('mapping', r.ref);
       }
+      if (kind === 'template') {
+        const [[s]]=await db.execute('SELECT parser_version FROM data_map_source_files WHERE batch_id=?',[ref]);
+        if(s?.parser_version===require('./excelEvidenceParser').VERSION){
+          const [[r]]=await db.execute('SELECT snapshot_json FROM data_map_excel_evidence WHERE batch_id=?',[ref]);
+          for(const link of parse(r.snapshot_json).document.links)await current(link.kind,link.ref_id);
+        }
+        if(s?.parser_version===require('./wordEvidenceParser').VERSION){
+          const [[r]]=await db.execute('SELECT snapshot_json FROM data_map_word_evidence WHERE batch_id=?',[ref]);
+          for(const link of parse(r.snapshot_json).document.links)await current(link.kind,link.ref_id);
+        }
+        if(s?.parser_version===require('./pdfEvidenceParser').VERSION){
+          const [[r]]=await db.execute('SELECT snapshot_json FROM data_map_pdf_evidence WHERE batch_id=?',[ref]);
+          for(const link of parse(r.snapshot_json).document.links)await current(link.kind,link.ref_id);
+        }
+      }
       if (ok === 0 || ok === false) throw fail('SOURCE_SUPERSEDED', 409);
     }
     for (const i of run.manifest.inputs) await current(i.snapshot.kind, i.snapshot.ref_id);
@@ -82,23 +97,32 @@ module.exports = function (helpers) {
   }
   return {
     ...require('./analysisIssueTasks')({ tx, actor, request, issue, linkedFindings, currentInputs, runs }),
+    ...require('./analysisIssueClosure')({ tx, actor, request, issue, linkedFindings, helpers }),
     analysisIssueTargets(session, after = null) { return tx(async db => {
       const who = await actor(db, session, 'governance:structure-gate');
       const [items] = await db.execute(`SELECT CAST(id AS CHAR) id,name FROM departments WHERE status='active' ${who.permissions.has('governance:read-global') ? '' : 'AND id=?'} ${after ? 'AND id>?' : ''} ORDER BY id LIMIT 101`, [...(who.permissions.has('governance:read-global') ? [] : [who.departmentId]), ...(after ? [id(after)] : [])]);
       return { items: items.slice(0,100), next: items.length > 100 ? items[99].id : null };
     }); },
-    getFindingReview(session, runId, findingId) { return tx(async db => {
+    async getFindingReview(session, runId, findingId) { for(let attempt=0;attempt<3;attempt++) { const value=await tx(async db => {
+      // A linked finding shares the issue-first lock order used by closure and task decisions.
+      const [[linked]]=await db.execute('SELECT CAST(issue_id AS CHAR) issue_id FROM data_map_analysis_finding_reviews WHERE finding_id=? AND issue_id IS NOT NULL ORDER BY revision_no DESC LIMIT 1',[id(findingId)]);
+      if(linked)await db.execute('SELECT issue_id FROM process_governance_issues WHERE issue_id=? FOR UPDATE',[linked.issue_id]);
       const who = await actor(db, session), f = await finding(db, session, runId, findingId), events = await history(db, f.found.finding_id);
       const state = events.at(-1) || { decision: 'pending_verification', revision_no: 1, issue_id: null };
+      // A concurrent first link may commit while actor() waits. Release this read transaction
+      // and restart issue-first; never hold an empty review-index gap while waiting for identity.
+      if(state.issue_id && state.issue_id!==linked?.issue_id)return {retry_linked_read:true};
       if (state.issue_id) { await issue(db, who, state.issue_id); await linkedFindings(db, session, state.issue_id); }
       return { finding_id: f.found.finding_id, state, events, can_confirm: !who.readOnly && who.permissions.has('governance:structure-gate'), close_enabled: false };
-    }); },
+    }); if(!value.retry_linked_read)return value; } throw fail('REVISION_CONFLICT',409); },
     getAnalysisIssue(session, issueId) { return tx(async db => {
+      await db.execute('SELECT issue_id FROM process_governance_issues WHERE issue_id=? FOR UPDATE',[id(issueId)]);
       const who = await actor(db, session), result = await issue(db, who, issueId), links = await linkedFindings(db, session, result.value.issue_id);
       return { issue: result.value, revision_no: result.binding?.revision_no || 1, issue_digest: digest(result.value), links, close_enabled: false };
     }); },
     decideAnalysisFinding(session, payload) { return tx(async db => {
       keys(payload, ['request_id','run_id','finding_id','expected_revision','action','reason','owner_department_id','owner_basis','evidence_ids','issue_id','expected_issue_revision','expected_issue_digest','title']);
+      if(payload.action==='link')await db.execute('SELECT issue_id FROM process_governance_issues WHERE issue_id=? FOR UPDATE',[id(payload.issue_id)]);
       const who = await actor(db, session, 'governance:structure-gate');
       const f = await finding(db, session, payload.run_id, payload.finding_id, true);
       const events = await history(db, f.found.finding_id), state = events.at(-1) || { decision: 'pending_verification', revision_no: 1, issue_id: null };

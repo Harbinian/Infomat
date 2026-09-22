@@ -593,8 +593,15 @@ router.get('/', requireAuth, (req, res) => {
         sankey: buildSankey(activeRoles, contexts, sankeyWorkItems)
       };
     });
+    // Per-issue authority is revalidated outside the legacy 15-second response cache.
+    const officeRepo=useMysqlIdentityReadModel()?require('./offices').getOfficeRepository():null;
+    const closureItems=officeRepo?.closureWorkItems?await officeRepo.closureWorkItems(req.session):[];
+    const liveActions=closureItems.length?buildNextActions([...closureItems,...body.workItems.filter(i=>i.type!=='guidance')],ownedRoles):body.nextActions;
+    const response=closureItems.length?{...body,workItems:[...closureItems,...body.workItems],
+      nextActions:liveActions,
+      summary:{...body.summary,priorityCount:liveActions.length,actionableCount:body.summary.actionableCount+closureItems.length}}:body;
     res.setHeader('Cache-Control', 'no-store');
-    res.json(body);
+    res.json(response);
   }, useMysqlIdentityReadModel() ? '工作台待办暂不可用，请稍后重试' : null);
 });
 

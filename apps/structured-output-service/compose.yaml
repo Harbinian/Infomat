@@ -1,0 +1,25 @@
+name: infomat-3001
+services:
+  structured-output:
+    image: infomat-structured-output:${STRUCTURED_OUTPUT_IMAGE_TAG:-local}
+    build:
+      context: ../..
+      dockerfile: apps/structured-output-service/Dockerfile
+      args:
+        NODE_IMAGE: ${STRUCTURED_OUTPUT_NODE_IMAGE:-node:24-bookworm-slim}
+        APP_COMMIT: ${STRUCTURED_OUTPUT_APP_COMMIT:-unknown}
+    container_name: infomat-structured-output-3001
+    ports:
+      - "0.0.0.0:3001:3001"
+    restart: unless-stopped
+    init: true
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

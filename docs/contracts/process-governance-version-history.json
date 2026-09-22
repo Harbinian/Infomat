@@ -1,6 +1,6 @@
 {
-  "current_version": "process-governance-v7",
-  "current_status": "released",
+  "current_version": "process-governance-v8",
+  "current_status": "candidate",
   "versions": [
     {
       "version": "process-governance-v1",
@@ -63,6 +63,13 @@
           "notes": "当前3001新建、完整校验和导出使用的v7结构；后续已发布结构发生变化时必须发布新的结构版本。"
         }
       ]
+    },
+    {
+      "version": "process-governance-v8",
+      "candidate_on": "2026-09-22",
+      "status": "candidate",
+      "title": "判断节点使用数据作为判断依据",
+      "summary": "允许 decision + use；其他数据操作仍要求 action。V7历史校验保持原规则，旧文件在导入内存中迁移，保持业务内容和稳定标识。候选版本尚未部署或业务验收。"
     }
   ]
 }

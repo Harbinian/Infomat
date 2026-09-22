@@ -255,7 +255,7 @@ v7根对象固定包含：
 
 所有非2xx的`/api/*`响应至少包含`error`和`code`。缺少校验对象、缺少结构版本和未知结构版本分别返回`VALIDATION_DATA_REQUIRED`、`SCHEMA_VERSION_REQUIRED`和`UNSUPPORTED_SCHEMA_VERSION`；未知模板、结构规则和健康检查版本统一返回`UNSUPPORTED_SCHEMA_VERSION`。`/api/session`、`/api/data`和`/api/export`返回`STATELESS_ENDPOINT_DISABLED`，未知接口返回`API_NOT_FOUND`。
 
-JSON请求正文上限为10MB。服务还拒绝超过64层的嵌套、按UTF-8实际字节计算超过1MB的单段文字、超过100000个对象或字段节点以及无效Unicode，并返回稳定JSON错误码。历史材料解析接口只接受一个不超过10MB的`.docx`、`.txt`或`.md`文件；DOCX在解析前检查条目数量、单条和总解压量、压缩比、路径层级、路径越界、ZIP64、无效UTF-8文件名、中央目录与本地文件头一致性以及压缩数据边界。DOCX最多并行解析两个文件，第三个请求返回429；单次解析超过5秒后，系统终止工作线程并释放并发名额。错误响应不返回堆栈、绝对路径或底层异常详情。
+JSON请求正文上限为10MB。服务还拒绝超过64层的嵌套、按UTF-8实际字节计算超过1MB的单段文字、超过100000个对象或字段节点以及无效Unicode，并返回稳定JSON错误码。旧版文档上传和粘贴解析功能已移除；`/api/upload`、`/api/paste` 返回404及 `API_NOT_FOUND`，不再支持DOCX、TXT或MD解析。对应的解析工作线程、`mammoth`、`multer`及专用依赖已移除。JSON导入、兼容迁移、校验和下载保持原有合同。错误响应不返回堆栈、绝对路径或底层异常详情。
 
 ## 运行与验证
 
@@ -295,6 +295,43 @@ Invoke-RestMethod http://127.0.0.1:3001/api/health
 合法多候选的整批失败浏览器回归使用 `npm.cmd run test:browser-import-atomic`。脚本在随机回环端口启动并关闭独立3001测试实例，不操作正式端口；它先证明旧版双流程源合法、迁移后候选0有效且候选1只包含一项非兼容自环错误，再分别核对图编辑状态和表格工作副本。失败导入前后的候选数组、JSON摘要、候选索引、图模式、选择、视口、撤销重做、未应用输入、未下载状态、最近下载基线和源文件摘要必须保持不变，两个候选均不得部分安装。
 
 原生v7导入规范化回归使用 `npm.cmd run test:browser-import-normalization -- --BaseUrl http://127.0.0.1:3011`。脚本只连接调用者明确指定的候选实例，并使用Microsoft Edge核对动态责任原值归档、按业务对象聚合的差异摘要、上传文字HTML转义、下载状态、规范化文件重导入、五档内容可视区、浏览器存储、3000网络边界和控制台。脚本不启动、停止或替换正式3001。
+
+## 本机 Docker 部署
+
+从仓库根目录执行以下命令。3001 容器独立于 MDM、MySQL 和 PMO，不读取 `.env`，不持久化用户业务内容。`docs/` 中随镜像携带的技术契约用于版本兼容；花名册、工作角色和映射文件仅保留现有功能的只读快照，不作为治理依据。
+
+```powershell
+$env:STRUCTURED_OUTPUT_APP_COMMIT = (git rev-parse HEAD).Trim()
+docker compose -f apps/structured-output-service/compose.yaml build
+docker compose -f apps/structured-output-service/compose.yaml up -d --no-build
+docker compose -f apps/structured-output-service/compose.yaml ps
+docker compose -f apps/structured-output-service/compose.yaml logs --tail 100
+```
+
+构建必须使用仓库根目录作为上下文。`Dockerfile.dockerignore` 采用白名单，只发送必要应用文件、技术契约和上述兼容快照，不包含私有配置、Git 历史、数据库或生成物。`STRUCTURED_OUTPUT_APP_COMMIT` 是构建时注入的 Git 基线标识，不证明工作区没有未提交修改；部署追溯同时记录 Docker 镜像 ID。
+
+Docker Hub 无法访问、但本机已有 `node:20-slim` 且 npm 官方仓库可访问时，可先构建 Node 24 备用基础镜像，再执行上面的构建和启动命令：
+
+```powershell
+docker build --pull=false -f apps/structured-output-service/Dockerfile.node24 -t infomat-node:24.21.0 .
+$env:STRUCTURED_OUTPUT_NODE_IMAGE = 'infomat-node:24.21.0'
+```
+
+备用镜像将缓存镜像内的 Node 替换为 24.21.0，并校验实际版本；不是以 Node 20 运行应用。它复用缓存的操作系统层，后续网络恢复时应重建官方 Node 24 基础镜像。
+
+首次切换前先用候选容器验证，命令如下。确认正式 3001 的原进程身份后停止该进程，再执行 Compose 启动命令；不要停止其他端口或数据库容器。
+
+```powershell
+docker run -d --name infomat-3001-candidate --init --read-only --cap-drop ALL --security-opt no-new-privileges:true -p 127.0.0.1:3011:3001 infomat-structured-output:local
+```
+
+至少验证首页、`/api/health` 的 V7 released 状态、`/api/schema` 摘要及 `/vendor/cytoscape.min.js`，并验证旧 JSON 文件迁移以及旧解析接口返回404。JSON 下载仍由浏览器执行，HTTP 检查不能替代实际浏览器导入、编辑、下载验收。候选验证完成后可用 `docker stop infomat-3001-candidate` 停止候选容器。
+
+可从仓库根目录执行 `node apps/structured-output-service/scripts/smoke-docker.js http://127.0.0.1:3011`，向候选服务发送合成的 V3/V6 迁移结果，检查 V7 校验及 JSON 序列化回读，并确认旧文档上传和粘贴解析请求被拒绝。切换后把地址改为 `http://127.0.0.1:3001` 再验证。脚本使用本应用已安装的依赖，不提交业务数据。
+
+正式容器名为 `infomat-structured-output-3001`，映射 `0.0.0.0:3001`。容器以非 root 用户、只读文件系统运行；日志最多保留 3 个 10MB 文件。`unless-stopped` 在容器进程退出后自动重启，但健康检查失败本身不会触发重启。Windows 登录后仍需 Docker Desktop 引擎运行；可在 Docker Desktop 设置中启用登录时启动。用户主动停止的容器需再次执行 `up -d --no-build`。
+
+回退时先执行 `docker compose -f apps/structured-output-service/compose.yaml stop`，再在 `apps/structured-output-service` 目录运行原有 `npm.cmd start` 并复查接口。切换前请下载页面中尚未保存的内容，服务不提供草稿恢复。
 
 ## 关联文档
 

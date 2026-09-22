@@ -982,7 +982,7 @@
         .filter(link => link?.operation === 'create')
         .map(link => text(link.behavior_ref))
         .filter(ref => behaviorRefs.has(ref));
-      const modernDataModel = ['process-governance-v4', 'process-governance-v5', 'process-governance-v6', 'process-governance-v7'].includes(data.schema_version);
+      const modernDataModel = ['process-governance-v4', 'process-governance-v5', 'process-governance-v6', 'process-governance-v7', 'process-governance-v8'].includes(data.schema_version);
       const canonicalProducerRef = v4CreateRefs.length === 1
         ? v4CreateRefs[0]
         : modernDataModel ? '' : text(item.produced_by_behavior_ref);
@@ -1656,7 +1656,7 @@
             fieldTarget(target, `data_objects.${index}.description`)
           ],
           [
-            !['process-governance-v4', 'process-governance-v5', 'process-governance-v6', 'process-governance-v7'].includes(data.schema_version)
+            !['process-governance-v4', 'process-governance-v5', 'process-governance-v6', 'process-governance-v7', 'process-governance-v8'].includes(data.schema_version)
               || (complete(item.information_type) && item.information_type !== 'pending_confirmation'),
             `${label}的信息类型待确认`,
             fieldTarget(target, `data_objects.${index}.information_type`)
@@ -1685,7 +1685,7 @@
       let lifecyclePassed = 0;
       const lifecycleTotal = dataObjects.length * 3;
       dataObjects.forEach((item, index) => {
-        if (data.schema_version !== 'process-governance-v7') {
+        if (!['process-governance-v7', 'process-governance-v8'].includes(data.schema_version)) {
           lifecyclePassed += 3;
           return;
         }
@@ -1801,7 +1801,7 @@
         const detailCount = areas.filter(area => area.area_type === '明细清单').length;
         const assignmentChecks = [];
         const formBehaviorLinks = Array.isArray(form.behavior_links) ? form.behavior_links : [];
-        const formBehaviorPassed = !['process-governance-v4', 'process-governance-v5', 'process-governance-v6', 'process-governance-v7'].includes(data.schema_version) || (
+        const formBehaviorPassed = !['process-governance-v4', 'process-governance-v5', 'process-governance-v6', 'process-governance-v7', 'process-governance-v8'].includes(data.schema_version) || (
           formBehaviorLinks.length > 0
           && formBehaviorLinks.every(link => behaviorRefs.has(text(link.behavior_ref)) && Array.isArray(link.operations) && link.operations.length > 0)
         );
@@ -1868,13 +1868,13 @@
                 `forms.${formIndex}.areas.${areaIndex}.items.${itemIndex}.required`
               ],
               [
-                !['process-governance-v4', 'process-governance-v5', 'process-governance-v6', 'process-governance-v7'].includes(data.schema_version)
+                !['process-governance-v4', 'process-governance-v5', 'process-governance-v6', 'process-governance-v7', 'process-governance-v8'].includes(data.schema_version)
                   || (item.value_origin_mode && item.value_origin_mode !== 'pending_confirmation'),
                 `${formLabel}的字段${itemIndex + 1}取值方式待确认`,
                 `forms.${formIndex}.areas.${areaIndex}.items.${itemIndex}.value_origin_mode`
               ],
               [
-                !['process-governance-v4', 'process-governance-v5', 'process-governance-v6', 'process-governance-v7'].includes(data.schema_version)
+                !['process-governance-v4', 'process-governance-v5', 'process-governance-v6', 'process-governance-v7', 'process-governance-v8'].includes(data.schema_version)
                   || item.value_origin_mode !== 'depends_on_data'
                   || (Array.isArray(item.source_links) && item.source_links.length > 0),
                 `${formLabel}的字段${itemIndex + 1}选择依赖数据但未登记来源`,
@@ -1892,7 +1892,7 @@
                 ));
               }
             });
-            if (['process-governance-v5', 'process-governance-v6', 'process-governance-v7'].includes(data.schema_version)) {
+            if (['process-governance-v5', 'process-governance-v6', 'process-governance-v7', 'process-governance-v8'].includes(data.schema_version)) {
               (Array.isArray(item.source_links) ? item.source_links : []).forEach((link, linkIndex) => {
                 const externalSystemSource = link.source_type === 'external_system';
                 const sourceComplete = externalSystemSource

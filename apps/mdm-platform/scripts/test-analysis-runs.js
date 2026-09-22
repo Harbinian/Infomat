@@ -193,10 +193,14 @@ async function main() {
       const r = await repo.createAnalysisRun(lead, payload()); await rejects(finish(r, 'succeeded'), 'DEFINITION_ANALYSIS_RUN_COVERAGE_CONFLICT'); await finish(r, 'failed');
       assert.equal((await get(r)).status, 'failed');
     });
+    if (process.argv.includes('--p19')) await require('./testHelpers/analysisAiVerification')({ repo, lead, pool, fixture, source, check, save, backup, restore, output });
     if (process.argv.includes('--p13')) await require('./testHelpers/analysisComparisonVerification')({ repo, lead, pool, run, historical, payload, begin, completion, finish, get, check, save });
     if (process.argv.includes('--p14')) await require('./testHelpers/analysisApiVerification')({ repo, lead, contact, pool, run, historical, payload, fixture, source, published, preview, template, fieldMap, handoff, field, begin, completion, finish, get, check, save, expect, backup, restore });
     if (process.argv.includes('--p16')) await require('./testHelpers/analysisIssueVerification')({ repo, lead, contact, pool, run, historical, payload, fixture, source, mapping, fieldMap, handoff, field, begin, completion, finish, get, check, save, expect, backup, restore, output });
     if (process.argv.includes('--p17')) await require('./testHelpers/analysisTaskVerification')({ repo, lead, contact, pool, run, historical, payload, fixture, source, mapping, fieldMap, handoff, field, begin, completion, finish, get, check, save, expect, backup, restore, output });
+    if (process.argv.includes('--p18-word')) await require('./testHelpers/wordEvidenceVerification')({ repo, lead, pool, fixture, source, field, check, save, backup, restore, output });
+    if (process.argv.includes('--p18-pdf')) await require('./testHelpers/pdfEvidenceVerification')({ repo, lead, pool, fixture, source, field, check, save, backup, restore, output });
+    if (process.argv.includes('--p18')) await require('./testHelpers/excelEvidenceVerification')({ repo, lead, pool, fixture, source, field, check, save, backup, restore, output });
     if (process.argv.includes('--p15')) await require('./testHelpers/analysisWorkbenchVerification')({ repo, lead, pool, run, historical, fixture, source, mapping, fieldMap, handoff, get, check, save, backup, restore, output });
     await check('database unique keys, same-run references and pending-only findings block invalid direct writes', async () => {
       const a = historical.attempts[0], f = a.findings[0];
@@ -247,7 +251,7 @@ async function main() {
       assert.deepEqual(await get(run), historical);
     });
     assert((await inspectAnalysisRuns(pool)).ready);
-    save('results.json', { passed: true, step: process.argv.includes('--p17') ? 'P17' : process.argv.includes('--p16') ? 'P16' : process.argv.includes('--p15') ? 'P15' : 'P09', checks, formal_environment: false, worker_started: process.argv.includes('--p15') || process.argv.includes('--p16'), human_acceptance: false });
+    save('results.json', { passed: true, step: process.argv.includes('--p19') ? 'P19' : process.argv.includes('--p18-pdf') ? 'P18-PDF' : process.argv.includes('--p18-word') ? 'P18-DOCX' : process.argv.includes('--p18') ? 'P18' : process.argv.includes('--p17') ? 'P17' : process.argv.includes('--p16') ? 'P16' : process.argv.includes('--p15') ? 'P15' : 'P09', checks, formal_environment: false, worker_started: process.argv.includes('--p19') || process.argv.includes('--p18-pdf') || process.argv.includes('--p18-word') || process.argv.includes('--p18') || process.argv.includes('--p15') || process.argv.includes('--p16'), human_acceptance: false });
   }, { evidenceDir: output }); }
   finally { for (const [k, v] of Object.entries(oldFlags)) { if (v === undefined) delete process.env[k]; else process.env[k] = v; } }
 }

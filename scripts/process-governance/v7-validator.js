@@ -5,6 +5,14 @@ function list(value) {
 }
 
 function validateProcessGovernanceV7(document, options = {}) {
+  return validateProcessGovernance(document, options, false);
+}
+
+function validateProcessGovernanceV8(document, options = {}) {
+  return validateProcessGovernance(document, options, true);
+}
+
+function validateProcessGovernance(document, options, allowDecisionUse) {
   const schemaValidator = options.schemaValidator;
   if (typeof schemaValidator !== 'function') {
     throw new TypeError('validateProcessGovernanceV7 requires a schemaValidator compiled from process-governance-v7.schema.json');
@@ -108,10 +116,13 @@ function validateProcessGovernanceV7(document, options = {}) {
     list(dataObject && dataObject.behavior_links).forEach((link, linkIndex) => {
       const linkPath = `/data_objects/${dataIndex}/behavior_links/${linkIndex}`;
       requireRef(behaviorRefs, link && link.behavior_ref, `${linkPath}/behavior_ref`, '数据关系对应行为');
-      if (link && link.behavior_ref && behaviorByRef.get(link.behavior_ref) && behaviorByRef.get(link.behavior_ref).node_type !== 'action') {
+      if (link && link.behavior_ref && behaviorByRef.get(link.behavior_ref) && behaviorByRef.get(link.behavior_ref).node_type !== 'action'
+        && !(allowDecisionUse && behaviorByRef.get(link.behavior_ref).node_type === 'decision' && link.operation === 'use')) {
         addError(
           `${linkPath}/behavior_ref`,
-          '数据关系关联了控制节点；请保留原内容，并将关系改到实际办理业务的行为',
+          allowDecisionUse && behaviorByRef.get(link.behavior_ref).node_type === 'decision'
+            ? '判断节点仅允许使用数据作为判断依据；生成、更新或待确认操作请关联到实际执行步骤。原关系应保留并由用户修正'
+            : '数据关系关联了不支持数据操作的控制节点；请保留原内容，并将关系改到实际办理业务的行为',
           { ref: link.behavior_ref },
           'localReference',
           'DATA_RELATION_ACTION_BEHAVIOR_REQUIRED'
@@ -219,5 +230,6 @@ function validateProcessGovernanceV7(document, options = {}) {
 
 module.exports = {
   V7,
-  validateProcessGovernanceV7
+  validateProcessGovernanceV7,
+  validateProcessGovernanceV8
 };

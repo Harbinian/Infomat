@@ -2,7 +2,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const Ajv2020 = require('ajv/dist/2020');
-const { validateProcessGovernanceV7 } = require('../../../scripts/process-governance/v7-validator');
+const { validateProcessGovernanceV7, validateProcessGovernanceV8 } = require('../../../scripts/process-governance/v7-validator');
 
 const V7 = 'process-governance-v7';
 const CONTRACTS_DIR = path.resolve(__dirname, '../../../docs/contracts');
@@ -12,6 +12,7 @@ for (const version of [1, 2]) {
   validator.addSchema(JSON.parse(fs.readFileSync(path.join(CONTRACTS_DIR, `process-governance-v${version}.schema.json`), 'utf8')));
 }
 const validateV7 = validator.compile(V7_SCHEMA);
+const validateV8 = validator.compile(JSON.parse(fs.readFileSync(path.join(CONTRACTS_DIR, 'process-governance-v8.schema.json'), 'utf8')));
 
 const PARTY_STATUSES = new Set(['pending', 'confirmed', 'needs_changes', 'pending_evidence', 'disputed']);
 const REVIEW_ITEM_DIGEST_VERSION = 'process-v7-review-item-v2';
@@ -129,7 +130,9 @@ function validateAndProjectV7(document, departments, options = {}) {
   if (!document || typeof document !== 'object' || Array.isArray(document)) {
     return { errors: [{ field: 'document', message: 'V7文件内容必须是JSON对象' }], warnings: [], blockingIssues: [], items: [] };
   }
-  const validation = validateProcessGovernanceV7(document, { schemaValidator: validateV7 });
+  const validation = document.schema_version === 'process-governance-v8'
+    ? validateProcessGovernanceV8(document, { schemaValidator: validateV8 })
+    : validateProcessGovernanceV7(document, { schemaValidator: validateV7 });
   if (!validation.valid) {
     return {
       errors: validation.errors.map(error => ({

@@ -61,6 +61,9 @@ module.exports=function({transaction,actor,scope,entityScope,version,request}){
     return {o,f};
   }
   return {
+    ...require('./excelEvidence')({transaction,actor,scope,entityScope,version,request,loadSource,target,unpack,mappingSelect}),
+    ...require('./wordEvidence')({transaction,actor,scope,entityScope,version,request,loadSource,target,unpack,mappingSelect}),
+    ...require('./pdfEvidence')({transaction,actor,scope,entityScope,version,request,loadSource,target,unpack,mappingSelect}),
     ...require('./analysisIssues')({transaction,actor,scope,entityScope,version,request,loadSource,target,unpack,mappingSelect}),
     ...require('./analysisApi')({transaction,actor,scope,entityScope,version,request,loadSource,target,unpack,mappingSelect}),
     ...require('./analysisRuns')({transaction,actor,scope,entityScope,version,request,loadSource,target,unpack,mappingSelect}),

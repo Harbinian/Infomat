@@ -585,10 +585,11 @@ function makeProcessV7PreviewReviewRepository(pool) {
           INSERT INTO process_v7_preview_revisions
             (case_id, revision_no, source_file_name, source_schema_version, source_exported_at,
              content_hash, content_json, uploaded_by_user_id, uploaded_by_person_id)
-          VALUES (?, 1, ?, 'process-governance-v7', ?, ?, ?, ?, ?)
+          VALUES (?, 1, ?, ?, ?, ?, ?, ?, ?)
         `, [
           caseId,
           meta.sourceFileName,
+          preview.document.schema_version,
           text(preview.document && preview.document.export_meta && preview.document.export_meta.exported_at) || null,
           preview.contentHash,
           JSON.stringify(preview.document),
@@ -692,11 +693,12 @@ function makeProcessV7PreviewReviewRepository(pool) {
           INSERT INTO process_v7_preview_revisions
             (case_id, revision_no, source_file_name, source_schema_version, source_exported_at,
              content_hash, content_json, uploaded_by_user_id, uploaded_by_person_id)
-          VALUES (?, ?, ?, 'process-governance-v7', ?, ?, ?, ?, ?)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
           locked.id,
           revisionNo,
           meta.sourceFileName,
+          candidatePreview.document.schema_version,
           text(candidatePreview.document && candidatePreview.document.export_meta && candidatePreview.document.export_meta.exported_at) || null,
           candidatePreview.contentHash,
           JSON.stringify(candidatePreview.document),
@@ -1036,7 +1038,7 @@ function makeProcessV7PreviewReviewRepository(pool) {
         let formalDraft;
         if (activeDraft) {
           if (
-            text(activeDraft.schema_version) !== 'process-governance-v7' ||
+            !['process-governance-v7', 'process-governance-v8'].includes(text(activeDraft.schema_version)) ||
             !['draft', 'needs_changes'].includes(text(activeDraft.status))
           ) {
             throw repositoryError(409, 'V7_FORMAL_DRAFT_LOCKED', '该正式流程主档已有不能覆盖的进行中草稿');
@@ -1049,7 +1051,7 @@ function makeProcessV7PreviewReviewRepository(pool) {
             UPDATE process_design_drafts
             SET document_no=?, document_title=?, process_name=?, reason=?, basis_type=?, basis_description=?,
                 involves_other_departments=?, related_departments_json=?, department_id=?,
-                schema_version='process-governance-v7', process_content_json=?, content_hash=?, revision_no=?,
+                schema_version=?, process_content_json=?, content_hash=?, revision_no=?,
                 content_updated_by=?, content_updated_at=CURRENT_TIMESTAMP,
                 status='draft', submitted_by=NULL, submitted_at=NULL, published_by=NULL, published_at=NULL,
                 updated_at=CURRENT_TIMESTAMP
@@ -1064,6 +1066,7 @@ function makeProcessV7PreviewReviewRepository(pool) {
             relatedDepartmentIds.length ? 1 : 0,
             JSON.stringify(relatedDepartmentIds),
             lockedCase.owning_department_id,
+            currentPreview.document.schema_version,
             serializedContent,
             lockedCase.current_content_hash,
             lockedRevision.revision_no,
@@ -1080,7 +1083,7 @@ function makeProcessV7PreviewReviewRepository(pool) {
                schema_version, process_content_json, content_hash, revision_no,
                content_updated_by, content_updated_at, status, created_by)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, 'unclassified', NULL, 'unclassified', NULL,
-                    'process-governance-v7', ?, ?, ?, ?, CURRENT_TIMESTAMP, 'draft', ?)
+                    ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, 'draft', ?)
           `, [
             formalDocument.id,
             formalDocument.document_no,
@@ -1095,6 +1098,7 @@ function makeProcessV7PreviewReviewRepository(pool) {
             relatedDepartmentIds.length ? 1 : 0,
             JSON.stringify(relatedDepartmentIds),
             lockedCase.owning_department_id,
+            currentPreview.document.schema_version,
             serializedContent,
             lockedCase.current_content_hash,
             lockedRevision.revision_no,

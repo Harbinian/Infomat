@@ -87,9 +87,11 @@ module.exports = function (helpers) {
         const [existing] = await db.execute('SELECT run_id FROM data_map_analysis_queue WHERE run_id=? FOR UPDATE', [run.run_id]);
         if (existing.length) throw code('ALREADY_ENQUEUED');
         if (run.status !== 'queued' || run.attempts.length) throw code('PRISTINE_RUN_REQUIRED');
+        if (run.manifest.ai_metadata?.adapter_version === require('./analysisAiOffline').VERSION &&
+          !(await db.execute('SELECT migration_key FROM schema_migrations WHERE migration_key=?', [require('./analysisAiSchema').MIGRATION_KEY]))[0].length) throw code('AI_MIGRATION_REQUIRED', 503);
         const stub = run.manifest.rule_version === 'p10-stub-v1' && !run.manifest.ai_metadata && Object.values(run.manifest.parser_versions).every(v => v === 'p10-stub-v1') &&
           run.manifest.steps.every(s => ['stub_success', 'stub_transient', 'stub_invalid', 'stub_hang', 'stub_partial'].includes(s.parser_key));
-        if (!stub && !require('./v7AnalysisRules').enabledManifest(run.manifest) && !require('./handoffAnalysisRules').enabledManifest(run.manifest)) throw code('ADAPTER_NOT_ENABLED', 400);
+        if (!stub && !require('./v7AnalysisRules').enabledManifest(run.manifest) && !require('./handoffAnalysisRules').enabledManifest(run.manifest) && !require('./excelEvidenceRules').enabledManifest(run.manifest) && !require('./wordEvidenceRules').enabledManifest(run.manifest) && !require('./pdfEvidenceRules').enabledManifest(run.manifest) && !require('./analysisAiOffline').enabledManifest(run.manifest)) throw code('ADAPTER_NOT_ENABLED', 400);
         const savedSession = { personId: id(session.personId), accountId: id(session.accountId), authVersion: id(session.authVersion) };
         await db.execute("INSERT INTO data_map_analysis_queue(run_id,session_json,policy_json,state,available_at,created_at,updated_at) VALUES (?,?,?,'ready',UTC_TIMESTAMP(3),UTC_TIMESTAMP(3),UTC_TIMESTAMP(3))", [run.run_id, json(savedSession), json(p)]);
         await event(db, { run_id: run.run_id, generation: 0, worker_id: null }, 'enqueued');
@@ -149,8 +151,8 @@ module.exports = function (helpers) {
       const attempt = await a.beginAnalysisAttempt(q.session, { request_id: uuid(), run_id: q.run_id, expected_revision: run.revision_no, step_key: s.step_key });
       await db.execute('UPDATE data_map_analysis_queue SET deadline_at=TIMESTAMPADD(MICROSECOND,?,UTC_TIMESTAMP(3)) WHERE run_id=?', [q.policy.timeout_ms * 1000, q.run_id]);
       let inputs;
-      if ([require('./v7AnalysisRules').PARSER, require('./handoffAnalysisRules').PARSER].includes(s.parser_key)) {
-        if (!require('./v7AnalysisRules').enabledManifest(run.manifest) && !require('./handoffAnalysisRules').enabledManifest(run.manifest)) throw code('ADAPTER_NOT_ENABLED', 400);
+      if ([require('./v7AnalysisRules').PARSER, require('./handoffAnalysisRules').PARSER, require('./excelEvidenceRules').PARSER, require('./wordEvidenceRules').PARSER, require('./pdfEvidenceRules').PARSER, require('./analysisAiOffline').PARSER].includes(s.parser_key)) {
+        if (!require('./v7AnalysisRules').enabledManifest(run.manifest) && !require('./handoffAnalysisRules').enabledManifest(run.manifest) && !require('./excelEvidenceRules').enabledManifest(run.manifest) && !require('./wordEvidenceRules').enabledManifest(run.manifest) && !require('./pdfEvidenceRules').enabledManifest(run.manifest) && !require('./analysisAiOffline').enabledManifest(run.manifest)) throw code('ADAPTER_NOT_ENABLED', 400);
         const who = await helpers.actor(db, q.session, 'governance:structure-gate');
         const resolve = require('./analysisInputReferences')(helpers);
         inputs = [];
@@ -161,12 +163,29 @@ module.exports = function (helpers) {
           inputs.push({ input_key: key, ...resolved });
         }
       }
-      return { ...attempt, step: s, manifest_digest: run.manifest_digest, ...(inputs ? { inputs } : {}) };
+      return { ...attempt, step: s, manifest_digest: run.manifest_digest, ai_metadata: run.manifest.ai_metadata, ...(inputs ? { inputs } : {}) };
     }); },
     completeQueuedAnalysis(claim, result) { return tx(async db => {
       const q = await fenced(db, claim), a = api(db);
       const run = await a.getAnalysisRun(q.session, q.run_id);
-      const completed = await a.completeAnalysisAttempt(q.session, { ...result, run_id: q.run_id });
+      const { ai_trace, ...ordinary } = result;
+      const ai = require('./analysisAiOffline');
+      const attempt = run.attempts.find(a => a.attempt_id === String(result.attempt_id));
+      const step = run.manifest.steps.find(s => s.step_key === attempt?.step_key);
+      if (step?.parser_key === ai.PARSER) {
+        const who = await helpers.actor(db, q.session, 'governance:structure-gate'), resolve = require('./analysisInputReferences')(helpers), inputs = [];
+        for (const input_key of step.input_keys) {
+          const ref = run.manifest.inputs.find(i => i.input_key === input_key).snapshot;
+          inputs.push({ input_key, ...await resolve(db, who, ref.kind, ref.ref_id) });
+        }
+        try { ai.verifyTrace({ step, inputs, ai_metadata: run.manifest.ai_metadata }, ai_trace, result); }
+        catch { throw code('AI_TRACE_INVALID', 400); }
+        const trace = { run_id: run.run_id, attempt_id: String(result.attempt_id), manifest_digest: run.manifest_digest, ...ai_trace };
+        const [[prior]] = await db.execute('SELECT snapshot_digest FROM data_map_analysis_ai_outputs WHERE attempt_id=? FOR UPDATE', [result.attempt_id]);
+        if (prior && prior.snapshot_digest !== digest(trace)) throw code('AI_TRACE_CONFLICT');
+        if (!prior) await db.execute('INSERT INTO data_map_analysis_ai_outputs(attempt_id,run_id,snapshot_json,snapshot_digest,created_at) VALUES (?,?,?,?,UTC_TIMESTAMP(3))', [result.attempt_id, run.run_id, json(trace), digest(trace)]);
+      } else if (ai_trace) throw code('AI_TRACE_INVALID', 400);
+      const completed = await a.completeAnalysisAttempt(q.session, { ...ordinary, run_id: q.run_id });
       if (completed.revision_no <= run.revision_no) return completed;
       await event(db, q, 'step_completed', result.error_code);
       if (result.status === 'failed' && result.error_code === 'TEMPORARY_UNAVAILABLE') await release(db, q, 'ready', result.error_code, q.policy.retry_ms);

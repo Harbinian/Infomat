@@ -214,7 +214,9 @@
     const behavior = array(documentValue.behaviors).find(item => item.behavior_ref === behaviorRef);
     if (!dataObject) return ['数据对象不存在'];
     if (!behavior) return ['业务行为不存在'];
-    if (behavior.node_type !== 'action') return ['判断和并行控制节点不是业务行为，不能建立数据操作关系'];
+    if (behavior.node_type !== 'action' && !(documentValue.schema_version === 'process-governance-v8' && behavior.node_type === 'decision' && array(operations).every(operation => operation === 'use'))) {
+      return [behavior.node_type === 'decision' ? '判断节点仅允许使用数据作为判断依据；其他操作请关联到实际执行步骤。输入已保留' : '并行等控制节点不能建立数据操作关系；请关联到实际执行步骤'];
+    }
     const selected = unique(array(operations));
     if (selected.some(operation => !DATA_OPERATIONS.has(operation))) return ['数据操作类型无效'];
     if (!selected.length) return [];

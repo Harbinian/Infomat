@@ -98,7 +98,7 @@
         columns: [
           column('link_ref', '技术标识', { technicalRef: true, readOnly: true }),
           column('data_ref', '数据对象', { required: true, technicalRef: true, editor: 'lookup', lookup: 'data_objects' }),
-          column('behavior_ref', '业务行为', { required: true, technicalRef: true, editor: 'lookup', lookup: 'behaviors' }),
+          column('behavior_ref', '业务行为', { required: true, technicalRef: true, editor: 'lookup', lookup: 'dataBehaviors' }),
           column('operation', '数据操作', { required: true, editor: 'select', values: options(DATA_OPERATIONS) }),
           column('updated_field_refs', '更新字段（可多选）', { editor: 'update-fields', width: 300 })
         ]
@@ -399,8 +399,8 @@
     orderedActive(tables, 'data_behavior_links').forEach(row => {
       if (!ensureParent(result, row, 'data_behavior_links', 'data_ref', row.data_ref, dataMap, '数据对象')) return;
       if (!ensureParent(result, row, 'data_behavior_links', 'behavior_ref', row.behavior_ref, behaviorMap, '业务行为')) return;
-      if (behaviorMap.get(row.behavior_ref)?.node_type !== 'action') {
-        problem(result.errors, row, 'data_behavior_links', 'behavior_ref', 'ACTION_BEHAVIOR_REQUIRED', '数据关系只能关联实际办理业务的行为，不能关联判断、并行、开始或结束等控制节点');
+      if (behaviorMap.get(row.behavior_ref)?.node_type !== 'action' && !(candidate.schema_version === 'process-governance-v8' && behaviorMap.get(row.behavior_ref)?.node_type === 'decision' && row.operation === 'use')) {
+        problem(result.errors, row, 'data_behavior_links', 'behavior_ref', 'ACTION_BEHAVIOR_REQUIRED', '判断节点仅允许使用数据作为判断依据；其他操作请关联到实际执行步骤，并行等控制节点不支持数据关系。输入已保留');
         return;
       }
       if (!forbidMove(result, row, 'data_behavior_links', 'data_ref', row.data_ref)) return;

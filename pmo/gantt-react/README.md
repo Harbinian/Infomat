@@ -15,6 +15,30 @@ npm run preview
 
 开发模式默认访问 `http://localhost:5174`。
 
+## 本机 Docker 部署（5173）
+
+容器保留 Vite 服务及交付物插件，因此读取、上传和状态写回仍可使用。它是原有内部开发服务的容器化运行方式，不是带登录鉴权的生产发布服务。只在受信任的内网使用，不对公网开放。
+
+在仓库根目录执行以下 PowerShell 命令：
+
+```powershell
+docker compose -f pmo/gantt-react/compose.yaml build
+docker compose -f pmo/gantt-react/compose.yaml up -d --no-build
+node pmo/gantt-react/scripts/smoke-docker.mjs http://127.0.0.1:5173
+```
+
+默认基镜像为 `node:24-bookworm-slim`。本机无法拉取 Docker Hub 镜像时，可复用已存在且验证过的本地 Node 24 镜像：先设置 `$env:PMO_NODE_IMAGE='infomat-node:24.21.0'`，再运行构建命令。镜像必须事先存在；该名称不是公共镜像。
+
+容器名为 `infomat-pmo-5173`，监听 `0.0.0.0:5173`，使用非 root 用户、只读根文件系统和临时 Vite 缓存。Compose 只将 `pmo/deliverables/` 及 `artifacts/pmo/deliverables/` 挂载为可写目录，分别保存交付物正本和上传、历史产物；重建容器不会删除这些宿主机文件。`public/`、流程地图和 ECharts 从原路径只读挂载，重新生成任务数据后刷新页面即可。
+
+构建上下文采用白名单，不包含 `.env`、其他应用或交付物正本。更新前应备份上述两个可写目录；回退软件不会自动回退期间发生的数据修改。周会事项仍存储在浏览器 `localStorage`，继续使用原访问地址和端口可保持原浏览器存储空间。
+
+`scripts/smoke-docker.mjs` 只读检查首页、前端模块、任务及清单文件摘要、流程地图、ECharts、交付物列表和详情，不写入业务数据。候选容器的写回测试必须使用隔离交付物目录。
+
+恢复宿主机运行时，先执行 `docker compose -f pmo/gantt-react/compose.yaml down` 释放5173，再进入 `pmo/gantt-react` 执行 `npm.cmd run dev -- --host 0.0.0.0 --port 5173 --strictPort`。不要同时启动两份服务写入同一交付物目录。
+
+安全限制：当前 XLSX 上传依赖 `xlsx@0.18.5`，npm 审计报告其存在高风险问题且没有 npm 修复版。容器隔离不消除该解析风险，不应上传不可信文件；更换解析库或取消该能力需要单独处理。
+
 ## 数据来源
 
 `public/tasks.json` 由 `pmo/信息化项目_计划管控真源.md` 通过 `pmo/build_pmo_task_data.py` 生成。页面实际读取 `public/tasks.json`，同时保留 `pmo/tasks.json` 作为 PMO 根目录备份。

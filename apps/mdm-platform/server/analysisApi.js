@@ -60,11 +60,16 @@ module.exports = function (helpers) {
     analysisCapabilities(session) { return transaction(async db => {
       const who = await reader(db, session);
       return { can_create: !who.readOnly && who.permissions.has('governance:structure-gate'), visibility: 'existing_source_scope',
-        public_summary_enabled: false, summary_fields: SUMMARY_FIELDS, material_kinds: ['v7_json'], source_kinds: Object.keys(sourceTables), export_formats: ['json'],
-        adapters: [['v7_source', require('./v7AnalysisRules')], ['handoff', require('./handoffAnalysisRules')]].map(([kind, rules]) => ({
-          kind, parser_key: rules.PARSER, rule_version: rules.VERSION, check_ids: rules.CHECKS,
+        public_summary_enabled: false, summary_fields: SUMMARY_FIELDS, material_kinds: ['v7_json', 'xlsx', 'docx', 'pdf'], source_kinds: Object.keys(sourceTables), export_formats: ['json'],
+        adapters: [['v7_source', require('./v7AnalysisRules')], ['handoff', require('./handoffAnalysisRules')], ['template', require('./excelEvidenceRules')], ['template', require('./wordEvidenceRules')], ['template', require('./pdfEvidenceRules')]].map(([kind, rules]) => ({
+          kind, source_kind: rules.PARSER === 'pdf_evidence' ? 'pdf_material' : rules.PARSER === 'word_evidence' ? 'word_material' : rules.PARSER === 'excel_evidence' ? 'excel_material' : null, parser_key: rules.PARSER, rule_version: rules.VERSION, check_ids: rules.CHECKS,
           catalog: rules.catalog.map(r => pick(r, ['rule_id', 'title', 'enabled', 'prerequisite', 'not_applicable']))
-        })) };
+        })).concat([{ kind: 'v7_source', parser_key: 'ai_offline', rule_version: require('./analysisAiOffline').VERSION,
+          check_ids: require('./analysisAiOffline').CHECKS, ai_metadata: require('./analysisAiOffline').METADATA,
+          base_adapter: { parser_key: require('./v7AnalysisRules').PARSER, rule_version: require('./v7AnalysisRules').VERSION, check_ids: require('./v7AnalysisRules').CHECKS },
+          catalog: require('./analysisAiOffline').CHECKS.map((rule_id, i) => ({ rule_id, enabled: rule_id !== 'ai.live_evaluation',
+            title: ({ 'ai.output_validation': '离线输出校验', 'ai.body_structure': '正文与结构待核实', 'ai.action_links': '动作连线待核实', 'ai.template_residue': '模板残留待核实', 'ai.responsibility': '责任表述待核实', 'ai.live_evaluation': '真实 AI 分析（未覆盖）' })[rule_id] }))
+        }]) };
     }); },
     listAnalysisSources(session, query = {}) { return transaction(async db => {
       const who = await reader(db, session), kind = query.kind || 'v7_source';
@@ -84,7 +89,7 @@ module.exports = function (helpers) {
       // Creation and queue admission share one transaction; invalid adapters leave no orphan run.
       const run = await api(db).createAnalysisRun(session, payload);
       const detail = await api(db).getAnalysisRun(session, run.run_id);
-      if (!require('./v7AnalysisRules').enabledManifest(detail.manifest) && !require('./handoffAnalysisRules').enabledManifest(detail.manifest)) throw fail('ADAPTER_NOT_ENABLED');
+      if (!require('./v7AnalysisRules').enabledManifest(detail.manifest) && !require('./handoffAnalysisRules').enabledManifest(detail.manifest) && !require('./excelEvidenceRules').enabledManifest(detail.manifest) && !require('./wordEvidenceRules').enabledManifest(detail.manifest) && !require('./pdfEvidenceRules').enabledManifest(detail.manifest) && !require('./analysisAiOffline').enabledManifest(detail.manifest)) throw fail('ADAPTER_NOT_ENABLED');
       await queue(db).enqueueAnalysis(session, { request_id: payload.request_id, run_id: run.run_id });
       return run;
     }); },

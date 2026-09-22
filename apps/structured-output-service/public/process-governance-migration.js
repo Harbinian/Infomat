@@ -6,6 +6,7 @@
   'use strict';
 
   const TARGET_VERSION = 'process-governance-v7';
+  const CURRENT_VERSION = 'process-governance-v8';
   const SUPPORTED_PROCESS_VERSIONS = [
     'process-governance-v1',
     'process-governance-v2',
@@ -13,7 +14,7 @@
     'process-governance-v4',
     'process-governance-v5',
     'process-governance-v6',
-    TARGET_VERSION
+    TARGET_VERSION, CURRENT_VERSION
   ];
   const LEGACY_DOCUMENT_VERSION = 'document-structured-output-v2';
   const NODE_TYPES = new Set(['', 'action', 'decision', 'parallel_split', 'parallel_join']);
@@ -1086,15 +1087,20 @@
   function migrateDocument(source, options = {}) {
     assertSource(source, options);
     const sourceSnapshot = clone(source);
+    if (source.schema_version === CURRENT_VERSION) {
+      assertTargets([sourceSnapshot], options);
+      return [sourceSnapshot];
+    }
     const documents = source.schema_version === LEGACY_DOCUMENT_VERSION
       ? splitLegacyDocument(sourceSnapshot, options)
       : [migrateProcessDocument(sourceSnapshot, options)];
+    documents.forEach(documentValue => { documentValue.schema_version = CURRENT_VERSION; });
     assertTargets(documents, options);
     return documents;
   }
 
   return {
-    TARGET_VERSION,
+    TARGET_VERSION: CURRENT_VERSION,
     SUPPORTED_PROCESS_VERSIONS: [...SUPPORTED_PROCESS_VERSIONS],
     LEGACY_DOCUMENT_VERSION,
     clone,

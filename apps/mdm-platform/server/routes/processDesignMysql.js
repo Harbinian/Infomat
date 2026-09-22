@@ -74,7 +74,7 @@ function httpError(statusCode, message, payload) {
 
 function assertActiveV7Draft(draft) {
   if (!draft) throw httpError(404, '流程草稿不存在');
-  if (text(draft.schema_version) !== 'process-governance-v7') throw httpError(410, '旧版流程办理入口已删除，历史记录保留；新流程请通过3001编制V7后上传。', { code: 'LEGACY_PROCESS_RETIRED', error: '旧版流程办理入口已删除，历史记录保留。' });
+  if (!['process-governance-v7', 'process-governance-v8'].includes(text(draft.schema_version))) throw httpError(410, '旧版流程办理入口已删除，历史记录保留；新流程请通过3001编制V7后上传。', { code: 'LEGACY_PROCESS_RETIRED', error: '旧版流程办理入口已删除，历史记录保留。' });
 }
 
 function text(value) {
@@ -819,7 +819,7 @@ function makeProcessDesignMysqlRepository(pool) {
     `, [document.id]) : [];
     const reviewTasks = await loadReviewTasks(draftId);
     const events = await loadEvents(draftId);
-    if (text(draft.schema_version) === 'process-governance-v7') {
+    if (['process-governance-v7', 'process-governance-v8'].includes(text(draft.schema_version))) {
       const content = parseJsonObject(draft.process_content_json);
       const contentHashVerified = Boolean(
         content &&
@@ -890,7 +890,7 @@ async getVersionContent(versionId) {
     },
 detail: detailForDraft,
 async canonicalContent(draft) {
-      if (text(draft.schema_version) === 'process-governance-v7') {
+      if (['process-governance-v7', 'process-governance-v8'].includes(text(draft.schema_version))) {
         const document = parseJsonObject(draft.process_content_json);
         const calculatedHash = v7ContentHash(document);
         if (!document || calculatedHash !== text(draft.content_hash)) {
@@ -901,7 +901,7 @@ async canonicalContent(draft) {
         }
         return {
           source: 'draft_canonical_json',
-          schema_version: 'process-governance-v7',
+          schema_version: draft.schema_version,
           content_hash: calculatedHash,
           revision: Number(draft.revision_no || 0),
           document
@@ -916,7 +916,7 @@ async submitDraft(draft, note, actorUserId, options = {}) {
       if (!transactionContext) {
         storedDraft = await getDraft(Number(draft && draft.id));
         if (!storedDraft) throw httpError(404, '制度结构草稿不存在');
-        isV7 = text(storedDraft.schema_version) === 'process-governance-v7';
+        isV7 = ['process-governance-v7', 'process-governance-v8'].includes(text(storedDraft.schema_version));
       }
       if (isV7 && !transactionContext) {
         assertV7FormalTransitionEnabled(storedDraft);
@@ -999,7 +999,7 @@ async decideReviewTask(task, decision, note, actorUserId, options = {}) {
         if (!storedTask) throw httpError(404, '审核任务不存在');
         draft = await getDraft(storedTask.draft_id);
         if (!draft) throw httpError(404, '制度结构草稿不存在');
-        isV7 = text(draft.schema_version) === 'process-governance-v7';
+        isV7 = ['process-governance-v7', 'process-governance-v8'].includes(text(draft.schema_version));
       }
       if (isV7 && !transactionContext) {
         assertV7FormalTransitionEnabled(draft);
@@ -1088,7 +1088,7 @@ async publishDraft(draft, note, actorUserId, options = {}) {
       if (!formalTransactionContext) {
         storedDraft = await getDraft(Number(draft && draft.id));
         if (!storedDraft) throw httpError(404, '制度结构草稿不存在');
-        isV7 = text(storedDraft.schema_version) === 'process-governance-v7';
+        isV7 = ['process-governance-v7', 'process-governance-v8'].includes(text(storedDraft.schema_version));
       }
       if (isV7 && !formalTransactionContext) {
         assertV7FormalTransitionEnabled(storedDraft);
@@ -1157,7 +1157,7 @@ async publishDraft(draft, note, actorUserId, options = {}) {
              schema_version, process_content_json, content_hash, source_revision_no,
              published_by, effective_at, supersedes_version_id, status)
           VALUES (?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, NULL,
-                  'process-governance-v7', ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, 'published')
+                  ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, 'published')
         `, [
           lockedDraft.id,
           document.id,
@@ -1166,6 +1166,7 @@ async publishDraft(draft, note, actorUserId, options = {}) {
           plannedEdition,
           versionNo,
           lockedDraft.department_id,
+          lockedDraft.schema_version,
           lockedDraft.process_content_json,
           lockedDraft.content_hash,
           Number(lockedDraft.revision_no),
@@ -1203,7 +1204,7 @@ async publishDraft(draft, note, actorUserId, options = {}) {
         const version = await getById('process_design_versions', result.insertId);
         await addEvent(lockedDraft.id, 'publish', authorizedActor.personId, optionalText(note) || '已发布原生V7流程版本', {
           process_version_id: Number(version.id),
-          schema_version: 'process-governance-v7',
+          schema_version: lockedDraft.schema_version,
           content_hash: binding.expectedContentHash,
           source_revision_no: binding.expectedRevisionNo,
           review_task_id: Number(approvedReview.id),
@@ -1310,7 +1311,7 @@ async function assertCanEditDraft(req, repo, draft) {
 
 async function assertCanEditDraftContent(req, repo, draft) {
   await assertCanEditDraft(req, repo, draft);
-  if (text(draft.schema_version) === 'process-governance-v7') {
+  if (['process-governance-v7', 'process-governance-v8'].includes(text(draft.schema_version))) {
     throw httpError(409, 'V7正式草稿正文不能在3000直接修改；请回到3001修改后上传新修订', {
       error: 'V7正式草稿正文不能在3000直接修改；请回到3001修改后上传新修订',
       code: 'V7_CONTENT_READ_ONLY'
@@ -1376,7 +1377,7 @@ async function readableProcessVersion(req) {
   if (!version.document) {
     throw httpError(409, '正式流程版本缺少可读正文', { error: '正式流程版本缺少可读正文', code: 'PROCESS_VERSION_CONTENT_MISSING' });
   }
-  if (text(version.schema_version) === 'process-governance-v7') {
+  if (['process-governance-v7', 'process-governance-v8'].includes(text(version.schema_version))) {
     const calculatedHash = v7ContentHash(version.document);
     if (text(version.content_hash) !== calculatedHash) {
       throw httpError(409, '正式V7版本正文摘要校验失败', {
@@ -1398,7 +1399,7 @@ router.get('/versions/:processVersionId/procedure-markdown', requireAuth, (req, 
   if (!['published', 'superseded'].includes(version.status)) {
     throw httpError(409, '该版本当前不能用于生成程序文件', { error: '该版本当前不能用于生成程序文件', code: 'PROCEDURE_VERSION_NOT_PUBLISHED' });
   }
-  if (version.schema_version !== 'process-governance-v7' || version.document.schema_version !== 'process-governance-v7') {
+  if (!['process-governance-v7', 'process-governance-v8'].includes(version.schema_version) || version.document.schema_version !== version.schema_version) {
     throw httpError(409, '程序文件下载需要原生V7正式版本', { error: '程序文件下载需要原生V7正式版本', code: 'PROCEDURE_V7_REQUIRED' });
   }
   const filename = `${markdownFileSafe(version.document_no || version.document.process?.process_name || 'process')}-version-${version.process_version_id}.md`;
@@ -1429,7 +1430,7 @@ router.get('/drafts/:id/export', requireAuth, (req, res) => runAction(res, async
   assertActiveV7Draft(draft);
   const content = await repo.canonicalContent(draft);
   if (!content.document) throw httpError(409, '该草稿不能无损导出为单流程治理JSON');
-  const filename = `${markdownFileSafe(text(draft.document_no) || `draft-${draft.id}`)}-process-governance-v7.json`;
+  const filename = `${markdownFileSafe(text(draft.document_no) || `draft-${draft.id}`)}-${draft.schema_version}.json`;
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
   res.json(content.document);
 }));
@@ -1447,7 +1448,7 @@ router.post('/drafts/:id/submit', requireAuth, requirePermission('governance:sub
   const draft = await repo.getDraft(req.params.id);
   await assertCanViewDraft(req, repo, draft);
   assertActiveV7Draft(draft);
-  const isV7 = text(draft && draft.schema_version) === 'process-governance-v7';
+  const isV7 = ['process-governance-v7', 'process-governance-v8'].includes(text(draft && draft.schema_version));
   let expectedBinding = {};
   if (isV7) {
     await assertCanEditDraft(req, repo, draft);
@@ -1473,7 +1474,7 @@ router.post('/review-tasks/:id/decision', requireAuth, (req, res) => runAction(r
   await assertCanViewDraft(req, repo, draft);
   assertActiveV7Draft(draft);
   await assertCanReview(req, repo, draft);
-  const isV7 = text(draft && draft.schema_version) === 'process-governance-v7';
+  const isV7 = ['process-governance-v7', 'process-governance-v8'].includes(text(draft && draft.schema_version));
   let expectedBinding = {};
   if (isV7) {
     assertV7FormalTransitionEnabled(draft);
@@ -1494,7 +1495,7 @@ router.post('/drafts/:id/publish', requireAuth, requirePermission('governance:pu
   let options = {
     confirm_complete_rewrite: Boolean(req.body && req.body.confirm_complete_rewrite)
   };
-  if (text(draft && draft.schema_version) === 'process-governance-v7') {
+  if (['process-governance-v7', 'process-governance-v8'].includes(text(draft && draft.schema_version))) {
     assertV7FormalTransitionEnabled(draft);
     const expectedBinding = v7FormalExpectedBinding(req.body || {});
     options = formalV7RepositoryOptions(req, expectedBinding);
