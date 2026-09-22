@@ -782,8 +782,8 @@ async function main() {
     },
     { userId: 10, personId: 10, departmentId: 1 }
   );
-  assert.strictEqual(insertedRevisionParams[4], candidateRevisionProjection.contentHash, '新修订摘要必须从事务内重新投影的正文生成');
-  assert.deepStrictEqual(JSON.parse(insertedRevisionParams[5]), candidateRevisionDocument, '新修订正文必须来自事务内重新校验的document');
+  assert.strictEqual(insertedRevisionParams[5], candidateRevisionProjection.contentHash, '新修订摘要必须从事务内重新投影的正文生成');
+  assert.deepStrictEqual(JSON.parse(insertedRevisionParams[6]), candidateRevisionDocument, '新修订正文必须来自事务内重新校验的document');
   assert.strictEqual(insertedRevisionItem.behavior_name, '工艺人员复核产品制造大纲', '调用方伪造的核对项不得写入');
   assert.strictEqual(updatedRevisionCaseParams[0], candidateRevisionProjection.processName, '调用方伪造的流程名称不得写入');
   assert.deepStrictEqual(JSON.parse(updatedRevisionCaseParams[5]), candidateRevisionProjection.blockingIssues, '调用方伪造的阻断项不得写入');

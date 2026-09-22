@@ -1,0 +1,5 @@
+# Fallback when Docker Hub is unavailable. Reuses the local Debian base,
+# replaces the Node runtime via npm, and retains the Node 24 requirement.
+FROM node:20-slim
+RUN npm install --global --force node@24.21.0 --registry=https://registry.npmjs.org && npm cache clean --force
+RUN node -e "if(process.versions.node!=='24.21.0')process.exit(1)"

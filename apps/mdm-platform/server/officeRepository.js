@@ -26,9 +26,9 @@ async function currentActor(db,session,lock=false) {
 }
 
 function makeOfficeRepository(pool) {
-  async function transaction(session,action) {
+  async function transaction(session,action,analysisTodoId=null) {
     const db=await pool.getConnection();
-    try{await db.beginTransaction();const actor=await currentActor(db,session,true);const result=await action(db,actor);await db.commit();return result;}
+    try{await db.beginTransaction();if(analysisTodoId!==null)await require('./analysisTaskLock').lockIssueForTask(db,analysisTodoId,false);const actor=await currentActor(db,session,true);const result=await action(db,actor);await db.commit();return result;}
     catch(error){await db.rollback();if(error.code==='ER_DUP_ENTRY'){const duplicate=failure('此交办请求已保存，请刷新办公室任务列表。','OFFICE_TASK_ALREADY_CREATED');duplicate.statusCode=409;throw duplicate;}if(['ER_LOCK_DEADLOCK','ER_LOCK_WAIT_TIMEOUT'].includes(error.code))throw changed();throw error;}
     finally{db.release();}
   }
@@ -93,6 +93,10 @@ function makeOfficeRepository(pool) {
         actionLabel:row.assignee_person_id?'办理办公室任务':'分配办公室成员',
         nextStep:row.assignee_person_id?'填写办理结果并办结':'为任务选择本办公室成员'}));
     },
+    async closureWorkItems(session) {
+      const actor=await currentActor(pool,session);if(actor.admin)return [];
+      return require('./analysisClosureWorkbench')(pool,session);
+    },
     async workbench(session,officeId) {
       const actor=await currentActor(pool,session);
       const [offices]=await pool.execute(officeSelect+(actor.canReadAll?'':` AND (o.manager_person_id=? OR EXISTS(SELECT 1 FROM office_membership m WHERE m.office_id=o.org_unit_id AND m.person_id=? AND m.status='active'))`)+' ORDER BY d.name,o.org_unit_code',actor.canReadAll?[]:[actor.personId,actor.personId]);
@@ -154,23 +158,25 @@ function makeOfficeRepository(pool) {
       return transaction(session,async(db,actor)=>{
         const current=await task(db,todoId,true),target=await requireActiveOffice(db,current.office_id,true);
         if(actor.admin||Number(target.manager_person_id)!==actor.personId)throw denied('只有该办公室负责人可以分配人员');
+        await require('./analysisTaskLock').lockIssueForTask(db,todoId);
         if(current.status!=='pending'||Number(payload.expected_revision)!==Number(current.revision_no))throw changed();
         const personId=positiveId(payload.assignee_person_id,'办理人员');
         if(!await member(db,target.id,personId,true))throw failure('办理人员必须是该办公室当前有效成员');
         await db.execute('UPDATE mdm_todo_office_assignments SET assignee_person_id=?,assigned_by_person_id=?,assigned_at=CURRENT_TIMESTAMP,revision_no=revision_no+1 WHERE todo_id=?',[personId,actor.personId,todoId]);
         await event(db,todoId,'office_person_assigned',actor,{office_id:target.id,from_person_id:current.assignee_person_id,to_person_id:personId});return {id:Number(todoId),revision_no:Number(current.revision_no)+1};
-      });
+      },todoId);
     },
     async completeTask(session,todoId,payload) {
       return transaction(session,async(db,actor)=>{
         const current=await task(db,todoId,true);await requireActiveOffice(db,current.office_id,true);
         if(actor.admin||Number(current.assignee_person_id)!==actor.personId||!await member(db,current.office_id,actor.personId,true))throw denied('只有当前被分配的办公室成员可以办结此任务');
+        await require('./analysisTaskLock').lockIssueForTask(db,todoId);
         if(current.status!=='pending'||Number(payload.expected_revision)!==Number(current.revision_no))throw changed();
         const note=text(payload.note);if(!note||note.length>4000)throw failure('请填写不超过4000个字符的办理结果');
         await db.execute("UPDATE mdm_todos SET status='done',done_at=CURRENT_TIMESTAMP,completed_by=?,completed_by_person_id=? WHERE id=?",[actor.personId,actor.personId,todoId]);
         await db.execute('UPDATE mdm_todo_office_assignments SET revision_no=revision_no+1 WHERE todo_id=?',[todoId]);
         await event(db,todoId,'office_task_completed',actor,{office_id:current.office_id,note});return {id:Number(todoId),status:'done',revision_no:Number(current.revision_no)+1};
-      });
+      },todoId);
     }
   };
 }

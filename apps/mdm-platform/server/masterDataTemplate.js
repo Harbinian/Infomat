@@ -16,7 +16,8 @@ function failure(code, message, statusCode = 400) {
 }
 function reject(code, message, status) { throw failure(code, message, status); }
 
-function inspectArchive(bytes) {
+function inspectArchive(bytes, limits = LIMITS, onEntry = null) {
+  const LIMITS = limits;
   // Bound actual expansion before ExcelJS allocates the workbook. Do not trust ZIP size declarations.
   let end = -1;
   for (let p = bytes.length - 22; p >= Math.max(0, bytes.length - 65557); p--) {
@@ -58,6 +59,7 @@ function inspectArchive(bytes) {
     }
     if (data.length > expanded) reject('TEMPLATE_LIMIT_EXCEEDED', '工作簿实际解压大小超出声明，已拒绝解析。', 413);
     if (data.length !== expanded) bad();
+    if (LIMITS.validateCrc && zlib.crc32(data) !== bytes.readUInt32LE(cursor + 16)) bad();
     if (/\.xml$|\.rels$/i.test(name)) {
       const xml = data.toString('utf8');
       if (/<!DOCTYPE|<!ENTITY/i.test(xml)) reject('TEMPLATE_ACTIVE_CONTENT_UNSUPPORTED', '不支持包含外部实体声明的工作簿。');
@@ -65,6 +67,7 @@ function inspectArchive(bytes) {
       // Detect hostile sparse dimensions before ExcelJS creates sparse row/cell arrays.
       if (/^xl\/worksheets\/[^/]+\.xml$/i.test(name)) {
         for (const match of xml.matchAll(/\b(?:r|ref|sqref)=["']([^"']*)["']/g)) {
+          if (LIMITS.ignoreValidationRanges && match[0].startsWith('sqref=')) continue;
           for (const coordinate of match[1].matchAll(/([A-Z]*)(\d+)/g)) {
             const column = [...coordinate[1]].reduce((n, c) => n * 26 + c.charCodeAt(0) - 64, 0);
             if (Number(coordinate[2]) > LIMITS.rows || column > LIMITS.columns) reject('TEMPLATE_LIMIT_EXCEEDED', '工作表超过5000行或64列。', 413);
@@ -72,9 +75,10 @@ function inspectArchive(bytes) {
         }
       }
     }
+    if (onEntry) onEntry(name, data);
     cursor = next;
   }
-  if (cursor !== end || !names.has('[Content_Types].xml') || !names.has('xl/workbook.xml')) bad();
+  if (cursor !== end || !(LIMITS.requiredParts || ['[Content_Types].xml', 'xl/workbook.xml']).every(name => names.has(name))) bad();
   return { entries: count, expanded_bytes: total };
 }
 
@@ -87,7 +91,7 @@ function cellSource(cell, sheet) {
     else if (Object.hasOwn(value, 'formula') || Object.hasOwn(value, 'sharedFormula')) {
       rawType = 'formula';
       const result = value.result;
-      formulaState = result === undefined || result === null || (typeof result === 'object' && !(result instanceof Date)) ? 'missing_or_invalid' : 'cached_unverified';
+      formulaState = result === undefined || result === null || (result instanceof Date && Number.isNaN(result.getTime())) || (typeof result === 'object' && !(result instanceof Date)) ? 'missing_or_invalid' : 'cached_unverified';
       normalized = formulaState === 'cached_unverified' ? (result instanceof Date ? result.toISOString() : result) : null;
     } else {
       rawType = 'string';
@@ -321,4 +325,4 @@ function previewMarkdown(preview) {
   return lines.join('\n');
 }
 
-module.exports = { parseMasterDataTemplate, previewMarkdown, PARSER_VERSION, LIMITS };
+module.exports = { parseMasterDataTemplate, previewMarkdown, PARSER_VERSION, LIMITS, inspectArchive, cellSource };

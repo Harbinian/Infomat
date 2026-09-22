@@ -25,6 +25,7 @@ module.exports = async ctx => {
     await pool.execute('ALTER TABLE data_map_analysis_issue_tasks DROP COLUMN p17_drift');
     save('p17-migration.json',{before,after:await migration.inspectAnalysisTasks(pool),empty_compensation:true,repeated:true});
   });
+  { const c=await pool.getConnection();try { await require('../../server/analysisClosureMigration').applyAnalysisClosure(c); } finally {c.release();} }
   const dump=backup();
   try {
     const spreadsheet=require('../../server/publicationSpreadsheet'), publication=require('../../server/publicationRepository').makePublicationRepository(pool);
@@ -83,7 +84,7 @@ module.exports = async ctx => {
       assert(personal.workItems.some(t=>t.id==='office-task:'+dispatched.todo_id));
       save('p17-minimal-context.json',{task:member.tasks.find(t=>String(t.id)===dispatched.todo_id),outsider_hidden:true,source_access_denied:true});
     });
-    await test('completion stays done without closing issue; legacy writes and unconfirmed review rejected',async()=>{
+    await test('completion stays done without closing issue; legacy writes and unappointed review rejected',async()=>{
       await expect('contact',taskURL+'/complete','POST',{expected_revision:2,note:'负责人不能代办'},403);
       await expect('reviewB',taskURL+'/complete','POST',{expected_revision:1,note:'过期'},409);
       await expect('reviewB',taskURL+'/complete','POST',{expected_revision:2,note:'合成核实结果：条件仍缺失，请继续处理'});
@@ -91,7 +92,7 @@ module.exports = async ctx => {
       assert.equal((await repo.getAnalysisIssue(lead,issueId)).issue.display_status,'waiting_my_action');
       await expect('lead',url+'/review','POST',{expected_revision:dispatched.revision_no,decision:'close'},404);
       await expect('admin',url+'/review','POST',{decision:'close'},404);
-      await assert.rejects(repo.reviewAnalysisIssueTask(lead,issueId),e=>e.code==='DEFINITION_ANALYSIS_TASK_REVIEW_AUTHORITY_UNCONFIRMED');
+      await assert.rejects(repo.reviewAnalysisIssueTask(lead,issueId),e=>e.code==='DEFINITION_ANALYSIS_CLOSURE_ACCESS_DENIED');
       await assert.rejects(require('../../server/processGovernanceIssuePoolRepository').makeProcessGovernanceIssuePoolRepository(pool).closeIssue(issueId),e=>e.code==='DEFINITION_ANALYSIS_ISSUE_LEGACY_ACTION_BLOCKED');
       const prior=await repo.getAnalysisIssueTasks(lead,issueId);
       await expect('lead',url+'/tasks','POST',{...payload,request_id:uuid(),expected_revision:prior.revision_no,round_no:2,instruction:'再次核实，保留前轮已办结历史'});
@@ -113,11 +114,12 @@ module.exports = async ctx => {
       assert.deepEqual(await repo.getAnalysisIssueTasks(lead,issueId),before);
     });
     await require('./analysisTaskBrowserVerification')({...ctx,test,issueId,officeId,findingId:f.finding_id});
+    await require('./analysisClosureVerification')({...ctx,test,issueId,officeId,findingId:f.finding_id});
     const before=await repo.getAnalysisIssueTasks(lead,issueId),snapshot=backup();
     await pool.execute("UPDATE data_map_analysis_issue_tasks SET snapshot_digest=REPEAT('0',64) WHERE todo_id=?",[dispatched.todo_id]);
     await assert.rejects(repo.getAnalysisIssueTasks(lead,issueId),e=>e.code==='DEFINITION_ANALYSIS_TASK_INTEGRITY_CONFLICT');
     restore(snapshot); assert.deepEqual(await repo.getAnalysisIssueTasks(lead,issueId),before);
     save('p17-backup-restore.json',{sha256:crypto.createHash('sha256').update(snapshot).digest('hex'),equal:true,persisted:false});
-    save('p17-results.json',{passed:true,checks:own,closure_enabled:false,review_authority_unconfirmed:true,formal_environment:false,human_acceptance:false});
+    save('p17-results.json',{passed:true,checks:own,closure_isolated_verified:true,formal_environment:false,human_acceptance:false});
   } finally { restore(dump); }
 };

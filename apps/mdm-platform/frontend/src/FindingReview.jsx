@@ -1,3 +1,4 @@
+import { IssueClosure } from './IssueClosure.jsx';
 import React, { useEffect, useRef, useState } from 'react';
 import { StatusPanel } from './components.jsx';
 import { IssueTasks } from './IssueTasks.jsx';
@@ -47,13 +48,13 @@ export function FindingReview({ api, run, finding, draft, setDraft, onNavigate }
   const final = review?.state.issue_id || review?.state.decision === 'not_an_issue';
   return <section className="card" aria-label="发现人工确认"><h3>人工确认与问题关联</h3>
     <p>确认仅针对当前发现。说明不是问题不影响其他发现，也不会关闭已有问题；未知归口继续待核实。</p>
-    {error && <StatusPanel kind="error" title="确认未完成，输入已保留">{error.message} {error.code}<button type="button" className="secondary" disabled={busy} onClick={() => setTick(t => t + 1)}>重新读取确认状态</button></StatusPanel>}
+    {error && <StatusPanel kind="error" title="确认未完成，输入已保留">{error.message} {error.code}<button type="button" className="secondary" disabled={busy||!!draft?.pdf} onClick={() => setTick(t => t + 1)}>重新读取确认状态</button></StatusPanel>}
     {!review && !error && <p>正在读取确认记录…</p>}
     {review && <><p data-testid="finding-review-state">{labels[review.state.decision]} · 确认修订 {review.state.revision_no}</p>
       {review.events.map(e => <p key={e.review_id}>{labels[e.decision]}：{e.reason} · 确认人 {e.actor_person_id} · {e.created_at}</p>)}
       {issue && <section aria-label="关联问题"><h4>问题 {issue.issue.issue_id}：{issue.issue.title}</h4><p>{issue.issue.what_text}</p><p>归口：{issue.issue.primary_dept_name}；办理状态：{issueStatuses[issue.issue.display_status] || '待核对'}</p>
-        <p>问题关闭尚未开启，待办办结不能代替问题复核。</p>{issue.links.map(l => <p key={l.finding_id}><button type="button" className="secondary" onClick={() => onNavigate(l.run_id, l.finding_id)}>追溯运行 {l.run_id} / 发现 {l.finding_id}</button></p>)}<IssueTasks api={api} issueId={issue.issue.issue_id} draft={draft} setDraft={setDraft}/></section>}
-      {review.can_confirm && !final ? <form onSubmit={submit}><fieldset disabled={busy}><legend>核对证据后明确提交</legend>
+        <p>待办办结不能代替问题复核；指定、复核和重开由各自有权人员提交。</p>{issue.links.map(l => <p key={l.finding_id}><button type="button" className="secondary" onClick={() => onNavigate(l.run_id, l.finding_id)}>追溯运行 {l.run_id} / 发现 {l.finding_id}</button></p>)}<IssueTasks api={api} issueId={issue.issue.issue_id} draft={draft} setDraft={setDraft}/><IssueClosure onStatus={status=>setIssue(current=>({...current,issue:{...current.issue,display_status:status}}))} api={api} issueId={issue.issue.issue_id} draft={draft} setDraft={setDraft}/></section>}
+      {review.can_confirm && !final ? <form onSubmit={submit}><fieldset disabled={busy||!!draft?.pdf}><legend>核对证据后明确提交</legend>
         <label className="management-input">确认动作<select aria-label="确认动作" value={d.action} onChange={e => edit('action', e.target.value)}><option value="confirm">确认发现，暂不关联问题</option><option value="not_an_issue">说明不是问题</option><option value="create">确认并创建治理问题</option><option value="link">确认并关联已有问题</option></select></label>
         <label className="management-input">明确归口部门<select aria-label="明确归口部门" value={d.owner} onChange={e => edit('owner', e.target.value)} required><option value="">尚未明确，请先核实</option>{targets.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
         <label className="management-input">归口依据<textarea aria-label="归口依据" value={d.ownerBasis} maxLength={4096} required onChange={e => edit('ownerBasis', e.target.value)} /></label>

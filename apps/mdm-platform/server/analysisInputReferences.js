@@ -53,6 +53,27 @@ module.exports = function ({ scope, entityScope, version, loadSource, target, un
       const [[r]] = await db.execute('SELECT CAST(batch_id AS CHAR) batch_id,CAST(scope_department_id AS CHAR) scope_department_id,raw_sha256,raw_digest_status,parser_version,template_profile_version FROM data_map_source_files WHERE batch_id=? FOR SHARE', [refId]);
       if (!r) throw failure('DEFINITION_ANALYSIS_REFERENCE_NOT_FOUND', 404);
       scope(who, r.scope_department_id);
+      if (r.parser_version === require('./excelEvidenceParser').VERSION) {
+        const excel = await require('./excelEvidence').load(db, who, r, scope, resolve);
+        return { snapshot: { kind, ref_id:refId, source_kind:'excel_material', batch_id:refId, raw_sha256:r.raw_sha256,
+          raw_digest_status:r.raw_digest_status, raw_digest_algorithm:'sha256-raw-bytes', parser_version:r.parser_version,
+          original_name:excel.original_name, byte_length:excel.byte_length, content_digest:excel.content_digest,
+          digest_algorithm:'sha256-canonical-json-v1', identity:{kind:'excel_material',id:refId} }, document:excel.document };
+      }
+      if (r.parser_version === require('./wordEvidenceParser').VERSION) {
+        const word = await require('./wordEvidence').load(db, who, r, scope, resolve);
+        return { snapshot: { kind, ref_id:refId, source_kind:'word_material', batch_id:refId, raw_sha256:r.raw_sha256,
+          raw_digest_status:r.raw_digest_status, raw_digest_algorithm:'sha256-raw-bytes', parser_version:r.parser_version,
+          original_name:word.original_name, byte_length:word.byte_length, content_digest:word.content_digest,
+          digest_algorithm:'sha256-canonical-json-v1', identity:{kind:'word_material',id:refId} }, document:word.document };
+      }
+      if (r.parser_version === require('./pdfEvidenceParser').VERSION) {
+        const pdf = await require('./pdfEvidence').load(db, who, r, scope, resolve);
+        return { snapshot: { kind, ref_id:refId, source_kind:'pdf_material', batch_id:refId, raw_sha256:r.raw_sha256,
+          raw_digest_status:r.raw_digest_status, raw_digest_algorithm:'sha256-raw-bytes', parser_version:r.parser_version,
+          original_name:pdf.original_name, byte_length:pdf.byte_length, content_digest:pdf.content_digest,
+          digest_algorithm:'sha256-canonical-json-v1', identity:{kind:'pdf_material',id:refId} }, document:pdf.document };
+      }
       const [cells] = await db.execute('SELECT sheet_name,cell_address,raw_type,CAST(raw_value_json AS CHAR) raw_value_json FROM data_map_source_cells WHERE batch_id=? ORDER BY sheet_name,cell_address FOR SHARE', [refId]);
       document = { cells: cells.map(c => ({ ...c, raw_value_json: parse(c.raw_value_json) })) };
       metadata = { source_kind: 'template_batch', batch_id: refId, raw_sha256: r.raw_sha256, raw_digest_status: r.raw_digest_status,

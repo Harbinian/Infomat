@@ -5348,6 +5348,7 @@ async function downloadNativeDiagram() {
 
     function openWorkbenchTarget(target) {
       if (!target) return;
+      if (/^\/app\/analysis#run=[1-9][0-9]*&finding=[1-9][0-9]*$/.test(target)) { location.assign(target); return; }
       if (target.charAt(0) === '#') location.hash = target;
       else location.hash = '#/' + target.replace(/^#?\//, '');
     }

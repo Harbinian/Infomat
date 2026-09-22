@@ -22,14 +22,14 @@ export function IssueTasks({ api, issueId, draft, setDraft }) {
     });
   }
   return <section aria-label="问题办公室办理"><h4>办公室办理</h4>
-    <button type="button" className="secondary" disabled={busy} onClick={load}>查看办理与交办</button>
+    <button type="button" className="secondary" disabled={busy||!!draft?.pdf} onClick={load}>查看办理与交办</button>
     {error && <StatusPanel kind="error" title="办理操作未完成，输入已保留">{error.message} {error.code}</StatusPanel>}
-    {data && <><p>自动派单未启用。任务办结后，问题仍等待有权复核；关闭主体及依据尚待明确。</p>
+    {data && <><p>自动派单未启用。任务办结后，问题仍等待有权复核；请在问题复核区核对指定人员、条件和最新决定。</p>
       {!data.items.length && <p>未分派。请由有权人员明确选择已登记办公室。</p>}
-      {data.items.map(t => <article key={t.todo_id}><p>任务 {t.todo_id} · {purposes[t.purpose]} · 第 {t.round_no} 轮 · {t.office_name} · {t.status === 'done' ? '办理动作已办结，问题未关闭' : t.assignee_person_id ? '待成员办理' : '待负责人分配'}</p>
+      {data.items.map(t => <article key={t.todo_id}><p>任务 {t.todo_id} · {purposes[t.purpose]} · 第 {t.round_no} 轮 · {t.office_name} · {t.status === 'done' ? '办理动作已办结（不自动关闭问题）' : t.assignee_person_id ? '待成员办理' : '待负责人分配'}</p>
         {t.completion && <p>{t.completion.note}</p>}<a href={`/#/officeWorkbench?office_id=${t.office_id}`} onClick={e => { if (draft?.dirty && !window.confirm('尚有未提交输入，确定放弃并前往办公室工作台？')) e.preventDefault(); }}>前往办公室任务 {t.todo_id}</a>
       </article>)}
-      {data.can_dispatch && <form onSubmit={submit}><fieldset disabled={busy}><legend>明确交办一个办理动作</legend>
+      {data.can_dispatch && <form onSubmit={submit}><fieldset disabled={busy || !!draft?.pdf || !!draft?.closure}><legend>明确交办一个办理动作</legend>
         <label className="management-input">承接办公室<select aria-label="承接办公室" required value={d.office} onChange={e=>edit('office',e.target.value)}><option value="">未分派，请明确选择</option>{data.offices.map(o=><option key={o.id} value={o.id}>{o.name}</option>)}</select></label>
         <label className="management-input">办理用途<select aria-label="办理用途" value={d.purpose} onChange={e=>edit('purpose',e.target.value)}>{Object.entries(purposes).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select></label>
         <label className="management-input">办理轮次<input aria-label="办理轮次" type="number" min="1" max="10000" required value={d.round} onChange={e=>edit('round',e.target.value)}/></label>

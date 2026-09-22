@@ -2646,7 +2646,7 @@
     ];
     const MATERIAL_TYPES = ['', '现有制度', '表单或记录', '现行业务操作说明', '会议或访谈', '其他参考材料'];
     const AREA_TYPES = ['', '基本信息', '明细清单'];
-    const EXPECTED_EXPORT_SCHEMA_VERSION = 'process-governance-v7';
+    const EXPECTED_EXPORT_SCHEMA_VERSION = 'process-governance-v8';
     const MAX_IMPORT_BYTES = 10 * 1024 * 1024;
     const FORM_DESIGN_STATES = new Set(['unspecified', 'current_state', 'proposed_design']);
     const INFORMATION_TYPES = [
@@ -2854,7 +2854,7 @@
         terms: [
           ['无状态临时工具', '3001不保存账号草稿、服务端草稿或浏览器持久化内容。业务内容只存在当前页面内存中，用户主动下载JSON是唯一保存方式。'],
           ['当前候选流程', '本次页面正在编制的一条流程。历史多候选文件导入后，每条候选流程分别显示、分别修改、分别下载，不形成审核状态。'],
-          ['单流程结构化文件规则', 'process-governance-v7规定一份JSON只包含一个流程，并固定流程、行为、关系、数据对象、生命周期、表单、术语和迁移归档的结构。'],
+          ['单流程结构化文件规则', 'process-governance-v8规定一份JSON只包含一个流程，并固定流程、行为、关系、数据对象、生命周期、表单、术语和迁移归档的结构。'],
           ['源文件', '用户从“文件”入口选择的原始JSON。3001只读取源文件并在页面内存中处理，不修改或覆盖源文件。'],
           ['来源版本', '源文件声明的结构版本。v1至v6和历史格式导入后只在当前页面内存中迁移为v7。'],
           ['源文件SHA-256', '按源文件实际字节计算的摘要，用于确认两次核对的源文件是否相同；摘要不代表内容已经审核。'],
@@ -3634,7 +3634,7 @@
     }
 
     async function fetchEmptyProcessDocument() {
-      const response = await fetch('/api/template?version=process-governance-v7', { cache: 'no-store' });
+      const response = await fetch('/api/template?version=process-governance-v8', { cache: 'no-store' });
       const result = await readJsonResponse(
         response,
         '3001空白模板接口未返回结构化数据。请保持当前页面打开，待维护人员重启3001服务后再次新建流程。'
@@ -4307,12 +4307,14 @@
       const result = runDocumentTransaction(nextDocument => {
         if (expectedKind === 'new-data-behavior-link') {
           const dataObject = (nextDocument.data_objects || []).find(item => item.data_ref === session.entityRef);
-          const behavior = (nextDocument.behaviors || []).find(item => item.behavior_ref === patch.behaviorRef && item.node_type === 'action');
+          const behavior = (nextDocument.behaviors || []).find(item => item.behavior_ref === patch.behaviorRef && ['action', 'decision'].includes(item.node_type));
           if (!dataObject) throw new Error('目标数据对象已不存在');
           if (!behavior) throw new Error('所选业务行为已不存在或不是实际办理行为');
+          const errors = globalThis.GraphEditCommands.dataOperationHardErrors(nextDocument, dataObject.data_ref, behavior.behavior_ref, [patch.operation || 'pending_confirmation']);
+          if (errors.length) throw new Error(errors.join('；'));
           dataObject.behavior_links.push({
             link_ref: newRef('data_link'), behavior_ref: behavior.behavior_ref,
-            operation: 'pending_confirmation', updated_field_refs: []
+            operation: patch.operation || 'pending_confirmation', updated_field_refs: []
           });
         } else if (expectedKind === 'new-form-behavior-link') {
           const form = (nextDocument.forms || []).find(item => item.form_ref === session.entityRef);
@@ -5686,7 +5688,7 @@
           `).join('');
       if (!data) {
         return `<section class="start-hero">
-          <div class="eyebrow">3001 · process-governance-v7</div>
+          <div class="eyebrow">3001 · process-governance-v8</div>
           <h2>${compactTaskUiEnabled() ? '按四项任务完成一条流程的编制、核对和交接准备' : '按七步完成一条流程的编制、核对和交接准备'}</h2>
           <p>v7已发布，当前在实际使用中继续验证。编制人维护当前唯一流程文件；业务核对人确认流程事实；MDM工作组检查结构。3001不保存草稿，也不记录审核结论。</p>
           ${renderRoleOperationSequence()}
@@ -6400,7 +6402,7 @@
         <div class="item-card">
           <div class="grid">
             <div class="inline-note"><strong>导入来源：</strong>${escapeHtml(summary.sourceVersion)}</div>
-            <div class="inline-note"><strong>当前格式：</strong>process-governance-v7</div>
+            <div class="inline-note"><strong>当前格式：</strong>process-governance-v8</div>
             <div class="inline-note"><strong>已保留内容：</strong>${summary.behaviorCount}个行为、${summary.dataCount}项数据、${summary.formCount}张表单、${summary.fieldCount}个字段</div>
             <div class="inline-note"><strong>待确认关系：</strong>${summary.unresolved}项</div>
           </div>
@@ -6986,7 +6988,7 @@
           <div class="graph-property-panel">
             <h3>选择关联行为</h3>
             <p class="technical-note">数据模式只编辑数据关系，业务行为仍是只读端点。</p>
-            <label>业务行为<select data-graph-data-behavior>${optionHtml(actionBehaviorOptions(true, behaviorRef), behaviorRef)}</select></label>
+            <label>业务行为<select data-graph-data-behavior>${optionHtml(dataBehaviorOptions(true, behaviorRef), behaviorRef)}</select></label>
             <div class="item-actions">
               <button class="button primary small" data-action="continue-data-relation" ${behaviorRef ? '' : 'disabled'}>继续</button>
               <button class="button small" data-action="cancel-data-relation">取消</button>
@@ -8685,6 +8687,12 @@
       return includeEmpty ? [{ value: '', label: '请选择' }, ...values] : values;
     }
 
+    function dataBehaviorOptions(includeEmpty = false, currentRef = '') {
+      const refs = new Set((currentDocument()?.behaviors || []).filter(item => ['action', 'decision'].includes(item.node_type)).map(item => item.behavior_ref));
+      const values = behaviorOptions(false).filter(option => refs.has(option.value) || option.value === currentRef);
+      return includeEmpty ? [{ value: '', label: '请选择' }, ...values] : values;
+    }
+
     function dataOptions(includeEmpty = true) {
       const values = (currentDocument()?.data_objects || []).map((item, index) => ({
         value: item.data_ref,
@@ -8700,7 +8708,7 @@
         <div class="item-card" data-focus-path="data_objects.${dataIndex}.behavior_links.${linkIndex}">
           <div class="grid">
             ${field(`data_objects.${dataIndex}.behavior_links.${linkIndex}.behavior_ref`, '业务行为', {
-              type: 'select', options: actionBehaviorOptions(false, link.behavior_ref)
+              type: 'select', options: dataBehaviorOptions(false, link.behavior_ref)
             })}
             ${field(`data_objects.${dataIndex}.behavior_links.${linkIndex}.operation`, '对数据的操作', {
               type: 'select', options: DATA_OPERATIONS
@@ -8721,8 +8729,8 @@
       const draftEditor = draft ? `<div class="item-card inline-warning">
         <strong>新增数据行为关系（尚未应用）</strong>
         <div class="grid" style="margin-top:9px">
-          <label class="field">业务行为<select data-edit-session-field="behaviorRef">${optionHtml(actionBehaviorOptions(true), draft.behaviorRef || '')}</select></label>
-          <div class="field"><span class="field-label">数据操作</span><div class="form-field-derived">待确认。建立关系后由业务人员明确选择创建、更新或使用。</div></div>
+          <label class="field">业务行为<select data-edit-session-field="behaviorRef">${optionHtml(dataBehaviorOptions(true), draft.behaviorRef || '')}</select></label>
+          <label class="field">数据操作<select data-edit-session-field="operation">${optionHtml(DATA_OPERATIONS, draft.operation || "pending_confirmation")}</select><span class="hint">判断节点只支持使用；生成和更新应关联实际执行步骤。</span></label>
         </div>
         <div class="item-actions"><button class="button primary small" data-action="apply-new-data-behavior-link" ${draftSession.canApply ? '' : 'disabled'}>应用新增关系</button><button class="button small" data-action="cancel-guided-create">取消</button></div>
       </div>` : '';
@@ -9540,7 +9548,7 @@
       return `<div class="score-panel" id="structureScorePanel" aria-live="polite">
         <div class="score-panel-head">
           <div>
-            <h3>${escapeHtml(rule?.label || '结构化学习评分 v5（process-governance-v7）')}</h3>
+            <h3>${escapeHtml(rule?.label || '结构化学习评分 v5（process-governance-v8）')}</h3>
             <p>评分根据当前页面内容自动生成，只用于结构化学习反馈，不写入下载的JSON。</p>
           </div>
           <button class="button small" data-action="refresh-structure-score"${pending ? ' disabled' : ''}>重新评分</button>
@@ -9908,8 +9916,8 @@
     }
 
     function gridLookupRows(lookup, rowData = {}) {
-      if (lookup === 'behaviors') {
-        const behaviors = (currentDocument()?.behaviors || []).filter(item => item.node_type === 'action');
+      if (lookup === 'behaviors' || lookup === 'dataBehaviors') {
+        const behaviors = (currentDocument()?.behaviors || []).filter(item => item.node_type === 'action' || (lookup === 'dataBehaviors' && item.node_type === 'decision'));
         const counts = new Map();
         behaviors.forEach(item => {
           const name = text(item.behavior_name);
@@ -12359,12 +12367,12 @@
       if (action === 'merge-duplicate-data') return mergeDuplicateData(index);
       if (action === 'add-data-behavior-link') {
         const dataObject = currentDocument().data_objects[Number(element.dataset.dataIndex)];
-        const hasBehavior = currentDocument().behaviors.some(item => item.node_type === 'action');
+        const hasBehavior = currentDocument().behaviors.some(item => ['action', 'decision'].includes(item.node_type));
         if (!dataObject || !hasBehavior) {
           window.alert('请先添加至少一个业务行为，再登记数据关系。');
           return;
         }
-        openGuidedCreateSession('new-data-behavior-link', dataObject.data_ref, { behaviorRef: '' });
+        openGuidedCreateSession('new-data-behavior-link', dataObject.data_ref, { behaviorRef: '', operation: 'pending_confirmation' });
         return render();
       }
       if (action === 'apply-new-data-behavior-link') return applyGuidedCreateSession('new-data-behavior-link');
@@ -13495,7 +13503,7 @@
           ? { validationProfile: 'early-v7-data-fields' }
           : {});
         const sourceClassification = globalThis.ImportCompatibility.classifyPostMigrationValidation(sourceValidation);
-        const sourceCanEnterRelationshipRepair = parsed.schema_version === EXPECTED_EXPORT_SCHEMA_VERSION
+        const sourceCanEnterRelationshipRepair = ['process-governance-v7', EXPECTED_EXPORT_SCHEMA_VERSION].includes(parsed.schema_version)
           && sourceClassification.allowed;
         if (!sourceValidation.valid && !sourceCanEnterRelationshipRepair) {
           const firstError = sourceValidation.errors?.[0];

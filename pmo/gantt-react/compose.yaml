@@ -1,0 +1,35 @@
+name: infomat-5173
+services:
+  pmo:
+    image: infomat-pmo:${PMO_IMAGE_TAG:-local}
+    build:
+      context: ../..
+      dockerfile: pmo/gantt-react/Dockerfile
+      args:
+        NODE_IMAGE: ${PMO_NODE_IMAGE:-node:24-bookworm-slim}
+    container_name: infomat-pmo-5173
+    ports:
+      - "0.0.0.0:5173:5173"
+    restart: unless-stopped
+    init: true
+    read_only: true
+    mem_limit: 1g
+    cpus: 2
+    pids_limit: 256
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    tmpfs:
+      - /tmp:uid=1000,gid=1000,mode=1777
+      - /app/pmo/gantt-react/node_modules/.vite:uid=1000,gid=1000
+      - /app/pmo/gantt-react/node_modules/.vite-temp:uid=1000,gid=1000
+    volumes:
+      - ../deliverables:/app/pmo/deliverables
+      - ../../artifacts/pmo/deliverables:/app/artifacts/pmo/deliverables
+      - ./public:/app/pmo/gantt-react/public:ro
+      - ../procedure-management/dashboard.html:/app/pmo/procedure-management/dashboard.html:ro
+      - ../../echarts.min.js:/app/echarts.min.js:ro
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

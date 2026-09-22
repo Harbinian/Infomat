@@ -13,9 +13,9 @@ async function stub(task, signal) {
   return { status: 'succeeded', checked_ids: task.step.check_ids, error_code: null };
 }
 async function dispatch(task, signal) {
-  if (!['v7_deterministic', 'handoff_deterministic'].includes(task.step.parser_key)) return stub(task, signal);
+  if (!['v7_deterministic', 'handoff_deterministic', 'excel_evidence', 'word_evidence', 'pdf_evidence', 'ai_offline'].includes(task.step.parser_key)) return stub(task, signal);
   const { Worker } = require('node:worker_threads');
-  const thread = new Worker(require.resolve('./v7AnalysisThread'), { workerData: task, resourceLimits: { maxOldGenerationSizeMb: 128 } });
+  const thread = new Worker(require.resolve(task.step.parser_key === 'ai_offline' ? './analysisAiThread' : './v7AnalysisThread'), { workerData: task, ...(task.step.parser_key === 'ai_offline' ? { env: {} } : {}), resourceLimits: { maxOldGenerationSizeMb: 128 } });
   let abort;
   try {
     return await new Promise((resolve, reject) => {

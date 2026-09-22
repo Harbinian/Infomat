@@ -12,6 +12,7 @@ module.exports = ({ tx, actor, request, issue, linkedFindings, currentInputs, ru
     if (!office) throw fail('OFFICE_UNAVAILABLE',404); return office;
   }
   async function source(db, session, issueId) {
+    await db.execute('SELECT issue_id FROM process_governance_issues WHERE issue_id=? FOR UPDATE',[id(issueId)]);
     const who = await actor(db,session), result = await issue(db,who,issueId);
     if (!result.binding) throw fail('ISSUE_UNLINKED',409);
     const links = await linkedFindings(db,session,id(issueId));
@@ -38,8 +39,8 @@ module.exports = ({ tx, actor, request, issue, linkedFindings, currentInputs, ru
       await ready(db);
       const allowed = ['request_id','issue_id','expected_revision','expected_issue_digest','office_id','purpose','round_no','instruction'];
       if (!payload || Object.keys(payload).some(k => !allowed.includes(k))) throw fail('PROPERTY_INVALID');
-      const who = await actor(db,session,'governance:assign-work');
-      const { result, links } = await source(db,session,payload.issue_id);
+      const { who, result, links } = await source(db,session,payload.issue_id);
+      if(who.readOnly||!who.permissions.has('governance:assign-work')) throw failure('DEFINITION_ACCESS_DENIED',403);
       const office = await target(db,payload.office_id);
       if (office.department_id !== result.binding.owner_department_id) throw fail('OFFICE_SCOPE_MISMATCH',403);
       if (!Object.hasOwn(PURPOSES,payload.purpose) || !Number.isSafeInteger(payload.round_no) || payload.round_no < 1 || payload.round_no > 10000) throw fail('ACTION_INVALID');
@@ -70,11 +71,6 @@ module.exports = ({ tx, actor, request, issue, linkedFindings, currentInputs, ru
         await db.execute('UPDATE data_map_analysis_issue_bindings SET revision_no=revision_no+1 WHERE issue_id=?',[id(payload.issue_id)]);
         return { todo_id:todoId, issue_id:id(payload.issue_id), revision_no:result.binding.revision_no+1, status:'pending' };
       });
-    }); },
-    reviewAnalysisIssueTask(session, issueId) { return tx(async db => {
-      await ready(db); await source(db,session,issueId);
-      // Business authority and its approval basis remain unresolved in the fixed contract.
-      throw fail('REVIEW_AUTHORITY_UNCONFIRMED',403);
     }); }
   };
 };

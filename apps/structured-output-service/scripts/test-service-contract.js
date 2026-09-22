@@ -8,8 +8,6 @@ const vm = require('node:vm');
 const Ajv2020 = require('ajv/dist/2020');
 const {
   app,
-  extractFromText,
-  decodeTextBuffer,
   createEmptyProcessGovernanceDocument,
   createEmptyProcessGovernanceV6Document,
   PROCESS_GOVERNANCE_SCHEMA_DIGEST
@@ -383,34 +381,7 @@ function jsonBodyWithExactByteLength(byteLength) {
   return body;
 }
 
-function zipWithSingleEntry(entryName, options = {}) {
-  const name = Buffer.from(entryName, 'utf8');
-  const data = Buffer.from(options.data || 'x');
-  const compressedSize = options.compressedSize ?? data.length;
-  const uncompressedSize = options.uncompressedSize ?? data.length;
-  const local = Buffer.alloc(30 + name.length);
-  local.writeUInt32LE(0x04034b50, 0);
-  local.writeUInt16LE(20, 4);
-  local.writeUInt32LE(compressedSize, 18);
-  local.writeUInt32LE(uncompressedSize, 22);
-  local.writeUInt16LE(name.length, 26);
-  name.copy(local, 30);
-  const central = Buffer.alloc(46 + name.length);
-  central.writeUInt32LE(0x02014b50, 0);
-  central.writeUInt16LE(20, 4);
-  central.writeUInt16LE(20, 6);
-  central.writeUInt32LE(compressedSize, 20);
-  central.writeUInt32LE(uncompressedSize, 24);
-  central.writeUInt16LE(name.length, 28);
-  name.copy(central, 46);
-  const eocd = Buffer.alloc(22);
-  eocd.writeUInt32LE(0x06054b50, 0);
-  eocd.writeUInt16LE(1, 8);
-  eocd.writeUInt16LE(1, 10);
-  eocd.writeUInt32LE(central.length, 12);
-  eocd.writeUInt32LE(local.length + data.length, 16);
-  return Buffer.concat([local, data, central, eocd]);
-}
+
 
 async function testSchemas() {
   const processSchema = JSON.parse(fs.readFileSync(processSchemaPath, 'utf8'));
@@ -509,28 +480,7 @@ async function testSchemas() {
   assert.equal(processValidator(incomplete), true, 'business-incomplete drafts must remain schema-exportable');
 }
 
-async function testDeterministicParser() {
-  const sample = [
-    '1 目的',
-    '规范公司费用报销办理。',
-    '2 适用范围',
-    '适用于公司各部门费用报销事项。',
-    '3 工作流程',
-    '3.1 申请人填写《费用报销申请单》，并提交票据。',
-    '3.2 财务部审核申请材料，形成审核意见。',
-    '4 表单与记录',
-    '费用报销申请单'
-  ].join('\n');
-  const result = await extractFromText(sample, { sourceName: '费用报销管理要求.md' });
-  assert.equal(result.data.schema_version, 'document-structured-output-v2');
-  assert.match(result.data.document_profile.purpose, /规范公司费用报销办理/);
-  assert.match(result.data.document_profile.scope, /适用于公司各部门费用报销事项/);
-  assert.ok(result.stats.steps >= 1, 'deterministic parser should still identify explicit workflow actions');
-  assert.equal(Object.keys(result.fieldSuggestions || {}).length, 0);
 
-  const utf8 = Buffer.from('中文流程说明', 'utf8');
-  assert.equal(decodeTextBuffer(utf8), '中文流程说明');
-}
 
 async function testApi() {
   await withServer(async baseUrl => {
@@ -670,64 +620,36 @@ async function testApi() {
     );
     assert.ok(Array.isArray(enums.body.rosterRolesByDepartment?.财务部));
     assert.ok(enums.body.rosterRolesByDepartment.财务部.includes('会计员'));
-    assert.ok(
-      enums.body.rosterRolesByDepartment?.工程技术部?.includes('车间主任助理'),
-      '3001 must preserve the current roster source assignment for engineering department positions'
-    );
+    const rosterLines = fs.readFileSync(path.join(repoRoot, 'docs', 'organization', '花名册.md'), 'utf8').split(/\r?\n/);
+    const rosterRows = rosterLines.filter(line => line.startsWith('|')).map(line => line.split('|').slice(1, -1).map(cell => cell.trim()));
+    const rosterHeader = rosterRows.find(row => row.includes('姓名') && row.includes('部门'));
+    assert.ok(rosterHeader, 'roster copy must have named columns');
+    const departmentIndex = rosterHeader.indexOf('部门');
+    const positionIndex = rosterHeader.indexOf('职务');
+    assert.ok(positionIndex >= 0);
+    for (const row of rosterRows.slice(rosterRows.indexOf(rosterHeader) + 1)) {
+      const department = row[departmentIndex];
+      const position = row[positionIndex];
+      if (!department || !position || /^[-:]+$/.test(department)) continue;
+      assert.ok(enums.body.rosterRolesByDepartment[department]?.includes(position), 'enums must preserve each department-position pair from the current roster copy');
+    }
 
-    const sourceText = '# 操作说明\n\n## 工作流程\n申请人提交申请，财务部审核。';
-    const body = new FormData();
-    body.append('requestId', 'request_upload_001');
-    body.append('file', new Blob([sourceText], { type: 'text/markdown' }), '现行业务操作说明.md');
-    const uploadResponse = await fetch(`${baseUrl}/api/upload`, { method: 'POST', body });
-    const upload = await uploadResponse.json();
-    assert.equal(uploadResponse.status, 200, upload.error || upload.detail);
-    assert.equal(upload.data.schema_version, 'document-structured-output-v2');
-    assert.equal(upload.documentName, '现行业务操作说明.md');
-    assert.equal(upload.referenceMaterial.material_type, '现行业务操作说明');
-    assert.equal(upload.referenceMaterial.material_name, '现行业务操作说明.md');
-    assert.equal(upload.referenceMaterial.readable_text, sourceText);
-    assert.equal(
-      upload.referenceMaterial.file_sha256,
-      crypto.createHash('sha256').update(Buffer.from(sourceText)).digest('hex')
-    );
-    const missingFileResponse = await fetch(`${baseUrl}/api/upload`, { method: 'POST' });
-    assert.equal(missingFileResponse.status, 400);
-    assert.equal((await missingFileResponse.json()).code, 'FILE_REQUIRED');
-    const emptyFileBody = new FormData();
-    emptyFileBody.append('file', new Blob(['   '], { type: 'text/plain' }), '空白.txt');
-    const emptyFileResponse = await fetch(`${baseUrl}/api/upload`, { method: 'POST', body: emptyFileBody });
-    assert.equal(emptyFileResponse.status, 400);
-    assert.equal((await emptyFileResponse.json()).code, 'FILE_CONTENT_EMPTY');
-    const unsupportedFileBody = new FormData();
-    unsupportedFileBody.append('file', new Blob(['pdf'], { type: 'application/pdf' }), '不支持.pdf');
-    const unsupportedFileResponse = await fetch(`${baseUrl}/api/upload`, { method: 'POST', body: unsupportedFileBody });
-    assert.equal(unsupportedFileResponse.status, 415);
-    assert.equal((await unsupportedFileResponse.json()).code, 'UNSUPPORTED_FILE_TYPE');
-    const emptyPaste = await postJson(baseUrl, '/api/paste', { text: '  ' });
-    assert.equal(emptyPaste.response.status, 400);
-    assert.equal(emptyPaste.body.code, 'PASTED_CONTENT_EMPTY');
-    const missingPasteBodyResponse = await fetch(`${baseUrl}/api/paste`, { method: 'POST' });
-    assert.equal(missingPasteBodyResponse.status, 400);
-    assert.equal((await missingPasteBodyResponse.json()).code, 'PASTED_CONTENT_EMPTY');
-    const emptyPasteObject = await postJson(baseUrl, '/api/paste', {});
-    assert.equal(emptyPasteObject.response.status, 400);
-    assert.equal(emptyPasteObject.body.code, 'PASTED_CONTENT_EMPTY');
-    const brokenDocxBody = new FormData();
-    brokenDocxBody.append('file', new Blob(['not-a-docx'], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }), '损坏文件.docx');
-    const brokenDocxResponse = await fetch(`${baseUrl}/api/upload`, { method: 'POST', body: brokenDocxBody });
-    assert.equal(brokenDocxResponse.status, 422);
-    const brokenDocxText = await brokenDocxResponse.text();
-    const brokenDocx = JSON.parse(brokenDocxText);
-    assert.equal(brokenDocx.code, 'FILE_PARSE_FAILED');
-    assert.equal(Object.prototype.hasOwnProperty.call(brokenDocx, 'detail'), false);
-    assert.doesNotMatch(brokenDocxText, /node_modules|Error:|E:\\\\/i);
-    const unsafeDocxBody = new FormData();
-    unsafeDocxBody.append('file', new Blob([zipWithSingleEntry('../outside.xml')]), '路径越界.docx');
-    const unsafeDocxResponse = await fetch(`${baseUrl}/api/upload`, { method: 'POST', body: unsafeDocxBody });
-    assert.equal(unsafeDocxResponse.status, 422);
-    const unsafeDocx = await unsafeDocxResponse.json();
-    assert.equal(unsafeDocx.code, 'DOCX_ARCHIVE_UNSAFE');
+    // Retired parsers must reject uploads and pasted text, including malformed DOCX.
+    for (const filename of ['retired.docx', 'retired.txt', 'retired.md']) {
+      const body = new FormData();
+      body.append('file', new Blob(['not a document']), filename);
+      const response = await fetch(baseUrl + '/api/upload', { method: 'POST', body });
+      assert.equal(response.status, 404);
+      assert.equal((await response.json()).code, 'API_NOT_FOUND');
+    }
+    for (const route of ['/api/upload', '/api/paste']) {
+      const absent = await fetch(baseUrl + route, { method: 'POST' });
+      assert.equal(absent.status, 404);
+      assert.equal((await absent.json()).code, 'API_NOT_FOUND');
+      const retired = await postJson(baseUrl, route, { text: 'retired parser input' });
+      assert.equal(retired.response.status, 404);
+      assert.equal(retired.body.code, 'API_NOT_FOUND');
+    }
 
     const valid = await postJson(baseUrl, '/api/validate', { data: createDraft() });
     assert.equal(valid.response.status, 200);
@@ -2632,7 +2554,7 @@ async function testFrontendContract() {
 
 async function main() {
   await testSchemas();
-  await testDeterministicParser();
+
   await testApi();
   testProcessDiagramModel();
   testReviewPatternDiagrams();

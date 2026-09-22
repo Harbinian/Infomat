@@ -3,6 +3,9 @@ import { StatusPanel, useInputProtection } from './components.jsx';
 import { statuses, types, stages, labelSource, filterFindings, createPayload, filteredExport } from './analysisView.js';
 
 import { FindingReview } from './FindingReview.jsx';
+import { ExcelEvidence } from './ExcelEvidence.jsx';
+import { WordEvidence } from './WordEvidence.jsx';
+import { PdfEvidence } from './PdfEvidence.jsx';
 const root = '/api/analysis';
 const readRoute = () => Object.fromEntries(new URLSearchParams(window.location.hash.slice(1)));
 const initialRoute = () => ({ run: '', finding: '', evidence: '', compare: '', q: '', type: '', input: '', history: '', ...readRoute() });
@@ -34,6 +37,9 @@ function FixedEvidence({ value }) {
   return <section className="card" aria-label="证据内容"><h3>固定来源证据</h3><p>{labelSource(s)} · 摘要 {s.content_digest}</p><p>定位：{value.locator_kind} · {value.locator || '文档根'}</p><p>{value.note}</p>
     {value.extraction_status === 'declared_anchor_only' ? <StatusPanel title="只有声明的原文位置，尚未提取原文">当前缺少已核对的原文证据；不能据此断言原文未说明。</StatusPanel> : <>
       <p>已解析固定快照位置。快照中的空值或缺项不等于原制度或表单未说明。</p>
+      {s.source_kind === 'excel_material' && <p><a href={'/app/analysis#excel='+encodeURIComponent(s.ref_id)}>浏览该 Excel 固定证据的全部单元格</a>{doc?.sheet_name ? ` · 原位置 ${doc.sheet_name}!${doc.cell_address}` : ''}</p>}
+      {s.source_kind === 'word_material' && <p><a href={'/app/analysis#word='+encodeURIComponent(s.ref_id)+(doc?.anchor_id?'&wordAnchor='+encodeURIComponent(doc.anchor_id):'')}>浏览该 DOCX 固定证据的正文结构</a>{doc?.xml_path ? ' · '+doc.xml_path : ''}；未渲染，不提供页码。</p>}
+      {s.source_kind === 'pdf_material' && <p><a href={'/app/analysis#pdf='+encodeURIComponent(s.ref_id)+(doc?.anchor_id?'&pdfAnchor='+encodeURIComponent(doc.anchor_id):'')}>浏览该 PDF 固定证据的文本位置</a>{doc?.page ? ' · 第 '+doc.page+' 页' : ''}；物理页序号，未执行 OCR。</p>}
       {s.kind === 'handoff' && doc && Object.hasOwn(doc, 'pairs') && <>
         <DirectedGraph name="已登记的交接两端（不代表实际贯通）" nodes={[doc.source ? `${doc.source.process_name} / 对象 ${doc.source.object_name || doc.source.object_id}` : '来源端未登记', doc.target ? `${doc.target.process_name} / 对象 ${doc.target.object_name || doc.target.object_id}` : '目标端未登记']} />
         <div className="handoff-endpoints">{endpoint(doc.source, '来源端')}{endpoint(doc.target, '目标端')}</div>
@@ -68,7 +74,7 @@ export function AnalysisWorkbench({ api, draft, setDraft }) {
     setBusy(true); setError(null); setDetail(null); setFindings([]); setFinding(null); setEvidence(null); setDiff(null); setSources([]); setRecords([]); setCap(null);
     (async () => {
       const capability = await api.request(root + '/capabilities', { signal: controller.signal });
-      const [runs, inputs] = await Promise.all([pages(root + '/runs', controller.signal), pages(root + '/sources?kind=' + sourceKind, controller.signal)]);
+      const [runs, inputs] = await Promise.all([pages(root + '/runs', controller.signal), pages(root + '/sources?kind=' + (sourceKind==='ai_offline'?'v7_source':['word','pdf'].includes(sourceKind)?'template':sourceKind), controller.signal)]);
       let d = null, f = [], selected = null, e = null, comparison = null;
       if (route.run) {
         d = await api.request(root + '/runs/' + encodeURIComponent(route.run), { signal: controller.signal });
@@ -81,7 +87,7 @@ export function AnalysisWorkbench({ api, draft, setDraft }) {
         if (route.compare) comparison = await api.request(root + '/runs/' + encodeURIComponent(route.compare) + '/diff/' + encodeURIComponent(route.run), { signal: controller.signal });
       }
       if (id !== sequence.current || controller.signal.aborted) return;
-      setCap(capability); setSources(inputs); setRecords(runs); setDetail(d); setFindings(f); setFinding(selected); setEvidence(e); setDiff(comparison);
+      setCap(capability); setSources(['template','word','pdf'].includes(sourceKind)?inputs.filter(s=>s.source_kind===(sourceKind==='pdf'?'pdf_material':sourceKind==='word'?'word_material':'excel_material')):inputs); setRecords(runs); setDetail(d); setFindings(f); setFinding(selected); setEvidence(e); setDiff(comparison);
     })().catch(e => { if (!controller.signal.aborted && id === sequence.current) setError(e); }).finally(() => { if (!controller.signal.aborted && id === sequence.current) setBusy(false); });
     return () => controller.abort();
   }, [api, sourceKind, route.run, route.finding, route.evidence, route.compare, tick]);
@@ -109,7 +115,7 @@ export function AnalysisWorkbench({ api, draft, setDraft }) {
   async function create(event) {
     event.preventDefault();
     if (!d.ref || !d.description.trim()) { setError(new Error('请选择固定来源并填写本轮范围说明。')); document.getElementById(!d.ref ? 'analysis-source' : 'analysis-description')?.focus(); return; }
-    const adapter = cap.adapters.find(a => a.kind === sourceKind);
+    const adapter = cap.adapters.find(a => sourceKind==='ai_offline'?a.parser_key==='ai_offline':sourceKind==='pdf'?a.parser_key==='pdf_evidence':sourceKind==='word'?a.parser_key==='word_evidence':a.kind===sourceKind&&!['word_evidence','pdf_evidence'].includes(a.parser_key));
     await act(async signal => {
       const result = await api.request(root + '/runs', { method: 'POST', body: createPayload(adapter, d.ref, d.description.trim(), d.requestId), signal });
       if (signal.aborted) return; setDraft(null); changeRoute({ run: result.run_id, finding: '', evidence: '', compare: '', input: '', q: '', type: '' }); setTick(t => t + 1);
@@ -127,14 +133,17 @@ export function AnalysisWorkbench({ api, draft, setDraft }) {
   const visible = detail ? filterFindings(findings, detail, route) : [], base = detail ? filterFindings(findings, detail, { history: route.history }) : [];
   const checkName = id => cap?.adapters.flatMap(a => a.catalog).find(r => r.rule_id === id)?.title || id;
   const coverageView = rows => <ul>{rows.map((c, i) => <li key={i}>{c.step_key}：已检查 {c.checked?.length || 0} / {c.expected?.length || 0} 项{c.missing?.length ? `；未覆盖：${c.missing.map(checkName).join('、')}` : '；本步骤无登记覆盖缺口'}</li>)}</ul>;
-  function back() { if ((draft?.review || draft?.task) && !guard.confirmLeave()) return; if (draft?.review || draft?.task) setDraft({ ...draft, review: null, task: null, dirty: (draft.task || draft.review).baseDirty }); returnFocus.current = route.finding; changeRoute({ finding: '', evidence: '' }); }
+  function back() { if ((draft?.review || draft?.task || draft?.closure) && !guard.confirmLeave()) return; if (draft?.review || draft?.task || draft?.closure) setDraft({ ...draft, review: null, task: null, closure: null, dirty: (draft.closure || draft.task || draft.review).baseDirty }); returnFocus.current = route.finding; changeRoute({ finding: '', evidence: '' }); }
   return <div className="analysis-workbench">
     <StatusPanel title="按当前身份获准范围检查固定材料">确定性分析结果初始为待核实；有权人员核对后可明确关联现有问题或创建问题，不自动生成待办。主链框架和完整输入尚未确认，不能据局部结果宣称主链贯通。历史评审意见未导入本检查台。</StatusPanel>
     {error && <StatusPanel kind="error" title="操作未完成，当前输入保留" onRetry={() => setTick(t => t + 1)}>{error.message} {error.code}</StatusPanel>}
     {notice && <StatusPanel title={notice} />}
-    <section className="card"><h2>创建分析</h2><p>选择一个固定 V7 来源或设计交接版本。对象、字段和映射仍通过现有台账入口维护。</p>
-      <form onSubmit={create}><fieldset disabled={busy || !cap?.can_create || !!draft?.review || !!draft?.task}>
-        <label className="management-input">分析对象<select aria-label="分析对象" value={sourceKind} onChange={e => { if (!guard.confirmLeave()) return; setDraft(null); setSourceKind(e.target.value); }}><option value="v7_source">V7 固定材料</option><option value="handoff">固定设计交接</option></select></label>
+    <ExcelEvidence api={api} draft={draft} setDraft={setDraft} batchId={route.excel || (sourceKind==='template'?d.ref:'')} canWrite={cap?.can_create} onRegistered={id=>{setSourceKind('template');setDraft({...draft,excel:null,kind:'template',ref:id,description:draft?.description||'',dirty:!!draft?.description,requestId:uuid()});changeRoute({excel:id});setTick(t=>t+1);}} />
+    <WordEvidence api={api} draft={draft} setDraft={setDraft} batchId={route.word || (sourceKind==='word'?d.ref:'')} anchorId={route.wordAnchor} canWrite={cap?.can_create} onRegistered={id=>{setSourceKind('word');setDraft({...draft,word:null,kind:'word',ref:id,description:draft?.description||'',dirty:!!draft?.description,requestId:uuid()});changeRoute({word:id,wordAnchor:''});setTick(t=>t+1);}} />
+    <PdfEvidence api={api} draft={draft} setDraft={setDraft} batchId={route.pdf || (sourceKind==='pdf'?d.ref:'')} anchorId={route.pdfAnchor} canWrite={cap?.can_create} onRegistered={id=>{setSourceKind('pdf');setDraft({...draft,pdf:null,kind:'pdf',ref:id,description:draft?.description||'',dirty:!!draft?.description,requestId:uuid()});changeRoute({pdf:id,pdfAnchor:''});setTick(t=>t+1);}} />
+    <section className="card"><h2>创建分析</h2><p>选择一个固定 V7 来源、设计交接版本或 Excel、DOCX 证据批次。对象、字段和映射仍通过现有台账入口维护。</p>
+      <form onSubmit={create}><fieldset disabled={busy || !cap?.can_create || !!draft?.review || !!draft?.task || !!draft?.closure || !!draft?.excel || !!draft?.word || !!draft?.pdf}>
+        <label className="management-input">分析对象<select aria-label="分析对象" value={sourceKind} onChange={e => { if (!guard.confirmLeave()) return; setDraft(null); setSourceKind(e.target.value); }}><option value="ai_offline">单流程与离线 AI 校验（不调用模型）</option><option value="v7_source">V7 固定材料</option><option value="handoff">固定设计交接</option><option value="template">Excel 证据读取核对</option><option value="word">DOCX 证据读取核对</option><option value="pdf">PDF 证据读取核对</option></select></label>
         <label className="management-input">固定来源<select id="analysis-source" aria-label="固定来源" value={d.ref} onChange={e => edit('ref', e.target.value)}><option value="">请选择来源及版本</option>{sources.map(s => <option value={s.ref_id} key={s.ref_id}>{labelSource(s)} · {s.validation_status || '版本 ' + (s.revision_no || s.version_no || s.ref_id)}</option>)}{d.ref && !sources.some(s => s.ref_id === d.ref) && <option value={d.ref}>原选择 {d.ref}（待重新核对）</option>}</select></label>
         <label className="management-input">本轮范围说明<textarea id="analysis-description" aria-label="本轮范围说明" maxLength={1000} value={d.description} onChange={e => edit('description', e.target.value)} /></label>
         <button className="primary" type="submit">创建并排队分析</button>
@@ -142,20 +151,21 @@ export function AnalysisWorkbench({ api, draft, setDraft }) {
       {!busy && cap && !cap.can_create && <p>当前身份只读，不能创建或取消分析。</p>}
       {!busy && !sources.length && <p>当前没有可选固定来源。请先在 V7 来源映射或设计交接入口登记有权访问的材料。</p>}
       {d.dirty && <p className="input-notice">本轮输入尚未提交；失败、查看详情和导出不会应用或清空输入。</p>}
-      {cap && <details><summary>本轮确定性规则及未覆盖条件</summary>{cap.adapters.find(a => a.kind === sourceKind)?.catalog.map(r => <p key={r.rule_id}>{r.title}：{r.prerequisite}；{r.not_applicable}{r.enabled === false ? '（未启用）' : ''}</p>)}</details>}
+      {cap && <details><summary>本轮确定性规则及未覆盖条件</summary>{cap.adapters.find(a => sourceKind==='pdf'?a.parser_key==='pdf_evidence':sourceKind==='word'?a.parser_key==='word_evidence':a.kind===sourceKind&&!['word_evidence','pdf_evidence'].includes(a.parser_key))?.catalog.map(r => <p key={r.rule_id}>{r.title}：{r.prerequisite}；{r.not_applicable}{r.enabled === false ? '（未启用）' : ''}</p>)}</details>}
     </section>
     <section className="card"><h2>分析记录</h2><div className="import-actions"><label>当前运行<select aria-label="当前运行" disabled={busy} value={route.run} onChange={e => chooseRun(e.target.value)}><option value="">请选择运行</option>{records.map(r => <option key={r.run_id} value={r.run_id}>运行 {r.run_id} · {statuses[r.status] || r.status} · {r.created_at}</option>)}</select></label><button className="secondary" disabled={busy} onClick={() => setTick(t => t + 1)}>刷新分析记录</button></div>{!busy && !records.length && <p>当前范围没有可见分析记录。</p>}</section>
     {busy && <StatusPanel kind="loading" title="正在读取或提交分析…">请稍候，输入仍保留。</StatusPanel>}
     {detail && <>
       <section className="card"><h2>运行 {detail.run_id} · {statuses[detail.status] || detail.status}</h2><p>当前范围：{detail.manifest.check_scope.description}</p><p>创建：{detail.created_at} · 开始：{detail.started_at || '尚未开始'} · 结束：{detail.finished_at || '尚未结束'}</p>
         <p>规则来源：{detail.manifest.rule_version} · AI：{detail.manifest.ai_metadata ? '本记录含 AI 配置，须结合步骤覆盖核对' : '未调用'} · 历史评审意见：未导入</p>
+        {detail.manifest.ai_metadata?.provider === 'offline' && <p role="note">本轮仅使用离线替身，未调用真实模型。意见均待核实，引用通过不代表判断正确；真实 AI 分析未覆盖。AI 步骤失败时保留确定性检查结果，不能据此关闭问题。</p>}
         <ul>{detail.manifest.inputs.map(i => <li key={i.input_key}>{i.input_key} · {labelSource(i.snapshot)}<details><summary>查看固定版本与摘要</summary><p>内容摘要：{i.snapshot.content_digest || '不可用（未解析）'}；原始字节摘要：{i.snapshot.raw_sha256 || '未提供'}</p><p>{text(i.snapshot.source_ref || { ref_id: i.snapshot.ref_id })}</p></details></li>)}</ul>
         <h3>步骤进度与完成覆盖</h3>{detail.manifest.steps.map(step => { const a = detail.attempts.filter(a => a.step_key === step.step_key).sort((a, b) => b.attempt_no - a.attempt_no)[0]; return <p key={step.step_key}>{step.step_key}：{a ? statuses[a.status] || a.status : '尚未开始'}{a?.error_code ? ' · 原因 ' + a.error_code : ''}</p>; })}
         {coverageView(detail.coverage)}<p>完成仅表示本轮已登记检查执行完毕；部分完成、失败或未覆盖不能当作已整改。</p>
         {pending(detail) && <p>每 2.5 秒刷新进度；有未提交输入时暂停自动刷新。排队中须等待独立分析工作进程。</p>}
         {pending(detail) && cap?.can_create && <button className="secondary" disabled={busy} onClick={() => act(async signal => { if (!cancelRequest.current || cancelRequest.current.run !== detail.run_id || cancelRequest.current.revision !== detail.revision_no) cancelRequest.current = { run: detail.run_id, revision: detail.revision_no, id: uuid() }; await api.request(root + '/runs/' + detail.run_id + '/cancel', { method: 'POST', signal, body: { request_id: cancelRequest.current.id, expected_revision: detail.revision_no } }); if (!signal.aborted) setTick(t => t + 1); })}>取消本次运行</button>}
       </section>
-      <section className="card"><h2>发现检查台</h2><div className="analysis-filters"><label>搜索内容或对象字段标识<input aria-label="搜索发现" value={route.q} onChange={e => changeRoute({ q: e.target.value })} /></label><label>发现类别<select aria-label="发现类别" value={route.type} onChange={e => changeRoute({ type: e.target.value })}><option value="">全部类别</option>{Object.entries(types).map(([k, v]) => <option value={k} key={k}>{v}</option>)}</select></label><label>固定输入<select aria-label="固定输入筛选" value={route.input} onChange={e => changeRoute({ input: e.target.value })}><option value="">全部当前输入</option>{detail.manifest.inputs.map(i => <option value={i.input_key} key={i.input_key}>{i.input_key} · {stages[i.snapshot.kind] || stages[i.snapshot.source_kind]}</option>)}</select></label><label>步骤尝试<select aria-label="步骤尝试" value={route.history} onChange={e => changeRoute({ history: e.target.value })}><option value="">各步骤最后一次尝试</option><option value="all">包含历史尝试（非历史评审）</option></select></label></div>
+      <section className="card"><h2>发现检查台</h2><div className="analysis-filters"><label>搜索内容或对象字段标识<input aria-label="搜索发现" value={route.q} onChange={e => changeRoute({ q: e.target.value })} /></label><label>发现类别<select aria-label="发现类别" value={route.type} onChange={e => changeRoute({ type: e.target.value })}><option value="">全部类别</option>{Object.entries(types).map(([k, v]) => <option value={k} key={k}>{v}</option>)}</select></label><label>固定输入<select aria-label="固定输入筛选" value={route.input} onChange={e => changeRoute({ input: e.target.value })}><option value="">全部当前输入</option>{detail.manifest.inputs.map(i => <option value={i.input_key} key={i.input_key}>{i.input_key} · {labelSource(i.snapshot)}</option>)}</select></label><label>步骤尝试<select aria-label="步骤尝试" value={route.history} onChange={e => changeRoute({ history: e.target.value })}><option value="">各步骤最后一次尝试</option><option value="all">包含历史尝试（非历史评审）</option></select></label></div>
         <p data-testid="analysis-count">匹配 {visible.length} / 当前范围 {base.length} 条发现</p><div className="import-actions"><button className="secondary" onClick={() => changeRoute({ q: '', type: '', input: '' })}>清除筛选</button><button className="secondary" disabled={busy} onClick={exportCurrent}>导出当前筛选范围</button></div>
         {!finding ? <><DirectedGraph name="当前筛选的分析路径（箭头不代表业务流转）" nodes={visible.length ? [`${detail.manifest.inputs.length} 个固定输入`, `规则 ${detail.manifest.rule_version}`, `${visible.length} 条规则发现`] : []} />
           {visible.map(f => <article className="analysis-finding" key={f.finding_id}><strong>{types[f.finding_type] || f.finding_type} · 规则发现</strong><p>{f.message}</p><p className="muted">{f.rule_id} · {f.semantic_locator} · 尝试 {f.attempt_id}</p><button className="secondary" data-finding={f.finding_id} disabled={busy} onClick={() => { scroll.current = window.scrollY; changeRoute({ finding: f.finding_id, evidence: '' }); }}>查看发现 {f.finding_id}</button></article>)}

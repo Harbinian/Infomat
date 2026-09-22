@@ -78,11 +78,11 @@
 }
 ```
 
-缺少文件、空文件、空粘贴内容和缺少校验对象分别返回`FILE_REQUIRED`、`FILE_CONTENT_EMPTY`、`PASTED_CONTENT_EMPTY`和`VALIDATION_DATA_REQUIRED`；`data`缺少`schema_version`时返回`SCHEMA_VERSION_REQUIRED`。未知版本在`/api/validate`、`/api/schema`、`/api/template`和`/api/health`统一返回`UNSUPPORTED_SCHEMA_VERSION`。非法JSON返回`INVALID_JSON`，不支持的上传类型返回`UNSUPPORTED_FILE_TYPE`。`/api/session`、`/api/data`和`/api/export`返回`STATELESS_ENDPOINT_DISABLED`，未知API返回`API_NOT_FOUND`。响应不得包含请求正文、绝对路径、堆栈、模块名或底层异常。
+旧版`/api/upload`与`/api/paste`解析接口已移除，请求返回404及`API_NOT_FOUND`。缺少校验对象返回`VALIDATION_DATA_REQUIRED`；`data`缺少`schema_version`时返回`SCHEMA_VERSION_REQUIRED`。未知版本在`/api/validate`、`/api/schema`、`/api/template`和`/api/health`统一返回`UNSUPPORTED_SCHEMA_VERSION`。非法JSON返回`INVALID_JSON`。`/api/session`、`/api/data`和`/api/export`返回`STATELESS_ENDPOINT_DISABLED`，未知API返回`API_NOT_FOUND`。响应不得包含请求正文、绝对路径、堆栈、模块名或底层异常。
 
 JSON单段文字上限按UTF-8实际字节计算。10MB正文、64层嵌套、100000个对象或字段节点和无效Unicode限制保持既有值。
 
-`inspectDocxArchive`同时读取ZIP中央目录和本地文件头，检查条目数2000、单条解压量20MB、总解压量50MB、压缩比100:1和路径层级20的闭区间边界，并拒绝路径越界、ZIP64、无效UTF-8文件名、中央目录与本地文件头名称或大小不一致，以及压缩数据越过中央目录。`createDocxParserPool`把工作线程创建、表格提取、并发上限和超时作为可注入边界；生产固定使用工作线程、并发2和超时5秒。并发已满时返回429，超时后终止工作线程、归还名额并返回422。
+文档文本提取、DOCX ZIP检查、解析工作线程与并发池已随旧功能删除；服务不再加载`mammoth`或`multer`。保留JSON大小、深度、节点数和Unicode校验，以及受支持旧版本的JSON兼容校验与页面迁移。
 
 ### 自动测试夹具
 

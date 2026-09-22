@@ -91,6 +91,13 @@ module.exports = function (helpers) {
       const outcome = { status: a.status, coverage: a.coverage, error_code: a.error_code, evidence: sorted(evidenceRows.map(checkedSnapshot)), findings: sorted(findingRows.map(checkedSnapshot)) };
       if (a.status === 'running' ? (a.result_digest !== null || evidenceRows.length || findingRows.length) : digest(outcome) !== a.result_digest) throw code('INTEGRITY_CONFLICT', 409);
       delete a.coverage_json;
+      if (run.manifest.ai_metadata?.adapter_version === 'analysis-ai-offline-v1' && run.manifest.steps.find(s => s.step_key === a.step_key)?.parser_key === 'ai_offline') {
+        const [[trace]] = await db.execute('SELECT snapshot_json,snapshot_digest FROM data_map_analysis_ai_outputs WHERE attempt_id=? AND run_id=? FOR SHARE', [a.attempt_id, run.run_id]);
+        if (trace) {
+          a.ai_trace = checkedSnapshot(trace);
+          if (a.ai_trace.run_id !== run.run_id || a.ai_trace.attempt_id !== a.attempt_id || a.ai_trace.manifest_digest !== run.manifest_digest) throw code('INTEGRITY_CONFLICT', 409);
+        } else if (['succeeded', 'partial'].includes(a.status) || (a.error_code || '').startsWith('AI_')) throw code('INTEGRITY_CONFLICT', 409);
+      }
     }
     for (const step of run.steps) {
       const history = attempts.filter(a => a.step_key === step.step_key), latest = history.at(-1);

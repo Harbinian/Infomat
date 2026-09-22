@@ -366,4 +366,36 @@ npm run test:stage06-mysql-isolated
 
 - `npm.cmd run manage:analysis-tasks -- --target host:port/database`：默认dry-run，支持显式 `--inspect`、`--dry-run` 或 `--apply`。只从显式环境变量取得连接，不加载私有.env；apply只增量创建问题—办公室待办关系及迁移标记，不回填。复用现有办公室及P16问题依赖，漂移拒绝；不自动调用其他迁移。
 - `npm.cmd run test:analysis-tasks -- --output <artifacts下全新目录>`：P09隔离夹具及P17专项，使用自有带标签tmpfs MySQL、随机回环HTTP、合成组织/花名册导入及Edge。验证CLI/DDL中断与续建、事务回滚、交办幂等、权限、来源快照、成员失效、普通待办兼容、任务done不关闭问题、输入保护及内存备份恢复。结束只清理本次资源，不启动worker、模型或真实通知。
-- 本步未确定新来源问题的复核关闭主体及依据，正向正式复核、关闭和重开未实施；测试证明拒绝门槛，不能表述为闭环业务验收。后续仍使用P17完成该缺口。
+- P17续步依据固定合同第27节实施逐问题指定、条件确认、独立复核和重开。`npm.cmd run manage:analysis-closure -- --target host:port/database` 默认dry-run；显式apply只增加复核事件表、历史链头及迁移标记，依赖问题待办结构。无启动DDL、原数据回填或新角色。
+- `test:analysis-tasks` 同时验证复核迁移、本人指定、角色候选与历史办理分离、指定暂停后不得自动恢复、任务/来源/条件修订、证据摘录、关闭事务回滚与幂等、复核不通过、负责人重开、历史恢复和真实Edge闭环。测试只使用自有隔离MySQL和合成身份；不得据此声称正式开启或业务验收。
+
+
+### P18 Excel证据验证与迁移
+
+- npm run test:excel-evidence：合成OOXML解析、定位、公式缓存、损坏/空提取和限额检查；不读外部文件、不联网或连库。
+- npm run test:excel-evidence-integration -- --output <artifacts下新目录>：复用P09自有带标签tmpfs MySQL和随机回环HTTP，使用合成身份/工作簿，启动自有worker与Edge，验证增量迁移、API、固定摘要、关联/权限/幂等、证据浏览和问题跳转。结束恢复内存备份并回收本轮资源；禁止指向已有数据库或业务端口。
+- npm run manage:excel-evidence -- --target HOST:PORT/DATABASE：默认dry-run，可用--inspect/--apply；必须显式环境变量，不加载.env。正式实例需要单独授权，完整备份先于变更。
+
+用户原始工作簿只在本批次verify-sample.cjs按指定路径只读核对；样本业务单元格不写入集成夹具、公共构建或测试报告，报告仅保存摘要、工作表结构和覆盖计数。
+
+## DOCX证据检查与迁移（P18）
+
+- npm.cmd run test:word-evidence：内存合成DOCX，验证结构顺序、嵌套表格、重复标题、无虚构页码、空提取、定位失败、域缓存、损坏、DOC/伪改名拒绝、活动内容、限额/并发与规则覆盖。纯计算，无HTTP、数据库、Word自动化、外链或私有配置。
+- npm.cmd run test:word-evidence-integration -- --output <artifacts下全新目录>：自有带唯一标签的tmpfs MySQL、随机回环HTTP、合成身份和真实Edge/worker。验证迁移、重复/中断/漂移、权限、CSRF、幂等、事务回滚、DOC拒绝、固定快照、显式关联、证据浏览和原问题追溯。结束恢复内存备份并回收本次资源，不操作既有服务或数据库。可在同一入口增加--p14和--p18核对原API及Excel；Word证据文件名使用p18-word-前缀，避免覆盖Excel结果。
+- npm.cmd run manage:word-evidence -- --target HOST:PORT/DATABASE：默认dry-run，支持--inspect/--apply。只接受明确目标及显式MySQL环境变量，不加载.env，无启动DDL。正式实例另获授权，已有数据须先完整备份。
+
+DOCX测试不转换原.doc，不把合成数据当作真实样本或业务验收。格式严格限定.docx；根关系与正文类型不匹配、二进制DOC伪改名均拒绝。CPU线程结束即回收，集成测试清理由已有所有权检查执行，禁止批量清理Node、Edge或容器。
+
+### P18 PDF证据维护与验证
+
+- npm.cmd run test:pdf-evidence：内存合成PDF，验证物理页、坐标、重复标题、空提取、损坏、注释脚本、惰性链接、资源限额和子进程失败隔离；不连接数据库或读取业务材料。
+- npm.cmd run test:pdf-evidence-integration -- --output <本仓artifacts下不存在的目录>：复用test-analysis-runs.js --p18-pdf，创建唯一标签tmpfs MySQL、合成身份及PDF、随机回环HTTP/worker/Edge；验证权限、迁移、事务、固定引用、原问题追溯和输入保护，结束恢复内存备份并按归属回收资源。可组合--p14、--p18、--p18-word检查已有API/Excel/DOCX兼容。
+- npm.cmd run manage:pdf-evidence -- --target <host:port/database>：默认dry-run，支持--inspect/--dry-run/--apply；必须明确MYSQL_HOST、MYSQL_PORT、MYSQL_USER、MYSQL_PASSWORD、MYSQL_DATABASE，target逐字匹配。命令不加载.env；只有--apply写增量表/迁移标记，保留旧记录，无自动回填、启动DDL或清理。正式实例运行须另获目标/备份授权。
+
+### P19 离线 AI 维护与验证
+
+- `npm.cmd run test:ai-offline`：内存合成材料及静态字符串替身，验证结构、固定引用、摘录、越范围主体、重复/冲突、注入、超时、取消、并发、字节/费用上限和真实调用关闭；不连数据库或外部服务。
+- `npm.cmd run test:ai-offline-integration -- --output <本仓artifacts下不存在的目录>`：组合 `test-analysis-runs.js --p19 --p14`，创建唯一标签 tmpfs MySQL、合成身份、随机回环 HTTP、worker 和 Edge。验证增量迁移、原 API 权限/范围、事务、完整性、实际输出留存、AI 失败保留确定性结果、P18 显式关联及页面安全渲染；结束恢复内存备份并按归属回收资源，不操作既有服务或正式数据库。
+- `npm.cmd run manage:analysis-ai -- --target HOST:PORT/DATABASE`：使用显式 MySQL 环境变量，默认 dry-run，支持 `--inspect`、`--dry-run`、`--apply`，target 必须与配置逐字匹配。只在显式 apply 下添加 AI 输出审计表和迁移标记，无自动 DDL、回填或旧数据删除。正式目标另获授权并准备完整备份。
+
+离线请求由 `analysisAiOffline.createPayload` 构造；输出及预算合同见应用 README。替身仅接收惰性字符串，不提供函数、工具或真实模型连接。测试证据中的实际输出全部来自合成替身，不能据此评价真实 AI 质量。
