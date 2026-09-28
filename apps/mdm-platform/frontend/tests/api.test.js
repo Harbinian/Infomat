@@ -5,6 +5,29 @@ import { isolatedBackend, checkDevPort, freeDevPort } from '../devBoundary.js';
 
 const response = (status, body) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 
+test('binary downloads preserve bytes, bounded errors and session/body cancellation', async () => {
+  const bytes = new Uint8Array([80, 75, 3, 4, 0, 255]);
+  const mime = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+  const api = createApiClient({ fetchImpl: async (url, options) => {
+    assert.equal(options.credentials, 'same-origin'); assert.equal(options.cache, 'no-store');
+    return new Response(bytes, { headers: { 'Content-Type': mime } });
+  } });
+  const blob = await api.request('/api/export/excel', { responseType: 'blob' });
+  assert.equal(blob.type, mime); assert.deepEqual(new Uint8Array(await blob.arrayBuffer()), bytes);
+  let expired = 0;
+  for (const status of [401, 403, 409, 503]) {
+    const denied = createApiClient({ fetchImpl: async () => response(status, { error: 'sensitive SQL' }), onUnauthorized: () => expired++ });
+    await assert.rejects(denied.request('/api/export/excel', { responseType: 'blob' }), e => e.status === status && !e.message.includes('SQL'));
+  }
+  assert.equal(expired, 1);
+  let release, started;
+  const entered = new Promise(resolve => { started = resolve; });
+  const delayed = createApiClient({ fetchImpl: async () => ({ ok: true, status: 200, blob: () => { started(); return new Promise(resolve => { release = resolve; }); } }) });
+  const pending = delayed.request('/api/export/excel', { responseType: 'blob' });
+  await entered; delayed.resetSession(); release(blob);
+  await assert.rejects(pending, e => e.name === 'AbortError');
+});
+
 test('write requests reuse session cookie and CSRF without automatic write retries', async () => {
   const calls = [];
   const api = createApiClient({ fetchImpl: async (url, options) => {

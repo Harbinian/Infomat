@@ -43,3 +43,20 @@
 
 .finding-review-evidence { display: flex; align-items: center; gap: 0.6rem; margin: 0.65rem 0; }
 .finding-review-evidence input[type=checkbox] { width: auto; flex: 0 0 auto; }
+
+/* Process preview reuses the platform cards and the local read-only renderers. */
+.process-preview { min-width:0; }
+.process-preview fieldset { border:0; padding:0; margin:0; min-width:0; }
+.process-preview label { display:block; margin:12px 0; }
+.process-preview select,.process-preview textarea,.process-preview input { display:block; width:100%; min-width:0; max-width:100%; font:inherit; padding:9px; border:1px solid var(--border); border-radius:6px; }
+.process-preview p,.process-preview h2,.process-preview h4,.process-preview summary { overflow-wrap:anywhere; white-space:pre-wrap; }
+.process-preview h3 { margin:24px 0 12px; }
+.process-preview h4 { margin:0 0 10px; }
+.process-preview details { margin:14px 0; }
+.preview-item,.preview-source { padding:18px 0; border-top:1px solid var(--border); }
+.preview-editor { border:2px solid var(--accent); }
+.preview-editor button { margin:12px 8px 0 0; }
+.preview-canvas { height:430px; border:1px solid var(--border); width:100%; min-width:0; }
+.process-preview :focus-visible { outline:3px solid #81b2e5; outline-offset:2px; }
+@media(max-width:760px) { .preview-canvas { height:340px; } .process-preview .card { padding:16px; } }
+.preview-canvas { position:relative; overflow:hidden; }

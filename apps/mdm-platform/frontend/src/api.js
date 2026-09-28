@@ -22,7 +22,7 @@ export function createApiClient({ fetchImpl = globalThis.fetch, onUnauthorized =
   let csrfToken = null;
   let sessionGeneration = 0;
   function resetSession() { csrfToken = null; sessionGeneration += 1; }
-  async function request(url, { method = 'GET', body, signal } = {}) {
+  async function request(url, { method = 'GET', body, signal, responseType = 'json' } = {}) {
     if (!/^\/api\//.test(url) || url.includes('\\') || url.includes('..')) throw new Error('Only same-origin API paths are allowed.');
     const generation = sessionGeneration;
     const controller = new AbortController();
@@ -31,7 +31,7 @@ export function createApiClient({ fetchImpl = globalThis.fetch, onUnauthorized =
     const login = url === '/api/org/login';
     method = method.toUpperCase();
     try {
-      const headers = { Accept: 'application/json' };
+      const headers = { Accept: responseType === 'blob' ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : 'application/json' };
       const multipart = typeof FormData !== 'undefined' && body instanceof FormData;
       if (body !== undefined && !multipart) headers['Content-Type'] = 'application/json';
       if (!['GET', 'HEAD', 'OPTIONS'].includes(method) && !login) {
@@ -48,7 +48,7 @@ export function createApiClient({ fetchImpl = globalThis.fetch, onUnauthorized =
       });
       // Logout, a new login or a replaced request makes the old response unusable.
       if (generation !== sessionGeneration || combinedSignal.aborted) throw new DOMException('Request replaced', 'AbortError');
-      const data = response.status === 204 ? null : await response.json().catch(() => null);
+      const data = response.status === 204 ? null : response.ok && responseType === 'blob' ? await response.blob() : await response.json().catch(() => null);
       if (generation !== sessionGeneration || combinedSignal.aborted) throw new DOMException('Request replaced', 'AbortError');
       if (!response.ok) {
         if (response.status === 401 && !login) { resetSession(); onUnauthorized(); }

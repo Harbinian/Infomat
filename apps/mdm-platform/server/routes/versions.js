@@ -1,7 +1,7 @@
 const { sendMysqlUnavailable } = require('../mysqlRuntimeSchema');
 const express = require('express');
 const router = express.Router();
-const { requireAuth } = require('../auth');
+const { requireAuth, getUserEffectivePermissionsAsync } = require('../auth');
 const {
   auditRepository,
   resetAuditRepositoryFactory,
@@ -26,7 +26,23 @@ function runAction(res, action) {
 router.get('/entity/:type/:id', requireAuth, (req, res) => {
   return runAction(res, async () => {
     const repo = await auditRepository();
-    return res.json(await repo.listEntityVersions(req.params.type, req.params.id));
+    const versions = await repo.listEntityVersions(req.params.type, req.params.id);
+    if ([...versions.logs, ...versions.changeSets].some(version => version.entity_type === 'todo')) {
+      const { permSet } = await getUserEffectivePermissionsAsync(req.session.userId);
+      const global = permSet.has('governance:read-global');
+      const department = permSet.has('governance:read-department') && req.session.departmentId;
+      const visible = version => {
+        if (version.entity_type !== 'todo') return true;
+        if (global) return true;
+        if (!department) return false;
+        try {
+          const metadata = typeof version.metadata_json === 'string' ? JSON.parse(version.metadata_json) : version.metadata_json;
+          return metadata?.schema_version === 'todo-deletion-v1' && Number(metadata.todo?.to_dept_id) === Number(department);
+        } catch { return false; }
+      };
+      return res.json({ ...versions, logs: versions.logs.filter(visible), changeSets: versions.changeSets.filter(visible) });
+    }
+    return res.json(versions);
   });
 });
 

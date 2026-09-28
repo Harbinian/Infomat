@@ -1,0 +1,14 @@
+.native-diagrams { min-width: 0; overflow-wrap: anywhere; }
+.native-diagrams select { max-width: 100%; }
+.native-diagrams .actions { display: flex; align-items: end; gap: 10px; flex-wrap: wrap; margin: 12px 0; }
+.native-diagrams .actions label { display: grid; gap: 6px; min-width: 0; max-width: 100%; }
+.native-diagrams .actions select { padding: 9px 12px; min-height: 40px; border: 1px solid #d9e2ed; border-radius: 8px; background: #fff; font: inherit; }
+.native-diagram-grid { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 16px; margin: 16px 0; }
+.native-diagram-viewport { height: 460px; min-width: 0; position: relative; border: 1px solid #d9e2ed; border-radius: 8px; background: #fff; }
+.native-diagram-inspector { min-width: 0; max-height: 460px; overflow: auto; padding: 12px; background: #f4f7fb; border-radius: 8px; }
+.native-diagram-inspector dd { margin: 4px 0 12px; white-space: pre-wrap; }
+@media (max-width: 700px) {
+  .native-diagram-grid { grid-template-columns: minmax(0, 1fr); }
+  .native-diagram-viewport { height: 360px; }
+  .native-diagram-inspector { max-height: 260px; }
+}

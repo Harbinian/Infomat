@@ -21,6 +21,9 @@ async function main() {
       if (normalizedSql.startsWith('CREATE TABLE')) return [[], undefined];
       if (normalizedSql.startsWith('SELECT todo_id FROM mdm_todo_office_assignments')) return [[], undefined];
       if (normalizedSql.startsWith('SELECT id FROM mdm_todos WHERE id=?')) return [[this.state.todos.find(todo=>Number(todo.id)===Number(params[0]))].filter(Boolean),undefined];
+      if (normalizedSql.startsWith('SELECT * FROM mdm_todos WHERE id=?')) return [[this.state.todos.find(todo=>Number(todo.id)===Number(params[0]))].filter(Boolean),undefined];
+      if (normalizedSql.startsWith('SELECT * FROM mdm_todo_events WHERE todo_id=?')) return [[],undefined];
+      if (normalizedSql.startsWith('INSERT INTO mdm_version_log')) return [{insertId:this.state.nextId++,affectedRows:1},undefined];
 
       if (normalizedSql.includes('INSERT INTO mdm_todos')) {
         const id = this.state.nextId++;

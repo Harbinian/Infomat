@@ -68,6 +68,14 @@ router.put('/:fieldEntryId', requireAuth, (req, res) => {
     if (!await canMaintainIdentity(req, context)) {
       return res.status(403).json({ error: '只能由部门主对接人维护本部门黄金源信息' });
     }
+    // Maintenance cannot assert a reviewer decision through the upsert payload.
+    // Existing confirmed records remain readable; confirmation has its own route.
+    if (req.body.confirmed || String(req.body.status || '').trim() === 'confirmed') {
+      return res.status(403).json({ error: '维护信息不能同时确认黄金源，请使用部门确认入口' });
+    }
+    if (existing && existing.owner_user_id && !existing.owner_person_id) {
+      return res.status(409).json({ error: '历史负责人尚未关联人员，请先明确人员映射后再维护' });
+    }
     res.json(await repo.upsertFieldIdentity(req.params.fieldEntryId, req.body));
   });
 });

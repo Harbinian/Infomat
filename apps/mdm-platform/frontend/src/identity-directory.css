@@ -1,0 +1,19 @@
+.identity-module { min-width:0; overflow-wrap:anywhere; }
+.identity-actions { display:flex; align-items:center; flex-wrap:wrap; gap:12px; margin:14px 0; }
+.identity-fields { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(230px,100%),1fr)); gap:16px; margin:16px 0; }
+.identity-field { display:flex; flex-direction:column; gap:7px; min-width:0; }
+.identity-field input,.identity-field select { width:100%; min-width:0; padding:9px; border:1px solid var(--border); border-radius:6px; background:white; font:inherit; }
+.identity-table { max-width:100%; overflow:auto; }
+.identity-table table { width:100%; min-width:780px; border-collapse:collapse; font-size:14px; }
+.identity-table th,.identity-table td { min-width:100px; padding:11px; text-align:left; vertical-align:top; border-bottom:1px solid var(--border); }
+.identity-table th { background:#f4f7fa; }
+.identity-table button { margin:3px; }
+.identity-checks { display:flex; flex-wrap:wrap; gap:14px; margin:16px 0; }
+.identity-checks label { display:flex; gap:8px; align-items:center; }
+.identity-checks input { width:auto; }
+.identity-module fieldset { border:1px solid var(--border); border-radius:8px; min-width:0; padding:16px; }
+.identity-outline { padding-left:22px; }
+.identity-outline li { padding:7px 0; }
+.identity-outline span { display:inline-block; padding:8px 12px; background:#f3f7fb; border-left:3px solid #3573a6; }
+.identity-secret { display:block; padding:16px; background:#fff5dd; user-select:all; }
+@media(max-width:700px) { .identity-module .card { padding:16px; } }
