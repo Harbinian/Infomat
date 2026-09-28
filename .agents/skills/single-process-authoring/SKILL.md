@@ -97,6 +97,8 @@ node .agents/skills/single-process-authoring/scripts/validate-process-v8.mjs --p
 
 该脚本调用 3001 实际使用的同一份语义校验器 `scripts/process-governance/v7-validator.js`，并按文件的 `schema_version` 分派到对应结构（V8 用服务结构常量，V7 用 `docs/contracts/process-governance-v7.schema.json`），按错误路径输出 `path`、`keyword`、`message`、`error_id`。校验不通过时为非零退出码。摘要按版本显示：V7 `e1d5b33b…`、V8 `3b68c1fd…`，两者不得混用。
 
+报告里另有两行标识，用途不同：**「3001 应用提交」**来自 3001 的 `APP_COMMIT`，设了 `STRUCTURED_OUTPUT_APP_COMMIT` 环境变量时取该值、否则回落 git HEAD，输出中会注明来源；回落值会被任何无关提交顶掉，**不可用于跨批次比对**。**「规则文件提交」**是 `docs/contracts` 与 `scripts/process-governance` 最后一次变更的提交，规则不改则不变——跨批次比对用这一行，或在 `--json` 输出中读 `app_commit_source` 与 `rules_commit`。
+
 结构规则见[V8 结构与映射规则](references/v8-structure-rules.md)。
 
 需要注意：本地校验覆盖结构、引用、端点和节点类型等可机器判定的问题，不覆盖 3001 页面的业务提示，也不判断业务内容是否正确。

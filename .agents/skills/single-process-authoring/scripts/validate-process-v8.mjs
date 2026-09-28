@@ -17,6 +17,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { execFileSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 
@@ -59,6 +60,29 @@ function readJsonFile(filePath) {
     fail(`JSON 解析失败：${filePath}\n${error.message}`);
   }
 }
+
+/**
+ * 3001 的 APP_COMMIT 有两条来源：设了 STRUCTURED_OUTPUT_APP_COMMIT 就用它，否则回落到 git HEAD。
+ * 回落值会被任何无关提交顶掉，所以本脚本同时报告取值来源，并另取「规则文件提交」——
+ * 只要结构契约与语义规则没改，后者就不变，跨批次比对应当用它。
+ */
+const RULES_PATHS = ['docs/contracts', 'scripts/process-governance'];
+
+function gitCommit(args) {
+  try {
+    return execFileSync('git', args, {
+      cwd: REPO_ROOT,
+      encoding: 'utf8',
+      windowsHide: true,
+      stdio: ['ignore', 'pipe', 'ignore']
+    }).trim();
+  } catch (_) {
+    return '';
+  }
+}
+
+const APP_COMMIT_SOURCE = process.env.STRUCTURED_OUTPUT_APP_COMMIT ? 'env' : 'head';
+const RULES_COMMIT = gitCommit(['log', '-1', '--format=%H', '--', ...RULES_PATHS]) || null;
 
 function loadService() {
   if (!fs.existsSync(SERVICE_ENTRY)) {
@@ -187,6 +211,8 @@ if (options.asJson) {
     schema_digest: digest ? digest.value : null,
     digest_available: Boolean(digest),
     app_commit: service.APP_COMMIT,
+    app_commit_source: APP_COMMIT_SOURCE,
+    rules_commit: RULES_COMMIT,
     valid,
     error_count: errors.length,
     errors
@@ -196,7 +222,10 @@ if (options.asJson) {
     `文件：${filePath}`,
     `结构版本：${version ?? '（缺少 schema_version）'}`,
     digest ? `3001 结构摘要（${digest.version}）：${digest.value}` : '3001 结构摘要：本脚本只核对 V7／V8，其他版本未取摘要',
-    `3001 应用提交：${service.APP_COMMIT}`
+    `3001 应用提交：${service.APP_COMMIT}（取自 ${APP_COMMIT_SOURCE === 'env' ? 'STRUCTURED_OUTPUT_APP_COMMIT 环境变量' : 'git HEAD；会被无关提交顶掉'}）`,
+    RULES_COMMIT
+      ? `规则文件提交：${RULES_COMMIT}（${RULES_PATHS.join('、')} 最后一次变更；跨批次比对这个）`
+      : '规则文件提交：未取到（非 git 工作区或 git 不可用）'
   ];
   if (digestMismatch) lines.push(`结构摘要不一致：期望 ${options.expectDigest}，实际 ${digest.value}`);
   if (digestUnavailable) lines.push(`无法核对结构摘要：本脚本只支持 V7／V8，当前为 ${version ?? '未知版本'}`);
