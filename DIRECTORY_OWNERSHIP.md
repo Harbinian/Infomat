@@ -109,6 +109,7 @@ scripts/AGENTS.md
 | `snapshots/` | norms 快照 | 需确认是否作为历史快照保留；若保留，应补 README |
 | `ai_materials/` | AI 处理输入材料 | 需确认是否为长期资料源；若是，应说明与 `docs/norms/` 的关系 |
 | `.agents/` | Codex 可用的项目技能和提示材料 | 可保留，但不放生成物 |
+| `.claude/skills/` | Claude Code 项目级技能入口 | 只放指向 `.agents/skills/` 的薄入口，技能正文、参考和脚本仍在 `.agents/skills/`；不放生成物、运行状态或业务事实 |
 | `.codex/config.toml` | 仓库内 Codex 偏好 | 可提交非敏感偏好，不放 Secret、主机信息、运行状态或业务事实 |
 | `.superpowers/` | Superpowers 工作输出 | 当前含截图等生成物，后续应迁移或忽略 |
 | `node_modules/` | 本地依赖 | 不提交 |
