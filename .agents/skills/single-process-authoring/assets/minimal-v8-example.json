@@ -1,0 +1,325 @@
+{
+  "schema_version": "process-governance-v8",
+  "export_meta": {
+    "package_ref": "package_demo_prompt_001",
+    "exported_at": "2026-09-24T06:04:31.244Z",
+    "initiating_department": "物资保障部",
+    "compiler": "虚构示例编制人"
+  },
+  "process": {
+    "process_ref": "process_demo_prompt_001",
+    "process_name": "虚构示例事项登记流程",
+    "owning_department": "物资保障部",
+    "purpose": "演示V8行为、判断依据、字段引用与导入回读，不代表实际业务制度",
+    "scope": "仅用于本提示词包的隔离演示，事项经核对符合条件后登记，不符合时补充后再次核对",
+    "capability_domain": null,
+    "business_capability": null,
+    "classification_status": "unclassified"
+  },
+  "behaviors": [
+    {
+      "behavior_ref": "behavior_demo_submit",
+      "node_type": "action",
+      "behavior_name": "示例经办岗填写事项申请单",
+      "behavior_description": "示例经办岗填写事项名称，提交给示例核对岗；收到补充要求后修改事项名称并再次提交。",
+      "current_actor_role": "物资保障部示例经办岗",
+      "actor_assignment_mode": "fixed_department",
+      "actor_department_data_ref": null,
+      "actor_position_rule": "",
+      "trigger": "需要登记演示事项时",
+      "precondition": "",
+      "input_description": "",
+      "timing": null,
+      "completion_standard": "事项名称已填写并提交，补充时已响应退回要求。",
+      "output_description": "",
+      "countersign_all_required": false,
+      "countersign_target_departments": []
+    },
+    {
+      "behavior_ref": "behavior_demo_review",
+      "node_type": "action",
+      "behavior_name": "示例核对岗核对事项并记录结论",
+      "behavior_description": "示例核对岗读取事项名称，按演示要求核对是否填写清楚，记录“符合”或“需补充”的结论。",
+      "current_actor_role": "质量安环部示例核对岗",
+      "actor_assignment_mode": "fixed_department",
+      "actor_department_data_ref": null,
+      "actor_position_rule": "",
+      "trigger": "",
+      "precondition": "",
+      "input_description": "",
+      "timing": null,
+      "completion_standard": "核对结论已记录；需补充时已经说明补充要求。",
+      "output_description": "",
+      "countersign_all_required": false,
+      "countersign_target_departments": []
+    },
+    {
+      "behavior_ref": "behavior_demo_decision",
+      "node_type": "decision",
+      "behavior_name": "事项核对结果是否符合登记条件",
+      "behavior_description": "",
+      "current_actor_role": "",
+      "actor_assignment_mode": "fixed_department",
+      "actor_department_data_ref": null,
+      "actor_position_rule": "",
+      "trigger": "",
+      "precondition": "",
+      "input_description": "",
+      "timing": null,
+      "completion_standard": "",
+      "output_description": "",
+      "countersign_all_required": false,
+      "countersign_target_departments": []
+    },
+    {
+      "behavior_ref": "behavior_demo_register",
+      "node_type": "action",
+      "behavior_name": "示例登记岗登记事项状态",
+      "behavior_description": "示例登记岗读取核对结论，将事项登记状态更新为已登记，结束本演示流程。",
+      "current_actor_role": "物资保障部示例登记岗",
+      "actor_assignment_mode": "fixed_department",
+      "actor_department_data_ref": null,
+      "actor_position_rule": "",
+      "trigger": "",
+      "precondition": "",
+      "input_description": "",
+      "timing": null,
+      "completion_standard": "事项登记状态已记录。",
+      "output_description": "",
+      "countersign_all_required": false,
+      "countersign_target_departments": []
+    }
+  ],
+  "flow_relations": [
+    {
+      "relation_ref": "relation_demo_01",
+      "relation_type": "sequence",
+      "from_behavior_ref": "behavior_demo_submit",
+      "to_behavior_ref": "behavior_demo_review",
+      "condition": ""
+    },
+    {
+      "relation_ref": "relation_demo_02",
+      "relation_type": "sequence",
+      "from_behavior_ref": "behavior_demo_review",
+      "to_behavior_ref": "behavior_demo_decision",
+      "condition": ""
+    },
+    {
+      "relation_ref": "relation_demo_03",
+      "relation_type": "condition",
+      "from_behavior_ref": "behavior_demo_decision",
+      "to_behavior_ref": "behavior_demo_register",
+      "condition": "核对结论为符合"
+    },
+    {
+      "relation_ref": "relation_demo_04",
+      "relation_type": "loop",
+      "from_behavior_ref": "behavior_demo_decision",
+      "to_behavior_ref": "behavior_demo_submit",
+      "condition": "核对结论为需补充，返回补充后再次核对"
+    }
+  ],
+  "data_objects": [
+    {
+      "data_ref": "data_demo_request",
+      "data_name": "示例事项申请信息",
+      "description": "本虚构流程登记的事项及状态定义",
+      "information_type": "business_information",
+      "fields": [
+        {
+          "field_ref": "field_demo_subject",
+          "field_name": "事项名称",
+          "field_type": "文本",
+          "definition": "本次需要登记的演示事项名称"
+        },
+        {
+          "field_ref": "field_demo_status",
+          "field_name": "登记状态",
+          "field_type": "文本",
+          "definition": "登记岗位办理后记录的状态"
+        }
+      ],
+      "behavior_links": [
+        {
+          "link_ref": "link_demo_request_create",
+          "behavior_ref": "behavior_demo_submit",
+          "operation": "create",
+          "updated_field_refs": []
+        },
+        {
+          "link_ref": "link_demo_request_correct",
+          "behavior_ref": "behavior_demo_submit",
+          "operation": "update",
+          "updated_field_refs": [
+            "field_demo_subject"
+          ]
+        },
+        {
+          "link_ref": "link_demo_request_read",
+          "behavior_ref": "behavior_demo_review",
+          "operation": "use",
+          "updated_field_refs": []
+        },
+        {
+          "link_ref": "link_demo_request_register",
+          "behavior_ref": "behavior_demo_register",
+          "operation": "update",
+          "updated_field_refs": [
+            "field_demo_status"
+          ]
+        }
+      ],
+      "source_relations": [],
+      "lifecycle": {
+        "applicability": "pending_confirmation",
+        "entry_state": {
+          "business_validity": "pending_confirmation",
+          "custody": "pending_confirmation",
+          "identifiability_applicability": "pending_confirmation",
+          "identifiability": "pending_confirmation"
+        },
+        "routes": [],
+        "analysis": {
+          "analyzer_version": "",
+          "source_fingerprint": "",
+          "status": "not_analyzed"
+        },
+        "decision_reason": "insufficient_evidence",
+        "decision_notes": "虚构结构示例，生命周期和保存期限未编制，不能作为实际业务规则。"
+      }
+    },
+    {
+      "data_ref": "data_demo_result",
+      "data_name": "示例核对结论",
+      "description": "示例核对岗位形成的符合或需补充结论，供判断节点使用",
+      "information_type": "business_conclusion",
+      "fields": [
+        {
+          "field_ref": "field_demo_result",
+          "field_name": "核对结果",
+          "field_type": "文本",
+          "definition": "示例核对岗位记录的符合或需补充结果"
+        }
+      ],
+      "behavior_links": [
+        {
+          "link_ref": "link_demo_result_create",
+          "behavior_ref": "behavior_demo_review",
+          "operation": "create",
+          "updated_field_refs": []
+        },
+        {
+          "link_ref": "link_demo_result_decision",
+          "behavior_ref": "behavior_demo_decision",
+          "operation": "use",
+          "updated_field_refs": []
+        },
+        {
+          "link_ref": "link_demo_result_register",
+          "behavior_ref": "behavior_demo_register",
+          "operation": "use",
+          "updated_field_refs": []
+        }
+      ],
+      "source_relations": [],
+      "lifecycle": {
+        "applicability": "pending_confirmation",
+        "entry_state": {
+          "business_validity": "pending_confirmation",
+          "custody": "pending_confirmation",
+          "identifiability_applicability": "pending_confirmation",
+          "identifiability": "pending_confirmation"
+        },
+        "routes": [],
+        "analysis": {
+          "analyzer_version": "",
+          "source_fingerprint": "",
+          "status": "not_analyzed"
+        },
+        "decision_reason": "insufficient_evidence",
+        "decision_notes": "虚构结构示例，生命周期和保存期限未编制，不能作为实际业务规则。"
+      }
+    }
+  ],
+  "forms": [
+    {
+      "form_ref": "form_demo_request",
+      "form_name": "示例事项申请单",
+      "form_no": null,
+      "form_design_state": "proposed_design",
+      "behavior_links": [
+        {
+          "link_ref": "form_link_demo_fill",
+          "behavior_ref": "behavior_demo_submit",
+          "operations": [
+            "fill",
+            "modify"
+          ],
+          "notes": "演示假设：初次填写，退回时补充修改。"
+        },
+        {
+          "link_ref": "form_link_demo_review",
+          "behavior_ref": "behavior_demo_review",
+          "operations": [
+            "read"
+          ],
+          "notes": "演示假设：核对岗位只读该表，结论单独记录。"
+        },
+        {
+          "link_ref": "form_link_demo_register",
+          "behavior_ref": "behavior_demo_register",
+          "operations": [
+            "modify"
+          ],
+          "notes": "仅登记岗位填写登记状态。"
+        }
+      ],
+      "areas": [
+        {
+          "area_ref": "area_demo_main",
+          "area_type": "基本信息",
+          "area_title": "事项信息",
+          "items": [
+            {
+              "item_ref": "item_demo_subject",
+              "item_name": "事项名称",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "由示例经办岗填写；在本演示中明确为必填。",
+              "business_data_ref": "data_demo_request",
+              "data_field_ref": "field_demo_subject",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "item_demo_status",
+              "item_name": "登记状态",
+              "item_type": "文本",
+              "required": false,
+              "instructions": "申请时不要求填写，登记岗位办理后填写。",
+              "business_data_ref": "data_demo_request",
+              "data_field_ref": "field_demo_status",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "terms": [],
+  "migration": {
+    "source_schema_version": "process-governance-v8",
+    "source_process_ref": null,
+    "source_process_count": 1,
+    "legacy_cross_department_records": [],
+    "reference_materials": [],
+    "internal_process_calls": [],
+    "work_roles": [],
+    "unresolved_actor_roles": [],
+    "unresolved_join_modes": []
+  }
+}

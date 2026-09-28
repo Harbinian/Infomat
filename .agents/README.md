@@ -14,6 +14,7 @@
 | `skills/department-capability-mapping/` | DCM 部门能力流程系统映射兼容技能 |
 | `skills/process-evidence-mapping/` | 只读取机器可读源文件，生成并校验 `document-structured-output-v2` 流程证据草稿；不可读来源阻断，不自动发布 |
 | `skills/database-to-process-json/` | 仅在用户显式调用时，从指定的 `CXSYSYS.dbo` 表单结构快照生成一个使用业务文件名的未审核 V7 JSON 和证据包；审批等实际办理保留为业务行为，办理后的条件分叉另设判断节点；默认不连接数据库，实时核验只允许专用只读账号和固定摘要查询 |
+| `skills/single-process-authoring/` | 一次编制一个流程：从已有业务材料、纯访谈、已有 JSON 续编或 3001 校验结果出发，按七阶段每轮只问一个问题，产出制度正文、`process-governance-v8` JSON、工作平衡报告和待确认事项四项待核对草案；交付前用自带离线校验器调用 3001 与 3000 共用的结构与语义规则；不自动写入或发布，不替代数据库转 JSON 和流程证据映射 |
 | `skills/technical-chinese-writer/` | 中文技术、业务和管理文档的受控起草、改写、审校与压缩技能 |
 | `skills/humanizer-zh/` | 仅在用户明确点名时使用的中文文风清理技能，不得替代受控写作 |
 
