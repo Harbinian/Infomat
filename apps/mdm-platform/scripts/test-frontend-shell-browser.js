@@ -95,14 +95,17 @@ async function main() {
       await page.goBack(); await waitHeading('当前身份');
       await page.goForward(); await waitHeading('我的工作台');
       checks.push('deep link refresh and browser back/forward');
-      await page.setViewportSize({ width: 390, height: 844 }); await noOverflow('390x844 workbench without horizontal overflow');
-      await page.screenshot({ path: path.join(output, 'workbench-mobile.png') });
+      await page.setViewportSize({ width: 1699, height: 828 }); await noOverflow('1699x828 workbench without horizontal overflow');
+      await page.screenshot({ path: path.join(output, 'workbench-desktop.png') });
       await page.getByRole('link', { name: '当前身份', exact: true }).click(); await waitHeading('当前身份');
-      await noOverflow('390x844 identity without horizontal overflow');
-      await page.screenshot({ path: path.join(output, 'identity-mobile.png') });
+      await noOverflow('1699x828 identity without horizontal overflow');
+      await page.screenshot({ path: path.join(output, 'identity-desktop.png') });
       await page.setViewportSize({ width: 1699, height: 828 });
       await page.getByRole('link', { name: '我的工作台', exact: true }).click();
-      await page.getByRole('link', { name: '查看我的待办 ↗', exact: true }).click();
+      await page.locator('.role-workbench[data-ready="true"]').waitFor();
+      const workbench = await (await context.request.get(base + '/api/role-workbench?mode=todo')).json();
+      assert.equal(await page.locator('[data-workbench-count]').textContent(), `我的待处理：${workbench.summary.actionableCount} 项`);
+      await page.getByRole('link', { name: '查看原工作台', exact: true }).click();
       await page.locator('#appContent').waitFor({ state: 'visible' });
       assert.equal(new URL(page.url()).hash, '#/roleWorkbench');
       checks.push('old workbench opens with same authenticated session');
@@ -121,12 +124,12 @@ async function main() {
       await submitLogin(); checks.push('real authorization revision expiration hides identity and reauthentication recovers');
 
       const realIdentity = await (await context.request.get(base + '/api/org/me')).json();
-      await page.route('**/api/org/me', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ...realIdentity, personName: '合成中文长姓名用于检查窄屏换行与页面边界', departmentName: '合成跨业务协同与主数据治理办公室长名称用于布局验证', rbacRoles: [] }) }), { times: 1 });
+      await page.route('**/api/org/me', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ...realIdentity, personName: '合成中文长姓名用于检查长文换行与页面边界', departmentName: '合成跨业务协同与主数据治理办公室长名称用于布局验证', rbacRoles: [] }) }), { times: 1 });
       await page.getByRole('link', { name: '当前身份', exact: true }).click();
       await page.getByRole('button', { name: '刷新身份' }).click();
       await page.getByText('暂无有效工作角色', { exact: true }).waitFor();
-      await page.setViewportSize({ width: 390, height: 844 }); await noOverflow('long Chinese identity and empty roles without horizontal overflow');
-      await page.screenshot({ path: path.join(output, 'identity-long-empty-mobile.png') });
+      await page.setViewportSize({ width: 1699, height: 828 }); await noOverflow('long Chinese identity and empty roles without horizontal overflow');
+      await page.screenshot({ path: path.join(output, 'identity-long-empty-desktop.png') });
       await page.getByRole('button', { name: '刷新身份' }).click();
       await page.getByText('部门主对接人', { exact: true }).waitFor();
 
@@ -137,8 +140,8 @@ async function main() {
       assert.equal((await context.request.get(base + '/echarts.min.js')).status(), 200);
       checks.push('real API/asset/upload/source 404 boundaries and local ECharts');
       await page.getByRole('button', { name: '退出登录' }).click(); await waitHeading('登录 MDM 平台');
-      await page.setViewportSize({ width: 390, height: 844 }); await noOverflow('390x844 login without horizontal overflow');
-      await page.screenshot({ path: path.join(output, 'login-mobile.png') });
+      await page.setViewportSize({ width: 1699, height: 828 }); await noOverflow('1699x828 login without horizontal overflow');
+      await page.screenshot({ path: path.join(output, 'login-desktop.png') });
 
       // Run the real dev proxy only against this owned backend. No .env loading.
       const frontendRoot = path.resolve(__dirname, '../frontend');
@@ -168,7 +171,7 @@ async function main() {
       // Failed requests above intentionally produce Chromium resource error messages.
       const unexpectedConsole = consoleErrors.filter(message => !/Failed to load resource: net::ERR_FAILED|Failed to load resource: the server responded with a status of (401|403|409|503)/.test(message));
       assert.deepEqual(unexpectedConsole, []);
-      fs.writeFileSync(path.join(output, 'browser-results.json'), JSON.stringify({ passed: true, checks, pageErrors, unexpectedConsole, expectedResourceErrors: consoleErrors, errorResponses, dependency: 'real Edge / owned tmpfs MySQL / real HTTP; browser-injected failures explicitly listed; no human acceptance', viewport: [1699,828,390,844] }, null, 2));
+      fs.writeFileSync(path.join(output, 'browser-results.json'), JSON.stringify({ passed: true, checks, pageErrors, unexpectedConsole, expectedResourceErrors: consoleErrors, errorResponses, dependency: 'real Edge / owned tmpfs MySQL / real HTTP; browser-injected failures explicitly listed; no human acceptance', viewport: [1699,828] }, null, 2));
       console.log('P01_EDGE_MYSQL_PASS ' + checks.length);
     } catch (error) {
       await page.screenshot({ path: path.join(output, 'failure.png') }).catch(() => {});

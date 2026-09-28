@@ -56,6 +56,8 @@ async function canUseTodo(req, todo) {
   );
   if (!sameDepartment) return false;
   const perms = await permissionSet(req.session.userId);
+  // Account administrators remain read-only even with department business roles.
+  if (perms.has('identity:manage-account')) return false;
   return [
     'governance:draft-department',
     'governance:submit-department',

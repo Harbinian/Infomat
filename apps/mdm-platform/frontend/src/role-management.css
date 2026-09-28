@@ -1,0 +1,10 @@
+.role-management { min-width:0; }
+.role-management p,.role-management h2,.role-management dd { overflow-wrap:anywhere; }
+.role-management-actions { display:flex; flex-wrap:wrap; align-items:center; gap:16px; }
+.role-management select { display:block; width:100%; max-width:640px; margin-top:8px; padding:10px; border:1px solid var(--border); border-radius:6px; background:white; color:inherit; font:inherit; }
+.role-table-scroll { max-width:100%; overflow:auto; }
+.role-table-scroll:focus-visible { outline:3px solid #81b2e5; outline-offset:2px; }
+.role-table-scroll table { width:100%; border-collapse:collapse; font-size:14px; }
+.role-table-scroll th,.role-table-scroll td { text-align:left; vertical-align:top; padding:12px 10px; border-bottom:1px solid var(--border); overflow-wrap:anywhere; min-width:110px; }
+.role-table-scroll th { background:#f4f7fa; }
+@media(max-width:700px) { .role-management .card { padding:16px; } }

@@ -60,6 +60,20 @@ async function main() {
   assert.strictEqual(rows[1].sourceType, 'todo_done');
   assert.strictEqual(rows[1].departmentName, '财务部');
 
+  // mysql2 returns SQL DATE as local-midnight Date unless dateStrings is enabled.
+  // Preserve that calendar day rather than the previous UTC day in UTC+08:00.
+  for (const [activity_date, expected] of [
+    ['2026-06-18', '2026-06-18'],
+    [new Date(2026, 0, 1), '2026-01-01'],
+    [new Date(2026, 8, 23), '2026-09-23'],
+    [new Date(2024, 1, 29), '2024-02-29'],
+    [null, '']
+  ]) {
+    const dateRepo = makeAuditMysqlRepository({ execute: async () => [[{ activity_date }], undefined] });
+    const result = await dateRepo.listActivityRows({ startDate: expected, endDate: expected });
+    assert.strictEqual(result[0].date, expected, 'SQL DATE must retain its calendar day');
+  }
+
   const sqlText = pool.state.sql.join('\n');
   assert.ok(sqlText.includes('mdm_mapping_approval_history'), 'activity repository should read MySQL mapping approval history');
   assert.ok(sqlText.includes('mdm_version_log'), 'activity repository should read MySQL version log');

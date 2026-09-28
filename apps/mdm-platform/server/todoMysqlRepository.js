@@ -40,7 +40,9 @@ function todoDomainSchemaStatements() {
     'schema_migrations',
     'departments',
     'mdm_todos',
-    'mdm_todo_events'
+    'mdm_todo_events',
+    'mdm_change_sets',
+    'mdm_version_log'
   ];
   return splitSqlStatements(mdmMysqlSchemaSql()).filter(statement => {
     const normalized = statement.replace(/\s+/g, ' ');
@@ -209,8 +211,15 @@ function makeTodoMysqlRepository(pool) {
 
     async deleteTodo(todoId, actor = {}) {
       return mutateUnallocated(todoId, async db => {
-        const [existing] = await db.execute('SELECT id FROM mdm_todos WHERE id=?', [todoId]);
+        const [existing] = await db.execute('SELECT * FROM mdm_todos WHERE id=?', [todoId]);
         if (!existing.length) return false;
+        const [events] = await db.execute('SELECT * FROM mdm_todo_events WHERE todo_id=? ORDER BY id FOR UPDATE', [todoId]);
+        // The existing FK cascades todo events. Preserve the record and its history
+        // in the existing version log, in the same transaction as deletion.
+        await db.execute(`INSERT INTO mdm_version_log
+          (entity_type,entity_id,operation,operated_by,operated_by_person_id,metadata_json)
+          VALUES ('todo',?,'delete',?,?,?)`, [todoId, actor.actor_user_id || null, personIdFromActor(actor),
+          JSON.stringify({ schema_version: 'todo-deletion-v1', todo: existing[0], events })]);
         await db.execute("INSERT INTO mdm_todo_events(todo_id,event_type,actor_user_id,actor_person_id) VALUES (?,'deleted',?,?)",[todoId,actor.actor_user_id || null,personIdFromActor(actor)]);
         const result = await db.execute('DELETE FROM mdm_todos WHERE id=?', [todoId]);
         return affectedRows(result) > 0;

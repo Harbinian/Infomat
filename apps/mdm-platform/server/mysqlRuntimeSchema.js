@@ -11,7 +11,7 @@ const DOMAIN_TABLES = {
   dataMap: ['data_map_objects', 'data_map_contexts', 'data_map_fields', 'data_map_field_identities'],
   mapping: ['mdm_mapping_records', 'mdm_mapping_approval_tasks', 'mdm_mapping_approval_history'],
   conflict: ['mdm_field_conflicts', 'mdm_term_conflicts', 'mdm_conflict_assignments'],
-  todo: ['mdm_todos', 'mdm_todo_events'],
+  todo: ['mdm_todos', 'mdm_todo_events', 'mdm_version_log'],
   terminology: ['data_map_terms', 'data_map_term_types'],
   audit: ['mdm_version_log', 'mdm_change_sets'],
   processDesign: ['process_design_documents', 'process_design_drafts', 'process_design_versions', 'process_design_cross_dept_handoffs']

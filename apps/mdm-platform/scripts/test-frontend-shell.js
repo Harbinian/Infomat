@@ -39,7 +39,9 @@ async function main() {
   assert.ok(![3000, 3001, 5173, 63805, 3306, 3307].includes(server.address().port));
   try {
     const base = 'http://127.0.0.1:' + server.address().port;
-    for (const url of ['/app/', '/app/workbench', '/app/identity', '/app/template-import', '/app/objects', '/app/fact-checks', '/app/v7-mappings', '/app/design-handoffs']) {
+    for (const route of ['todos','data-map','quality','publications','terms','conflicts','accounts','access-audit','organization','roster']) assert.equal((await fetch(base + '/app/' + route)).status, 200, route + ' route');
+    assert.equal((await fetch(base + '/app/roles')).status, 200, 'role detail route');
+    for (const url of ['/app/', '/app/workbench', '/app/identity', '/app/template-import', '/app/objects', '/app/fact-checks', '/app/v7-mappings', '/app/design-handoffs', '/app/process-preview', '/app/process-formal', '/app/data-governance', '/app/offices', '/app/dashboard']) {
       const res = await fetch(base + url); assert.equal(res.status, 200);
       assert.ok((await res.text()).includes('id="root"'));
       assert.equal(res.headers.get('cache-control'), 'no-store');

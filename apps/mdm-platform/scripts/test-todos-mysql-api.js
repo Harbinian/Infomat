@@ -152,6 +152,11 @@ async function main() {
     assert.strictEqual(res.status, 200, JSON.stringify(body));
     assert.ok(body.id);
 
+    effectivePermissions = new Set(['identity:manage-account', 'governance:read-department', 'governance:draft-department']);
+    const callsBeforeDenied = repo.state.calls.filter(call => call[0] === 'completeTodo').length;
+    res = await fetch(`${baseUrl}/api/todos/${body.id}/done`, { method: 'POST' });
+    assert.strictEqual(res.status, 403);
+    assert.strictEqual(repo.state.calls.filter(call => call[0] === 'completeTodo').length, callsBeforeDenied);
     effectivePermissions = new Set([
       'governance:read-department',
       'governance:draft-department'

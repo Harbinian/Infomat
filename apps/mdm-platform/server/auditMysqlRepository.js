@@ -80,8 +80,13 @@ function publicChangeSetRow(row) {
 }
 
 function publicActivityRow(row) {
+  const value = row.activity_date;
+  // SQL DATE is a calendar day; mysql2 constructs it in the connection's local timezone.
+  const date = value instanceof Date
+    ? `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`
+    : String(value || '').slice(0, 10);
   return {
-    date: String(row.activity_date || '').slice(0, 10),
+    date,
     sourceType: row.source_type,
     sourceLabel: row.source_label,
     actorUserId: row.actor_user_id == null ? null : Number(row.actor_user_id),
