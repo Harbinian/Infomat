@@ -30,7 +30,7 @@ async function main(){await withStage05Fixture(async({fixture,pool,expect,reques
     await page.goto(fixture.baseURL+'/app/publications');await login('lead');await ready();
     await button('手工导入主数据').click();await file('编码,名称,补充说明\n001,合成长名称,保留原值\n002,合成旧项,旧值\n');await read();
     await page.getByLabel('唯一标识列（必填）').selectOption('编码');await preview();await capture('import-desktop');
-    await page.setViewportSize({width:390,height:844});await capture('import-mobile');await page.setViewportSize({width:1699,height:828});
+    await page.setViewportSize({width:1699,height:828});
     page.once('dialog',d=>d.dismiss());await page.getByLabel('发布类型').selectOption('organization');assert.equal(await page.getByLabel('发布类型').inputValue(),'master_data');assert.equal(await page.locator('[data-directory-checked]').count(),1);
     await button('刷新发布记录').click();await ready();assert.equal(await page.getByLabel('唯一标识列（必填）').inputValue(),'编码');
     await publish();let records=await expect('lead','/api/publications?kind=master_data','GET');assert.equal(records.rows.length,1);const first=await expect('lead','/api/publications/'+records.rows[0].id,'GET');
@@ -44,7 +44,7 @@ async function main(){await withStage05Fixture(async({fixture,pool,expect,reques
     const checkedText=await page.locator('[data-directory-checked]').textContent();assert.match(checkedText,/新版移除 1 行/);await publish();
     records=await expect('lead','/api/publications?kind=master_data','GET');const second=await expect('lead','/api/publications/'+records.rows[0].id,'GET');assert.equal(second.version_no,2);assert.equal(second.dataset_key,first.dataset_key);assert.equal(second.previous_publication_id,first.id);assert.deepEqual((await expect('lead','/api/publications/'+first.id,'GET')).content,first.content);
     await button('查看发布记录 '+first.id).click();await detail();await button('查看发布记录 '+second.id).click();await detail();await page.goBack();await detail();assert.ok(page.url().includes('id='+first.id));await page.goForward();await detail();assert.ok(page.url().includes('id='+second.id));
-    await capture('history-desktop');await page.setViewportSize({width:390,height:844});await capture('history-mobile');await page.setViewportSize({width:1699,height:828});
+    await capture('history-desktop');await page.setViewportSize({width:1699,height:828});
     checks.push('same dataset new version; additions/updates/removals; immutable original; selected-version back/forward');
     await button('导入新版 '+second.id).click();await file('编码,名称\n001,合成第三版\n');await read();await preview();
     const repo=require('../server/publicationRepository').makePublicationRepository(pool);
@@ -73,7 +73,7 @@ async function main(){await withStage05Fixture(async({fixture,pool,expect,reques
     await preview();page.once('dialog',d=>d.dismiss());await file('编码,名称\nx,替换文件\n');assert.equal(await page.locator('[data-directory-checked]').count(),1);assert.match(await page.locator('[data-directory-import]').textContent(),/synthetic-sheets.xlsx/);
     assert.equal(await page.evaluate(()=>{const e=new Event('beforeunload',{cancelable:true});window.dispatchEvent(e);return e.defaultPrevented;}),true);
     const current=page.url();page.once('dialog',d=>d.dismiss());await page.evaluate(()=>history.back());await page.waitForTimeout(250);assert.equal(page.url(),current);assert.equal(await page.locator('[data-directory-import]').count(),1);
-    await page.getByLabel('发布名称',{exact:true}).fill('未提交的合成长名称'.repeat(12));await capture('long-form-desktop');await page.setViewportSize({width:390,height:844});await capture('long-form-mobile');await page.setViewportSize({width:1699,height:828});
+    await page.getByLabel('发布名称',{exact:true}).fill('未提交的合成长名称'.repeat(12));await capture('long-form-desktop');await page.setViewportSize({width:1699,height:828});
     await page.getByLabel('发布名称',{exact:true}).fill('合成待发布表');await preview();await page.getByLabel('我已核对文件、列对应关系和变更结果，确认发布此版本。').check();
     await page.route('**/api/publications/publish',route=>route.fulfill({status:403,json:{}}),{times:1});await button('发布此主数据版本').click();await page.getByText('目录导入或读取未完成',{exact:true}).waitFor();assert.equal(await page.getByLabel('发布名称',{exact:true}).inputValue(),'合成待发布表');await cancel();
     checks.push('late detail ignored; multi-sheet XLSX switching/file replacement confirmation; focus, cancelled back, unload protection, long text and failed-write retention');

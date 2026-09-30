@@ -40,9 +40,13 @@ async page => {
   page.on('pageerror', error => pageErrors.push(error.message));
   page.on('request', request => requestUrls.push(request.url()));
 
-  await page.setViewportSize({ width: 1920, height: 1080 });
+  await page.setViewportSize({ width: 1699, height: 828 });
   await page.bringToFront();
   await page.reload({ waitUntil: 'networkidle' });
+  const expectedSchemaVersion = await page.evaluate(() => EXPECTED_EXPORT_SCHEMA_VERSION);
+  assert(['process-governance-v7', 'process-governance-v8'].includes(expectedSchemaVersion), '不支持当前页面结构版本。');
+  const browserRuntime = await page.evaluate(() => ({ userAgent: navigator.userAgent, scale: visualViewport?.scale || 1 }));
+  assert(/Edg\//.test(browserRuntime.userAgent) && browserRuntime.scale === 1, '性能回归要求Microsoft Edge 100%缩放。');
   const frameSchedulerSamples = await page.evaluate(async () => {
     const samples = [];
     for (let index = 0; index < 3; index += 1) {
@@ -77,10 +81,10 @@ async page => {
       throw new Error('页面缺少数据关系图模型函数。');
     }
 
-    const templateResponse = await fetch('/api/template?version=process-governance-v7');
+    const templateResponse = await fetch(`/api/template?version=${EXPECTED_EXPORT_SCHEMA_VERSION}`);
     const templateBody = await templateResponse.json();
     if (!templateResponse.ok || !templateBody.data) {
-      throw new Error(`无法取得V7空白模板：${JSON.stringify(templateBody)}`);
+      throw new Error(`无法取得当前版本空白模板：${JSON.stringify(templateBody)}`);
     }
     const fixture = JSON.parse(JSON.stringify(templateBody.data));
     fixture.export_meta.package_ref = 'package_v7_browser_performance';
@@ -548,7 +552,7 @@ async page => {
     let content = '';
     for await (const chunk of stream) content += chunk.toString('utf8');
     const downloadedDocument = JSON.parse(content);
-    assert(downloadedDocument.schema_version === 'process-governance-v7', '阶段下载没有生成V7 JSON。');
+    assert(downloadedDocument.schema_version === expectedSchemaVersion, '阶段下载结构版本与当前页面不一致。');
     await page.locator('#jsonInput').evaluate((input, payload) => {
       const transfer = new DataTransfer();
       transfer.items.add(new File([payload.text], payload.name, { type: 'application/json' }));
@@ -631,6 +635,7 @@ async page => {
     platform: navigator.platform
   }));
   results.environment.frame_scheduler_two_frames_samples_ms = frameSchedulerSamples.map(round);
+  results.environment.schema_version = expectedSchemaVersion;
   results.environment.frame_scheduler_two_frames_median_ms = round(frameSchedulerMedian);
 
   results.gates = {

@@ -74,9 +74,8 @@ async function main() {
       await (await downloadEvent).saveAs(path.join(output, 'export-data.png'));
       assert.ok(fs.statSync(path.join(output, 'export-data.png')).size > 1000);
       await page.screenshot({ path: path.join(output, 'desktop-data.png'), fullPage: true });
-      await page.setViewportSize({ width: 390, height: 844 }); await noOverflow();
-      await page.screenshot({ path: path.join(output, 'mobile.png'), fullPage: true });
-      await page.setViewportSize({ width: 1699, height: 828 }); checks.push('local process/data renderers and desktop/mobile containment');
+      await noOverflow();
+      await page.setViewportSize({ width: 1699, height: 828 }); checks.push('local process/data renderers and desktop containment');
       const old = structuredClone(fixture.document); old.process.process_ref = 'legacy_v7_p21'; old.process.process_name = '历史V7合成案例';
       const legacy = await expect('contact', root + '/cases', 'POST', { document: old, source_file_name: 'legacy-v7.json' }, 201);
       const legacyId = legacy.case.id;

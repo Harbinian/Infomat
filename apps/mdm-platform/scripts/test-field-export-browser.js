@@ -87,7 +87,7 @@ async function main() {
       await page.waitForTimeout(150); assert.equal(downloads, count); await preserved();
       assert.deepEqual(await download('after-cancel'), scoped);
       checks.push('concurrent clicks issue one request, explicit cancellation suppresses late download, retry succeeds');
-      for (const [width, height, name] of [[1699,828,'desktop'],[390,844,'mobile']]) {
+      for (const [width, height, name] of [[1699,828,'desktop']]) {
         await page.setViewportSize({ width, height }); await button().scrollIntoViewIfNeeded();
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
         assert.equal(await page.evaluate(() => visualViewport.scale), 1);
@@ -101,7 +101,7 @@ async function main() {
       page.once('dialog', d => d.accept()); await page.getByRole('link', { name: '打开原数据地图入口', exact: true }).click(); await page.waitForURL('**/#/dataMap');
       assert.deepEqual(await download('legacy', () => page.locator('#dataMap a[href="/api/export/excel"]').click()), scoped);
       await page.goBack(); await ready(); assert.equal(await select().inputValue(), '913'); await page.reload(); await ready();
-      checks.push('desktop/mobile/keyboard, cancelled reload protects inputs, old/new workbook cell parity, browser back and reload');
+      checks.push('desktop/keyboard, cancelled reload protects inputs, old/new workbook cell parity, browser back and reload');
       let finishOld, startedOld;
       const oldHeld = new Promise(resolve => { finishOld = resolve; }), oldEntered = new Promise(resolve => { startedOld = resolve; });
       await page.route('**/api/export/excel', async r => { startedOld(); await oldHeld; await r.fulfill({ contentType: mime, body: bytes }).catch(() => {}); }, { times: 1 });

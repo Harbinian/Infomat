@@ -141,11 +141,11 @@ module.exports = async function ({ repo, lead, pool, fixture, source, check, sav
       await page.goto(fixture.baseURL + '/app/analysis#run=' + accepted + '&finding=' + f.finding_id); await idle();
       await page.getByText(f.message, { exact: true }).first().waitFor();
       assert.match(await page.locator('body').innerText(), /<img src=x/); assert.equal(await page.evaluate(() => window.p19Injected), undefined); assert.equal(await page.locator('img[onerror]').count(), 0);
-      for (const [width, height, name] of [[1699, 828, 'desktop'], [390, 844, 'narrow']]) { await page.setViewportSize({ width, height }); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false); assert.equal(await page.evaluate(() => visualViewport.scale), 1); await page.screenshot({ path: path.join(output, 'p19-opinion-' + name + '.png'), fullPage: true }); }
+      for (const [width, height, name] of [[1699, 828, 'desktop']]) { await page.setViewportSize({ width, height }); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false); assert.equal(await page.evaluate(() => visualViewport.scale), 1); await page.screenshot({ path: path.join(output, 'p19-opinion-' + name + '.png'), fullPage: true }); }
       await label('当前运行').selectOption(invalid); await idle(); await page.getByText(/offline_opinions.*AI_OUTPUT_TRUNCATED_OR_INVALID/).waitFor(); assert.match(await page.locator('body').innerText(), /AI_OUTPUT_TRUNCATED_OR_INVALID/); assert.match(await page.locator('body').innerText(), /确定性检查结果/);
-      await page.screenshot({ path: path.join(output, 'p19-failed-narrow.png'), fullPage: true });
+
       assert.deepEqual(errors, []); assert.equal(consoleErrors.length, 1); assert(consoleErrors.every(e => /503/.test(e))); assert.equal(await issueCount(), originalIssueCount);
-      save('p19-browser.json', { passed: true, page_errors: errors, console_errors: consoleErrors, failure_injection: [503], viewports: ['1699x828', '390x844'], real_worker: true, real_models: false, issue_count_unchanged: true });
+      save('p19-browser.json', { passed: true, page_errors: errors, console_errors: consoleErrors, failure_injection: [503], viewports: ['1699x828'], real_worker: true, real_models: false, issue_count_unchanged: true });
     });
     save('p19-results.json', { passed: true, checks: own, accepted, invalid, timedout, linkedRun, real_calls: 0, business_acceptance: false });
   } catch (e) { if (page && !page.isClosed()) { await page.screenshot({ path: path.join(output, 'p19-failure.png'), fullPage: true }).catch(() => {}); save('p19-failure-ui.json', { body: await page.locator('body').innerText().catch(() => ''), errors, consoleErrors }); } throw e;

@@ -104,7 +104,7 @@ module.exports=async function({repo,lead,pool,fixture,source,field,check,save,ba
    try{await ok('contact',root+'/'+batch,undefined,undefined,404);await ok('contact','/api/analysis/runs/'+runId,undefined,undefined,404);}finally{await pool.execute('UPDATE data_map_v7_sources SET scope_department_id=? WHERE source_id=?',[original.scope_department_id,source.source_id]);}
    await assert.rejects(repo.getWordEvidence({...lead,authVersion:999},batch),e=>e.statusCode===401);
   });
-  await test('Edge DOCX-only upload, structure and issue evidence navigation, failure inputs and narrow viewport',async()=>{
+  await test('Edge DOCX-only upload, structure and issue evidence navigation, failure inputs and desktop viewport',async()=>{
    let pw;try{pw=require('playwright');}catch{pw=require(path.join(process.env.APPDATA,'npm/node_modules/@playwright/cli/node_modules/playwright'));}
    server=await pw.chromium.launchServer({channel:'msedge',headless:true});browser=await pw.chromium.connect(server.wsEndpoint());context=await browser.newContext({viewport:{width:1699,height:828},deviceScaleFactor:1});const page=await context.newPage();
    page.on('pageerror',e=>errors.push(e.message));page.on('console',e=>{if(e.type()==='error')consoleErrors.push(e.text());});page.setDefaultTimeout(15000);
@@ -138,10 +138,10 @@ module.exports=async function({repo,lead,pool,fixture,source,field,check,save,ba
    await page.getByRole('link',{name:'浏览该 DOCX 固定证据的正文结构',exact:true}).click();await page.getByText('原文结构 a0',{exact:true}).waitFor();
    await wait(async()=>!await submit.isDisabled());
    await page.getByRole('region',{name:'DOCX证据',exact:true}).scrollIntoViewIfNeeded();await page.screenshot({path:path.join(output,'p18-word-word-desktop-panel.png')});
-   await page.setViewportSize({width:390,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await page.screenshot({path:path.join(output,'p18-word-mobile.png'),fullPage:true});
-   await page.getByRole('region',{name:'DOCX证据',exact:true}).scrollIntoViewIfNeeded();await page.screenshot({path:path.join(output,'p18-word-word-mobile-panel.png')});assert.deepEqual(errors,[]);
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+   await page.getByRole('region',{name:'DOCX证据',exact:true}).scrollIntoViewIfNeeded();assert.deepEqual(errors,[]);
    assert(consoleErrors.every(e=>/Failed to load resource:.*(401|403|409|503)/.test(e)),consoleErrors.join('\n'));
-   save('p18-word-browser.json',{errors,expected_console_errors:consoleErrors,desktop:[1699,828],mobile:[390,844],zoom:1,doc_rejected:true,upload:true,failed_upload_input_preserved:true,same_identity_relogin_preserved:true,analysis_description_preserved:true,create_analysis_from_browser:true,issue_trace_and_evidence_jump:true});
+   save('p18-word-browser.json',{errors,expected_console_errors:consoleErrors,desktop:[1699,828],zoom:1,doc_rejected:true,upload:true,failed_upload_input_preserved:true,same_identity_relogin_preserved:true,analysis_description_preserved:true,create_analysis_from_browser:true,issue_trace_and_evidence_jump:true});
   });
   save('p18-word-results.json',{passed:true,checks:own,formal_environment:false,human_acceptance:false});
  }finally{

@@ -13,7 +13,7 @@
 | `README.md` | 仓库入口说明 | 只放导航、当前基线/真源入口、常用命令入口 | 不写长篇方案，不放生成数据 |
 | `AGENTS.md` | Codex 自动加载根 Interface | 只写当前阶段、全仓硬规则、任务路由和状态表述底线 | 不写应用详细规格、端口配置、静态资源路径或完整目录清单 |
 | `CODEX.md` | 仓库变更任务的按需 Implementation | 写基线检查、脏工作区保护、实施、迁移、文档同步、验证和交付方法 | 不作为普通只读问答的强制前置，不写应用业务规格或完整目录清单 |
-| `MEMORY.md` | 长期项目上下文 | 文件前部维护当前运行基线；历史和长期条目按关键词检索 | 不作为执行规则，不让历史条目覆盖当前运行基线或边界文件 |
+| `MEMORY.md` | 历史项目上下文 | 按关键词追溯；内容更新须有明确授权 | 旧“当前运行基线”不代表当前状态，不覆盖当前规则、实现及实时证据 |
 | `CONTEXT.md` | 仓库术语和目录规范 | 新增长期有效的仓库域语言 | 不记录临时计划 |
 | `REPOSITORY_BOUNDARY.md` | 仓库职责边界 | 定义仓库放什么、不放什么 | 不替代目录级 README |
 | `DIRECTORY_OWNERSHIP.md` | 目录责任矩阵 | 定义每个目录怎么改 | 不记录具体迁移日志 |
@@ -48,7 +48,7 @@ scripts/AGENTS.md
 |---|---|---|---|---|
 | `apps/` | 可运行应用集合 | 子目录 README | 新应用必须有独立 README、运行命令和数据边界 | 不放业务资料原件 |
 | `apps/mdm-platform/` | MDM 平台源码 | `package.json`、`server/`、`public/`、`scripts/` | 平台功能、平台测试、平台维护脚本在此修改 | 不放 PMO 甘特图、流程制度原文、历史方案 |
-| `apps/structured-output-service/` | 局域网单流程治理编制工具 | `package.json`、`server.js`、`public/`、`scripts/` | 默认监听`0.0.0.0:3001`供公司局域网用户直接访问；按 `docs/contracts/process-governance-v7.schema.json` 导出单流程未审核JSON并兼容导入v1至v7及历史多候选结构化JSON；页面内编辑会话区分未应用修改与未下载修改，并在切换、下载和替换前保护用户输入；可只读读取流程映射、花名册和 `docs/work-role-data.json` 做候选提示 | 不保存用户内容和图坐标，不写回 `docs/norms/`、花名册或工作角色真源，不调用3000，不依赖DeepSeek、MDM-AI助手或认证网关，不替代受控发布流程 |
+| `apps/structured-output-service/` | 局域网单流程治理编制工具 | `package.json`、`server.js`、`public/`、`scripts/` | 默认监听`0.0.0.0:3001`供公司局域网用户直接访问；本工作区按V8候选技术规则导出单流程未审核JSON，兼容导入v1至v8及已支持历史文件；服务部署和业务验收另行核对；页面内编辑会话区分未应用修改与未下载修改，并在切换、下载和替换前保护用户输入；可只读读取流程映射、花名册和 `docs/work-role-data.json` 做候选提示 | 不保存用户内容和图坐标，不写回 `docs/norms/`、花名册或工作角色真源，不调用3000，不依赖DeepSeek、MDM-AI助手或认证网关，不替代受控发布流程 |
 | `apps/information-collection-service/` | 内部信息表收集服务 | `package.json`、`server/`、`public/`、`scripts/`、`docs/` | 4000 管理端设计并发布收集任务，4001 填报端保存本人草稿和答卷；只读复用 `person`、`user_accounts`、`departments`，业务数据写入 `collection_*` 表，附件写入仓库外受控目录 | 不修改 MDM 身份、角色或治理业务表；不自动继承 3000 权限；不向浏览器持久化答案或附件 |
 | `apps/mdm-platform/server/` | MDM 后端实现 | Express 路由、当前MySQL运行schema与历史/测试SQLite兼容实现 | 修改时同步平台测试 | 不直接依赖 PMO 页面内嵌数据 |
 | `apps/mdm-platform/public/` | MDM 旧前端及共享本地资产 | 既有页面和本地图形资源 | 保留未迁移模块及资源路径兼容 | 不放 PMO 驾驶舱截图 |

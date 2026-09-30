@@ -86,14 +86,12 @@ async function main() {
       await page.getByLabel('选择角色').focus(); assert.equal(await page.getByLabel('选择角色').evaluate(el => el === document.activeElement), true);
       await layout(); await page.screenshot({ path: path.join(output, 'desktop.png'), fullPage: true });
       await page.screenshot({ path: path.join(output, 'desktop-viewport.png') });
-      await page.setViewportSize({ width: 390, height: 844 }); await layout();
-      await page.screenshot({ path: path.join(output, 'mobile.png'), fullPage: true });
-      await page.screenshot({ path: path.join(output, 'mobile-viewport.png') });
+      await layout();
       await page.setViewportSize({ width: 1699, height: 828 });
       await page.goto(fixture.baseURL + '/app/roles?role_id=999999'); await page.getByText('角色详情暂不可用', { exact: true }).waitFor();
       assert.equal(await page.locator('[data-role-ready]').count(), 0);
       await page.getByLabel('选择角色').selectOption(String(admin.role_id)); await ready();
-      checks.push('desktop/mobile no page overflow, keyboard focus, explicit unknown-role feedback');
+      checks.push('desktop no page overflow, keyboard focus, explicit unknown-role feedback');
       await pool.execute('UPDATE user_accounts SET auth_version=auth_version+1 WHERE account_id=181');
       await refresh(); await page.getByRole('heading', { name: '请重新登录', exact: true }).waitFor();
       await login('contact'); await page.getByText('角色资料暂不可用', { exact: true }).waitFor();

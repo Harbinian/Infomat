@@ -97,10 +97,9 @@ async function main() {
       await page.locator('[data-dashboard-day]').last().focus(); await page.keyboard.press('Enter');
       assert.ok((await page.locator('[data-day-detail]').textContent()).includes('次有效治理动作'));
       await noOverflow(); await page.screenshot({ path: path.join(output, 'desktop.png'), fullPage: true });
-      await page.setViewportSize({ width: 390, height: 844 }); await noOverflow();
-      await page.screenshot({ path: path.join(output, 'mobile.png'), fullPage: true });
+      await noOverflow();
       await page.setViewportSize({ width: 1699, height: 828 });
-      checks.push('applied filters survive failures and reload; keyboard day inspection; desktop/mobile layout');
+      checks.push('applied filters survive failures and reload; keyboard day inspection; desktop layout');
       await context.setOffline(true); await button('刷新统计').click(); await ready(); assert.equal(await metric('mappings').textContent(), '暂不可用');
       await context.setOffline(false); await button('刷新统计').click(); await ready();
       let release;

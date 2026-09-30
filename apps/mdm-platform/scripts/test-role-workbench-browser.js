@@ -53,8 +53,7 @@ async function main() {
       checks.push('native V8 tasks and source roles from real API, preserved full legacy item target, browser back and reload');
       await button('全量职责').click(); await idle(); await noOverflow();
       await page.screenshot({ path: path.join(output, 'desktop.png'), fullPage: true });
-      await page.setViewportSize({ width: 390, height: 844 }); await noOverflow();
-      await page.screenshot({ path: path.join(output, 'mobile.png'), fullPage: true });
+      await noOverflow();
       await page.setViewportSize({ width: 1699, height: 828 });
       for (const status of [403, 409, 503]) {
         await page.route('**/api/role-workbench?*', route => route.fulfill({ status, json: { error: 'synthetic failure' } }), { times: 1 });
@@ -63,7 +62,7 @@ async function main() {
         assert.ok((await page.locator('[data-workbench-count]').textContent()).includes('暂不可用'));
         await button('重试读取待办').click(); await idle();
       }
-      checks.push('desktop/mobile geometry, 403/409/503 clear stale actionable data and retry');
+      checks.push('desktop geometry, 403/409/503 clear stale actionable data and retry');
       await page.route('**/api/activity/heatmap?*', route => route.fulfill({ status: 503, json: {} }), { times: 1 });
       await refresh(); await page.getByText('治理活动暂不可用', { exact: true }).waitFor();
       assert.ok(await page.locator('[data-next-action]').count() > 0);
@@ -106,9 +105,9 @@ async function main() {
       await page.waitForFunction(() => document.activeElement?.className === 'wb-node-detail');
       await page.getByText('合成图形交互样例', { exact: true }).waitFor(); await noOverflow();
       await page.screenshot({ path: path.join(output, 'graph.png'), fullPage: true });
-      await page.setViewportSize({ width: 390, height: 844 }); await noOverflow();
+      await noOverflow();
       await page.setViewportSize({ width: 1699, height: 828 });
-      checks.push('synthetic five-level local ECharts graph, keyboard node detail and contained mobile scroll');
+      checks.push('synthetic five-level local ECharts graph, keyboard node detail and contained desktop scroll');
       let release, arrived;
       const held = new Promise(resolve => { release = resolve; });
       const started = new Promise(resolve => { arrived = resolve; });

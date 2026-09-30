@@ -12,12 +12,12 @@ Infomat 是航空复材制造领域的信息化资料与工具仓库，包含：
 
 - [AGENTS.md](AGENTS.md)：Codex 根入口规则。
 - [CODEX.md](CODEX.md)：Codex 执行纪律、文档同步和验证口径。
-- [MEMORY.md](MEMORY.md)：长期项目上下文；先读取文件前部的当前运行基线，历史和长期条目按任务关键词检索。
+- [MEMORY.md](MEMORY.md)：历史项目上下文，按关键词追溯；文件内旧“当前运行基线”不代表当前版本、能力或服务状态。
 - [REPOSITORY_BOUNDARY.md](REPOSITORY_BOUNDARY.md)：仓库放什么、不放什么。
 - [DIRECTORY_OWNERSHIP.md](DIRECTORY_OWNERSHIP.md)：每个目录的责任、入口/真源和禁止事项。
 - [MAINLINE_MAP.md](MAINLINE_MAP.md)：流程治理、字段台账、MDM、PMO 和脚本的数据流。
 - [docs/architecture/context-management.md](docs/architecture/context-management.md)：项目资料上下文分层、读取顺序和历史材料使用规则。
-- [2026-06-07 仓库边界审计报告](docs/reports/2026-06-07-repo-boundary-audit.md)：当前混放、生成物和轻量整理建议。
+- [2026-06-07 仓库边界审计报告](docs/reports/2026-06-07-repo-boundary-audit.md)：当时的混放、生成物和轻量整理建议，仅用于追溯。
 
 ## 目录结构（当前导航）
 
@@ -28,8 +28,8 @@ Infomat 是航空复材制造领域的信息化资料与工具仓库，包含：
 - `docs/`：资料、说明、方案与沉淀
   - `docs/samples/`：必要样例（用于复现、格式示例与对齐）
   - `docs/superpowers/`：历史方案与计划（可能含旧路径，按仓库结构说明做替换）
-  - `docs/norms/`：制度/表单源文件材料与部门流程输入基线（流程地图/数据地图）
-  - `docs/organization/`：组织架构与部门职责（**部门→域映射的真源**；修改前读取目录 `AGENTS.md`）
+  - `docs/norms/`：历史制度、表单和部门映射资料，保留旧消费链兼容，不作为当前治理依据
+  - `docs/organization/`：组织、人员和职责的历史资料及转换副本；修改前读取目录 `AGENTS.md`
   - `docs/contracts/`：脚本和模型使用的机器可读校验规则，例如文档结构化输出结构规则（修改前读取目录 `AGENTS.md`）
   - `pmo/procedure-management/dashboard.html`：桑基图数据内嵌于 `<script id="sankey-data">`，由 `scripts/parse-sankey-data.mjs` 直接注入
 - `pmo/`：项目管理工作室
@@ -124,11 +124,11 @@ npm run test:work-role-contract
 - `pmo/procedure-management/dashboard.html?domain=生产域` — 生产域
 - `pmo/procedure-management/dashboard.html?domain=总经理直辖域` — 总经理直辖域
 
-**更新数据**:修改流程输入基线 Markdown 后,运行:
+**历史展示链更新**：仅在明确授权维护旧消费链时，核对历史 Markdown 输入后运行：
 ```bash
 node scripts/parse-sankey-data.mjs
 ```
 脚本会直接注入 `pmo/procedure-management/dashboard.html` 的 `#sankey-data` 标签,刷新/重新双击即可看到最新数据。
 
-**部门→域映射**以 `docs/organization/组织架构和部门职责.md` 为准(总经理直辖:工程技术部/质量管理部/财务部;经营副总:行政人事部/经营发展部/物资保障部;生产副总:项目管理部/复材车间/运维安环部)。
+**治理依据**：所有 `docs/` 文件的真源身份已于2026-09-11撤销。当前部门、职责、人员及流程事实来自用户指定的外部原始材料和明确业务确认；旧 parser 对 `docs/organization/组织架构和部门职责.md` 的读取仅说明历史消费关系。
 

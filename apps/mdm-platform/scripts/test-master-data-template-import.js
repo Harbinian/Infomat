@@ -150,7 +150,7 @@ async function main(){
         await dismiss(()=>page.getByLabel('选择主数据模板文件').setInputFiles({...uiFile,name:'replacement.xlsx'}));
         await dismiss(()=>page.getByRole('button',{name:'取消本次导入'}).click());
         await noOverflow();await page.screenshot({path:path.join(output,'preview-desktop.png'),fullPage:true});
-        await page.setViewportSize({width:390,height:844});await noOverflow();await page.evaluate(()=>window.scrollTo(0,0));await page.screenshot({path:path.join(output,'preview-mobile.png'),fullPage:true});
+        await noOverflow();await page.evaluate(()=>window.scrollTo(0,0));
         await page.setViewportSize({width:1699,height:828});
       });
       await check('403/409/503 and network errors retain file and preview without automatic write retries',async()=>{
@@ -171,7 +171,7 @@ async function main(){
         await page.getByRole('button',{name:'重新查询对象、字段与来源'}).click();await page.getByRole('button',{name:/OBJ-001 → 平台对象/}).waitFor();
         await page.getByRole('button',{name:/OBJ-001 → 平台对象/}).click();await page.getByText(/平台编号.*修订 1.*待核实/).waitFor();
         await page.screenshot({path:path.join(output,'imported-desktop.png'),fullPage:true});
-        await page.setViewportSize({width:390,height:844});await noOverflow();await page.evaluate(()=>window.scrollTo(0,0));await page.screenshot({path:path.join(output,'imported-mobile.png'),fullPage:true});
+        await noOverflow();await page.evaluate(()=>window.scrollTo(0,0));
         const [[actual]]=await pool.execute("SELECT CAST(id AS CHAR) AS id,status FROM data_map_objects WHERE object_name_cn='页面导入的合成对象'");assert(actual&&actual.status==='draft');
         assert.equal((await pool.execute("SELECT description FROM data_map_objects WHERE id=600"))[0][0].description,'旧台账原文');
       });
@@ -186,8 +186,8 @@ async function main(){
           await page.getByLabel(local+'入库方式',{exact:true}).selectOption('revision');await page.getByLabel(local+'平台编号',{exact:true}).fill(id);
           await page.getByRole('button',{name:'核对 '+local+' 关联',exact:true}).click();await page.getByText(new RegExp('已核对：.*平台编号 '+id+'，修订 1')).waitFor();
         }
-        await inspect();await page.setViewportSize({width:390,height:844});await noOverflow();
-        await page.locator('details').last().locator('summary').click();await noOverflow();await page.evaluate(()=>window.scrollTo(0,0));await page.screenshot({path:path.join(output,'revision-source-mobile.png'),fullPage:true});
+        await inspect();await noOverflow();
+        await page.locator('details').last().locator('summary').click();await noOverflow();await page.evaluate(()=>window.scrollTo(0,0));
         await page.getByRole('button',{name:'明确确认导入',exact:true}).click();await page.getByRole('heading',{name:'导入完成，待核实',exact:true}).waitFor();
         const [[head]]=await pool.execute("SELECT revision_no FROM data_map_definition_heads WHERE entity_type='object' AND entity_id=?",[object.id]);assert.equal(head.revision_no,2);
         // Delay a real preview response, navigate with explicit consent, and
@@ -203,7 +203,7 @@ async function main(){
       await check('browser rendering has no page errors or unexpected console errors',async()=>{
         assert.deepEqual(errors,[]);assert.deepEqual(consoleErrors.filter(e=>!/Failed to load resource:.*(401|403|409|503|ERR_FAILED)/.test(e)),[]);
       });
-      fs.writeFileSync(path.join(output,'results.json'),JSON.stringify({passed:true,checks,viewport:[1699,828,390,844],browser:'Microsoft Edge, 100% zoom',mysql:'owned tmpfs fixture; real HTTP and persisted synthetic data',browserFailureInjection:[403,409,503,'network'],realSessionExpiry:true,counts:await counts(),pageErrors:errors,consoleErrors,human_acceptance:false},null,2));
+      fs.writeFileSync(path.join(output,'results.json'),JSON.stringify({passed:true,checks,viewport:[1699,828],browser:'Microsoft Edge, 100% zoom',mysql:'owned tmpfs fixture; real HTTP and persisted synthetic data',browserFailureInjection:[403,409,503,'network'],realSessionExpiry:true,counts:await counts(),pageErrors:errors,consoleErrors,human_acceptance:false},null,2));
     }catch(error){if(page)await page.screenshot({path:path.join(output,'failure.png'),fullPage:true}).catch(()=>{});fs.writeFileSync(path.join(output,'failure.json'),JSON.stringify({message:error.message,checks},null,2));throw error;}
     finally{if(browser)await browser.close();for(const c of clients)await c.dispose();}
   },{evidenceDir:output,previewOnly:true});

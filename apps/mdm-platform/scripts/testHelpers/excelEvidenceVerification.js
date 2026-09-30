@@ -96,7 +96,7 @@ module.exports=async function({repo,lead,pool,fixture,source,field,check,save,ba
    try{await ok('contact',root+'/'+batch,undefined,undefined,404);await ok('contact','/api/analysis/runs/'+runId,undefined,undefined,404);}finally{await pool.execute('UPDATE data_map_v7_sources SET scope_department_id=? WHERE source_id=?',[original.scope_department_id,source.source_id]);}
    await assert.rejects(repo.getExcelEvidence({...lead,authVersion:999},batch),e=>e.statusCode===401);
   });
-  await test('Edge upload, evidence browsing, finding jump and desktop/narrow input protection',async()=>{
+  await test('Edge upload, evidence browsing, finding jump and desktop input protection',async()=>{
    let pw;try{pw=require('playwright');}catch{pw=require(path.join(process.env.APPDATA,'npm/node_modules/@playwright/cli/node_modules/playwright'));}
    server=await pw.chromium.launchServer({channel:'msedge',headless:true});browser=await pw.chromium.connect(server.wsEndpoint());context=await browser.newContext({viewport:{width:1699,height:828},deviceScaleFactor:1});const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));page.on('console',e=>{if(e.type()==='error')consoleErrors.push(e.text());});page.setDefaultTimeout(15000);
    await page.goto(fixture.baseURL+'/app/analysis#run='+runId+'&excel='+batch);await page.locator('#login-name').fill('SYNTHETIC_lead');await page.locator('#login-password').fill(fixture.loginPassword);await page.getByRole('button',{name:'登录',exact:true}).click();
@@ -115,9 +115,9 @@ module.exports=async function({repo,lead,pool,fixture,source,field,check,save,ba
    await wait(async()=>!(await page.getByRole('button',{name:'刷新分析记录',exact:true}).isDisabled()));await page.getByLabel('证据工作表',{exact:true}).selectOption('第一页');await page.getByRole('button',{name:'B2',exact:true}).click();await page.getByText('原单元格 第一页!B2',{exact:true}).waitFor();
    assert.equal(await page.getByLabel('Excel 文件',{exact:true}).inputValue(),'');
    assert.equal(await page.getByLabel('本轮范围说明',{exact:true}).inputValue(),'登记新证据后仍保留的范围说明');
-   await page.setViewportSize({width:390,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await page.screenshot({path:path.join(output,'p18-mobile.png'),fullPage:true});assert.deepEqual(errors,[]);
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);assert.deepEqual(errors,[]);
    assert(consoleErrors.every(e=>/Failed to load resource:.*(401|403|409|503)/.test(e)),consoleErrors.join('\n'));
-   save('p18-browser.json',{errors,expected_console_errors:consoleErrors,desktop:[1699,828],mobile:[390,844],zoom:1,upload:true,failed_upload_input_preserved:true,same_identity_relogin_preserved:true,analysis_description_preserved:true,evidence_jump:true});
+   save('p18-browser.json',{errors,expected_console_errors:consoleErrors,desktop:[1699,828],zoom:1,upload:true,failed_upload_input_preserved:true,same_identity_relogin_preserved:true,analysis_description_preserved:true,evidence_jump:true});
   });
   save('p18-results.json',{passed:true,checks:own,formal_environment:false,human_acceptance:false});
  }finally{

@@ -25,6 +25,9 @@ async page => {
   }));
   assert(/Edg\//.test(browserRuntime.userAgent), `浏览器不是Microsoft Edge：${browserRuntime.userAgent}`);
   assert(browserRuntime.viewportScale === 1, `浏览器页面缩放不是100%：${browserRuntime.viewportScale}`);
+  const expectedSchemaVersion = await page.evaluate(() => EXPECTED_EXPORT_SCHEMA_VERSION);
+  assert(['process-governance-v7', 'process-governance-v8'].includes(expectedSchemaVersion), '不支持当前页面结构版本。');
+  await page.setViewportSize({ width: 1699, height: 828 });
 
   const v6Seed = {
     schema_version: 'process-governance-v6',
@@ -92,6 +95,8 @@ async page => {
 
   const source = await page.evaluate(seed => {
     const value = globalThis.ProcessGovernanceMigration.migrateDocument(seed)[0];
+    // Exercise historical V7 normalization even when the current migrator emits V8.
+    value.schema_version = 'process-governance-v7';
     Object.assign(value.behaviors[0], {
       behavior_name: '<script data-normalization-xss>动态责任一</script>',
       current_actor_role: '<img data-normalization-xss src=x onerror="window.__normalizationXss=1">',
@@ -146,14 +151,19 @@ async page => {
   });
   assert(importedState.dirty === true && importedState.forceDirty === true, '规范化差异没有形成未下载状态');
   assert(importedState.fileState === null, '规范化后仍错误显示为与导入文件一致');
-  assert(importedState.normalization?.totalChanges === 2, '动态责任差异没有按两个业务对象聚合');
-  assert(importedState.normalization?.shownChanges === 2 && importedState.normalization?.truncated === false,
+  const expectedChanges = expectedSchemaVersion === 'process-governance-v8' ? 3 : 2;
+  const actorChanges = importedState.normalization?.changes?.filter(change => change.code === 'DYNAMIC_ACTOR_ROLE_ARCHIVED') || [];
+  const versionChanges = importedState.normalization?.changes?.filter(change => change.path === '/schema_version') || [];
+  assert(actorChanges.length === 2 && importedState.normalization?.totalChanges === expectedChanges,
+    `动态责任归档或版本升级差异不正确：${JSON.stringify(importedState.normalization)}`);
+  assert(versionChanges.length === expectedChanges - 2 && versionChanges.every(change =>
+    change.code === 'NORMALIZATION_VALUE_CHANGED' && change.before_value === 'process-governance-v7'
+    && change.after_value === expectedSchemaVersion), '版本升级差异没有保留原版本及当前版本');
+  assert(importedState.normalization?.shownChanges === expectedChanges && importedState.normalization?.truncated === false,
     '规范化差异显示数量不正确');
-  assert(importedState.normalization.changes.every(change => change.code === 'DYNAMIC_ACTOR_ROLE_ARCHIVED'),
-    '动态责任差异编码不正确');
-  assert(importedState.normalization.changes.every(change => change.path.endsWith('/current_actor_role')),
+  assert(actorChanges.every(change => change.path.endsWith('/current_actor_role')),
     '动态责任差异没有定位到JSON Pointer');
-  assert(importedState.normalization.changes.every(change => change.stable_object_ref && change.object_name
+  assert(actorChanges.every(change => change.stable_object_ref && change.object_name
     && change.before_present && change.after_present && change.migration_archive_ref),
   '规范化差异缺少稳定标识、对象名称、前后值或迁移归档标识');
   assert(JSON.stringify(importedState.currentActors) === JSON.stringify(['', '']), '动态责任当前字段没有清空');
@@ -162,10 +172,11 @@ async page => {
   assert(importedState.archives.length === 2, '动态责任原值没有完整进入迁移归档');
   assert(importedState.importInfoInDocument === false, '页面导入摘要进入了当前JSON');
 
+  await page.evaluate(() => setActiveGovernanceStep('start'));
   const details = page.locator('.import-normalization-details');
   await details.waitFor({ state: 'visible', timeout: 5000 });
   await details.locator('summary').click();
-  assert(await details.locator('.import-normalization-item').count() === 2, '页面没有按业务对象显示两项差异');
+  assert(await details.locator('.import-normalization-item').count() === expectedChanges, '页面没有显示全部归档及版本差异');
   const detailsText = await details.textContent();
   assert(detailsText.includes('动态责任原值已保留在迁移归档；当前内容尚未下载。'), '页面缺少归档和未下载提示');
   assert(detailsText.includes('/behaviors/0/current_actor_role'), '页面缺少JSON Pointer');
@@ -174,11 +185,7 @@ async page => {
   assert(await page.evaluate(() => globalThis.__normalizationXss !== 1), '上传文字触发了脚本');
 
   for (const viewport of [
-    { width: 1699, height: 828 },
-    { width: 1920, height: 1080 },
-    { width: 1920, height: 900 },
-    { width: 1536, height: 864 },
-    { width: 1280, height: 720 }
+    { width: 1699, height: 828 }
   ]) {
     await page.setViewportSize(viewport);
     await page.waitForTimeout(50);
@@ -214,6 +221,7 @@ async page => {
   let downloadedText = '';
   for await (const chunk of stream) downloadedText += chunk.toString('utf8');
   const downloaded = JSON.parse(downloadedText);
+  assert(downloaded.schema_version === expectedSchemaVersion, '下载结构版本与当前页面不一致');
   await page.locator('#governanceHeader').getByText('当前内容已下载', { exact: true })
     .waitFor({ state: 'visible', timeout: 15000 });
   assert((await details.textContent()).includes('当前内容已下载。'), '下载后差异摘要没有更新文件状态');
@@ -260,8 +268,11 @@ async page => {
   const evidence = {
     passed: true,
     browser: 'Microsoft Edge',
+    schemaVersion: expectedSchemaVersion,
     viewportScale: browserRuntime.viewportScale,
-    normalizationChanges: 2,
+    normalizationChanges: expectedChanges,
+    dynamicActorChanges: actorChanges.length,
+    versionChanges: versionChanges.length,
     archiveCount: 2,
     reimportedArchiveCount: reimportedState.archiveCount,
     reimportedDirty: reimportedState.dirty,

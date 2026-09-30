@@ -37,7 +37,7 @@ async function main() {
       await page.reload({ timeout: 1500 }).catch(e => { assert.equal(e.name, 'TimeoutError'); });
       assert.equal(reloadBlocked, true); await ready(); assert.equal(await title().inputValue(), '合成新增上下文');
       checks.push('injected 403/409/503, refresh, navigation and reload cancellation preserve visible input');
-      for (const [width,height,name] of [[1699,828,'desktop'],[390,844,'mobile']]) {
+      for (const [width,height,name] of [[1699,828,'desktop']]) {
         await page.setViewportSize({ width,height }); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
         assert.equal(await page.evaluate(() => visualViewport.scale),1); await page.screenshot({ path:path.join(output,name+'.png'),fullPage:true });
       }

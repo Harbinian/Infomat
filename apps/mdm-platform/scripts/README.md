@@ -39,7 +39,7 @@ P21补充：在正式流转页的“主档已发布版本查阅”中明确选�
 
 构建后运行 `npm.cmd run test:field-export-browser -- --output <仓库artifacts内全新目录>`。使用现有 Edge、Playwright 和本地 `mysql:8.4` 镜像，创建并清理自有隔离 MySQL、HTTP 和浏览器；仅写合成测试数据，不访问正式数据库、私有配置或业务端口。输出工作簿、截图、结果和资源归属记录。
 
-覆盖原 `GET /api/export/excel` 的字段台账、黄金源矩阵、两种权限范围、空表头及新旧页面逐单元格对照；验证草稿和文件不被提交、取消和迟到请求、重复点击、键盘、刷新返回及1699×828/390×844布局。401及权限撤销使用真实隔离身份，403/409/503、网络失败和错误文件类型另用显式注入。导出不限当前选择的上下文，原接口不保证跨查询事务一致快照。无API、审批或旧数据迁移变化，正式切换仍属P25。
+覆盖原 `GET /api/export/excel` 的字段台账、黄金源矩阵、两种权限范围、空表头及新旧页面逐单元格对照；验证草稿和文件不被提交、取消和迟到请求、重复点击、键盘、刷新返回及1699×828桌面布局。401及权限撤销使用真实隔离身份，403/409/503、网络失败和错误文件类型另用显式注入。导出不限当前选择的上下文，原接口不保证跨查询事务一致快照。无API、审批或旧数据迁移变化，正式切换仍属P25。
 
 构建后运行 `npm.cmd run test:data-map-read-browser -- --output <仓库artifacts内全新目录>`。脚本创建并清理自有隔离MySQL、HTTP和Edge，只使用合成数据，输出结果与截图，不访问正式数据库。读取失败清除旧数据显示重试，取消及迟到响应不回写。具有本部门编制权限的人员可通过原 POST /api/data-map/contexts 创建上下文，成功后定位关联台账；输入绑定人员与部门，刷新列表、错误和同身份重登保留输入，离开及整页刷新提示确认。冲突或网络结果不明确时先核对列表，不自动重试创建。该页面不改审批链、权限、接口或旧数据。另运行 `npm.cmd run test:data-map-create-browser -- --output <仓库artifacts内全新目录>`，条件及资源清理同上，覆盖真实创建、重复并发、权限与输入保护。正式切换仍留P25，人工体验和业务验收另行记录。
 
@@ -47,31 +47,31 @@ P21补充：在正式流转页的“主档已发布版本查阅”中明确选�
 
 文件选择只在壳层内存保留并绑定人员、部门及原上下文；切换查看、列表刷新、失败和同身份重登保留，换人或明确放弃时清除。下载不提交文件。原 API 逐行写入，没有整批事务或完整幂等回执；错误、超时或失效响应不能说明全部回滚。再次提交前须刷新目标台账、核对已写行并修正文件，然后明确确认；页面不自动重试。保留原唯一键、质量规则、管理员只读及部门范围，不改变审批链、数据库结构、历史字段或原入口。
 
-`npm.cmd run test:field-import-browser -- --output <仓库artifacts内全新目录>` 先要求 `npm.cmd run build:frontend`，使用现有 Edge、Playwright 和本地 `mysql:8.4` 镜像。只向自有隔离 MySQL 写入合成上下文、字段及命名规则，通过真实 HTTP 和 Edge 验证导入、模板、表头、部分写入、质量规则、CSRF、部门/管理员拒绝、并发、身份和输入保护、新旧页读回及宽窄布局；403/409/503、断网和迟到响应另用显式注入。输出结果、截图及自有资源归属信息，结束清理自有资源，不操作正式数据库或业务端口。
+`npm.cmd run test:field-import-browser -- --output <仓库artifacts内全新目录>` 先要求 `npm.cmd run build:frontend`，使用现有 Edge、Playwright 和本地 `mysql:8.4` 镜像。只向自有隔离 MySQL 写入合成上下文、字段及命名规则，通过真实 HTTP 和 Edge 验证导入、模板、表头、部分写入、质量规则、CSRF、部门/管理员拒绝、并发、身份和输入保护、新旧页读回及Edge 100%、1699×828桌面布局；403/409/503、断网和迟到响应另用显式注入。输出结果、截图及自有资源归属信息，结束清理自有资源，不操作正式数据库或业务端口。
 
 ## P21 术语词典与冲突管理浏览器验证
 
 `npm.cmd run test:terms-conflicts-browser -- --output <仓库artifacts内全新目录>` 要求先构建独立前端，并具备本机 Edge、现有 Playwright 及 `mysql:8.4` 镜像。脚本沿用 `withStage05Fixture`，仅在带唯一归属标记的自有 tmpfs MySQL 中写入合成身份、流程引用、术语、字段、冲突及办理记录；应用使用随机回环端口，不连接正式库或读取私有配置。
 
-真实 HTTP/Edge 验证术语申报、修改、审核和删除，冲突指定/改派、协调、处理决定、升级、重开、归档、检测去重，以及同编号不同类型、历史标识、管理员只读、数据范围、并发变化、会话失效、输入保护、新旧入口与历史导航。403/409/503、空态、迟到响应、断网及写入后丢失响应通过明确的浏览器注入验证，不能作为真实业务验收。输出 results.json、桌面/窄屏截图和 fixture-app.log；失败保留 failure.json 与限时截图。结束关闭本次 Edge、HTTP 和经归属核对的容器，不清理已有资源。
+真实 HTTP/Edge 验证术语申报、修改、审核和删除，冲突指定/改派、协调、处理决定、升级、重开、归档、检测去重，以及同编号不同类型、历史标识、管理员只读、数据范围、并发变化、会话失效、输入保护、新旧入口与历史导航。403/409/503、空态、迟到响应、断网及写入后丢失响应通过明确的浏览器注入验证，不能作为真实业务验收。输出 results.json、桌面截图和 fixture-app.log；失败保留 failure.json 与限时截图。结束关闭本次 Edge、HTTP 和经归属核对的容器，不清理已有资源。
 
 ## P21 角色详细管理浏览器验证
 
 `npm.cmd run test:role-management-browser -- --output <仓库artifacts内全新目录>` 要求已有前端构建、本机Edge与mysql:8.4镜像。脚本复用withStage05Fixture，仅向自有tmpfs MySQL写入合成身份、历史角色和撤销授权；验证真实角色接口、新旧页面、刷新/返回/前进、会话失效、无权读取及固定模型写入拒绝。页面本身只有读取操作，并核对人员授权记录未被改写。
 
-403/409/503、断网、空列表和迟到响应为显式浏览器注入；正常内容、权限和会话验证使用真实HTTP/MySQL。输出results.json、桌面及窄屏截图；失败保存failure.json和截图。结束关闭本次Edge、自有HTTP及经过归属核对的容器；不操作正式服务、私有配置、账号或数据库。旧页初始账号读取尚未完成时切换标签可能被迟到账号响应覆盖，兼容检查等待初始账号列表完成再切换，本脚本不修复该旧页行为。
+403/409/503、断网、空列表和迟到响应为显式浏览器注入；正常内容、权限和会话验证使用真实HTTP/MySQL。输出results.json、桌面截图；失败保存failure.json和截图。结束关闭本次Edge、自有HTTP及经过归属核对的容器；不操作正式服务、私有配置、账号或数据库。旧页初始账号读取尚未完成时切换标签可能被迟到账号响应覆盖，兼容检查等待初始账号列表完成再切换，本脚本不修复该旧页行为。
 
 ## P21 统计看板浏览器验证
 
 `npm.cmd run test:dashboard-browser -- --output <仓库artifacts内全新目录>` 先要求完成前端构建，并使用本机已有Edge、mysql:8.4镜像和withStage05Fixture。仅在自有tmpfs MySQL中准备合成身份及历史兼容统计记录；通过真实HTTP核对新旧入口、统计口径、筛选、权限和会话。隔离历史users记录只提供既有活动展示标签，登录授权仍使用person、user_accounts及person_roles。
 
-403/409/503、断网和迟到响应使用明确浏览器注入，与正常真实接口检查分别记录。输出results.json、桌面及窄屏截图和隔离应用日志；失败保留failure.txt、browser-failure.json及截图。结束时关闭本次浏览器、自有HTTP及经归属核对的容器。不读取私有配置、不连接正式库、不恢复退役入口。结果不代表正式开启或业务验收。
+403/409/503、断网和迟到响应使用明确浏览器注入，与正常真实接口检查分别记录。输出results.json、桌面截图和隔离应用日志；失败保留failure.txt、browser-failure.json及截图。结束时关闭本次浏览器、自有HTTP及经归属核对的容器。不读取私有配置、不连接正式库、不恢复退役入口。结果不代表正式开启或业务验收。
 
 ## P21 办公室工作台浏览器验证
 
 `npm.cmd run test:office-workbench-browser -- --output <仓库artifacts内全新目录>` 要求已构建独立前端、本地 `mysql:8.4` 镜像及Edge。脚本沿用 `withStage05Fixture`，只创建带唯一归属标记的临时MySQL、随机回环HTTP及浏览器，并在finally中清理自有资源；不读取私有配置、不连接正式库。
 
-真实隔离HTTP覆盖明确组织和成员导入、原生V7发布及固定来源、交办、原部门待办承接、负责人分配、跨办公室成员办结、实际并发和401、管理员只读与越权拒绝、新旧入口及历史结果读取。浏览器检查刷新/返回、切换/离开保护、跨身份清除、迟到响应、键盘焦点和1699×828、390×844布局。403/409/503、断网和P17最小办理说明投影为明确注入；投影不代表重新验收完整分析问题闭环。
+真实隔离HTTP覆盖明确组织和成员导入、原生V7发布及固定来源、交办、原部门待办承接、负责人分配、跨办公室成员办结、实际并发和401、管理员只读与越权拒绝、新旧入口及历史结果读取。浏览器检查刷新/返回、切换/离开保护、跨身份清除、迟到响应、键盘焦点和1699×828桌面布局。403/409/503、断网和P17最小办理说明投影为明确注入；投影不代表重新验收完整分析问题闭环。
 
 输出 `results.json`、截图及 `fixture-app.log`，失败保留 `failure.json` 和截图。未涉及正式运行或人工业务验收。
 
@@ -79,7 +79,7 @@ P21补充：在正式流转页的“主档已发布版本查阅”中明确选�
 
 `npm.cmd run test:data-governance-browser -- --output <仓库artifacts内全新目录>` 使用既有 `withStage05Fixture`，需要先构建独立前端，并具备本地 `mysql:8.4` 镜像及Edge。全新输出目录防止覆盖历史证据；测试仅创建带唯一归属标记的临时MySQL、自有HTTP服务及浏览器，结束后核对归属并清理。不得指定正式库，不读取私有配置。
 
-检查原生V7发布后的显式工作包建立、幂等、固定来源、治理明细、定向问题/答复/核对关闭、审核卡口及完成记录；覆盖管理员叠加角色只读、部门范围、真实并发/来源摘要变化/401、历史版本、新旧入口兼容，以及刷新返回、未提交输入、迟到响应和1699×828、390×844页面。403/409/503、断网及模式投影的浏览器注入与真实流程分别标记；既有 `test:process-data-governance` 验证实际只读路由及仓储前置拒绝。
+检查原生V7发布后的显式工作包建立、幂等、固定来源、治理明细、定向问题/答复/核对关闭、审核卡口及完成记录；覆盖管理员叠加角色只读、部门范围、真实并发/来源摘要变化/401、历史版本、新旧入口兼容，以及刷新返回、未提交输入、迟到响应和1699×828桌面页面。403/409/503、断网及模式投影的浏览器注入与真实流程分别标记；既有 `test:process-data-governance` 验证实际只读路由及仓储前置拒绝。
 
 输出 `results.json`、截图及 `fixture-app.log`；失败保留 `failure.json` 和截图。只证明所列本地技术检查，不代表正式开启、人工输入法或业务验收。
 
@@ -111,7 +111,7 @@ P21补充：在正式流转页的“主档已发布版本查阅”中明确选�
 
 从应用目录执行 `npm.cmd run build:frontend`，再执行 `npm.cmd run test:design-handoffs -- --output <仓库artifacts内全新目录>`。输入为脚本内合成的两个相邻流程、对象与字段映射及身份；依赖现有Docker的mysql:8.4镜像、Playwright和Microsoft Edge。复用自有tmpfs MySQL、随机回环HTTP与明确空闲的浏览器控制端口，排除业务端口；不读私有配置、外部业务原件或正式数据。`--no-browser` 只验证后端，不能报告页面通过。
 
-检查覆盖三表首次/重复迁移、部分DDL、空增量补偿、结构漂移、维护CLI、组合标识、同名异身份、缺映射/部分来源、未确认目标、转换依据、目标必填字段、部门范围、管理员只读、幂等/并发、事务故障、不可变历史、字段修订影响、快照及引用完整性、内存备份恢复和数值分页。Edge检查实际填写/保存/确认、字段位置和焦点、证据与对象跳转、401重新登录、明确注入403/409/503/断网、取消切换/刷新/放弃及旧响应保护，并检查1699×828和390×844布局。输出 results.json、browser-results.json、PNG、migration.json、complete-design.json、field-impact.json、protected-records.json、backup-restore.json；失败记录保留。finally只关闭本次持有的Edge/HTTP资源并按容器ID和唯一标签清理自有库。
+检查覆盖三表首次/重复迁移、部分DDL、空增量补偿、结构漂移、维护CLI、组合标识、同名异身份、缺映射/部分来源、未确认目标、转换依据、目标必填字段、部门范围、管理员只读、幂等/并发、事务故障、不可变历史、字段修订影响、快照及引用完整性、内存备份恢复和数值分页。Edge检查实际填写/保存/确认、字段位置和焦点、证据与对象跳转、401重新登录、明确注入403/409/503/断网、取消切换/刷新/放弃及旧响应保护，并检查1699×828桌面布局。输出 results.json、browser-results.json、PNG、migration.json、complete-design.json、field-impact.json、protected-records.json、backup-restore.json；失败记录保留。finally只关闭本次持有的Edge/HTTP资源并按容器ID和唯一标签清理自有库。
 
 `npm.cmd run migrate:design-handoffs -- --target <host:port/database>` 默认只读dry-run；显式 `--inspect`、`--dry-run`、`--apply` 互斥，使用与目标完全一致的 `MYSQL_HOST/PORT/USER/PASSWORD/DATABASE`。不读 `.env`，不连接默认库，无启动DDL。兼容、补偿和恢复条件见 [应用README](../README.md#设计交接关系p08)。正式实例迁移、开启及业务验收分别需要授权和证据。
 
@@ -119,7 +119,7 @@ P21补充：在正式流转页的“主档已发布版本查阅”中明确选�
 
 先执行 `npm.cmd run build:frontend`，再执行 `npm.cmd run test:v7-mappings -- --output <仓库artifacts内全新目录>`。复用项目的自有 tmpfs MySQL、合成身份、随机回环 HTTP 和 Microsoft Edge；已有 Docker 镜像及 Playwright/Edge 必须可用，不安装新依赖。`--no-browser` 仅运行后端检查，不能据此宣称浏览器通过。测试在隔离库通过现有公开 API 准备预览与已发布 V7，P07 操作前后比较九张 V7/审核表摘要，证明映射不改写这些表；不操作真实 3000/3001、正式库或外部材料。
 
-测试覆盖失败来源登记、原始字节/内容摘要、同名对象分离、字段改名、数组重排、历史来源、父映射修订、重复/并发/事务失败、权限及管理员只读、部门卡口、来源变化、DDL 中断/漂移/补偿和内存备份恢复。Edge 检查来源登记、字段映射、证据定位、失败输入保护、实际401重登、注入403/409/503/断网、过期响应、1699×828及390×844布局。结果保存于指定目录的 results.json、browser-results.json、PNG、migration.json、v7-read-only-proof.json、backup-restore.json；失败时保留 failure.json/PNG。测试结束只关闭自有浏览器与 HTTP，并核对本次容器 ID/标签后清理。
+测试覆盖失败来源登记、原始字节/内容摘要、同名对象分离、字段改名、数组重排、历史来源、父映射修订、重复/并发/事务失败、权限及管理员只读、部门卡口、来源变化、DDL 中断/漂移/补偿和内存备份恢复。Edge 检查来源登记、字段映射、证据定位、失败输入保护、实际401重登、注入403/409/503/断网、过期响应、1699×828桌面布局。结果保存于指定目录的 results.json、browser-results.json、PNG、migration.json、v7-read-only-proof.json、backup-restore.json；失败时保留 failure.json/PNG。测试结束只关闭自有浏览器与 HTTP，并核对本次容器 ID/标签后清理。
 
 `npm.cmd run migrate:v7-mappings -- --target <host:port/database>` 默认 dry-run；可选 `--inspect`、`--dry-run`、`--apply`，要求既有 `MYSQL_HOST/PORT/USER/PASSWORD/DATABASE` 与目标一致。无 `.env` 加载、默认数据库连接或启动 DDL。兼容与恢复边界见 [应用 README](../README.md#固定-v7-来源与台账映射p07)。
 
@@ -127,13 +127,13 @@ P21补充：在正式流转页的“主档已发布版本查阅”中明确选�
 
 `npm.cmd run test:data-map-facts -- --output <仓库artifacts内全新目录>` 使用本地 Docker、已有 Playwright 和 Microsoft Edge，要求先执行 `npm.cmd run build:frontend`。复用 `withStage05Fixture` 的自有 tmpfs MySQL、合成账号和随机回环 HTTP；不读取私有配置或共享模板，不操作 3000、3001、5173、63805、正式数据库或实际权限。本步为测试夹具增加内存备份/恢复能力的传递，未改变旧调用方行为。
 
-测试覆盖迁移缺失拒绝、inspect/dry-run/显式apply CLI、重复迁移、部分DDL失败与空表补偿、结构漂移、请求幂等、事务故障、并发、越权和管理员只读，以及字段问题发起、缺证据、答复、修订、过期意见拒绝、重新核对和完成核对。完整数据库备份仅在内存中用于本次自有库恢复校验；不输出口令、不保存数据库dump。浏览器检查定向上下文、返回办理位置、输入保护、真实401重登、注入的403/409/503/断网、旧异步返回及1699×828/390×844视口。输出 results.json、迁移证据、完整合成办理历史、截图及失败记录；finally 只关闭本次持有的 Edge/HTTP 句柄和核对归属的容器。
+测试覆盖迁移缺失拒绝、inspect/dry-run/显式apply CLI、重复迁移、部分DDL失败与空表补偿、结构漂移、请求幂等、事务故障、并发、越权和管理员只读，以及字段问题发起、缺证据、答复、修订、过期意见拒绝、重新核对和完成核对。完整数据库备份仅在内存中用于本次自有库恢复校验；不输出口令、不保存数据库dump。浏览器检查定向上下文、返回办理位置、输入保护、真实401重登、注入的403/409/503/断网、旧异步返回及1699×828桌面视口。输出 results.json、迁移证据、完整合成办理历史、截图及失败记录；finally 只关闭本次持有的 Edge/HTTP 句柄和核对归属的容器。
 
 `npm.cmd run migrate:data-map-facts -- --target <host:port/database>` 默认 dry-run；显式 `--inspect`、`--dry-run`、`--apply` 三者互斥。使用现有 `MYSQL_HOST/PORT/USER/PASSWORD/DATABASE`，拒绝缺配置或目标不一致；不加载 `.env`，不自动连接默认库。apply 仅建两张增量表及迁移标记，不回填旧事实。具体兼容、补偿和业务边界见 [应用README](../README.md#台账事实核对p06)。正式迁移、真实人员体验和业务验收需分别取得证据。
 
 ### P05 对象与字段管理真实链路
 
-`npm.cmd run test:data-map-management -- --output <仓库artifacts内全新目录>` 在已构建前端上验证对象新增、字段补充、保存修订、刷新读取、固定版本、单字段/组合标识、来源回查和停用影响。服务端覆盖权限与部门范围、多角色admin只读、CSRF、无删除入口、空值/枚举、父对象、幂等、事务回滚、并发及已审核状态拒绝；Edge覆盖当前面板唯一新增入口、焦点、中文长文、取消切换/返回/刷新/停用、真实401重登、显式注入的403/409/503/断网、旧响应和1699×828/390×844布局。
+`npm.cmd run test:data-map-management -- --output <仓库artifacts内全新目录>` 在已构建前端上验证对象新增、字段补充、保存修订、刷新读取、固定版本、单字段/组合标识、来源回查和停用影响。服务端覆盖权限与部门范围、多角色admin只读、CSRF、无删除入口、空值/枚举、父对象、幂等、事务回滚、并发及已审核状态拒绝；Edge覆盖当前面板唯一新增入口、焦点、中文长文、取消切换/返回/刷新/停用、真实401重登、显式注入的403/409/503/断网、旧响应和1699×828桌面布局。
 
 前置为 `npm.cmd run build:frontend`、本地Docker、已安装的Playwright和Microsoft Edge。脚本复用withStage05Fixture，只创建本轮带唯一标签的tmpfs MySQL、合成身份及随机回环HTTP端口；不加载私有配置、不访问原模板或正式库、不操作业务端口。缺P02迁移先验证503，再显式迁移自有库。输出results.json、截图、失败记录和应用日志；finally关闭本轮浏览器、HTTP及按归属核对的容器。浏览器通过本轮BrowserServer句柄管理，退出等待有上限；超时只结束该句柄持有的实例，避免清理被浏览器退出阻塞。新实现对P02仓储的改动以 `test:data-map-definitions-mysql` 回归，模板消费方以 `test:master-data-template-import` 回归。测试不代表真实人员体验或业务验收。
 
@@ -188,7 +188,7 @@ P02仓储事务复用的兼容回归仍为 `test:data-map-definitions-mysql`，P
 | `npm.cmd run test:frontend-shell` | 请求客户端/开发边界测试及已生成dist | Node纯逻辑测试、临时回环HTTP路由和公开资产检查；不连接数据库；finally关闭本次监听 |
 | `npm.cmd run test:frontend-shell-browser -- --output <全新目录>` | artifacts内全新目录，拒绝覆盖已有目录 | 复用withStage05Fixture及freshMysql；本机Docker和已有mysql:8.4镜像、已安装Playwright与Edge；不拉镜像、不下载浏览器，不读取私有配置 |
 
-浏览器入口只在新建、唯一标记、tmpfs、随机回环端口的MySQL中初始化结构、合成账号和会话，通过真实HTTP验证新旧入口、CSRF、失效、退出及404边界；403/409/503和断网由浏览器明确注入，长名称/空角色是界面替身，不作为真实权限测试。补测真实Vite代理连接该隔离后端，保持前后端同源访问。检查1699×828和390×844、100%缩放、输入保护、焦点、控制台及横向溢出；截图和JSON写入指定目录，不保存密码、Cookie或会话令牌。最终关闭自有Edge/Vite/HTTP进程，按容器ID和标记核对后清理，不操作已有容器或正式服务。外部强制中断时按本轮精确资源归属核对，不批量清理。
+浏览器入口只在新建、唯一标记、tmpfs、随机回环端口的MySQL中初始化结构、合成账号和会话，通过真实HTTP验证新旧入口、CSRF、失效、退出及404边界；403/409/503和断网由浏览器明确注入，长名称/空角色是界面替身，不作为真实权限测试。补测真实Vite代理连接该隔离后端，保持前后端同源访问。检查1699×828桌面、100%缩放、输入保护、焦点、控制台及横向溢出；截图和JSON写入指定目录，不保存密码、Cookie或会话令牌。最终关闭自有Edge/Vite/HTTP进程，按容器ID和标记核对后清理，不操作已有容器或正式服务。外部强制中断时按本轮精确资源归属核对，不批量清理。
 
 本目录脚本属于 MDM 平台应用内工具。跨 `docs/`、`pmo/` 和多个应用的仓库级脚本应放在仓库根 `scripts/`。
 
@@ -435,7 +435,7 @@ npm run test:stage06-mysql-isolated
 
 `npm.cmd run test:analysis-workbench -- --output <同批次下不存在的新证据目录>` 运行 P14 HTTP、P15 Edge 及原P09存储回归。执行前运行 `npm.cmd run build:frontend`。复用自有tmpfs MySQL与随机回环HTTP夹具，P15扩展仅启动本次自有Edge和独立worker，所有身份、材料和写入均为合成隔离数据。finally停止自有worker和浏览器，恢复内存备份，再继续旧记录保护检查；无正式数据库、现有服务、模型或通知调用。
 
-新增 `testHelpers/analysisWorkbenchVerification.js` 覆盖页面创建/取消、真实worker、部分覆盖、两端与字段证据、对照和过滤导出、刷新深链接、返回筛选、图形箭头/间距/缩放/空图、Edge 1699×828及390×844、错误输入保护、身份重登、旧异步、只读/越权及静态泄露检查。输出 p15-browser-results.json、p15-worker-result.json、p15-filtered-export.json、p15-geometry.json、PNG截图、worker事件和清理记录。错误注入与真实API场景分别记录；浏览器自动化不替代人工业务验收。
+新增 `testHelpers/analysisWorkbenchVerification.js` 覆盖页面创建/取消、真实worker、部分覆盖、两端与字段证据、对照和过滤导出、刷新深链接、返回筛选、图形箭头/间距/缩放/空图、Edge 1699×828桌面、错误输入保护、身份重登、旧异步、只读/越权及静态泄露检查。输出 p15-browser-results.json、p15-worker-result.json、p15-filtered-export.json、p15-geometry.json、PNG截图、worker事件和清理记录。错误注入与真实API场景分别记录；浏览器自动化不替代人工业务验收。
 
 `npm.cmd --prefix frontend test` 同时检查视图默认尝试过滤、空结果导出、证据裁剪及服务端目录生成请求，保留原前端测试。
 
@@ -487,7 +487,7 @@ DOCX测试不转换原.doc，不把合成数据当作真实样本或业务验收
 
 先执行 `npm.cmd run build:frontend`，再执行 `npm.cmd run test:process-preview-browser -- --output <仓库artifacts内全新目录>`。脚本拒绝覆盖已有证据目录，复用 stage05 的自有 tmpfs MySQL、随机回环 HTTP、合成人员和本机 Edge；测试结束只关闭自建 HTTP、Edge 和经标签核对的容器。不得指向正式服务，不读私有配置，不下载浏览器或镜像。输出 results.json、合成 V8 文件、页面/图形截图、PNG 导出和夹具日志。
 
-覆盖 V8/V7 接收、判断节点数据依据、版本原样保存、修订比较和并发、需要修改及双方确认、归口分派、范围卡口、管理员只读/越部门拒绝、输入保护、身份失效、迟到响应，以及桌面/窄屏图形几何。403/409/503/断网部分使用浏览器故障注入；真实401、正常写入、修订冲突和权限拒绝使用真实隔离后端，结果分别记录。相关轻量回归为 `npm.cmd --prefix frontend test`、`node scripts/test-frontend-shell.js`，既有核对回归分别以默认版本及 `TEST_PROCESS_FORMAT=process-governance-v8` 运行 `node -r ./scripts/testHelpers/blockRealMysql.js scripts/test-process-v7-preview-review.js`。
+覆盖 V8/V7 接收、判断节点数据依据、版本原样保存、修订比较和并发、需要修改及双方确认、归口分派、范围卡口、管理员只读/越部门拒绝、输入保护、身份失效、迟到响应，以及桌面图形几何。403/409/503/断网部分使用浏览器故障注入；真实401、正常写入、修订冲突和权限拒绝使用真实隔离后端，结果分别记录。相关轻量回归为 `npm.cmd --prefix frontend test`、`node scripts/test-frontend-shell.js`，既有核对回归分别以默认版本及 `TEST_PROCESS_FORMAT=process-governance-v8` 运行 `node -r ./scripts/testHelpers/blockRealMysql.js scripts/test-process-v7-preview-review.js`。
 
 ### P21 流程正式流转
 
@@ -505,9 +505,9 @@ DOCX测试不转换原.doc，不把合成数据当作真实样本或业务验收
 
 `npm.cmd run test:role-workbench-browser -- --output <仓库artifacts内全新目录>` 要求先构建前端，使用本机已有 Edge、`mysql:8.4` 和 `withStage05Fixture`。脚本只在自建 tmpfs MySQL 中创建合成身份、V8/V7案例和办公室任务，通过真实 HTTP 验证范围、待办更新、旧入口定位及身份失效；不读取私有配置，不调用正式服务，不改变实际组织或权限。结束时关闭本次浏览器、自建HTTP及带归属标签的容器。
 
-输出包含 results.json、桌面/窄屏/合成图形截图、图形几何及隔离应用日志。403/409/503、迟到响应与完整图形数据为显式浏览器注入；正常任务、角色、会话、核对及办公室任务办理使用真实隔离后端。当前生产合同没有职责上下文时仍显示空态，合成图形只验证渲染和交互。自动化结果不代替正式运行、人工中文输入法或业务验收。
+输出包含 results.json、桌面/合成图形截图、图形几何及隔离应用日志。403/409/503、迟到响应与完整图形数据为显式浏览器注入；正常任务、角色、会话、核对及办公室任务办理使用真实隔离后端。当前生产合同没有职责上下文时仍显示空态，合成图形只验证渲染和交互。自动化结果不代替正式运行、人工中文输入法或业务验收。
 
-脚本通过真实 API 准备已核对的合成案例，通过 Edge 办理明确主档选择、提升、提交、审核退回、重提、通过、发布、固定版本读回和程序文件下载；检查并发审核、当前有效部门变化、V7/V8 原生保留、管理员多角色只读及越部门拒绝。503/403/409 提升失败用浏览器故障注入；会话失效、审核并发、权限拒绝及业务写入使用真实隔离后端。另检查刷新/返回、未提交输入、迟到返回、中文长意见和1699×828、390×844布局。
+脚本通过真实 API 准备已核对的合成案例，通过 Edge 办理明确主档选择、提升、提交、审核退回、重提、通过、发布、固定版本读回和程序文件下载；检查并发审核、当前有效部门变化、V7/V8 原生保留、管理员多角色只读及越部门拒绝。503/403/409 提升失败用浏览器故障注入；会话失效、审核并发、权限拒绝及业务写入使用真实隔离后端。另检查刷新/返回、未提交输入、迟到返回、中文长意见和1699×828桌面布局。
 
 输出 `results.json`、页面截图、程序文件和 `fixture-app.log`；失败保留 `failure.json` 与截图。结果不代表真实人员试用、正式环境开启或业务验收。
 
