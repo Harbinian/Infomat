@@ -316,7 +316,20 @@ async function main() {
         const markdown = await expect('lead', '/api/process-design/versions/' + item.id + '/procedure-markdown', 'GET');
         assert.equal(fs.readFileSync(dest, 'utf8'), markdown.markdown);
         assert.equal((await request('outsider', '/api/process-design/versions/' + item.id + '/content', 'GET')).status, 403);
+        for (const [mode, name] of [['process', '查阅所选版本流程图'], ['data', '查阅所选版本数据关系图']]) {
+          const link = publishedPanel.getByRole('link', { name, exact: true });
+          assert.equal(await link.getAttribute('href'), '/app/data-map?diagramVersion=' + item.id + '&diagramMode=' + mode);
+          const opened = page.waitForEvent('popup'); await link.click(); const diagramPage = await opened;
+          try {
+            await diagramPage.locator('[data-diagram-state="ready"]').waitFor();
+            assert.ok((await diagramPage.locator('[data-diagram-source]').innerText()).includes('正式版本 ' + item.id));
+            assert.equal(await diagramPage.getByLabel('图形视图', { exact: true }).inputValue(), mode);
+            assert.equal(await diagramPage.evaluate(() => window.opener), null);
+          } finally { await diagramPage.close(); }
+          assert.equal(await versionSelect.inputValue(), String(item.id));
+        }
       }
+      checks.push('selected current/historical version links open both diagram modes in isolated tabs with no opener');
       await noOverflow(); await publishedPanel.screenshot({ path: path.join(output, 'published-history.png') });
       const selectedVersion = publishedTruth.versions[1]; const versionPath = '/api/process-design/versions/' + selectedVersion.id;
       await versionSelect.selectOption(String(selectedVersion.id));
@@ -351,8 +364,87 @@ async function main() {
       assert.equal(await publishedPanel.count(), 0); await login('outsider'); await idle();
       assert.equal(await publishedPanel.count(), 0); await as('lead');
       checks.push('published/superseded native V8 history and markdown match real APIs; explicit selection, empty V7, read-only, scope, keyboard, refresh/back, errors/mismatch rejection and late download cancellation');
+      // Cross-draft reads use the existing master and retained audit rows; synthetic copies
+      // below exercise pagination and scope only, not invented historical business evidence.
+      await select(historyCase.id);
+      const masterPath = '/api/process-design/drafts/' + revisedFormal.draft.id + '/document-drafts';
+      const baselineMaster = await expect('lead', masterPath, 'GET');
+      assert.equal(baselineMaster.items.length, 2, 'both published drafts remain discoverable');
+      assert.equal(baselineMaster.next_cursor, null);
+      const olderDraft = baselineMaster.items.find(row => row.id !== String(revisedFormal.draft.id));
+      const olderTruth = await expect('lead', '/api/process-design/drafts/' + olderDraft.id, 'GET');
+      const clones = [];
+      for (let index = 0; index < 23; index++) {
+        const [result] = await pool.execute(`INSERT INTO process_design_drafts
+          (document_id,document_no,document_title,planned_edition,process_name,reason,basis_type,basis_description,
+           department_id,schema_version,process_content_json,content_hash,revision_no,status)
+          SELECT document_id,document_no,document_title,planned_edition,process_name,reason,basis_type,basis_description,
+                 ?,?,process_content_json,content_hash,revision_no,?
+          FROM process_design_drafts WHERE id=?`, [index === 22 ? 92 : 91,
+          index === 21 ? 'process-governance-v3' : 'process-governance-v8',
+          index % 2 ? 'rejected' : 'needs_changes', revisedFormal.draft.id]);
+        clones.push(String(result.insertId));
+      }
+      const contactPage = await expect('contact', masterPath, 'GET');
+      assert.equal(contactPage.items.length, 20); assert.ok(contactPage.next_cursor);
+      assert.ok(contactPage.items.every(row => row.department_id === '91'));
+      assert.ok(contactPage.items.some(row => row.status === 'rejected'));
+      const contactTail = await expect('contact', masterPath + '?before_id=' + contactPage.next_cursor, 'GET');
+      assert.equal(contactTail.next_cursor, null);
+      const visibleIds = [...contactPage.items, ...contactTail.items].map(row => row.id);
+      assert.equal(visibleIds.length, 23); assert.equal(new Set(visibleIds).size, 23);
+      assert.ok(!visibleIds.includes(clones[21]) && !visibleIds.includes(clones[22]));
+      const globalPage = await expect('adminMulti', masterPath, 'GET');
+      assert.ok(globalPage.items.some(row => row.id === clones[22]), 'global read retains admin read-only visibility');
+      assert.equal((await request('outsider', masterPath, 'GET')).status, 403);
+      assert.equal((await fetch(fixture.baseURL + masterPath)).status, 401);
+      assert.equal((await request('lead', '/api/process-design/drafts/' + clones[21] + '/document-drafts', 'GET')).status, 410);
+      for (const cursor of ['0', '-1', '1.5', '1e2', '9223372036854775808', 'x']) {
+        assert.equal((await request('lead', masterPath + '?before_id=' + cursor, 'GET')).status, 400);
+      }
+      assert.equal((await expect('lead', masterPath + '?before_id=1', 'GET')).items.length, 0);
+      const masterPanel = page.locator('[data-document-history]');
+      const masterButton = name => masterPanel.getByRole('button', { name, exact: true });
+      const masterSelect = masterPanel.getByLabel('选择历史草稿', { exact: true });
+      const readMaster = async () => { await masterButton('读取或刷新主档草稿列表').click(); await masterSelect.waitFor(); };
+      const crossWrites = []; const trackCross = req => { if (req.method() !== 'GET') crossWrites.push(req.url()); }; page.on('request', trackCross);
+      await readMaster(); assert.equal(await masterSelect.locator('option').count(), 21);
+      await masterButton('读取更早草稿').click(); await masterPanel.getByText(/已到当前可见范围的末页/).waitFor();
+      await masterSelect.selectOption(olderDraft.id);
+      await masterButton('读取或刷新正式历史').click();
+      await masterPanel.locator('[data-formal-review]').first().waitFor();
+      assert.equal(await masterPanel.locator('[data-formal-review]').count(), olderTruth.reviewTasks.length);
+      assert.equal(await masterPanel.locator('[data-formal-event]').count(), olderTruth.events.length);
+      await noOverflow(); await masterPanel.screenshot({ path: path.join(output, 'cross-draft-history.png') });
+      await masterButton('返回最新草稿').click(); await masterSelect.waitFor();
+      assert.equal(await masterPanel.locator('[data-formal-history]').count(), 0);
+      for (const status of [403, 409, 503]) {
+        await page.route('**' + masterPath, r => r.fulfill({ status, json: { error: 'synthetic master history fault' } }), { times: 1 });
+        await masterButton('读取或刷新主档草稿列表').click();
+        await masterPanel.getByText('主档草稿历史暂不可用', { exact: true }).waitFor();
+        assert.equal(await masterSelect.count(), 0);
+        await masterButton('重试本页草稿').click(); await masterSelect.waitFor();
+      }
+      await page.route('**' + masterPath, r => r.fulfill({ json: { ...baselineMaster, document_id: '999999' } }), { times: 1 });
+      await masterButton('读取或刷新主档草稿列表').click();
+      await masterPanel.getByText('主档草稿历史暂不可用', { exact: true }).waitFor(); await readMaster();
+      let releaseMaster, receivedMaster;
+      const masterHeld = new Promise(resolve => { releaseMaster = resolve; });
+      const masterReceived = new Promise(resolve => { receivedMaster = resolve; });
+      await page.route('**' + masterPath, async r => { receivedMaster(); await masterHeld; await r.continue().catch(() => {}); }, { times: 1 });
+      await masterButton('读取或刷新主档草稿列表').click(); await masterReceived;
+      await select(legacy.id); releaseMaster(); assert.equal(await masterSelect.count(), 0);
+      assert.deepEqual(crossWrites, []); page.off('request', trackCross);
+      // Read while editing must not apply or discard the adjacent review note.
+      await as('contact'); await button('提交正式审核').click(); await commit(); await as('reviewA');
+      await button('办理正式审核').click(); await page.getByLabel('正式审核意见', { exact: true }).fill('跨草稿查阅保留的未提交意见');
+      await readMaster(); await masterSelect.selectOption(String(legacyDetail.formal_promotion.draft.id));
+      await masterButton('读取或刷新正式历史').click(); await masterPanel.locator('h4').first().waitFor();
+      assert.equal(await page.getByLabel('正式审核意见', { exact: true }).inputValue(), '跨草稿查阅保留的未提交意见');
+      await discard(); await refresh();
+      checks.push('cross-draft real MySQL pagination and current scope; old schemas excluded; global read-only; 401/403/400/410; retained audits, desktop, errors, mismatch, late response and unsaved input');
       await select(legacy.id);
-      await as('contact'); await button('提交正式审核').click(); await commit(); await as('reviewA'); await button('办理正式审核').click();
+      await button('办理正式审核').click();
       await page.getByLabel('正式审核意见', { exact: true }).fill('只能原身份看到的输入');
       await page.evaluate(async () => { const t = await (await fetch('/api/csrf-token')).json(); await fetch('/api/org/logout', { method: 'POST', headers: { 'X-CSRF-Token': t.csrfToken } }); });
       await button('刷新正式办理状态').click(); await page.locator('#login-name').waitFor(); await login('adminMulti'); await idle();
@@ -370,6 +462,17 @@ async function main() {
       assert.equal(await historyPanel.locator('[data-formal-review]').count(), legacyHistory.reviewTasks.length);
       assert.equal(await historyPanel.locator('[data-formal-event]').count(), legacyHistory.events.length);
       assert.deepEqual((await expect('lead', '/api/process-design/versions/' + legacyVersion.id + '/content', 'GET')).document, legacy.doc);
+      await listPublished(); await versionSelect.selectOption(String(legacyVersion.id));
+      for (const name of ['查阅所选版本流程图', '查阅所选版本数据关系图']) {
+        const opened = page.waitForEvent('popup'); await publishedPanel.getByRole('link', { name, exact: true }).click();
+        const diagramPage = await opened;
+        try {
+          await diagramPage.locator('[data-diagram-state="ready"]').waitFor();
+          assert.ok((await diagramPage.locator('[data-diagram-source]').innerText()).includes('正式版本 ' + legacyVersion.id));
+          if (name.includes('数据关系')) await diagramPage.getByText('当前流程没有数据对象，无法绘制数据关系。', { exact: true }).waitFor();
+        } finally { await diagramPage.close(); }
+      }
+      checks.push('real published native V7 independent graph links and empty-data state');
       checks.push('native V7 full lifecycle completes; current department gate denies promotion/submit/publish and stale source binding');
       let release, started; const held = new Promise(r => { release = r; }); const received = new Promise(r => { started = r; });
       await page.route('**/api/process-v7-preview/cases/' + legacy.id, async route => { started(); await held; await route.continue().catch(() => {}); }, { times: 1 });

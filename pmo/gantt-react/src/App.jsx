@@ -17,7 +17,7 @@ import TaskLedger from './components/TaskLedger';
 import StandardGapOperationsView from './components/StandardGapOperationsView';
 import WeeklyIssueLedger from './components/WeeklyIssueLedger';
 import { buildTaskTree, applyFilters, normalizeTasks, analyzeTasks, computeProjectRange, formatDate, parseDate, filterTasksByExpansion } from './utils/dateUtils';
-import { normalizeDeliverables, loadDeliverableStatusOverrides } from './utils/deliverableUtils.js';
+import { buildDeliverableIndex, deliverableStorageKey } from './utils/deliverableIndex.js';
 import { buildPhaseGates } from './utils/phaseGateUtils.js';
 import { transitionDeliverableStatus } from './utils/deliverableWorkflow.js';
 import { useDeliverableFsEvents } from './hooks/useDeliverableFs.js';
@@ -81,6 +81,29 @@ const loadDeliverableFsApi = import.meta.env.DEV
     error.status = 404;
     throw error;
   };
+
+// 台账索引只在 dev / 容器（均跑 Vite dev server）下可用。
+// 静态构建时退化为纯计划投影视图，受控行为空 —— 这是已知且可接受的降级。
+async function loadDeliverableLedgerSafe() {
+  try {
+    const { getDeliverableLedger } = await loadDeliverableFsApi();
+    return await getDeliverableLedger();
+  } catch (error) {
+    console.warn('交付物台账索引不可用，退化为纯计划投影视图：', error.message);
+    return null;
+  }
+}
+
+// 责任部门名册解析自《信息化项目部门主备对接人名单》，不可用时降级为空表
+async function loadRosterSafe() {
+  try {
+    const { getDeliverableRoster } = await loadDeliverableFsApi();
+    return await getDeliverableRoster();
+  } catch (error) {
+    console.warn('责任部门名册不可用：', error.message);
+    return [];
+  }
+}
 
 async function loadProjectGovernanceSnapshot() {
   try {
@@ -156,7 +179,10 @@ async function readEvidenceFile(deliverableId) {
 export default function App() {
   const [rawTasks, setRawTasks] = useState([]);
   const [allTasks, setAllTasks] = useState([]);
-  const [deliverables, setDeliverables] = useState([]);
+  const [deliverableIndex, setDeliverableIndex] = useState(null);
+  const [suggestedNextId, setSuggestedNextId] = useState('');
+  const [roster, setRoster] = useState([]);
+  const [actionBusy, setActionBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [page, setPage] = useState(getInitialPage);
@@ -181,9 +207,11 @@ export default function App() {
   const loadProjectData = useCallback(async ({ showLoading = false } = {}) => {
     if (showLoading) setLoading(true);
     try {
-      const [response, projectGovernanceSnapshot] = await Promise.all([
+      const [response, projectGovernanceSnapshot, ledgerPayload, rosterRows] = await Promise.all([
         fetch('tasks.json'),
         loadProjectGovernanceSnapshot(),
+        loadDeliverableLedgerSafe(),
+        loadRosterSafe(),
       ]);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
@@ -193,9 +221,14 @@ export default function App() {
       computeProjectRange(normalized);
       analyzeTasks(data);
       setAllTasks(normalized);
-      let normalizedDeliverables = normalizeDeliverables(normalized);
-      normalizedDeliverables = await loadDeliverableStatusOverrides(normalizedDeliverables);
-      setDeliverables(normalizedDeliverables);
+      setDeliverableIndex(buildDeliverableIndex({
+        tasks: normalized,
+        controlled: ledgerPayload?.controlled || [],
+        scanErrors: ledgerPayload?.errors || [],
+        detectedAt: new Date().toISOString(),
+      }));
+      setSuggestedNextId(ledgerPayload?.suggestedNextId || '');
+      setRoster(rosterRows || []);
       const starts = normalized.map(t => parseDate(t.start)).filter(Boolean);
       if (starts.length) {
         setProjectStart(new Date(Math.min(...starts.map(d => d.getTime()))));
@@ -229,9 +262,10 @@ export default function App() {
     loadProjectData({ showLoading: false });
   });
 
-  const deliverablesWithEvidence = useMemo(() => deliverables.map(deliverable => {
-    const evidence = evidenceMap[deliverable.deliverableId];
-    const transition = localTransitions[deliverable.deliverableId];
+  const deliverablesWithEvidence = useMemo(() => (deliverableIndex?.allRows || []).map(deliverable => {
+    const key = deliverableStorageKey(deliverable);
+    const evidence = evidenceMap[key];
+    const transition = localTransitions[key];
     const merged = transition ? { ...deliverable, ...transition } : deliverable;
     if (!evidence) return merged;
     return {
@@ -241,7 +275,13 @@ export default function App() {
       _actualSubmitDate: merged._actualSubmitDate || evidence.uploadedAt.slice(0, 10),
       notes: merged.notes || `已本地登记凭证：${evidence.fileName}`,
     };
-  }), [deliverables, evidenceMap, localTransitions]);
+  }), [deliverableIndex, evidenceMap, localTransitions]);
+
+  // 交付物台账主表只承载受控行；计划投影行走候选池子页签。
+  const controlledDeliverables = useMemo(
+    () => deliverablesWithEvidence.filter(row => row.recordKind === 'controlled'),
+    [deliverablesWithEvidence],
+  );
 
   const treeData = useMemo(() => {
     const built = buildTaskTree(allTasks);
@@ -253,8 +293,9 @@ export default function App() {
   const phaseGates = useMemo(() => buildPhaseGates(deliverablesWithEvidence, pmoDate), [deliverablesWithEvidence, pmoDate]);
 
   const selectedDisplayDeliverable = useMemo(() => {
-    if (!selectedDeliverable?.deliverableId) return null;
-    return deliverablesWithEvidence.find(item => item.deliverableId === selectedDeliverable.deliverableId) || selectedDeliverable;
+    const key = deliverableStorageKey(selectedDeliverable);
+    if (!key) return null;
+    return deliverablesWithEvidence.find(item => deliverableStorageKey(item) === key) || selectedDeliverable;
   }, [deliverablesWithEvidence, selectedDeliverable]);
 
   const filteredTasks = useMemo(() => {
@@ -443,6 +484,63 @@ export default function App() {
     setLedgerSort(next);
   }, []);
 
+  /** 把一条计划投影行提升为受控交付物：分配编号并创建正本骨架。 */
+  const handlePromoteProjection = useCallback(async (projection, overrides = {}) => {
+    if (!projection?.candidateName) return;
+    try {
+      const { createDeliverable } = await loadDeliverableFsApi();
+      await createDeliverable({
+        deliverableId: overrides.deliverableId || undefined,
+        title: overrides.title || projection.candidateName,
+        deliverableType: projection.deliverableType,
+        deliverableLevel: projection.deliverableLevel,
+        department: overrides.department || projection.department,
+        plannedFinish: overrides.plannedFinish || projection.plannedFinish,
+        taskId: projection.taskId,
+        normalizedWbs: projection.normalizedWbs,
+        ownerNote: `由计划候选池提升（task ${projection.taskId} / WBS ${projection.normalizedWbs}）`,
+      });
+      await loadProjectData({ showLoading: false });
+    } catch (error) {
+      window.alert(error.message || '提升为受控交付物失败');
+    }
+  }, [loadProjectData]);
+
+  /** 行动项事件：发布 / 接收 / 提交结果 / 关闭 / 重新开启 / 期限调整。 */
+  const handleDeliverableAction = useCallback(async (payload) => {
+    const id = selectedDeliverable?.deliverableId;
+    if (!id || !payload?.action) return;
+    setActionBusy(true);
+    try {
+      const api = await loadDeliverableFsApi();
+      const command = { ...payload, at: new Date().toISOString() };
+      const options = { ifMatch: selectedDeliverable.canonicalMtime };
+      switch (payload.action) {
+        case 'publish': await api.publishDeliverable(id, command, options); break;
+        case 'acknowledge': await api.acknowledgeDeliverable(id, command, options); break;
+        case 'submitResult': await api.submitDeliverableResult(id, command, options); break;
+        case 'close': await api.closeDeliverableAction(id, command, options); break;
+        case 'reopen': await api.reopenDeliverableAction(id, command, options); break;
+        case 'changeDueDate': await api.changeDeliverableDueDate(id, command, options); break;
+        default: throw new Error(`未知行动项动作: ${payload.action}`);
+      }
+      await loadProjectData({ showLoading: false });
+    } catch (error) {
+      window.alert(error.message || '行动项操作失败');
+    } finally {
+      setActionBusy(false);
+    }
+  }, [selectedDeliverable, loadProjectData]);
+
+  const handleArchivePublishText = useCallback(async (text) => {
+    try {
+      const { archivePublishText } = await loadDeliverableFsApi();
+      await archivePublishText(text);
+    } catch {
+      // 归档失败不影响剪贴板复制
+    }
+  }, []);
+
   const handleDeliverableTransition = useCallback((deliverable, command) => {
     if (!deliverable?.deliverableId || !command?.action) return;
     loadDeliverableFsApi()
@@ -500,10 +598,13 @@ export default function App() {
       case 'tasks':
         return <TaskLedger tasks={allTasks} filters={taskFilters} />;
       case 'weekly-issues':
-        return <WeeklyIssueLedger tasks={allTasks} deliverables={deliverablesWithEvidence} phaseGates={phaseGates} pmoDate={pmoDate} />;
+        return <WeeklyIssueLedger tasks={allTasks} deliverables={deliverablesWithEvidence} phaseGates={phaseGates} pmoDate={pmoDate} roster={roster} />;
       case 'deliverables':
         return <DeliverableLedger
-          deliverables={deliverablesWithEvidence}
+          deliverables={controlledDeliverables}
+          projections={deliverableIndex?.projections || []}
+          health={deliverableIndex?.health}
+          suggestedNextId={suggestedNextId}
           filters={ledgerFilters}
           sort={ledgerSort}
           onFilterChange={handleLedgerFilterChange}
@@ -511,6 +612,7 @@ export default function App() {
           onSelectDeliverable={handleSelectDeliverable}
           onUploadDeliverable={handleUploadDeliverable}
           onDownloadDeliverable={handleDownloadDeliverable}
+          onPromoteProjection={handlePromoteProjection}
         />;
       case 'phasegates':
         return <PhaseGateView phaseGates={phaseGates} gateStatusFilter={ledgerFilters.gateStatus} />;
@@ -585,7 +687,19 @@ export default function App() {
             ))}
           </div>
           {renderPMOContent()}
-          {selectedDisplayDeliverable && <DeliverableDetail deliverable={selectedDisplayDeliverable} phaseGates={phaseGates} onClose={() => setSelectedDeliverable(null)} onTransition={handleDeliverableTransition} onDownloadDeliverable={handleDownloadDeliverable} />}
+          {selectedDisplayDeliverable && (
+            <DeliverableDetail
+              deliverable={selectedDisplayDeliverable}
+              phaseGates={phaseGates}
+              roster={roster}
+              actionBusy={actionBusy}
+              onClose={() => setSelectedDeliverable(null)}
+              onTransition={handleDeliverableTransition}
+              onDownloadDeliverable={handleDownloadDeliverable}
+              onActionEvent={handleDeliverableAction}
+              onArchiveText={handleArchivePublishText}
+            />
+          )}
         </div>
       )}
     </>

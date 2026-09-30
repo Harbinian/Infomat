@@ -1,14 +1,23 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { formatDate, getPmoDeliveryWeekRange } from '../utils/dateUtils.js';
 import {
   WEEKLY_ISSUE_STATUSES,
   WEEKLY_ISSUE_TYPES,
+  applyWeeklyIssuePatch,
   buildWeeklyIssueSuggestions,
   createWeeklyIssueItem,
   getWeeklyIssueType,
+  isWeeklyIssueOverdue,
   normalizeWeeklyIssueItems,
   summarizeWeeklyIssueItems,
 } from '../utils/weeklyIssueUtils.js';
+import { buildPublishTextForIssue } from '../utils/publishText.js';
+
+// 周会事项的文件正本只在 dev / 容器（均跑 Vite dev server）下可用。
+// 静态构建降级为浏览器本地台账，并在此前提示用户数据不会持久化。
+const loadFsApi = import.meta.env.DEV
+  ? () => import('../utils/weeklyIssueApi.js')
+  : null;
 
 const STORAGE_KEY = 'pmo-weekly-issue-ledger-v1';
 
@@ -47,19 +56,61 @@ function statusClass(status) {
   return `weekly-status status-${status || 'open'}`;
 }
 
-export default function WeeklyIssueLedger({ tasks = [], deliverables = [], phaseGates = [], pmoDate }) {
-  const [items, setItems] = useState(loadStoredItems);
+export default function WeeklyIssueLedger({ tasks = [], deliverables = [], phaseGates = [], pmoDate, roster = [] }) {
+  const [items, setItems] = useState([]);
+  const [store, setStore] = useState({ mode: 'loading', mtime: 0, error: '' });
   const [draft, setDraft] = useState(() => makeInitialDraft(pmoDate));
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('active');
   const [search, setSearch] = useState('');
+  const [actor, setActor] = useState(() => {
+    try { return window.localStorage.getItem('pmo-actor') || 'PMO'; } catch { return 'PMO'; }
+  });
 
   const referenceDate = useMemo(() => pmoDate || new Date(), [pmoDate]);
   const { start: weekStart, end: weekEnd } = useMemo(() => getPmoDeliveryWeekRange(referenceDate), [referenceDate]);
 
+  const loadItems = useCallback(async () => {
+    if (!loadFsApi) {
+      setItems(loadStoredItems());
+      setStore({ mode: 'local', mtime: 0, error: '' });
+      return;
+    }
+
+    try {
+      const api = await loadFsApi();
+      const data = await api.listWeeklyIssues();
+      let nextItems = normalizeWeeklyIssueItems(data.items);
+
+      // 首次接入文件正本时，把浏览器里遗留的事项迁入，避免「升级即丢数据」。
+      // localStorage 按 origin 隔离，5173 与 5174 各存各的，迁移只在正本为空时发生一次。
+      if (!nextItems.length) {
+        const legacy = loadStoredItems().filter(item => item.title);
+        if (legacy.length) {
+          for (const item of legacy) await api.createWeeklyIssue(item);
+          const refreshed = await api.listWeeklyIssues();
+          nextItems = normalizeWeeklyIssueItems(refreshed.items);
+        }
+      }
+
+      setItems(nextItems);
+      setStore({ mode: 'fs', mtime: data.mtime, error: '' });
+    } catch (error) {
+      setItems(loadStoredItems());
+      setStore({ mode: 'local', mtime: 0, error: error.message });
+    }
+  }, []);
+
   useEffect(() => {
-    saveStoredItems(items);
-  }, [items]);
+    // 与 App.jsx 的 loadProjectData 同约定：用 setTimeout 0 让首次 setState 脱离 effect 同步体
+    const timer = window.setTimeout(() => { loadItems(); }, 0);
+    return () => window.clearTimeout(timer);
+  }, [loadItems]);
+
+  // 只有本地模式回写 localStorage；文件正本模式由服务端负责持久化
+  useEffect(() => {
+    if (store.mode === 'local') saveStoredItems(items);
+  }, [items, store.mode]);
 
   const suggestions = useMemo(() => {
     const existingSourceKeys = new Set(items.map(item => item.sourceKey).filter(Boolean));
@@ -105,10 +156,34 @@ export default function WeeklyIssueLedger({ tasks = [], deliverables = [], phase
     }));
   };
 
-  const addItem = (input) => {
+  const runFs = useCallback(async (operation) => {
+    try {
+      return await operation();
+    } catch (error) {
+      if (error.code === 'WRITE_CONFLICT') {
+        window.alert(`${error.message}\n已重新载入台账，请确认后重试。`);
+        await loadItems();
+        return null;
+      }
+      window.alert(error.message || '台账操作失败');
+      return null;
+    }
+  }, [loadItems]);
+
+  const addItem = async (input) => {
     const next = createWeeklyIssueItem(input);
     if (!next.title) return;
-    setItems(prev => [next, ...prev]);
+
+    if (store.mode !== 'fs') {
+      setItems(prev => [next, ...prev]);
+      return;
+    }
+
+    const { createWeeklyIssue } = await loadFsApi();
+    const created = await runFs(() => createWeeklyIssue(next));
+    if (!created) return;
+    setItems(prev => [created.item, ...prev]);
+    setStore(prev => ({ ...prev, mtime: created.mtime }));
   };
 
   const handleSubmit = (event) => {
@@ -121,12 +196,64 @@ export default function WeeklyIssueLedger({ tasks = [], deliverables = [], phase
     addItem({ ...suggestion, id: undefined, status: 'open' });
   };
 
-  const updateStatus = (itemId, status) => {
-    setItems(prev => prev.map(item => (
-      item.id === itemId
-        ? { ...item, status, updatedAt: new Date().toISOString() }
-        : item
-    )));
+  /** 统一的更新入口：文件正本模式下规则校验由服务端执行，本地模式用同一纯函数。 */
+  const updateItem = async (itemId, patch) => {
+    const current = items.find(item => item.id === itemId);
+    if (!current) return;
+
+    if (store.mode !== 'fs') {
+      try {
+        const next = applyWeeklyIssuePatch(current, { ...patch, actor });
+        setItems(prev => prev.map(item => (item.id === itemId ? next : item)));
+      } catch (error) {
+        window.alert(error.message);
+      }
+      return;
+    }
+
+    const { updateWeeklyIssue } = await loadFsApi();
+    const updated = await runFs(() => updateWeeklyIssue(itemId, { ...patch, actor }, { ifMatch: store.mtime }));
+    if (!updated) return;
+    setItems(prev => prev.map(item => (item.id === itemId ? updated.item : item)));
+    setStore(prev => ({ ...prev, mtime: updated.mtime }));
+  };
+
+  const handleStatusChange = (item, status) => {
+    if (status === 'closed') {
+      // 规则 6.4：没有结果或可核对依据的事项不得关闭
+      const closureNote = window.prompt(
+        '关闭结论（规则 6.4：需具备结果、材料位置、记录或明确结论）',
+        item.closureNote || item.resultNote || '',
+      );
+      if (closureNote === null) return;
+      updateItem(item.id, { closureNote: closureNote.trim(), status });
+      return;
+    }
+    updateItem(item.id, { status });
+  };
+
+  const handleRegisterResult = (item) => {
+    const resultNote = window.prompt('办理结果或材料位置（规则 6.3）', item.resultNote || '');
+    if (resultNote === null) return;
+    updateItem(item.id, { resultNote: resultNote.trim() });
+  };
+
+  const handleChangeDueDate = (item) => {
+    const dueDate = window.prompt('新的截止时间（YYYY-MM-DD）', item.dueDate || '');
+    if (!dueDate) return;
+    const approvedBy = window.prompt('同意人（规则 8.1：在信息化工作群明确同意的人员）', '');
+    if (!approvedBy) return;
+    updateItem(item.id, { dueDate: dueDate.trim(), approvedBy: approvedBy.trim() });
+  };
+
+  const handleCopyPublishText = async (item) => {
+    const text = buildPublishTextForIssue(item, { roster });
+    try {
+      await navigator.clipboard.writeText(text);
+      window.alert('发布文本已复制，可粘贴到信息化工作群');
+    } catch {
+      window.alert(`复制失败，请手工复制：\n\n${text}`);
+    }
   };
 
   return (
@@ -135,6 +262,14 @@ export default function WeeklyIssueLedger({ tasks = [], deliverables = [], phase
         <div>
           <h3>周会事项台账</h3>
           <span>{formatDate(weekStart)} - {formatDate(weekEnd)}</span>
+          <span
+            className={`weekly-store-badge is-${store.mode}`}
+            title={store.mode === 'fs'
+              ? '登记、状态流转与关闭结论写入 pmo/weekly-issues/ledger.json，随仓库版本管理'
+              : `未接入文件正本，数据只存在当前浏览器（${store.error || '静态构建'}）`}
+          >
+            {store.mode === 'fs' ? '文件正本' : store.mode === 'loading' ? '载入中' : '仅本地'}
+          </span>
         </div>
         <div className="weekly-issue-kpis">
           <span>待处理 {summary.open}</span>
@@ -230,6 +365,16 @@ export default function WeeklyIssueLedger({ tasks = [], deliverables = [], phase
           {WEEKLY_ISSUE_STATUSES.map(status => <option key={status.key} value={status.key}>{status.label}</option>)}
         </select>
         <input value={search} placeholder="搜索事项/责任方/来源" onChange={event => setSearch(event.target.value)} />
+        <input
+          className="weekly-actor-input"
+          value={actor}
+          placeholder="操作人"
+          aria-label="操作人"
+          onChange={event => {
+            setActor(event.target.value);
+            try { window.localStorage.setItem('pmo-actor', event.target.value); } catch { /* 忽略存储失败 */ }
+          }}
+        />
         <span>当前 {visibleItems.length} 项</span>
       </div>
 
@@ -245,26 +390,39 @@ export default function WeeklyIssueLedger({ tasks = [], deliverables = [], phase
               <th>关联对象</th>
               <th>来源</th>
               <th>关闭标准</th>
+              <th>操作</th>
             </tr>
           </thead>
           <tbody>
             {visibleItems.map(item => (
               <tr key={item.id} className={`weekly-issue-row ${item.status === 'closed' ? 'is-closed' : ''}`}>
                 <td><span className="weekly-ledger-badge">{item.ledgerName}</span></td>
-                <td className="dlv-name" title={item.title}>{item.title}</td>
+                <td className="dlv-name" title={item.title}>
+                  {item.title}
+                  {item.resultNote && <div className="weekly-issue-sub" title={item.resultNote}>结果：{item.resultNote}</div>}
+                  {item.closureNote && <div className="weekly-issue-sub" title={item.closureNote}>关闭：{item.closureNote}</div>}
+                </td>
                 <td>{item.owner || '-'}</td>
-                <td>{item.dueDate || '-'}</td>
                 <td>
-                  <select className={statusClass(item.status)} value={item.status} onChange={event => updateStatus(item.id, event.target.value)}>
+                  {item.dueDate || '-'}
+                  {isWeeklyIssueOverdue(item, referenceDate) && <span className="weekly-overdue-badge">已逾期</span>}
+                </td>
+                <td>
+                  <select className={statusClass(item.status)} value={item.status} onChange={event => handleStatusChange(item, event.target.value)}>
                     {WEEKLY_ISSUE_STATUSES.map(status => <option key={status.key} value={status.key}>{status.label}</option>)}
                   </select>
                 </td>
                 <td className="dlv-task" title={item.related}>{item.related || '-'}</td>
                 <td className="dlv-task" title={item.source}>{item.source || '-'}</td>
                 <td className="dlv-task" title={item.closeCriteria}>{item.closeCriteria || getWeeklyIssueType(item.type).closeRule}</td>
+                <td className="weekly-issue-actions">
+                  <button type="button" className="weekly-mini-btn" onClick={() => handleRegisterResult(item)}>登记结果</button>
+                  <button type="button" className="weekly-mini-btn" onClick={() => handleChangeDueDate(item)}>期限调整</button>
+                  <button type="button" className="weekly-mini-btn" onClick={() => handleCopyPublishText(item)}>复制发布文本</button>
+                </td>
               </tr>
             ))}
-            {visibleItems.length === 0 && <tr><td className="empty-row" colSpan={8}>无匹配事项</td></tr>}
+            {visibleItems.length === 0 && <tr><td className="empty-row" colSpan={9}>无匹配事项</td></tr>}
           </tbody>
         </table>
       </div>

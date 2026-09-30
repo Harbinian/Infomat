@@ -1,5 +1,6 @@
 const { sendMysqlUnavailable } = require('../mysqlRuntimeSchema');
 const express = require('express');
+const { terminologyScope } = require('../terminologyAccess');
 const router = express.Router();
 const {
   requireAuth,
@@ -12,6 +13,7 @@ const {
 } = require('../todoMysqlRepository');
 
 function handleDbError(res, error) {
+  if (String(error.code || '').startsWith('TODO_TERM_')) return res.status(error.statusCode || 400).json({ code: error.code, error: error.message });
   if (error.code === 'OFFICE_TASK_REQUIRES_WORKBENCH') return res.status(409).json({code:error.code,error:error.message});
   if (sendMysqlUnavailable(res, error)) return;
   const code = String(error && error.code || '');
@@ -79,13 +81,18 @@ router.get('/', requireAuth, (req, res) => {
 
 router.post('/', requireAuth, (req, res) => {
   return runAction(res, async () => {
-    if (!await hasPermission(req, 'governance:assign-work')) {
+    const permissions = await permissionSet(req.session.userId);
+    if (!permissions.has('governance:assign-work') || permissions.has('identity:manage-account')) {
       return res.status(403).json({ error: '无任务分派权限' });
     }
     const repo = await todoRepository();
     const created = await repo.createTodo(req.body || {}, {
       actor_user_id: req.session.userId,
-      actor_dept_id: req.session.departmentId || null
+      actor_person_id: req.session.personId || req.session.userId,
+      actor_dept_id: req.session.departmentId || null,
+      can_assign_work: true,
+      is_admin: false,
+      term_scope: req.body?.related_term_id != null ? await terminologyScope(req) : null
     });
     return res.json({ id: created.id });
   });

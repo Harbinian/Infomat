@@ -31,6 +31,9 @@ async function main() {
   ]);
   let identity = null;
   const repository = {
+    identityGovernance() {
+      return { mutate: (id, body, actor, action) => action === 'maintain' ? this.upsertFieldIdentity(id, body) : this.confirmFieldIdentity(id, body, actor.personId) };
+    },
     async getField(fieldId) {
       return Number(fieldId) === 101 ? { id: 101, context_id: 51 } : null;
     },

@@ -5,6 +5,7 @@ import {
   DELIVERABLE_ACTIONS,
   canTransitionDeliverableStatus,
 } from '../utils/deliverableWorkflow';
+import DeliverableActionPanel from './DeliverableActionPanel';
 
 const loadCanonicalDeliverable = import.meta.env.DEV
   ? async id => {
@@ -58,7 +59,17 @@ function defaultActor() {
   }
 }
 
-export default function DeliverableDetail({ deliverable, phaseGates, onClose, onTransition, onDownloadDeliverable }) {
+export default function DeliverableDetail({
+  deliverable,
+  phaseGates,
+  roster = [],
+  actionBusy = false,
+  onClose,
+  onTransition,
+  onDownloadDeliverable,
+  onActionEvent,
+  onArchiveText,
+}) {
   const panelRef = useRef(null);
   const lastDeliverableKey = useRef(null);
   const [pendingAction, setPendingAction] = useState(null);
@@ -244,6 +255,15 @@ export default function DeliverableDetail({ deliverable, phaseGates, onClose, on
                 </div>
               </div>
             )}
+
+            <DeliverableActionPanel
+              deliverable={deliverable}
+              roster={roster}
+              actor={actor}
+              busy={actionBusy}
+              onEvent={onActionEvent}
+              onArchiveText={onArchiveText}
+            />
 
             {history.length > 0 && (
               <div className="detail-field detail-history">

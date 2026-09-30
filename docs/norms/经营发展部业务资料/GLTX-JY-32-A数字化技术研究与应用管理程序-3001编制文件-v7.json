@@ -1,0 +1,4635 @@
+{
+  "schema_version": "process-governance-v7",
+  "export_meta": {
+    "package_ref": "package_gltx_jy_32_a_draft",
+    "exported_at": "2026-09-23T10:24:35.964Z",
+    "initiating_department": "经营发展部",
+    "compiler": "编制稿第三版（判据为业界参考值，待经营发展部确认）"
+  },
+  "process": {
+    "process_ref": "process_gltx_jy_32",
+    "process_name": "数字化技术研究与应用管理",
+    "owning_department": "经营发展部",
+    "purpose": "规范公司数字技术研究与应用活动的任务形成、立项、实施、验证评价、推广应用和成果固化，推动人工智能、工业软件等数字技术在公司业务场景中落地，提高公司数字化能力和业务效能。",
+    "scope": "适用于公司各部门提出的数字技术应用需求，以及经批准立项的数字技术研究与应用项目的全过程管理。业务信息系统建设、软硬件采购、网络与基础设施建设不适用本程序。外部合作的寻源比价转采购周期管理程序，合同审签转公司合同审签流程，成果固化涉及的文件修订按公司管理体系程序文件编制管理规定办理，本程序只规定转办、登记和归档要求。",
+    "capability_domain": "数字化治理",
+    "business_capability": "数字化技术研究与应用管理",
+    "classification_status": "needs_review"
+  },
+  "behaviors": [
+    {
+      "behavior_ref": "behavior_fill_demand",
+      "node_type": "action",
+      "behavior_name": "提出部门填报数字技术应用需求申报表",
+      "behavior_description": "提出部门业务人员填写申报表，写明业务场景、现状问题、期望效果和涉及数据，报部门负责人签字确认。",
+      "current_actor_role": "全公司",
+      "actor_assignment_mode": "company_wide",
+      "actor_department_data_ref": null,
+      "actor_position_rule": "提出部门业务人员填报，部门负责人签字确认",
+      "trigger": "本部门存在可以用数字技术解决的业务问题",
+      "precondition": "业务场景、现状问题、期望效果和涉及数据已经明确",
+      "input_description": "本部门业务现状、现有系统使用情况",
+      "timing": null,
+      "completion_standard": "申报表 17 个字段填写完整，部门负责人在“部门负责人意见”栏签字；一份申报表只对应一个业务场景",
+      "output_description": "经部门负责人签字的数字技术应用需求申报表",
+      "countersign_all_required": false,
+      "countersign_target_departments": []
+    },
+    {
+      "behavior_ref": "behavior_check_demand",
+      "node_type": "action",
+      "behavior_name": "数字工程室核对需求申报表",
+      "behavior_description": "数字工程室逐份核对申报表填写要素，在表内记录核验结论。数字工程室正式成立前，由经营发展部在信息化工作组内指定人员代行（信息化工作组为司人字〔2026〕63号红头成立）。",
+      "current_actor_role": "经营发展部数字工程室",
+      "actor_assignment_mode": "fixed_department",
+      "actor_department_data_ref": null,
+      "actor_position_rule": "数字工程室负责人或者指定编制人。数字工程室正式成立前，由经营发展部在信息化工作组内指定人员代行（信息化工作组为司人字〔2026〕63号红头成立）",
+      "trigger": "收到经部门负责人签字的数字技术应用需求申报表",
+      "precondition": "申报表已经过提出部门负责人签字",
+      "input_description": "数字技术应用需求申报表",
+      "timing": null,
+      "completion_standard": "逐份核对 17 个字段；通过的在“核验结论”栏记明通过并签字；要素缺失或者场景不具体的在“退回补正要求”栏写明具体缺失项和补正期限（3 个工作日）",
+      "output_description": "含核验结论的需求申报表",
+      "countersign_all_required": false,
+      "countersign_target_departments": []
+    },
+    {
+      "behavior_ref": "behavior_decide_demand",
+      "node_type": "decision",
+      "behavior_name": "数字工程室判断申报表是否需要退回补正",
+      "behavior_description": "按核验结论判断该份申报表是否退回提出部门补正。",
+      "current_actor_role": "经营发展部数字工程室",
+      "actor_assignment_mode": "fixed_department",
+      "actor_department_data_ref": null,
+      "actor_position_rule": "数字工程室负责人。数字工程室正式成立前，由经营发展部在信息化工作组内指定人员代行（信息化工作组为司人字〔2026〕63号红头成立）",
+      "trigger": "申报表核验结论已经填写",
+      "precondition": "核验结论和退回补正要求已经写明",
+      "input_description": "含核验结论的需求申报表",
+      "timing": null,
+      "completion_standard": "形成退回补正或者核验通过的结论；退回补正的由提出部门在 3 个工作日内补正后重新提交；逾期未补正的按暂不纳入本年度计划处理",
+      "output_description": "退回补正或者核验通过的结论",
+      "countersign_all_required": false,
+      "countersign_target_departments": []
+    },
+    {
+      "behavior_ref": "behavior_make_plan",
+      "node_type": "action",
+      "behavior_name": "数字工程室汇总需求并编制年度计划表",
+      "behavior_description": "数字工程室合并同类需求，逐项标注实施方式建议，编制年度计划表。数字工程室正式成立前，由经营发展部在信息化工作组内指定人员代行（信息化工作组为司人字〔2026〕63号红头成立）。",
+      "current_actor_role": "经营发展部数字工程室",
+      "actor_assignment_mode": "fixed_department",
+      "actor_department_data_ref": null,
+      "actor_position_rule": "数字工程室负责人或者指定编制人。数字工程室正式成立前，由经营发展部在信息化工作组内指定人员代行（信息化工作组为司人字〔2026〕63号红头成立）",
+      "trigger": "需求申报表核验通过",
+      "precondition": "核验通过的申报表和现有系统与数据现状可以获取",
+      "input_description": "核验通过的需求申报表、现有系统与数据现状、上年度研究应用情况",
+      "timing": null,
+      "completion_standard": "计划表明细一行一项需求并标注来源部门；同类需求合并并注明合并关系；每项均填写“实施方式”列；涉及数据使用和保密的已征询信息化工作组意见",
+      "output_description": "年度数字技术研究与应用计划表",
+      "countersign_all_required": false,
+      "countersign_target_departments": []
+    },
+    {
+      "behavior_ref": "behavior_sign_plan",
+      "node_type": "action",
+      "behavior_name": "分管领导签署年度计划表审批意见",
+      "behavior_description": "分管领导审批年度计划表，在表内签署意见。",
+      "current_actor_role": "公司领导分管领导",
+      "actor_assignment_mode": "fixed_department",
+      "actor_department_data_ref": null,
+      "actor_position_rule": "分管副总经理",
+      "trigger": "数字工程室提交年度计划表",
+      "precondition": "计划表明细完整，各项实施方式已经填写",
+      "input_description": "年度数字技术研究与应用计划表",
+      "timing": null,
+      "completion_standard": "在“分管领导意见”栏写明同意执行或者退回修改，并签字注明日期；退回时写明需要补充的具体内容",
+      "output_description": "经签字的年度计划表",
+      "countersign_all_required": false,
+      "countersign_target_departments": []
+    },
+    {
+      "behavior_ref": "behavior_decide_plan",
+      "node_type": "decision",
+      "behavior_name": "分管领导判断年度计划表是否通过审批",
+      "behavior_description": "按分管领导签署的意见判断年度计划表是否通过。",
+      "current_actor_role": "公司领导分管领导",
+      "actor_assignment_mode": "fixed_department",
+      "actor_department_data_ref": null,
+      "actor_position_rule": "分管副总经理",
+      "trigger": "分管领导签署意见完成",
+      "precondition": "计划表已经在“分管领导意见”栏签字",
+      "input_description": "经签字的年度计划表",
+      "timing": null,
+      "completion_standard": "形成同意执行或者退回修改的结论；退回修改的由数字工程室修改后重新报批",
+      "output_description": "年度计划表审批结论",
+      "countersign_all_required": false,
+      "countersign_target_departments": []
+    },
+    {
+      "behavior_ref": "behavior_decide_project",
+      "node_type": "decision",
+      "behavior_name": "数字工程室判断事项是否需要立项研究",
+      "behavior_description": "按计划表“实施方式”列逐项判断该事项是否需要立项研究。",
+      "current_actor_role": "经营发展部数字工程室",
+      "actor_assignment_mode": "fixed_department",
+      "actor_department_data_ref": null,
+      "actor_position_rule": "数字工程室负责人。数字工程室正式成立前，由经营发展部在信息化工作组内指定人员代行（信息化工作组为司人字〔2026〕63号红头成立）",
+      "trigger": "年度计划表获得分管领导签字",
+      "precondition": "计划表中该事项的实施方式已经标注",
+      "input_description": "经签字的年度计划表",
+      "timing": null,
+      "completion_standard": "逐项确认实施方式。判据参考值（业界通行分档，待经营发展部确认）：满足下列任一项的进入立项研究——预算 5 万元及以上、涉及 2 个及以上部门、实施周期 3 个月及以上、涉及生产质量财务数据或者需要系统接口改造、需要试验验证且无成熟方案；预算低于 5 万元且单部门且周期不足 1 个月且使用成熟工具的纳入直接实施；年度资源不足或者与公司年度重点不符的暂不实施",
+      "output_description": "该事项的实施方式结论",
+      "countersign_all_required": false,
+      "countersign_target_departments": []
+    },
+    {
+      "behavior_ref": "behavior_issue_plan",
+      "node_type": "action",
+      "behavior_name": "数字工程室下达年度计划并登记接收",
+      "behavior_description": "数字工程室向实施部门下达经批准的年度计划表，登记接收情况。数字工程室正式成立前，由经营发展部在信息化工作组内指定人员代行（信息化工作组为司人字〔2026〕63号红头成立）。",
+      "current_actor_role": "经营发展部数字工程室",
+      "actor_assignment_mode": "fixed_department",
+      "actor_department_data_ref": null,
+      "actor_position_rule": "数字工程室负责人或者指定编制人。数字工程室正式成立前，由经营发展部在信息化工作组内指定人员代行（信息化工作组为司人字〔2026〕63号红头成立）",
+      "trigger": "事项确定纳入年度计划直接实施或者暂不实施",
+      "precondition": "年度计划表已经分管领导签字",
+      "input_description": "经签字的年度数字技术研究与应用计划表",
+      "timing": null,
+      "completion_standard": "在“下达登记”区填写下达日期、接收部门和接收人签字；下达期限为计划批准后 5 个工作日内；暂不实施的事项在“备注”列写明暂缓原因",
+      "output_description": "经接收人签字的年度计划表",
+      "countersign_all_required": false,
+      "countersign_target_departments": []
+    },
+    {
+      "behavior_ref": "behavior_feedback_plan",
+      "node_type": "action",
+      "behavior_name": "实施部门反馈年度计划事项完成情况",
+      "behavior_description": "实施部门按年度计划执行事项，在计划表“执行反馈”明细登记完成情况。",
+      "current_actor_role": "全公司",
+      "actor_assignment_mode": "company_wide",
+      "actor_department_data_ref": null,
+      "actor_position_rule": "实施部门负责人指定承办人反馈",
+      "trigger": "收到数字工程室下达的年度计划表",
+      "precondition": "年度计划表已经接收人签字",
+      "input_description": "经接收人签字的年度计划表",
+      "timing": null,
+      "completion_standard": "在“执行反馈”明细逐项登记事项名称、完成情况、完成日期和备注；完成情况分为已完成、进行中、未启动三档；进行中和未启动的写明原因；反馈时点为年度终了后 10 个工作日内",
+      "output_description": "含执行反馈明细的年度计划表",
+      "countersign_all_required": false,
+      "countersign_target_departments": []
+    },
+    {
+      "behavior_ref": "behavior_make_scheme",
+      "node_type": "action",
+      "behavior_name": "数字工程室编制项目实施方案",
+      "behavior_description": "数字工程室会同提出部门编制实施方案，写明技术路线、实施步骤、技术指标和资源需求。",
+      "current_actor_role": "经营发展部数字工程室 / 提出部门",
+      "actor_assignment_mode": "fixed_department",
+      "actor_department_data_ref": null,
+      "actor_position_rule": "数字工程室负责人或者指定项目负责人。数字工程室正式成立前，由经营发展部在信息化工作组内指定人员代行（信息化工作组为司人字〔2026〕63号红头成立）",
+      "trigger": "事项的实施方式确定为立项研究",
+      "precondition": "事项的业务目标、范围和资源需求已经明确",
+      "input_description": "经签字的年度计划表、数字技术应用需求申报表、相关技术资料",
+      "timing": null,
+      "completion_standard": "方案写明目标、研究内容、技术路线、参与人员、资源与费用需求和风险应对；“实施步骤”明细填写步骤、时间节点和责任人；“技术指标”明细逐项填写指标名称、要求值和验证方法，每项指标必须给出可测量的要求值",
+      "output_description": "数字技术研究与应用项目实施方案",
+      "countersign_all_required": false,
+      "countersign_target_departments": []
+    },
+    {
+      "behavior_ref": "behavior_review_scheme",
+      "node_type": "action",
+      "behavior_name": "评审组评审项目实施方案并签署评审意见",
+      "behavior_description": "评审组逐项评分并签署评审意见。",
+      "current_actor_role": "经营发展部评审组",
+      "actor_assignment_mode": "fixed_department",
+      "actor_department_data_ref": null,
+      "actor_position_rule": "评审组组长；评审组由数字工程室、提出部门、工程技术部人员组成，涉及费用预算时含财务部人员",
+      "trigger": "数字工程室提交项目实施方案",
+      "precondition": "方案正文、实施步骤明细和技术指标明细填写完整",
+      "input_description": "数字技术研究与应用项目实施方案",
+      "timing": null,
+      "completion_standard": "按目标合理性、技术可行性、资源充分性、风险可控性四项各按 1 至 5 分评分并填写“评审意见”栏；全体评审成员在“评审组成员签字”栏签字并注明日期",
+      "output_description": "经评审组签字的实施方案、方案评审意见",
+      "countersign_all_required": false,
+      "countersign_target_departments": []
+    },
+    {
+      "behavior_ref": "behavior_decide_review",
+      "node_type": "decision",
+      "behavior_name": "评审组判断方案评审是否通过",
+      "behavior_description": "按四项评分结果判断方案是否通过评审。",
+      "current_actor_role": "经营发展部评审组",
+      "actor_assignment_mode": "fixed_department",
+      "actor_department_data_ref": null,
+      "actor_position_rule": "评审组组长",
+      "trigger": "方案评审意见已经形成",
+      "precondition": "全体评审成员已经签字",
+      "input_description": "经签字的数字技术研究与应用项目实施方案",
+      "timing": null,
+      "completion_standard": "形成通过、退回修改或者不予立项的结论。判据参考值（业界通行分档，待经营发展部确认）：四项评分合计 16 分及以上且无单项 2 分及以下为通过；合计 12 分至 15 分，或者存在单项 2 分及以下为退回修改；合计低于 12 分为不予立项。退回修改的由数字工程室修改后重新评审；连续两次未通过或者不具备实施条件的报分管领导同意后终止并归档",
+      "output_description": "方案评审结论",
+      "countersign_all_required": false,
+      "countersign_target_departments": []
+    },
+    {
+      "behavior_ref": "behavior_approve_project",
+      "node_type": "action",
+      "behavior_name": "分管领导签署项目立项审批意见",
+      "behavior_description": "分管领导在实施方案表内签署立项审批意见。",
+      "current_actor_role": "公司领导分管领导",
+      "actor_assignment_mode": "fixed_department",
+      "actor_department_data_ref": null,
+      "actor_position_rule": "分管副总经理",
+      "trigger": "方案评审结论为通过",
+      "precondition": "评审意见、资源与费用需求已经明确",
+      "input_description": "经签字的数字技术研究与应用项目实施方案",
+      "timing": null,
+      "completion_standard": "在“分管领导审批意见”栏写明同意立项或者不予立项并签字注明日期；预算 10 万元及以上的按公司预算和授权规则报总经理批准；低于 10 万元的由分管领导批准",
+      "output_description": "经签字的实施方案、项目立项审批意见",
+      "countersign_all_required": false,
+      "countersign_target_departments": []
+    },
+    {
+      "behavior_ref": "behavior_decide_external",
+      "node_type": "decision",
+      "behavior_name": "数字工程室判断项目是否需要外部合作",
+      "behavior_description": "按技术路线和公司现有能力判断是否需要外部合作。",
+      "current_actor_role": "经营发展部数字工程室",
+      "actor_assignment_mode": "fixed_department",
+      "actor_department_data_ref": null,
+      "actor_position_rule": "数字工程室负责人。数字工程室正式成立前，由经营发展部在信息化工作组内指定人员代行（信息化工作组为司人字〔2026〕63号红头成立）",
+      "trigger": "项目立项审批完成",
+      "precondition": "技术路线和公司现有技术能力与资源情况已经明确",
+      "input_description": "经签字的项目实施方案、公司现有技术能力与资源情况",
+      "timing": null,
+      "completion_standard": "形成自主实施或者需要外部合作的结论。判据参考值（业界通行分档，待经营发展部确认）：满足下列任一项的确定外部合作——公司无该领域专职人员或者专用工具；需要外部授权、资质或者标准符合性认证；外部成熟产品采购成本较自主开发低 30% 以上，或者实施周期短 50% 以上；需要与外部系统或者平台对接且对方要求原厂实施",
+      "output_description": "外部合作或者自主实施的结论",
+      "countersign_all_required": false,
+      "countersign_target_departments": []
+    },
+    {
+      "behavior_ref": "behavior_sign_agreement",
+      "node_type": "action",
+      "behavior_name": "数字工程室签署外部合作协议",
+      "behavior_description": "数字工程室按采购和合同管理制度完成合作单位确定，与外部单位签署合作协议。",
+      "current_actor_role": "经营发展部数字工程室 / 财务部",
+      "actor_assignment_mode": "fixed_department",
+      "actor_department_data_ref": null,
+      "actor_position_rule": "数字工程室负责人；财务部核价。数字工程室正式成立前，由经营发展部在信息化工作组内指定人员代行（信息化工作组为司人字〔2026〕63号红头成立）",
+      "trigger": "项目确定需要外部合作",
+      "precondition": "合作内容、技术要求、预算和交付要求已经明确",
+      "input_description": "经签字的项目实施方案、外部合作需求说明、预算资料",
+      "timing": null,
+      "completion_standard": "合作单位选定与比价转采购周期管理程序办理；合同审签转公司合同审签流程办理；财务部核价限额参考值（待经营发展部确认）：预估费用 10 万元及以上需财务部出具书面核价意见，低于 10 万元由数字工程室比价并附报价单；签署后在实施方案“是否需要外部合作”栏登记协议编号；协议须写明交付成果、验收标准、费用、知识产权归属和保密要求，成果归公司所有",
+      "output_description": "外部合作协议及协议编号",
+      "countersign_all_required": false,
+      "countersign_target_departments": []
+    },
+    {
+      "behavior_ref": "behavior_fill_record",
+      "node_type": "action",
+      "behavior_name": "数字工程室按方案实施并填写项目过程记录表",
+      "behavior_description": "数字工程室会同提出部门按方案实施，在过程记录表逐条登记实施情况。",
+      "current_actor_role": "经营发展部数字工程室 / 提出部门",
+      "actor_assignment_mode": "fixed_department",
+      "actor_department_data_ref": null,
+      "actor_position_rule": "数字工程室负责人或者指定项目负责人。数字工程室正式成立前，由经营发展部在信息化工作组内指定人员代行（信息化工作组为司人字〔2026〕63号红头成立）",
+      "trigger": "项目立项审批完成；需要外部合作时协议已经签署",
+      "precondition": "实施人员、环境和必要资源已经落实",
+      "input_description": "经签字的项目实施方案、外部合作协议（如有）",
+      "timing": null,
+      "completion_standard": "按“实施步骤”明细逐步实施；在“过程记录”明细逐条登记记录日期、节点或事项、实施情况和实施人；发生技术选择、方案调整或者异常情况时在对应列写明；到达里程碑节点且阶段成果达成方案要求时，在“确认人签字”和“确认日期”栏签署；涉及数据使用和系统接入的符合信息安全和保密要求",
+      "output_description": "数字技术研究与应用项目过程记录表",
+      "countersign_all_required": false,
+      "countersign_target_departments": []
+    },
+    {
+      "behavior_ref": "behavior_decide_milestone",
+      "node_type": "decision",
+      "behavior_name": "数字工程室判断里程碑节点是否达到方案要求",
+      "behavior_description": "到达方案确定的里程碑节点时，核对阶段成果并判断是否达到方案的节点要求。",
+      "current_actor_role": "经营发展部数字工程室",
+      "actor_assignment_mode": "fixed_department",
+      "actor_department_data_ref": null,
+      "actor_position_rule": "数字工程室负责人或者指定项目负责人。数字工程室正式成立前，由经营发展部在信息化工作组内指定人员代行（信息化工作组为司人字〔2026〕63号红头成立）",
+      "trigger": "到达实施方案“实施步骤”明细确定的里程碑节点",
+      "precondition": "该节点对应的实施步骤已经完成并登记过程记录",
+      "input_description": "本项目过程记录表",
+      "timing": null,
+      "completion_standard": "形成达到要求或者未达到要求的结论；达到要求的转入下一节点；未达到要求的在“异常情况”列写明差距、补救措施和新的完成期限后退回继续实施；无法继续实施的报分管领导同意后中止或者终止并形成书面结论",
+      "output_description": "里程碑节点确认结论",
+      "countersign_all_required": false,
+      "countersign_target_departments": []
+    },
+    {
+      "behavior_ref": "behavior_technical_validation",
+      "node_type": "action",
+      "behavior_name": "数字工程室核对技术指标并填写验证记录",
+      "behavior_description": "数字工程室会同工程技术部、信息化工作组逐项核对技术指标，填写验证记录。",
+      "current_actor_role": "经营发展部数字工程室 / 工程技术部 / 信息化工作组",
+      "actor_assignment_mode": "fixed_department",
+      "actor_department_data_ref": null,
+      "actor_position_rule": "数字工程室负责人或者指定验证人。数字工程室正式成立前，由经营发展部在信息化工作组内指定人员代行（信息化工作组为司人字〔2026〕63号红头成立）",
+      "trigger": "全部里程碑节点确认完成，形成可以验证的技术成果",
+      "precondition": "实施方案中的“技术指标”明细已经填写要求值和验证方法",
+      "input_description": "技术成果、经签字的项目实施方案、项目过程记录表",
+      "timing": null,
+      "completion_standard": "在“指标核对”明细逐条填写指标名称、方案要求值、实际结果、偏差比例和结论；填写验证环境、验证内容与方法和技术验证结论；涉及系统接入和数据传输的由信息化工作组在“信息化工作组意见”栏确认信息安全和网络使用要求",
+      "output_description": "技术验证与试点应用记录表（指标核对明细和技术验证结论）",
+      "countersign_all_required": false,
+      "countersign_target_departments": []
+    },
+    {
+      "behavior_ref": "behavior_pilot_validation",
+      "node_type": "action",
+      "behavior_name": "使用部门填写试点应用记录",
+      "behavior_description": "使用部门在限定范围内试用并填写试点记录。",
+      "current_actor_role": "全公司",
+      "actor_assignment_mode": "company_wide",
+      "actor_department_data_ref": null,
+      "actor_position_rule": "使用部门负责人指定业务人员填写",
+      "trigger": "技术验证结论为达到方案要求",
+      "precondition": "试点范围、使用人员、业务数据和运行环境已经确定",
+      "input_description": "技术验证与试点应用记录表的指标核对明细、试点方案",
+      "timing": null,
+      "completion_standard": "填写试点部门、试点范围、试点时间、业务效果记录、问题与反馈和试点结论；业务效果记录对照实施方案的预期成果填写并给出量化对比；试点周期不少于 2 周；问题反馈数字工程室处理",
+      "output_description": "技术验证与试点应用记录表（试点记录）",
+      "countersign_all_required": false,
+      "countersign_target_departments": []
+    },
+    {
+      "behavior_ref": "behavior_decide_validation",
+      "node_type": "decision",
+      "behavior_name": "评审组判断验证与试点是否通过",
+      "behavior_description": "按指标核对偏差和试点记录判断是否通过验证。",
+      "current_actor_role": "经营发展部评审组",
+      "actor_assignment_mode": "fixed_department",
+      "actor_department_data_ref": null,
+      "actor_position_rule": "评审组组长",
+      "trigger": "技术验证和业务试点完成",
+      "precondition": "指标核对明细和试点记录已经填写",
+      "input_description": "技术验证与试点应用记录表",
+      "timing": null,
+      "completion_standard": "形成通过、整改后复验或者终止的结论。判据参考值（业界通行分档，待经营发展部确认）：全部指标实际结果达到方案要求值的 90% 及以上，安全性和精度类关键指标 100% 达标，且试点期间无停工或者数据错误、使用部门可独立操作的为通过；指标达到 70% 至 90%，或者存在可整改操作问题的整改后复验；指标低于 70%，或者无法满足业务要求的终止并归档",
+      "output_description": "验证与试点结论",
+      "countersign_all_required": false,
+      "countersign_target_departments": []
+    },
+    {
+      "behavior_ref": "behavior_make_result_report",
+      "node_type": "action",
+      "behavior_name": "评审组编制成果评价报告",
+      "behavior_description": "评审组按评价维度出具成果评价报告。",
+      "current_actor_role": "经营发展部评审组",
+      "actor_assignment_mode": "fixed_department",
+      "actor_department_data_ref": null,
+      "actor_position_rule": "评审组组长",
+      "trigger": "验证与试点结论为通过",
+      "precondition": "指标核对明细、试点记录和过程记录齐备",
+      "input_description": "项目实施方案、项目过程记录表、技术验证与试点应用记录表",
+      "timing": null,
+      "completion_standard": "填写完成情况、技术水平、业务价值、应用范围与推广条件和费用投入与效果；给出评价结论和推广应用建议；全体评审成员签字。判据参考值（业界通行分档，待经营发展部确认）：技术水平分国内先进、行业领先、公司首次应用三档；业务价值分显著（效率提升 30% 及以上）、一般（10% 至 30%）、有限（低于 10%）三档；技术水平和业务价值均不低于“一般”的判定为具备应用条件",
+      "output_description": "数字技术研究与应用成果评价报告",
+      "countersign_all_required": false,
+      "countersign_target_departments": []
+    },
+    {
+      "behavior_ref": "behavior_make_rollout",
+      "node_type": "action",
+      "behavior_name": "数字工程室编制应用推广方案",
+      "behavior_description": "数字工程室会同使用部门编制推广方案。",
+      "current_actor_role": "经营发展部数字工程室 / 使用部门",
+      "actor_assignment_mode": "fixed_department",
+      "actor_department_data_ref": null,
+      "actor_position_rule": "数字工程室负责人或者指定推广负责人。数字工程室正式成立前，由经营发展部在信息化工作组内指定人员代行（信息化工作组为司人字〔2026〕63号红头成立）",
+      "trigger": "成果评价结论为具备应用条件",
+      "precondition": "推广范围、推广条件和所需资源已经明确",
+      "input_description": "成果评价报告、现有系统与数据条件",
+      "timing": null,
+      "completion_standard": "在“推广范围”“实施步骤”明细中写明推广部门、实施步骤和责任部门与人员；填写时间安排、培训要求、数据与权限要求；推广前完成不少于 1 轮操作培训；涉及系统权限和数据使用的符合公司相关要求",
+      "output_description": "应用推广方案",
+      "countersign_all_required": false,
+      "countersign_target_departments": []
+    },
+    {
+      "behavior_ref": "behavior_fill_effect",
+      "node_type": "action",
+      "behavior_name": "数字工程室填写应用效果评价表",
+      "behavior_description": "数字工程室会同使用部门对照项目目标填写效果评价。",
+      "current_actor_role": "经营发展部数字工程室 / 使用部门",
+      "actor_assignment_mode": "fixed_department",
+      "actor_department_data_ref": null,
+      "actor_position_rule": "数字工程室负责人或者指定评价人。数字工程室正式成立前，由经营发展部在信息化工作组内指定人员代行（信息化工作组为司人字〔2026〕63号红头成立）",
+      "trigger": "推广实施满 1 个月，达到评价时点",
+      "precondition": "推广实施情况应用后的业务数据可以获取",
+      "input_description": "应用推广方案、应用业务数据",
+      "timing": null,
+      "completion_standard": "逐项填写预期目标、实际效果、差异与原因；实际效果对照项目目标填写可核对的数据或者事实；使用部门在“使用部门意见”栏签署意见",
+      "output_description": "应用效果评价表",
+      "countersign_all_required": false,
+      "countersign_target_departments": []
+    },
+    {
+      "behavior_ref": "behavior_solidify",
+      "node_type": "action",
+      "behavior_name": "数字工程室修订制度或者编制作业指南",
+      "behavior_description": "数字工程室把验证有效的成果固化到制度和作业文件。",
+      "current_actor_role": "经营发展部数字工程室 / 行政人事部",
+      "actor_assignment_mode": "fixed_department",
+      "actor_department_data_ref": null,
+      "actor_position_rule": "数字工程室负责人。数字工程室正式成立前，由经营发展部在信息化工作组内指定人员代行（信息化工作组为司人字〔2026〕63号红头成立）",
+      "trigger": "应用效果评价完成",
+      "precondition": "成果评价报告结论为具备应用条件，应用效果评价表已填写",
+      "input_description": "数字技术研究与应用成果评价报告、应用效果评价表",
+      "timing": null,
+      "completion_standard": "按公司管理体系程序文件编制管理规定办理制度修订或者新增，或者编制作业指南并纳入受控文件；需要对外申报政府项目、专利或者软件著作权的转政策研究与项目申报管理程序办理；固化情况在应用效果评价表“后续建议”栏登记",
+      "output_description": "修订后的制度文件、作业指南或者对外申报转办记录",
+      "countersign_all_required": false,
+      "countersign_target_departments": []
+    },
+    {
+      "behavior_ref": "behavior_handover_archive",
+      "node_type": "action",
+      "behavior_name": "数字工程室移交项目资料归档",
+      "behavior_description": "数字工程室整理项目全过程资料，移交行政人事部归档。",
+      "current_actor_role": "经营发展部数字工程室 / 行政人事部",
+      "actor_assignment_mode": "fixed_department",
+      "actor_department_data_ref": null,
+      "actor_position_rule": "数字工程室负责人。数字工程室正式成立前，由经营发展部在信息化工作组内指定人员代行（信息化工作组为司人字〔2026〕63号红头成立）",
+      "trigger": "应用效果评价完成，固化事项已经办理",
+      "precondition": "申报表、计划表、实施方案、过程记录表、验证与试点记录表、成果评价报告、推广方案和效果评价表齐备",
+      "input_description": "本程序全部关联表单",
+      "timing": null,
+      "completion_standard": "在 GLTX-JY-32-09-A《项目资料移交清单》中按表单编号顺序逐项登记资料名称、表单编号和份数；行政人事部核对份数后在“接收人签字”栏签收并填写接收日期；资料保存期限为长期，不设销毁节点；保存期满后按公司档案管理规定处置",
+      "output_description": "项目归档资料及移交清单",
+      "countersign_all_required": false,
+      "countersign_target_departments": []
+    }
+  ],
+  "flow_relations": [
+    {
+      "relation_ref": "relation_01",
+      "relation_type": "sequence",
+      "from_behavior_ref": "behavior_fill_demand",
+      "to_behavior_ref": "behavior_check_demand",
+      "condition": ""
+    },
+    {
+      "relation_ref": "relation_02",
+      "relation_type": "sequence",
+      "from_behavior_ref": "behavior_check_demand",
+      "to_behavior_ref": "behavior_decide_demand",
+      "condition": ""
+    },
+    {
+      "relation_ref": "relation_03",
+      "relation_type": "loop",
+      "from_behavior_ref": "behavior_decide_demand",
+      "to_behavior_ref": "behavior_fill_demand",
+      "condition": "填写要素缺失或者业务场景不具体，退回补正"
+    },
+    {
+      "relation_ref": "relation_04",
+      "relation_type": "condition",
+      "from_behavior_ref": "behavior_decide_demand",
+      "to_behavior_ref": "behavior_make_plan",
+      "condition": "核验通过"
+    },
+    {
+      "relation_ref": "relation_05",
+      "relation_type": "sequence",
+      "from_behavior_ref": "behavior_make_plan",
+      "to_behavior_ref": "behavior_sign_plan",
+      "condition": ""
+    },
+    {
+      "relation_ref": "relation_06",
+      "relation_type": "sequence",
+      "from_behavior_ref": "behavior_sign_plan",
+      "to_behavior_ref": "behavior_decide_plan",
+      "condition": ""
+    },
+    {
+      "relation_ref": "relation_07",
+      "relation_type": "loop",
+      "from_behavior_ref": "behavior_decide_plan",
+      "to_behavior_ref": "behavior_make_plan",
+      "condition": "分管领导退回修改"
+    },
+    {
+      "relation_ref": "relation_08",
+      "relation_type": "condition",
+      "from_behavior_ref": "behavior_decide_plan",
+      "to_behavior_ref": "behavior_decide_project",
+      "condition": "同意执行"
+    },
+    {
+      "relation_ref": "relation_09",
+      "relation_type": "condition",
+      "from_behavior_ref": "behavior_decide_project",
+      "to_behavior_ref": "behavior_make_scheme",
+      "condition": "实施方式为立项研究的事项"
+    },
+    {
+      "relation_ref": "relation_10",
+      "relation_type": "condition",
+      "from_behavior_ref": "behavior_decide_project",
+      "to_behavior_ref": "behavior_issue_plan",
+      "condition": "纳入年度计划直接实施或者暂不实施的事项"
+    },
+    {
+      "relation_ref": "relation_11",
+      "relation_type": "sequence",
+      "from_behavior_ref": "behavior_issue_plan",
+      "to_behavior_ref": "behavior_feedback_plan",
+      "condition": ""
+    },
+    {
+      "relation_ref": "relation_12",
+      "relation_type": "sequence",
+      "from_behavior_ref": "behavior_feedback_plan",
+      "to_behavior_ref": "behavior_handover_archive",
+      "condition": "年度计划执行情况随项目资料归档"
+    },
+    {
+      "relation_ref": "relation_13",
+      "relation_type": "sequence",
+      "from_behavior_ref": "behavior_make_scheme",
+      "to_behavior_ref": "behavior_review_scheme",
+      "condition": ""
+    },
+    {
+      "relation_ref": "relation_14",
+      "relation_type": "sequence",
+      "from_behavior_ref": "behavior_review_scheme",
+      "to_behavior_ref": "behavior_decide_review",
+      "condition": ""
+    },
+    {
+      "relation_ref": "relation_15",
+      "relation_type": "loop",
+      "from_behavior_ref": "behavior_decide_review",
+      "to_behavior_ref": "behavior_make_scheme",
+      "condition": "评审结论为退回修改"
+    },
+    {
+      "relation_ref": "relation_16",
+      "relation_type": "condition",
+      "from_behavior_ref": "behavior_decide_review",
+      "to_behavior_ref": "behavior_approve_project",
+      "condition": "评审通过"
+    },
+    {
+      "relation_ref": "relation_17",
+      "relation_type": "condition",
+      "from_behavior_ref": "behavior_decide_review",
+      "to_behavior_ref": "behavior_handover_archive",
+      "condition": "不予立项，终止并归档"
+    },
+    {
+      "relation_ref": "relation_18",
+      "relation_type": "sequence",
+      "from_behavior_ref": "behavior_approve_project",
+      "to_behavior_ref": "behavior_decide_external",
+      "condition": ""
+    },
+    {
+      "relation_ref": "relation_19",
+      "relation_type": "condition",
+      "from_behavior_ref": "behavior_decide_external",
+      "to_behavior_ref": "behavior_sign_agreement",
+      "condition": "需要外部合作"
+    },
+    {
+      "relation_ref": "relation_20",
+      "relation_type": "condition",
+      "from_behavior_ref": "behavior_decide_external",
+      "to_behavior_ref": "behavior_fill_record",
+      "condition": "自主实施"
+    },
+    {
+      "relation_ref": "relation_21",
+      "relation_type": "sequence",
+      "from_behavior_ref": "behavior_sign_agreement",
+      "to_behavior_ref": "behavior_fill_record",
+      "condition": ""
+    },
+    {
+      "relation_ref": "relation_22",
+      "relation_type": "sequence",
+      "from_behavior_ref": "behavior_fill_record",
+      "to_behavior_ref": "behavior_decide_milestone",
+      "condition": ""
+    },
+    {
+      "relation_ref": "relation_23",
+      "relation_type": "loop",
+      "from_behavior_ref": "behavior_decide_milestone",
+      "to_behavior_ref": "behavior_fill_record",
+      "condition": "节点未达到方案要求，补救后继续实施"
+    },
+    {
+      "relation_ref": "relation_24",
+      "relation_type": "condition",
+      "from_behavior_ref": "behavior_decide_milestone",
+      "to_behavior_ref": "behavior_technical_validation",
+      "condition": "全部里程碑节点达到方案要求"
+    },
+    {
+      "relation_ref": "relation_25",
+      "relation_type": "sequence",
+      "from_behavior_ref": "behavior_technical_validation",
+      "to_behavior_ref": "behavior_pilot_validation",
+      "condition": ""
+    },
+    {
+      "relation_ref": "relation_26",
+      "relation_type": "sequence",
+      "from_behavior_ref": "behavior_pilot_validation",
+      "to_behavior_ref": "behavior_decide_validation",
+      "condition": ""
+    },
+    {
+      "relation_ref": "relation_27",
+      "relation_type": "loop",
+      "from_behavior_ref": "behavior_decide_validation",
+      "to_behavior_ref": "behavior_technical_validation",
+      "condition": "整改后复验"
+    },
+    {
+      "relation_ref": "relation_28",
+      "relation_type": "condition",
+      "from_behavior_ref": "behavior_decide_validation",
+      "to_behavior_ref": "behavior_make_result_report",
+      "condition": "验证与试点通过"
+    },
+    {
+      "relation_ref": "relation_29",
+      "relation_type": "condition",
+      "from_behavior_ref": "behavior_decide_validation",
+      "to_behavior_ref": "behavior_handover_archive",
+      "condition": "终止并归档"
+    },
+    {
+      "relation_ref": "relation_30",
+      "relation_type": "sequence",
+      "from_behavior_ref": "behavior_make_result_report",
+      "to_behavior_ref": "behavior_make_rollout",
+      "condition": ""
+    },
+    {
+      "relation_ref": "relation_31",
+      "relation_type": "sequence",
+      "from_behavior_ref": "behavior_make_rollout",
+      "to_behavior_ref": "behavior_fill_effect",
+      "condition": ""
+    },
+    {
+      "relation_ref": "relation_32",
+      "relation_type": "sequence",
+      "from_behavior_ref": "behavior_fill_effect",
+      "to_behavior_ref": "behavior_solidify",
+      "condition": ""
+    },
+    {
+      "relation_ref": "relation_33",
+      "relation_type": "sequence",
+      "from_behavior_ref": "behavior_solidify",
+      "to_behavior_ref": "behavior_handover_archive",
+      "condition": ""
+    }
+  ],
+  "data_objects": [
+    {
+      "data_ref": "data_demand",
+      "data_name": "数字技术应用需求",
+      "description": "提出部门填报并经部门负责人签字、数字工程室核验的数字技术应用需求。",
+      "information_type": "business_information",
+      "fields": [
+        {
+          "field_ref": "data_demand_field_01",
+          "field_name": "申请部门",
+          "field_type": "文本",
+          "definition": "提出需求的部门"
+        },
+        {
+          "field_ref": "data_demand_field_02",
+          "field_name": "申请人",
+          "field_type": "文本",
+          "definition": "填报人"
+        },
+        {
+          "field_ref": "data_demand_field_03",
+          "field_name": "申请日期",
+          "field_type": "日期",
+          "definition": "填报日期"
+        },
+        {
+          "field_ref": "data_demand_field_04",
+          "field_name": "需求名称",
+          "field_type": "文本",
+          "definition": "需求事项名称"
+        },
+        {
+          "field_ref": "data_demand_field_05",
+          "field_name": "业务场景",
+          "field_type": "文本",
+          "definition": "需求对应的具体业务场景"
+        },
+        {
+          "field_ref": "data_demand_field_06",
+          "field_name": "现状问题描述",
+          "field_type": "文本",
+          "definition": "当前存在的问题"
+        },
+        {
+          "field_ref": "data_demand_field_07",
+          "field_name": "期望达到的效果",
+          "field_type": "文本",
+          "definition": "期望通过数字技术达到的效果"
+        },
+        {
+          "field_ref": "data_demand_field_08",
+          "field_name": "涉及的业务流程或者环节",
+          "field_type": "文本",
+          "definition": "受影响的流程或者环节"
+        },
+        {
+          "field_ref": "data_demand_field_09",
+          "field_name": "涉及的数据或者信息",
+          "field_type": "文本",
+          "definition": "需求涉及的数据范围"
+        },
+        {
+          "field_ref": "data_demand_field_10",
+          "field_name": "拟采用的技术方向",
+          "field_type": "文本",
+          "definition": "建议采用的技术方向"
+        },
+        {
+          "field_ref": "data_demand_field_11",
+          "field_name": "使用人员范围",
+          "field_type": "文本",
+          "definition": "涉及的使用人员"
+        },
+        {
+          "field_ref": "data_demand_field_12",
+          "field_name": "期望完成时间",
+          "field_type": "日期",
+          "definition": "提出部门期望的完成时间"
+        },
+        {
+          "field_ref": "data_demand_field_13",
+          "field_name": "部门负责人意见",
+          "field_type": "文本",
+          "definition": "部门负责人签字意见"
+        },
+        {
+          "field_ref": "data_demand_field_14",
+          "field_name": "核验结论",
+          "field_type": "文本",
+          "definition": "数字工程室的通过或者退回结论"
+        },
+        {
+          "field_ref": "data_demand_field_15",
+          "field_name": "退回补正要求",
+          "field_type": "文本",
+          "definition": "退回时写明的缺失项和补正期限"
+        },
+        {
+          "field_ref": "data_demand_field_16",
+          "field_name": "核验人",
+          "field_type": "文本",
+          "definition": "核验人签字"
+        },
+        {
+          "field_ref": "data_demand_field_17",
+          "field_name": "核验日期",
+          "field_type": "日期",
+          "definition": "核验日期"
+        }
+      ],
+      "behavior_links": [
+        {
+          "link_ref": "data_demand_link_01",
+          "behavior_ref": "behavior_fill_demand",
+          "operation": "create",
+          "updated_field_refs": []
+        },
+        {
+          "link_ref": "data_demand_link_02",
+          "behavior_ref": "behavior_check_demand",
+          "operation": "update",
+          "updated_field_refs": []
+        },
+        {
+          "link_ref": "data_demand_link_03",
+          "behavior_ref": "behavior_make_plan",
+          "operation": "use",
+          "updated_field_refs": []
+        }
+      ],
+      "source_relations": [],
+      "lifecycle": {
+        "applicability": "applicable",
+        "entry_state": {
+          "business_validity": "effective",
+          "custody": "active_custody",
+          "identifiability_applicability": "not_applicable",
+          "identifiability": "not_applicable"
+        },
+        "routes": [
+          {
+            "route_ref": "data_demand_route_archive",
+            "route_label": "项目资料移交归档",
+            "flow_relation_refs": [],
+            "events": [
+              {
+                "event_ref": "data_demand_event_archive",
+                "action": "archive",
+                "trigger": {
+                  "mode": "behavior",
+                  "operator": "single",
+                  "behavior_ref": "behavior_handover_archive",
+                  "expression": "数字工程室移交项目资料归档并通过行政人事部签收时"
+                },
+                "result_state": {
+                  "business_validity": "effective",
+                  "custody": "archived",
+                  "identifiability_applicability": "not_applicable",
+                  "identifiability": "not_applicable"
+                },
+                "target_scope": "batch",
+                "carrier_scope": "paper_and_electronic",
+                "responsibility": {
+                  "mode": "explicit",
+                  "department": "经营发展部",
+                  "position": "数字工程室负责人"
+                },
+                "exception_handling": "资料不齐备时退回数字工程室补齐后重新移交",
+                "review_status": "pending_confirmation",
+                "high_risk": false,
+                "decision_reason": "",
+                "decision_notes": "保存期限为长期，不设销毁节点。",
+                "provenance": {
+                  "source_type": "user_confirmed",
+                  "source_ref": null,
+                  "source_path": "",
+                  "basis": "编制访谈确认：项目全过程资料由行政人事部按长期保存",
+                  "analyzer_version": "",
+                  "source_fingerprint": ""
+                }
+              }
+            ],
+            "exit_state": {
+              "business_validity": "effective",
+              "custody": "archived",
+              "identifiability_applicability": "not_applicable",
+              "identifiability": "not_applicable"
+            }
+          }
+        ],
+        "analysis": {
+          "analyzer_version": "",
+          "source_fingerprint": "",
+          "status": "not_analyzed"
+        },
+        "decision_reason": "",
+        "decision_notes": ""
+      }
+    },
+    {
+      "data_ref": "data_annual_plan",
+      "data_name": "年度数字技术研究与应用计划",
+      "description": "经分管领导签字、下达并由实施部门反馈执行情况的年度计划。",
+      "information_type": "business_information",
+      "fields": [
+        {
+          "field_ref": "data_annual_plan_field_01",
+          "field_name": "计划年度",
+          "field_type": "文本",
+          "definition": "计划所属年度"
+        },
+        {
+          "field_ref": "data_annual_plan_field_02",
+          "field_name": "编制人",
+          "field_type": "文本",
+          "definition": "编制人签字"
+        },
+        {
+          "field_ref": "data_annual_plan_field_03",
+          "field_name": "编制日期",
+          "field_type": "日期",
+          "definition": "编制日期"
+        },
+        {
+          "field_ref": "data_annual_plan_field_04",
+          "field_name": "分管领导意见",
+          "field_type": "文本",
+          "definition": "分管领导签字意见"
+        },
+        {
+          "field_ref": "data_annual_plan_field_05",
+          "field_name": "事项名称",
+          "field_type": "文本",
+          "definition": "计划包含的研究与应用事项"
+        },
+        {
+          "field_ref": "data_annual_plan_field_06",
+          "field_name": "来源",
+          "field_type": "文本",
+          "definition": "规划下达或者部门申报"
+        },
+        {
+          "field_ref": "data_annual_plan_field_07",
+          "field_name": "申报部门",
+          "field_type": "文本",
+          "definition": "事项的来源部门"
+        },
+        {
+          "field_ref": "data_annual_plan_field_08",
+          "field_name": "业务场景",
+          "field_type": "文本",
+          "definition": "事项对应的业务场景"
+        },
+        {
+          "field_ref": "data_annual_plan_field_09",
+          "field_name": "预期目标",
+          "field_type": "文本",
+          "definition": "事项预期达到的目标"
+        },
+        {
+          "field_ref": "data_annual_plan_field_10",
+          "field_name": "实施方式",
+          "field_type": "文本",
+          "definition": "立项研究、直接实施或者暂不实施"
+        },
+        {
+          "field_ref": "data_annual_plan_field_11",
+          "field_name": "责任部门",
+          "field_type": "文本",
+          "definition": "事项的责任部门"
+        },
+        {
+          "field_ref": "data_annual_plan_field_12",
+          "field_name": "计划完成时间",
+          "field_type": "日期",
+          "definition": "计划完成时间"
+        },
+        {
+          "field_ref": "data_annual_plan_field_13",
+          "field_name": "资源需求",
+          "field_type": "文本",
+          "definition": "所需资源和费用"
+        },
+        {
+          "field_ref": "data_annual_plan_field_14",
+          "field_name": "备注",
+          "field_type": "文本",
+          "definition": "暂缓原因等补充说明"
+        },
+        {
+          "field_ref": "data_annual_plan_field_15",
+          "field_name": "下达日期",
+          "field_type": "日期",
+          "definition": "计划下达日期"
+        },
+        {
+          "field_ref": "data_annual_plan_field_16",
+          "field_name": "接收部门",
+          "field_type": "文本",
+          "definition": "接收计划表的部门"
+        },
+        {
+          "field_ref": "data_annual_plan_field_17",
+          "field_name": "接收人签字",
+          "field_type": "文本",
+          "definition": "接收人签字"
+        },
+        {
+          "field_ref": "data_annual_plan_field_18",
+          "field_name": "完成情况",
+          "field_type": "文本",
+          "definition": "已完成、进行中或者未启动"
+        },
+        {
+          "field_ref": "data_annual_plan_field_19",
+          "field_name": "完成日期",
+          "field_type": "日期",
+          "definition": "事项完成日期"
+        }
+      ],
+      "behavior_links": [
+        {
+          "link_ref": "data_annual_plan_link_01",
+          "behavior_ref": "behavior_make_plan",
+          "operation": "create",
+          "updated_field_refs": []
+        },
+        {
+          "link_ref": "data_annual_plan_link_02",
+          "behavior_ref": "behavior_sign_plan",
+          "operation": "update",
+          "updated_field_refs": []
+        },
+        {
+          "link_ref": "data_annual_plan_link_03",
+          "behavior_ref": "behavior_issue_plan",
+          "operation": "update",
+          "updated_field_refs": []
+        },
+        {
+          "link_ref": "data_annual_plan_link_04",
+          "behavior_ref": "behavior_feedback_plan",
+          "operation": "update",
+          "updated_field_refs": []
+        },
+        {
+          "link_ref": "data_annual_plan_link_05",
+          "behavior_ref": "behavior_make_scheme",
+          "operation": "use",
+          "updated_field_refs": []
+        }
+      ],
+      "source_relations": [],
+      "lifecycle": {
+        "applicability": "applicable",
+        "entry_state": {
+          "business_validity": "effective",
+          "custody": "active_custody",
+          "identifiability_applicability": "not_applicable",
+          "identifiability": "not_applicable"
+        },
+        "routes": [
+          {
+            "route_ref": "data_annual_plan_route_archive",
+            "route_label": "项目资料移交归档",
+            "flow_relation_refs": [],
+            "events": [
+              {
+                "event_ref": "data_annual_plan_event_archive",
+                "action": "archive",
+                "trigger": {
+                  "mode": "behavior",
+                  "operator": "single",
+                  "behavior_ref": "behavior_handover_archive",
+                  "expression": "数字工程室移交项目资料归档并通过行政人事部签收时"
+                },
+                "result_state": {
+                  "business_validity": "effective",
+                  "custody": "archived",
+                  "identifiability_applicability": "not_applicable",
+                  "identifiability": "not_applicable"
+                },
+                "target_scope": "batch",
+                "carrier_scope": "paper_and_electronic",
+                "responsibility": {
+                  "mode": "explicit",
+                  "department": "经营发展部",
+                  "position": "数字工程室负责人"
+                },
+                "exception_handling": "资料不齐备时退回数字工程室补齐后重新移交",
+                "review_status": "pending_confirmation",
+                "high_risk": false,
+                "decision_reason": "",
+                "decision_notes": "保存期限为长期，不设销毁节点。",
+                "provenance": {
+                  "source_type": "user_confirmed",
+                  "source_ref": null,
+                  "source_path": "",
+                  "basis": "编制访谈确认：项目全过程资料由行政人事部按长期保存",
+                  "analyzer_version": "",
+                  "source_fingerprint": ""
+                }
+              }
+            ],
+            "exit_state": {
+              "business_validity": "effective",
+              "custody": "archived",
+              "identifiability_applicability": "not_applicable",
+              "identifiability": "not_applicable"
+            }
+          }
+        ],
+        "analysis": {
+          "analyzer_version": "",
+          "source_fingerprint": "",
+          "status": "not_analyzed"
+        },
+        "decision_reason": "",
+        "decision_notes": ""
+      }
+    },
+    {
+      "data_ref": "data_scheme",
+      "data_name": "数字技术研究与应用项目实施方案",
+      "description": "经评审和批准的项目实施方案。",
+      "information_type": "business_information",
+      "fields": [
+        {
+          "field_ref": "data_scheme_field_01",
+          "field_name": "项目名称",
+          "field_type": "文本",
+          "definition": "项目名称"
+        },
+        {
+          "field_ref": "data_scheme_field_02",
+          "field_name": "提出部门",
+          "field_type": "文本",
+          "definition": "提出项目的部门"
+        },
+        {
+          "field_ref": "data_scheme_field_03",
+          "field_name": "项目负责人",
+          "field_type": "文本",
+          "definition": "项目负责人"
+        },
+        {
+          "field_ref": "data_scheme_field_04",
+          "field_name": "实施部门",
+          "field_type": "文本",
+          "definition": "负责实施的部门"
+        },
+        {
+          "field_ref": "data_scheme_field_05",
+          "field_name": "项目目标",
+          "field_type": "文本",
+          "definition": "项目拟达到的目标"
+        },
+        {
+          "field_ref": "data_scheme_field_06",
+          "field_name": "研究内容",
+          "field_type": "文本",
+          "definition": "研究开发内容"
+        },
+        {
+          "field_ref": "data_scheme_field_07",
+          "field_name": "技术路线",
+          "field_type": "文本",
+          "definition": "拟采用的技术路线"
+        },
+        {
+          "field_ref": "data_scheme_field_08",
+          "field_name": "参与人员",
+          "field_type": "文本",
+          "definition": "参与实施的人员"
+        },
+        {
+          "field_ref": "data_scheme_field_09",
+          "field_name": "资源与费用需求",
+          "field_type": "文本",
+          "definition": "所需资源和费用"
+        },
+        {
+          "field_ref": "data_scheme_field_10",
+          "field_name": "预期成果",
+          "field_type": "文本",
+          "definition": "预期形成的成果"
+        },
+        {
+          "field_ref": "data_scheme_field_11",
+          "field_name": "风险与应对措施",
+          "field_type": "文本",
+          "definition": "主要风险和应对措施"
+        },
+        {
+          "field_ref": "data_scheme_field_12",
+          "field_name": "是否需要外部合作",
+          "field_type": "文本",
+          "definition": "外部合作需求说明和协议编号"
+        },
+        {
+          "field_ref": "data_scheme_field_13",
+          "field_name": "编制人",
+          "field_type": "文本",
+          "definition": "编制人签字"
+        },
+        {
+          "field_ref": "data_scheme_field_14",
+          "field_name": "编制日期",
+          "field_type": "日期",
+          "definition": "编制日期"
+        },
+        {
+          "field_ref": "data_scheme_field_15",
+          "field_name": "评审意见",
+          "field_type": "文本",
+          "definition": "评审组四项评分和结论"
+        },
+        {
+          "field_ref": "data_scheme_field_16",
+          "field_name": "评审组成员签字",
+          "field_type": "文本",
+          "definition": "全体评审成员签字"
+        },
+        {
+          "field_ref": "data_scheme_field_17",
+          "field_name": "分管领导审批意见",
+          "field_type": "文本",
+          "definition": "立项审批意见"
+        },
+        {
+          "field_ref": "data_scheme_field_18",
+          "field_name": "实施步骤",
+          "field_type": "文本",
+          "definition": "实施步骤名称"
+        },
+        {
+          "field_ref": "data_scheme_field_19",
+          "field_name": "时间节点",
+          "field_type": "日期",
+          "definition": "该步骤的时间节点"
+        },
+        {
+          "field_ref": "data_scheme_field_20",
+          "field_name": "责任人",
+          "field_type": "文本",
+          "definition": "该步骤的责任人"
+        },
+        {
+          "field_ref": "data_scheme_field_21",
+          "field_name": "指标名称",
+          "field_type": "文本",
+          "definition": "技术指标名称"
+        },
+        {
+          "field_ref": "data_scheme_field_22",
+          "field_name": "指标要求值",
+          "field_type": "文本",
+          "definition": "方案要求达到的指标值"
+        },
+        {
+          "field_ref": "data_scheme_field_23",
+          "field_name": "验证方法",
+          "field_type": "文本",
+          "definition": "该指标的验证方法"
+        }
+      ],
+      "behavior_links": [
+        {
+          "link_ref": "data_scheme_link_01",
+          "behavior_ref": "behavior_make_scheme",
+          "operation": "create",
+          "updated_field_refs": []
+        },
+        {
+          "link_ref": "data_scheme_link_02",
+          "behavior_ref": "behavior_review_scheme",
+          "operation": "update",
+          "updated_field_refs": []
+        },
+        {
+          "link_ref": "data_scheme_link_03",
+          "behavior_ref": "behavior_approve_project",
+          "operation": "update",
+          "updated_field_refs": []
+        },
+        {
+          "link_ref": "data_scheme_link_04",
+          "behavior_ref": "behavior_sign_agreement",
+          "operation": "use",
+          "updated_field_refs": []
+        },
+        {
+          "link_ref": "data_scheme_link_05",
+          "behavior_ref": "behavior_fill_record",
+          "operation": "use",
+          "updated_field_refs": []
+        },
+        {
+          "link_ref": "data_scheme_link_06",
+          "behavior_ref": "behavior_technical_validation",
+          "operation": "use",
+          "updated_field_refs": []
+        }
+      ],
+      "source_relations": [],
+      "lifecycle": {
+        "applicability": "applicable",
+        "entry_state": {
+          "business_validity": "effective",
+          "custody": "active_custody",
+          "identifiability_applicability": "not_applicable",
+          "identifiability": "not_applicable"
+        },
+        "routes": [
+          {
+            "route_ref": "data_scheme_route_archive",
+            "route_label": "项目资料移交归档",
+            "flow_relation_refs": [],
+            "events": [
+              {
+                "event_ref": "data_scheme_event_archive",
+                "action": "archive",
+                "trigger": {
+                  "mode": "behavior",
+                  "operator": "single",
+                  "behavior_ref": "behavior_handover_archive",
+                  "expression": "数字工程室移交项目资料归档并通过行政人事部签收时"
+                },
+                "result_state": {
+                  "business_validity": "effective",
+                  "custody": "archived",
+                  "identifiability_applicability": "not_applicable",
+                  "identifiability": "not_applicable"
+                },
+                "target_scope": "batch",
+                "carrier_scope": "paper_and_electronic",
+                "responsibility": {
+                  "mode": "explicit",
+                  "department": "经营发展部",
+                  "position": "数字工程室负责人"
+                },
+                "exception_handling": "资料不齐备时退回数字工程室补齐后重新移交",
+                "review_status": "pending_confirmation",
+                "high_risk": false,
+                "decision_reason": "",
+                "decision_notes": "保存期限为长期，不设销毁节点。",
+                "provenance": {
+                  "source_type": "user_confirmed",
+                  "source_ref": null,
+                  "source_path": "",
+                  "basis": "编制访谈确认：项目全过程资料由行政人事部按长期保存",
+                  "analyzer_version": "",
+                  "source_fingerprint": ""
+                }
+              }
+            ],
+            "exit_state": {
+              "business_validity": "effective",
+              "custody": "archived",
+              "identifiability_applicability": "not_applicable",
+              "identifiability": "not_applicable"
+            }
+          }
+        ],
+        "analysis": {
+          "analyzer_version": "",
+          "source_fingerprint": "",
+          "status": "not_analyzed"
+        },
+        "decision_reason": "",
+        "decision_notes": ""
+      }
+    },
+    {
+      "data_ref": "data_cooperation",
+      "data_name": "外部合作协议",
+      "description": "与外部单位签订的合作协议。",
+      "information_type": "business_information",
+      "fields": [
+        {
+          "field_ref": "data_cooperation_field_01",
+          "field_name": "合作单位",
+          "field_type": "文本",
+          "definition": "外部合作单位名称"
+        },
+        {
+          "field_ref": "data_cooperation_field_02",
+          "field_name": "合作内容",
+          "field_type": "文本",
+          "definition": "合作内容和交付成果"
+        },
+        {
+          "field_ref": "data_cooperation_field_03",
+          "field_name": "费用",
+          "field_type": "文本",
+          "definition": "合作费用"
+        },
+        {
+          "field_ref": "data_cooperation_field_04",
+          "field_name": "知识产权归属",
+          "field_type": "文本",
+          "definition": "成果和知识产权归属约定"
+        },
+        {
+          "field_ref": "data_cooperation_field_05",
+          "field_name": "保密要求",
+          "field_type": "文本",
+          "definition": "保密条款约定"
+        },
+        {
+          "field_ref": "data_cooperation_field_06",
+          "field_name": "协议编号",
+          "field_type": "文本",
+          "definition": "协议或者合同编号"
+        }
+      ],
+      "behavior_links": [
+        {
+          "link_ref": "data_cooperation_link_01",
+          "behavior_ref": "behavior_sign_agreement",
+          "operation": "create",
+          "updated_field_refs": []
+        },
+        {
+          "link_ref": "data_cooperation_link_02",
+          "behavior_ref": "behavior_fill_record",
+          "operation": "use",
+          "updated_field_refs": []
+        }
+      ],
+      "source_relations": [],
+      "lifecycle": {
+        "applicability": "applicable",
+        "entry_state": {
+          "business_validity": "effective",
+          "custody": "active_custody",
+          "identifiability_applicability": "not_applicable",
+          "identifiability": "not_applicable"
+        },
+        "routes": [
+          {
+            "route_ref": "data_cooperation_route_archive",
+            "route_label": "项目资料移交归档",
+            "flow_relation_refs": [],
+            "events": [
+              {
+                "event_ref": "data_cooperation_event_archive",
+                "action": "archive",
+                "trigger": {
+                  "mode": "behavior",
+                  "operator": "single",
+                  "behavior_ref": "behavior_handover_archive",
+                  "expression": "数字工程室移交项目资料归档并通过行政人事部签收时"
+                },
+                "result_state": {
+                  "business_validity": "effective",
+                  "custody": "archived",
+                  "identifiability_applicability": "not_applicable",
+                  "identifiability": "not_applicable"
+                },
+                "target_scope": "batch",
+                "carrier_scope": "paper_and_electronic",
+                "responsibility": {
+                  "mode": "explicit",
+                  "department": "经营发展部",
+                  "position": "数字工程室负责人"
+                },
+                "exception_handling": "资料不齐备时退回数字工程室补齐后重新移交",
+                "review_status": "pending_confirmation",
+                "high_risk": false,
+                "decision_reason": "",
+                "decision_notes": "协议正本按公司合同管理要求保存，本程序归档副本。",
+                "provenance": {
+                  "source_type": "user_confirmed",
+                  "source_ref": null,
+                  "source_path": "",
+                  "basis": "编制访谈确认：项目全过程资料由行政人事部按长期保存",
+                  "analyzer_version": "",
+                  "source_fingerprint": ""
+                }
+              }
+            ],
+            "exit_state": {
+              "business_validity": "effective",
+              "custody": "archived",
+              "identifiability_applicability": "not_applicable",
+              "identifiability": "not_applicable"
+            }
+          }
+        ],
+        "analysis": {
+          "analyzer_version": "",
+          "source_fingerprint": "",
+          "status": "not_analyzed"
+        },
+        "decision_reason": "",
+        "decision_notes": ""
+      }
+    },
+    {
+      "data_ref": "data_project_record",
+      "data_name": "数字技术研究与应用项目过程记录",
+      "description": "项目实施过程和里程碑节点确认的记录。",
+      "information_type": "business_information",
+      "fields": [
+        {
+          "field_ref": "data_project_record_field_01",
+          "field_name": "项目名称",
+          "field_type": "文本",
+          "definition": "项目名称"
+        },
+        {
+          "field_ref": "data_project_record_field_02",
+          "field_name": "项目负责人",
+          "field_type": "文本",
+          "definition": "项目负责人"
+        },
+        {
+          "field_ref": "data_project_record_field_03",
+          "field_name": "记录人",
+          "field_type": "文本",
+          "definition": "记录人签字"
+        },
+        {
+          "field_ref": "data_project_record_field_04",
+          "field_name": "记录日期",
+          "field_type": "日期",
+          "definition": "过程记录日期"
+        },
+        {
+          "field_ref": "data_project_record_field_05",
+          "field_name": "节点或事项",
+          "field_type": "文本",
+          "definition": "对应的实施步骤或者节点"
+        },
+        {
+          "field_ref": "data_project_record_field_06",
+          "field_name": "实施情况",
+          "field_type": "文本",
+          "definition": "该步骤的实施情况"
+        },
+        {
+          "field_ref": "data_project_record_field_07",
+          "field_name": "技术选择与调整",
+          "field_type": "文本",
+          "definition": "重要技术选择和方案调整"
+        },
+        {
+          "field_ref": "data_project_record_field_08",
+          "field_name": "异常情况",
+          "field_type": "文本",
+          "definition": "异常、差距和补救措施"
+        },
+        {
+          "field_ref": "data_project_record_field_09",
+          "field_name": "确认人签字",
+          "field_type": "文本",
+          "definition": "节点确认人签字"
+        },
+        {
+          "field_ref": "data_project_record_field_10",
+          "field_name": "确认日期",
+          "field_type": "日期",
+          "definition": "节点确认日期"
+        }
+      ],
+      "behavior_links": [
+        {
+          "link_ref": "data_project_record_link_01",
+          "behavior_ref": "behavior_fill_record",
+          "operation": "create",
+          "updated_field_refs": []
+        },
+        {
+          "link_ref": "data_project_record_link_02",
+          "behavior_ref": "behavior_technical_validation",
+          "operation": "use",
+          "updated_field_refs": []
+        },
+        {
+          "link_ref": "data_project_record_link_03",
+          "behavior_ref": "behavior_make_result_report",
+          "operation": "use",
+          "updated_field_refs": []
+        }
+      ],
+      "source_relations": [],
+      "lifecycle": {
+        "applicability": "applicable",
+        "entry_state": {
+          "business_validity": "effective",
+          "custody": "active_custody",
+          "identifiability_applicability": "not_applicable",
+          "identifiability": "not_applicable"
+        },
+        "routes": [
+          {
+            "route_ref": "data_project_record_route_archive",
+            "route_label": "项目资料移交归档",
+            "flow_relation_refs": [],
+            "events": [
+              {
+                "event_ref": "data_project_record_event_archive",
+                "action": "archive",
+                "trigger": {
+                  "mode": "behavior",
+                  "operator": "single",
+                  "behavior_ref": "behavior_handover_archive",
+                  "expression": "数字工程室移交项目资料归档并通过行政人事部签收时"
+                },
+                "result_state": {
+                  "business_validity": "effective",
+                  "custody": "archived",
+                  "identifiability_applicability": "not_applicable",
+                  "identifiability": "not_applicable"
+                },
+                "target_scope": "batch",
+                "carrier_scope": "paper_and_electronic",
+                "responsibility": {
+                  "mode": "explicit",
+                  "department": "经营发展部",
+                  "position": "数字工程室负责人"
+                },
+                "exception_handling": "资料不齐备时退回数字工程室补齐后重新移交",
+                "review_status": "pending_confirmation",
+                "high_risk": false,
+                "decision_reason": "",
+                "decision_notes": "保存期限为长期，不设销毁节点。",
+                "provenance": {
+                  "source_type": "user_confirmed",
+                  "source_ref": null,
+                  "source_path": "",
+                  "basis": "编制访谈确认：项目全过程资料由行政人事部按长期保存",
+                  "analyzer_version": "",
+                  "source_fingerprint": ""
+                }
+              }
+            ],
+            "exit_state": {
+              "business_validity": "effective",
+              "custody": "archived",
+              "identifiability_applicability": "not_applicable",
+              "identifiability": "not_applicable"
+            }
+          }
+        ],
+        "analysis": {
+          "analyzer_version": "",
+          "source_fingerprint": "",
+          "status": "not_analyzed"
+        },
+        "decision_reason": "",
+        "decision_notes": ""
+      }
+    },
+    {
+      "data_ref": "data_verification",
+      "data_name": "技术验证与试点应用记录",
+      "description": "技术指标核对和业务试点应用的记录。",
+      "information_type": "business_conclusion",
+      "fields": [
+        {
+          "field_ref": "data_verification_field_01",
+          "field_name": "项目名称",
+          "field_type": "文本",
+          "definition": "项目名称"
+        },
+        {
+          "field_ref": "data_verification_field_02",
+          "field_name": "验证环境",
+          "field_type": "文本",
+          "definition": "技术验证所处的环境"
+        },
+        {
+          "field_ref": "data_verification_field_03",
+          "field_name": "验证内容与方法",
+          "field_type": "文本",
+          "definition": "验证内容和采用的方法"
+        },
+        {
+          "field_ref": "data_verification_field_04",
+          "field_name": "技术验证结论",
+          "field_type": "文本",
+          "definition": "技术验证总体结论"
+        },
+        {
+          "field_ref": "data_verification_field_05",
+          "field_name": "信息化工作组意见",
+          "field_type": "文本",
+          "definition": "信息安全和网络使用要求确认意见"
+        },
+        {
+          "field_ref": "data_verification_field_06",
+          "field_name": "试点部门",
+          "field_type": "文本",
+          "definition": "开展试点的部门"
+        },
+        {
+          "field_ref": "data_verification_field_07",
+          "field_name": "试点范围",
+          "field_type": "文本",
+          "definition": "试点的业务范围"
+        },
+        {
+          "field_ref": "data_verification_field_08",
+          "field_name": "试点时间",
+          "field_type": "文本",
+          "definition": "试点起止时间"
+        },
+        {
+          "field_ref": "data_verification_field_09",
+          "field_name": "问题与反馈",
+          "field_type": "文本",
+          "definition": "试点中发现的问题和人员反馈"
+        },
+        {
+          "field_ref": "data_verification_field_10",
+          "field_name": "试点结论",
+          "field_type": "文本",
+          "definition": "试点结论"
+        },
+        {
+          "field_ref": "data_verification_field_11",
+          "field_name": "指标名称",
+          "field_type": "文本",
+          "definition": "技术指标名称"
+        },
+        {
+          "field_ref": "data_verification_field_12",
+          "field_name": "方案要求值",
+          "field_type": "文本",
+          "definition": "方案中的指标要求值"
+        },
+        {
+          "field_ref": "data_verification_field_13",
+          "field_name": "实际结果",
+          "field_type": "文本",
+          "definition": "实际测得的指标结果"
+        },
+        {
+          "field_ref": "data_verification_field_14",
+          "field_name": "偏差比例",
+          "field_type": "文本",
+          "definition": "实际结果相对要求值的偏差比例"
+        },
+        {
+          "field_ref": "data_verification_field_15",
+          "field_name": "结论",
+          "field_type": "文本",
+          "definition": "单项指标是否达到要求"
+        },
+        {
+          "field_ref": "data_verification_field_16",
+          "field_name": "业务效果记录",
+          "field_type": "文本",
+          "definition": "试点期间的业务效果和量化对比"
+        }
+      ],
+      "behavior_links": [
+        {
+          "link_ref": "data_verification_link_01",
+          "behavior_ref": "behavior_technical_validation",
+          "operation": "create",
+          "updated_field_refs": []
+        },
+        {
+          "link_ref": "data_verification_link_02",
+          "behavior_ref": "behavior_pilot_validation",
+          "operation": "update",
+          "updated_field_refs": []
+        },
+        {
+          "link_ref": "data_verification_link_03",
+          "behavior_ref": "behavior_make_result_report",
+          "operation": "use",
+          "updated_field_refs": []
+        }
+      ],
+      "source_relations": [],
+      "lifecycle": {
+        "applicability": "applicable",
+        "entry_state": {
+          "business_validity": "effective",
+          "custody": "active_custody",
+          "identifiability_applicability": "not_applicable",
+          "identifiability": "not_applicable"
+        },
+        "routes": [
+          {
+            "route_ref": "data_verification_route_archive",
+            "route_label": "项目资料移交归档",
+            "flow_relation_refs": [],
+            "events": [
+              {
+                "event_ref": "data_verification_event_archive",
+                "action": "archive",
+                "trigger": {
+                  "mode": "behavior",
+                  "operator": "single",
+                  "behavior_ref": "behavior_handover_archive",
+                  "expression": "数字工程室移交项目资料归档并通过行政人事部签收时"
+                },
+                "result_state": {
+                  "business_validity": "effective",
+                  "custody": "archived",
+                  "identifiability_applicability": "not_applicable",
+                  "identifiability": "not_applicable"
+                },
+                "target_scope": "batch",
+                "carrier_scope": "paper_and_electronic",
+                "responsibility": {
+                  "mode": "explicit",
+                  "department": "经营发展部",
+                  "position": "数字工程室负责人"
+                },
+                "exception_handling": "资料不齐备时退回数字工程室补齐后重新移交",
+                "review_status": "pending_confirmation",
+                "high_risk": false,
+                "decision_reason": "",
+                "decision_notes": "保存期限为长期，不设销毁节点。",
+                "provenance": {
+                  "source_type": "user_confirmed",
+                  "source_ref": null,
+                  "source_path": "",
+                  "basis": "编制访谈确认：项目全过程资料由行政人事部按长期保存",
+                  "analyzer_version": "",
+                  "source_fingerprint": ""
+                }
+              }
+            ],
+            "exit_state": {
+              "business_validity": "effective",
+              "custody": "archived",
+              "identifiability_applicability": "not_applicable",
+              "identifiability": "not_applicable"
+            }
+          }
+        ],
+        "analysis": {
+          "analyzer_version": "",
+          "source_fingerprint": "",
+          "status": "not_analyzed"
+        },
+        "decision_reason": "",
+        "decision_notes": ""
+      }
+    },
+    {
+      "data_ref": "data_result_report",
+      "data_name": "数字技术研究与应用成果评价报告",
+      "description": "评审组出具的成果评价报告。",
+      "information_type": "business_conclusion",
+      "fields": [
+        {
+          "field_ref": "data_result_report_field_01",
+          "field_name": "项目名称",
+          "field_type": "文本",
+          "definition": "项目名称"
+        },
+        {
+          "field_ref": "data_result_report_field_02",
+          "field_name": "评价日期",
+          "field_type": "日期",
+          "definition": "评价日期"
+        },
+        {
+          "field_ref": "data_result_report_field_03",
+          "field_name": "评价组成员",
+          "field_type": "文本",
+          "definition": "参加评价的成员"
+        },
+        {
+          "field_ref": "data_result_report_field_04",
+          "field_name": "项目完成情况",
+          "field_type": "文本",
+          "definition": "项目完成情况"
+        },
+        {
+          "field_ref": "data_result_report_field_05",
+          "field_name": "技术水平说明",
+          "field_type": "文本",
+          "definition": "成果技术水平说明"
+        },
+        {
+          "field_ref": "data_result_report_field_06",
+          "field_name": "业务价值",
+          "field_type": "文本",
+          "definition": "成果的业务价值"
+        },
+        {
+          "field_ref": "data_result_report_field_07",
+          "field_name": "应用范围与推广条件",
+          "field_type": "文本",
+          "definition": "可以应用的范围和推广条件"
+        },
+        {
+          "field_ref": "data_result_report_field_08",
+          "field_name": "费用投入与效果",
+          "field_type": "文本",
+          "definition": "投入费用与实际效果的对比"
+        },
+        {
+          "field_ref": "data_result_report_field_09",
+          "field_name": "评价结论",
+          "field_type": "文本",
+          "definition": "是否具备应用条件"
+        },
+        {
+          "field_ref": "data_result_report_field_10",
+          "field_name": "推广应用建议",
+          "field_type": "文本",
+          "definition": "推广或者进一步研究的建议"
+        },
+        {
+          "field_ref": "data_result_report_field_11",
+          "field_name": "评价组成员签字",
+          "field_type": "文本",
+          "definition": "评价组成员签字"
+        },
+        {
+          "field_ref": "data_result_report_field_12",
+          "field_name": "分管领导意见",
+          "field_type": "文本",
+          "definition": "分管领导意见"
+        }
+      ],
+      "behavior_links": [
+        {
+          "link_ref": "data_result_report_link_01",
+          "behavior_ref": "behavior_make_result_report",
+          "operation": "create",
+          "updated_field_refs": []
+        },
+        {
+          "link_ref": "data_result_report_link_02",
+          "behavior_ref": "behavior_make_rollout",
+          "operation": "use",
+          "updated_field_refs": []
+        },
+        {
+          "link_ref": "data_result_report_link_03",
+          "behavior_ref": "behavior_solidify",
+          "operation": "use",
+          "updated_field_refs": []
+        },
+        {
+          "link_ref": "data_result_report_link_04",
+          "behavior_ref": "behavior_handover_archive",
+          "operation": "use",
+          "updated_field_refs": []
+        }
+      ],
+      "source_relations": [],
+      "lifecycle": {
+        "applicability": "applicable",
+        "entry_state": {
+          "business_validity": "effective",
+          "custody": "active_custody",
+          "identifiability_applicability": "not_applicable",
+          "identifiability": "not_applicable"
+        },
+        "routes": [
+          {
+            "route_ref": "data_result_report_route_archive",
+            "route_label": "项目资料移交归档",
+            "flow_relation_refs": [],
+            "events": [
+              {
+                "event_ref": "data_result_report_event_archive",
+                "action": "archive",
+                "trigger": {
+                  "mode": "behavior",
+                  "operator": "single",
+                  "behavior_ref": "behavior_handover_archive",
+                  "expression": "数字工程室移交项目资料归档并通过行政人事部签收时"
+                },
+                "result_state": {
+                  "business_validity": "effective",
+                  "custody": "archived",
+                  "identifiability_applicability": "not_applicable",
+                  "identifiability": "not_applicable"
+                },
+                "target_scope": "batch",
+                "carrier_scope": "paper_and_electronic",
+                "responsibility": {
+                  "mode": "explicit",
+                  "department": "经营发展部",
+                  "position": "数字工程室负责人"
+                },
+                "exception_handling": "资料不齐备时退回数字工程室补齐后重新移交",
+                "review_status": "pending_confirmation",
+                "high_risk": false,
+                "decision_reason": "",
+                "decision_notes": "保存期限为长期，不设销毁节点。",
+                "provenance": {
+                  "source_type": "user_confirmed",
+                  "source_ref": null,
+                  "source_path": "",
+                  "basis": "编制访谈确认：项目全过程资料由行政人事部按长期保存",
+                  "analyzer_version": "",
+                  "source_fingerprint": ""
+                }
+              }
+            ],
+            "exit_state": {
+              "business_validity": "effective",
+              "custody": "archived",
+              "identifiability_applicability": "not_applicable",
+              "identifiability": "not_applicable"
+            }
+          }
+        ],
+        "analysis": {
+          "analyzer_version": "",
+          "source_fingerprint": "",
+          "status": "not_analyzed"
+        },
+        "decision_reason": "",
+        "decision_notes": ""
+      }
+    },
+    {
+      "data_ref": "data_rollout_plan",
+      "data_name": "应用推广方案",
+      "description": "成果应用推广的实施安排。",
+      "information_type": "business_information",
+      "fields": [
+        {
+          "field_ref": "data_rollout_plan_field_01",
+          "field_name": "推广事项名称",
+          "field_type": "文本",
+          "definition": "推广的成果或者事项名称"
+        },
+        {
+          "field_ref": "data_rollout_plan_field_02",
+          "field_name": "编制人",
+          "field_type": "文本",
+          "definition": "编制人签字"
+        },
+        {
+          "field_ref": "data_rollout_plan_field_03",
+          "field_name": "编制日期",
+          "field_type": "日期",
+          "definition": "编制日期"
+        },
+        {
+          "field_ref": "data_rollout_plan_field_04",
+          "field_name": "推广范围",
+          "field_type": "文本",
+          "definition": "推广覆盖的部门或者业务"
+        },
+        {
+          "field_ref": "data_rollout_plan_field_05",
+          "field_name": "推广条件",
+          "field_type": "文本",
+          "definition": "推广所需的前置条件"
+        },
+        {
+          "field_ref": "data_rollout_plan_field_06",
+          "field_name": "时间安排",
+          "field_type": "文本",
+          "definition": "推广时间安排"
+        },
+        {
+          "field_ref": "data_rollout_plan_field_07",
+          "field_name": "培训要求",
+          "field_type": "文本",
+          "definition": "配套培训要求"
+        },
+        {
+          "field_ref": "data_rollout_plan_field_08",
+          "field_name": "数据与权限要求",
+          "field_type": "文本",
+          "definition": "系统权限和数据使用要求"
+        },
+        {
+          "field_ref": "data_rollout_plan_field_09",
+          "field_name": "分管领导意见",
+          "field_type": "文本",
+          "definition": "分管领导意见"
+        },
+        {
+          "field_ref": "data_rollout_plan_field_10",
+          "field_name": "实施步骤",
+          "field_type": "文本",
+          "definition": "推广实施步骤"
+        },
+        {
+          "field_ref": "data_rollout_plan_field_11",
+          "field_name": "责任部门与人员",
+          "field_type": "文本",
+          "definition": "该步骤的责任部门和人员"
+        }
+      ],
+      "behavior_links": [
+        {
+          "link_ref": "data_rollout_plan_link_01",
+          "behavior_ref": "behavior_make_rollout",
+          "operation": "create",
+          "updated_field_refs": []
+        },
+        {
+          "link_ref": "data_rollout_plan_link_02",
+          "behavior_ref": "behavior_fill_effect",
+          "operation": "use",
+          "updated_field_refs": []
+        },
+        {
+          "link_ref": "data_rollout_plan_link_03",
+          "behavior_ref": "behavior_handover_archive",
+          "operation": "use",
+          "updated_field_refs": []
+        }
+      ],
+      "source_relations": [],
+      "lifecycle": {
+        "applicability": "applicable",
+        "entry_state": {
+          "business_validity": "effective",
+          "custody": "active_custody",
+          "identifiability_applicability": "not_applicable",
+          "identifiability": "not_applicable"
+        },
+        "routes": [
+          {
+            "route_ref": "data_rollout_plan_route_archive",
+            "route_label": "项目资料移交归档",
+            "flow_relation_refs": [],
+            "events": [
+              {
+                "event_ref": "data_rollout_plan_event_archive",
+                "action": "archive",
+                "trigger": {
+                  "mode": "behavior",
+                  "operator": "single",
+                  "behavior_ref": "behavior_handover_archive",
+                  "expression": "数字工程室移交项目资料归档并通过行政人事部签收时"
+                },
+                "result_state": {
+                  "business_validity": "effective",
+                  "custody": "archived",
+                  "identifiability_applicability": "not_applicable",
+                  "identifiability": "not_applicable"
+                },
+                "target_scope": "batch",
+                "carrier_scope": "paper_and_electronic",
+                "responsibility": {
+                  "mode": "explicit",
+                  "department": "经营发展部",
+                  "position": "数字工程室负责人"
+                },
+                "exception_handling": "资料不齐备时退回数字工程室补齐后重新移交",
+                "review_status": "pending_confirmation",
+                "high_risk": false,
+                "decision_reason": "",
+                "decision_notes": "保存期限为长期，不设销毁节点。",
+                "provenance": {
+                  "source_type": "user_confirmed",
+                  "source_ref": null,
+                  "source_path": "",
+                  "basis": "编制访谈确认：项目全过程资料由行政人事部按长期保存",
+                  "analyzer_version": "",
+                  "source_fingerprint": ""
+                }
+              }
+            ],
+            "exit_state": {
+              "business_validity": "effective",
+              "custody": "archived",
+              "identifiability_applicability": "not_applicable",
+              "identifiability": "not_applicable"
+            }
+          }
+        ],
+        "analysis": {
+          "analyzer_version": "",
+          "source_fingerprint": "",
+          "status": "not_analyzed"
+        },
+        "decision_reason": "",
+        "decision_notes": ""
+      }
+    },
+    {
+      "data_ref": "data_effect_evaluation",
+      "data_name": "应用效果评价",
+      "description": "应用后业务效果的评价结论。",
+      "information_type": "business_conclusion",
+      "fields": [
+        {
+          "field_ref": "data_effect_evaluation_field_01",
+          "field_name": "推广事项名称",
+          "field_type": "文本",
+          "definition": "被评价的推广事项"
+        },
+        {
+          "field_ref": "data_effect_evaluation_field_02",
+          "field_name": "评价日期",
+          "field_type": "日期",
+          "definition": "评价日期"
+        },
+        {
+          "field_ref": "data_effect_evaluation_field_03",
+          "field_name": "预期目标",
+          "field_type": "文本",
+          "definition": "项目预期目标"
+        },
+        {
+          "field_ref": "data_effect_evaluation_field_04",
+          "field_name": "实际效果",
+          "field_type": "文本",
+          "definition": "应用后的实际效果"
+        },
+        {
+          "field_ref": "data_effect_evaluation_field_05",
+          "field_name": "差异与原因",
+          "field_type": "文本",
+          "definition": "与预期目标的差异及原因"
+        },
+        {
+          "field_ref": "data_effect_evaluation_field_06",
+          "field_name": "使用部门意见",
+          "field_type": "文本",
+          "definition": "使用部门签署意见"
+        },
+        {
+          "field_ref": "data_effect_evaluation_field_07",
+          "field_name": "后续建议",
+          "field_type": "文本",
+          "definition": "后续改进、固化或者推广建议"
+        },
+        {
+          "field_ref": "data_effect_evaluation_field_08",
+          "field_name": "评价人",
+          "field_type": "文本",
+          "definition": "评价人签字"
+        },
+        {
+          "field_ref": "data_effect_evaluation_field_09",
+          "field_name": "部门负责人意见",
+          "field_type": "文本",
+          "definition": "部门负责人意见"
+        }
+      ],
+      "behavior_links": [
+        {
+          "link_ref": "data_effect_evaluation_link_01",
+          "behavior_ref": "behavior_fill_effect",
+          "operation": "create",
+          "updated_field_refs": []
+        },
+        {
+          "link_ref": "data_effect_evaluation_link_02",
+          "behavior_ref": "behavior_solidify",
+          "operation": "use",
+          "updated_field_refs": []
+        },
+        {
+          "link_ref": "data_effect_evaluation_link_03",
+          "behavior_ref": "behavior_handover_archive",
+          "operation": "use",
+          "updated_field_refs": []
+        }
+      ],
+      "source_relations": [],
+      "lifecycle": {
+        "applicability": "applicable",
+        "entry_state": {
+          "business_validity": "effective",
+          "custody": "active_custody",
+          "identifiability_applicability": "not_applicable",
+          "identifiability": "not_applicable"
+        },
+        "routes": [
+          {
+            "route_ref": "data_effect_evaluation_route_archive",
+            "route_label": "项目资料移交归档",
+            "flow_relation_refs": [],
+            "events": [
+              {
+                "event_ref": "data_effect_evaluation_event_archive",
+                "action": "archive",
+                "trigger": {
+                  "mode": "behavior",
+                  "operator": "single",
+                  "behavior_ref": "behavior_handover_archive",
+                  "expression": "数字工程室移交项目资料归档并通过行政人事部签收时"
+                },
+                "result_state": {
+                  "business_validity": "effective",
+                  "custody": "archived",
+                  "identifiability_applicability": "not_applicable",
+                  "identifiability": "not_applicable"
+                },
+                "target_scope": "batch",
+                "carrier_scope": "paper_and_electronic",
+                "responsibility": {
+                  "mode": "explicit",
+                  "department": "经营发展部",
+                  "position": "数字工程室负责人"
+                },
+                "exception_handling": "资料不齐备时退回数字工程室补齐后重新移交",
+                "review_status": "pending_confirmation",
+                "high_risk": false,
+                "decision_reason": "",
+                "decision_notes": "保存期限为长期，不设销毁节点。",
+                "provenance": {
+                  "source_type": "user_confirmed",
+                  "source_ref": null,
+                  "source_path": "",
+                  "basis": "编制访谈确认：项目全过程资料由行政人事部按长期保存",
+                  "analyzer_version": "",
+                  "source_fingerprint": ""
+                }
+              }
+            ],
+            "exit_state": {
+              "business_validity": "effective",
+              "custody": "archived",
+              "identifiability_applicability": "not_applicable",
+              "identifiability": "not_applicable"
+            }
+          }
+        ],
+        "analysis": {
+          "analyzer_version": "",
+          "source_fingerprint": "",
+          "status": "not_analyzed"
+        },
+        "decision_reason": "",
+        "decision_notes": ""
+      }
+    },
+    {
+      "data_ref": "data_archive",
+      "data_name": "项目归档资料",
+      "description": "项目全过程形成的归档资料。",
+      "information_type": "file_attachment",
+      "fields": [
+        {
+          "field_ref": "data_archive_field_01",
+          "field_name": "项目名称",
+          "field_type": "文本",
+          "definition": "归档项目名称"
+        },
+        {
+          "field_ref": "data_archive_field_02",
+          "field_name": "移交人",
+          "field_type": "文本",
+          "definition": "移交人签字"
+        },
+        {
+          "field_ref": "data_archive_field_03",
+          "field_name": "移交日期",
+          "field_type": "日期",
+          "definition": "移交日期"
+        },
+        {
+          "field_ref": "data_archive_field_04",
+          "field_name": "归档部门",
+          "field_type": "文本",
+          "definition": "归档保存部门"
+        },
+        {
+          "field_ref": "data_archive_field_05",
+          "field_name": "接收人签字",
+          "field_type": "文本",
+          "definition": "接收人签字"
+        },
+        {
+          "field_ref": "data_archive_field_06",
+          "field_name": "接收日期",
+          "field_type": "日期",
+          "definition": "接收日期"
+        },
+        {
+          "field_ref": "data_archive_field_07",
+          "field_name": "保存期限",
+          "field_type": "文本",
+          "definition": "保存期限"
+        },
+        {
+          "field_ref": "data_archive_field_08",
+          "field_name": "资料名称",
+          "field_type": "文本",
+          "definition": "归档资料名称"
+        },
+        {
+          "field_ref": "data_archive_field_09",
+          "field_name": "表单编号",
+          "field_type": "文本",
+          "definition": "对应的表单编号"
+        },
+        {
+          "field_ref": "data_archive_field_10",
+          "field_name": "份数",
+          "field_type": "数字",
+          "definition": "资料份数"
+        },
+        {
+          "field_ref": "data_archive_field_11",
+          "field_name": "备注",
+          "field_type": "文本",
+          "definition": "补充说明"
+        }
+      ],
+      "behavior_links": [
+        {
+          "link_ref": "data_archive_link_01",
+          "behavior_ref": "behavior_handover_archive",
+          "operation": "create",
+          "updated_field_refs": []
+        }
+      ],
+      "source_relations": [],
+      "lifecycle": {
+        "applicability": "applicable",
+        "entry_state": {
+          "business_validity": "effective",
+          "custody": "active_custody",
+          "identifiability_applicability": "not_applicable",
+          "identifiability": "not_applicable"
+        },
+        "routes": [
+          {
+            "route_ref": "data_archive_route_archive",
+            "route_label": "项目资料移交归档",
+            "flow_relation_refs": [],
+            "events": [
+              {
+                "event_ref": "data_archive_event_archive",
+                "action": "archive",
+                "trigger": {
+                  "mode": "behavior",
+                  "operator": "single",
+                  "behavior_ref": "behavior_handover_archive",
+                  "expression": "数字工程室移交项目资料归档并通过行政人事部签收时"
+                },
+                "result_state": {
+                  "business_validity": "effective",
+                  "custody": "archived",
+                  "identifiability_applicability": "not_applicable",
+                  "identifiability": "not_applicable"
+                },
+                "target_scope": "batch",
+                "carrier_scope": "paper_and_electronic",
+                "responsibility": {
+                  "mode": "explicit",
+                  "department": "经营发展部",
+                  "position": "数字工程室负责人"
+                },
+                "exception_handling": "资料不齐备时退回数字工程室补齐后重新移交",
+                "review_status": "pending_confirmation",
+                "high_risk": false,
+                "decision_reason": "",
+                "decision_notes": "保存期限为长期，不设销毁节点；保存期满后按公司档案管理规定处置。",
+                "provenance": {
+                  "source_type": "user_confirmed",
+                  "source_ref": null,
+                  "source_path": "",
+                  "basis": "编制访谈确认：项目全过程资料由行政人事部按长期保存",
+                  "analyzer_version": "",
+                  "source_fingerprint": ""
+                }
+              }
+            ],
+            "exit_state": {
+              "business_validity": "effective",
+              "custody": "archived",
+              "identifiability_applicability": "not_applicable",
+              "identifiability": "not_applicable"
+            }
+          }
+        ],
+        "analysis": {
+          "analyzer_version": "",
+          "source_fingerprint": "",
+          "status": "not_analyzed"
+        },
+        "decision_reason": "",
+        "decision_notes": ""
+      }
+    }
+  ],
+  "forms": [
+    {
+      "form_ref": "form_demand",
+      "form_name": "数字技术应用需求申报表",
+      "form_no": "GLTX-JY-32-01-A",
+      "form_design_state": "proposed_design",
+      "behavior_links": [
+        {
+          "link_ref": "form_demand_link_01",
+          "behavior_ref": "behavior_fill_demand",
+          "operations": [
+            "fill"
+          ],
+          "notes": "由提出部门业务人员填写，部门负责人签字确认"
+        },
+        {
+          "link_ref": "form_demand_link_02",
+          "behavior_ref": "behavior_check_demand",
+          "operations": [
+            "review",
+            "confirm"
+          ],
+          "notes": "由数字工程室核对并记明通过或者退回补正"
+        }
+      ],
+      "areas": [
+        {
+          "area_ref": "form_demand_area_base",
+          "area_type": "基本信息",
+          "area_title": "基本信息",
+          "items": [
+            {
+              "item_ref": "form_demand_base_01",
+              "item_name": "申请部门",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_demand",
+              "data_field_ref": "data_demand_field_01",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_demand_base_02",
+              "item_name": "申请人",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_demand",
+              "data_field_ref": "data_demand_field_02",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_demand_base_03",
+              "item_name": "申请日期",
+              "item_type": "日期",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_demand",
+              "data_field_ref": "data_demand_field_03",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_demand_base_04",
+              "item_name": "需求名称",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_demand",
+              "data_field_ref": "data_demand_field_04",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_demand_base_05",
+              "item_name": "业务场景",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_demand",
+              "data_field_ref": "data_demand_field_05",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_demand_base_06",
+              "item_name": "现状问题描述",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_demand",
+              "data_field_ref": "data_demand_field_06",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_demand_base_07",
+              "item_name": "期望达到的效果",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_demand",
+              "data_field_ref": "data_demand_field_07",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_demand_base_08",
+              "item_name": "涉及的业务流程或者环节",
+              "item_type": "文本",
+              "required": false,
+              "instructions": "",
+              "business_data_ref": "data_demand",
+              "data_field_ref": "data_demand_field_08",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_demand_base_09",
+              "item_name": "涉及的数据或者信息",
+              "item_type": "文本",
+              "required": false,
+              "instructions": "",
+              "business_data_ref": "data_demand",
+              "data_field_ref": "data_demand_field_09",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_demand_base_10",
+              "item_name": "拟采用的技术方向",
+              "item_type": "文本",
+              "required": false,
+              "instructions": "",
+              "business_data_ref": "data_demand",
+              "data_field_ref": "data_demand_field_10",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_demand_base_11",
+              "item_name": "使用人员范围",
+              "item_type": "文本",
+              "required": false,
+              "instructions": "",
+              "business_data_ref": "data_demand",
+              "data_field_ref": "data_demand_field_11",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_demand_base_12",
+              "item_name": "期望完成时间",
+              "item_type": "日期",
+              "required": false,
+              "instructions": "",
+              "business_data_ref": "data_demand",
+              "data_field_ref": "data_demand_field_12",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_demand_base_13",
+              "item_name": "部门负责人意见",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_demand",
+              "data_field_ref": "data_demand_field_13",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_demand_base_14",
+              "item_name": "核验结论",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_demand",
+              "data_field_ref": "data_demand_field_14",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_demand_base_15",
+              "item_name": "退回补正要求",
+              "item_type": "文本",
+              "required": false,
+              "instructions": "",
+              "business_data_ref": "data_demand",
+              "data_field_ref": "data_demand_field_15",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_demand_base_16",
+              "item_name": "核验人",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_demand",
+              "data_field_ref": "data_demand_field_16",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_demand_base_17",
+              "item_name": "核验日期",
+              "item_type": "日期",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_demand",
+              "data_field_ref": "data_demand_field_17",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "form_ref": "form_plan",
+      "form_name": "年度数字技术研究与应用计划表",
+      "form_no": "GLTX-JY-32-02-A",
+      "form_design_state": "proposed_design",
+      "behavior_links": [
+        {
+          "link_ref": "form_plan_link_01",
+          "behavior_ref": "behavior_make_plan",
+          "operations": [
+            "fill"
+          ],
+          "notes": "由数字工程室编制"
+        },
+        {
+          "link_ref": "form_plan_link_02",
+          "behavior_ref": "behavior_sign_plan",
+          "operations": [
+            "review",
+            "approve"
+          ],
+          "notes": "由分管领导签署意见"
+        },
+        {
+          "link_ref": "form_plan_link_03",
+          "behavior_ref": "behavior_issue_plan",
+          "operations": [
+            "confirm"
+          ],
+          "notes": "由数字工程室下达并登记接收"
+        },
+        {
+          "link_ref": "form_plan_link_04",
+          "behavior_ref": "behavior_feedback_plan",
+          "operations": [
+            "fill"
+          ],
+          "notes": "由实施部门登记执行情况"
+        }
+      ],
+      "areas": [
+        {
+          "area_ref": "form_plan_area_base",
+          "area_type": "基本信息",
+          "area_title": "基本信息",
+          "items": [
+            {
+              "item_ref": "form_plan_base_01",
+              "item_name": "计划年度",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_annual_plan",
+              "data_field_ref": "data_annual_plan_field_01",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_plan_base_02",
+              "item_name": "编制人",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_annual_plan",
+              "data_field_ref": "data_annual_plan_field_02",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_plan_base_03",
+              "item_name": "编制日期",
+              "item_type": "日期",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_annual_plan",
+              "data_field_ref": "data_annual_plan_field_03",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_plan_base_04",
+              "item_name": "分管领导意见",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_annual_plan",
+              "data_field_ref": "data_annual_plan_field_04",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            }
+          ]
+        },
+        {
+          "area_ref": "form_plan_area_detail_1",
+          "area_type": "明细清单",
+          "area_title": "计划明细",
+          "items": [
+            {
+              "item_ref": "form_plan_detail_1_01",
+              "item_name": "序号",
+              "item_type": "数字",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": null,
+              "data_field_ref": null,
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_plan_detail_1_02",
+              "item_name": "事项名称",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_annual_plan",
+              "data_field_ref": "data_annual_plan_field_05",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_plan_detail_1_03",
+              "item_name": "来源",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_annual_plan",
+              "data_field_ref": "data_annual_plan_field_06",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_plan_detail_1_04",
+              "item_name": "申报部门",
+              "item_type": "文本",
+              "required": false,
+              "instructions": "",
+              "business_data_ref": "data_annual_plan",
+              "data_field_ref": "data_annual_plan_field_07",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_plan_detail_1_05",
+              "item_name": "业务场景",
+              "item_type": "文本",
+              "required": false,
+              "instructions": "",
+              "business_data_ref": "data_annual_plan",
+              "data_field_ref": "data_annual_plan_field_08",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_plan_detail_1_06",
+              "item_name": "预期目标",
+              "item_type": "文本",
+              "required": false,
+              "instructions": "",
+              "business_data_ref": "data_annual_plan",
+              "data_field_ref": "data_annual_plan_field_09",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_plan_detail_1_07",
+              "item_name": "实施方式",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_annual_plan",
+              "data_field_ref": "data_annual_plan_field_10",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_plan_detail_1_08",
+              "item_name": "责任部门",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_annual_plan",
+              "data_field_ref": "data_annual_plan_field_11",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_plan_detail_1_09",
+              "item_name": "计划完成时间",
+              "item_type": "日期",
+              "required": false,
+              "instructions": "",
+              "business_data_ref": "data_annual_plan",
+              "data_field_ref": "data_annual_plan_field_12",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_plan_detail_1_10",
+              "item_name": "资源需求",
+              "item_type": "文本",
+              "required": false,
+              "instructions": "",
+              "business_data_ref": "data_annual_plan",
+              "data_field_ref": "data_annual_plan_field_13",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_plan_detail_1_11",
+              "item_name": "备注",
+              "item_type": "文本",
+              "required": false,
+              "instructions": "",
+              "business_data_ref": "data_annual_plan",
+              "data_field_ref": "data_annual_plan_field_14",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            }
+          ]
+        },
+        {
+          "area_ref": "form_plan_area_detail_2",
+          "area_type": "明细清单",
+          "area_title": "下达登记",
+          "items": [
+            {
+              "item_ref": "form_plan_detail_2_01",
+              "item_name": "下达日期",
+              "item_type": "日期",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_annual_plan",
+              "data_field_ref": "data_annual_plan_field_15",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_plan_detail_2_02",
+              "item_name": "接收部门",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_annual_plan",
+              "data_field_ref": "data_annual_plan_field_16",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_plan_detail_2_03",
+              "item_name": "接收人签字",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_annual_plan",
+              "data_field_ref": "data_annual_plan_field_17",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            }
+          ]
+        },
+        {
+          "area_ref": "form_plan_area_detail_3",
+          "area_type": "明细清单",
+          "area_title": "执行反馈",
+          "items": [
+            {
+              "item_ref": "form_plan_detail_3_01",
+              "item_name": "序号",
+              "item_type": "数字",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": null,
+              "data_field_ref": null,
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_plan_detail_3_02",
+              "item_name": "事项名称",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_annual_plan",
+              "data_field_ref": "data_annual_plan_field_05",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_plan_detail_3_03",
+              "item_name": "完成情况",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_annual_plan",
+              "data_field_ref": "data_annual_plan_field_18",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_plan_detail_3_04",
+              "item_name": "完成日期",
+              "item_type": "日期",
+              "required": false,
+              "instructions": "",
+              "business_data_ref": "data_annual_plan",
+              "data_field_ref": "data_annual_plan_field_19",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_plan_detail_3_05",
+              "item_name": "备注",
+              "item_type": "文本",
+              "required": false,
+              "instructions": "",
+              "business_data_ref": "data_annual_plan",
+              "data_field_ref": "data_annual_plan_field_14",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "form_ref": "form_scheme",
+      "form_name": "数字技术研究与应用项目实施方案",
+      "form_no": "GLTX-JY-32-03-A",
+      "form_design_state": "proposed_design",
+      "behavior_links": [
+        {
+          "link_ref": "form_scheme_link_01",
+          "behavior_ref": "behavior_make_scheme",
+          "operations": [
+            "fill"
+          ],
+          "notes": "由数字工程室会同提出部门编制"
+        },
+        {
+          "link_ref": "form_scheme_link_02",
+          "behavior_ref": "behavior_review_scheme",
+          "operations": [
+            "review"
+          ],
+          "notes": "由评审组按四项评分并签署意见"
+        },
+        {
+          "link_ref": "form_scheme_link_03",
+          "behavior_ref": "behavior_approve_project",
+          "operations": [
+            "approve"
+          ],
+          "notes": "由分管领导签署立项审批意见"
+        }
+      ],
+      "areas": [
+        {
+          "area_ref": "form_scheme_area_base",
+          "area_type": "基本信息",
+          "area_title": "基本信息",
+          "items": [
+            {
+              "item_ref": "form_scheme_base_01",
+              "item_name": "项目名称",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_scheme",
+              "data_field_ref": "data_scheme_field_01",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_scheme_base_02",
+              "item_name": "提出部门",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_scheme",
+              "data_field_ref": "data_scheme_field_02",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_scheme_base_03",
+              "item_name": "项目负责人",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_scheme",
+              "data_field_ref": "data_scheme_field_03",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_scheme_base_04",
+              "item_name": "实施部门",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_scheme",
+              "data_field_ref": "data_scheme_field_04",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_scheme_base_05",
+              "item_name": "项目目标",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_scheme",
+              "data_field_ref": "data_scheme_field_05",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_scheme_base_06",
+              "item_name": "研究内容",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_scheme",
+              "data_field_ref": "data_scheme_field_06",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_scheme_base_07",
+              "item_name": "技术路线",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_scheme",
+              "data_field_ref": "data_scheme_field_07",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_scheme_base_08",
+              "item_name": "参与人员",
+              "item_type": "文本",
+              "required": false,
+              "instructions": "",
+              "business_data_ref": "data_scheme",
+              "data_field_ref": "data_scheme_field_08",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_scheme_base_09",
+              "item_name": "资源与费用需求",
+              "item_type": "文本",
+              "required": false,
+              "instructions": "",
+              "business_data_ref": "data_scheme",
+              "data_field_ref": "data_scheme_field_09",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_scheme_base_10",
+              "item_name": "预期成果",
+              "item_type": "文本",
+              "required": false,
+              "instructions": "",
+              "business_data_ref": "data_scheme",
+              "data_field_ref": "data_scheme_field_10",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_scheme_base_11",
+              "item_name": "风险与应对措施",
+              "item_type": "文本",
+              "required": false,
+              "instructions": "",
+              "business_data_ref": "data_scheme",
+              "data_field_ref": "data_scheme_field_11",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_scheme_base_12",
+              "item_name": "是否需要外部合作",
+              "item_type": "文本",
+              "required": false,
+              "instructions": "",
+              "business_data_ref": "data_scheme",
+              "data_field_ref": "data_scheme_field_12",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_scheme_base_13",
+              "item_name": "编制人",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_scheme",
+              "data_field_ref": "data_scheme_field_13",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_scheme_base_14",
+              "item_name": "编制日期",
+              "item_type": "日期",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_scheme",
+              "data_field_ref": "data_scheme_field_14",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_scheme_base_15",
+              "item_name": "评审意见",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_scheme",
+              "data_field_ref": "data_scheme_field_15",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_scheme_base_16",
+              "item_name": "评审组成员签字",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_scheme",
+              "data_field_ref": "data_scheme_field_16",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_scheme_base_17",
+              "item_name": "分管领导审批意见",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_scheme",
+              "data_field_ref": "data_scheme_field_17",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            }
+          ]
+        },
+        {
+          "area_ref": "form_scheme_area_detail_1",
+          "area_type": "明细清单",
+          "area_title": "实施步骤",
+          "items": [
+            {
+              "item_ref": "form_scheme_detail_1_01",
+              "item_name": "序号",
+              "item_type": "数字",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": null,
+              "data_field_ref": null,
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_scheme_detail_1_02",
+              "item_name": "实施步骤",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_scheme",
+              "data_field_ref": "data_scheme_field_18",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_scheme_detail_1_03",
+              "item_name": "时间节点",
+              "item_type": "日期",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_scheme",
+              "data_field_ref": "data_scheme_field_19",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_scheme_detail_1_04",
+              "item_name": "责任人",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_scheme",
+              "data_field_ref": "data_scheme_field_20",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            }
+          ]
+        },
+        {
+          "area_ref": "form_scheme_area_detail_2",
+          "area_type": "明细清单",
+          "area_title": "技术指标",
+          "items": [
+            {
+              "item_ref": "form_scheme_detail_2_01",
+              "item_name": "序号",
+              "item_type": "数字",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": null,
+              "data_field_ref": null,
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_scheme_detail_2_02",
+              "item_name": "指标名称",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_scheme",
+              "data_field_ref": "data_scheme_field_21",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_scheme_detail_2_03",
+              "item_name": "指标要求值",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_scheme",
+              "data_field_ref": "data_scheme_field_22",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_scheme_detail_2_04",
+              "item_name": "验证方法",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_scheme",
+              "data_field_ref": "data_scheme_field_23",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "form_ref": "form_record",
+      "form_name": "数字技术研究与应用项目过程记录表",
+      "form_no": "GLTX-JY-32-04-A",
+      "form_design_state": "proposed_design",
+      "behavior_links": [
+        {
+          "link_ref": "form_record_link_01",
+          "behavior_ref": "behavior_fill_record",
+          "operations": [
+            "fill"
+          ],
+          "notes": "由数字工程室会同提出部门登记实施情况，到达里程碑节点时一并签署确认"
+        }
+      ],
+      "areas": [
+        {
+          "area_ref": "form_record_area_base",
+          "area_type": "基本信息",
+          "area_title": "基本信息",
+          "items": [
+            {
+              "item_ref": "form_record_base_01",
+              "item_name": "项目名称",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_project_record",
+              "data_field_ref": "data_project_record_field_01",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_record_base_02",
+              "item_name": "项目负责人",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_project_record",
+              "data_field_ref": "data_project_record_field_02",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_record_base_03",
+              "item_name": "记录人",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_project_record",
+              "data_field_ref": "data_project_record_field_03",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            }
+          ]
+        },
+        {
+          "area_ref": "form_record_area_detail_1",
+          "area_type": "明细清单",
+          "area_title": "过程记录",
+          "items": [
+            {
+              "item_ref": "form_record_detail_1_01",
+              "item_name": "序号",
+              "item_type": "数字",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": null,
+              "data_field_ref": null,
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_record_detail_1_02",
+              "item_name": "记录日期",
+              "item_type": "日期",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_project_record",
+              "data_field_ref": "data_project_record_field_04",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_record_detail_1_03",
+              "item_name": "节点或事项",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_project_record",
+              "data_field_ref": "data_project_record_field_05",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_record_detail_1_04",
+              "item_name": "实施情况",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_project_record",
+              "data_field_ref": "data_project_record_field_06",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_record_detail_1_05",
+              "item_name": "技术选择与调整",
+              "item_type": "文本",
+              "required": false,
+              "instructions": "",
+              "business_data_ref": "data_project_record",
+              "data_field_ref": "data_project_record_field_07",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_record_detail_1_06",
+              "item_name": "异常情况",
+              "item_type": "文本",
+              "required": false,
+              "instructions": "",
+              "business_data_ref": "data_project_record",
+              "data_field_ref": "data_project_record_field_08",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_record_detail_1_07",
+              "item_name": "确认人签字",
+              "item_type": "文本",
+              "required": false,
+              "instructions": "",
+              "business_data_ref": "data_project_record",
+              "data_field_ref": "data_project_record_field_09",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_record_detail_1_08",
+              "item_name": "确认日期",
+              "item_type": "日期",
+              "required": false,
+              "instructions": "",
+              "business_data_ref": "data_project_record",
+              "data_field_ref": "data_project_record_field_10",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "form_ref": "form_verification",
+      "form_name": "技术验证与试点应用记录表",
+      "form_no": "GLTX-JY-32-05-A",
+      "form_design_state": "proposed_design",
+      "behavior_links": [
+        {
+          "link_ref": "form_verification_link_01",
+          "behavior_ref": "behavior_technical_validation",
+          "operations": [
+            "fill"
+          ],
+          "notes": "由数字工程室会同工程技术部、信息化工作组填写指标核对"
+        },
+        {
+          "link_ref": "form_verification_link_02",
+          "behavior_ref": "behavior_pilot_validation",
+          "operations": [
+            "fill"
+          ],
+          "notes": "由使用部门填写试点记录"
+        }
+      ],
+      "areas": [
+        {
+          "area_ref": "form_verification_area_base",
+          "area_type": "基本信息",
+          "area_title": "基本信息",
+          "items": [
+            {
+              "item_ref": "form_verification_base_01",
+              "item_name": "项目名称",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_verification",
+              "data_field_ref": "data_verification_field_01",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_verification_base_02",
+              "item_name": "验证环境",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_verification",
+              "data_field_ref": "data_verification_field_02",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_verification_base_03",
+              "item_name": "验证内容与方法",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_verification",
+              "data_field_ref": "data_verification_field_03",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_verification_base_04",
+              "item_name": "技术验证结论",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_verification",
+              "data_field_ref": "data_verification_field_04",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_verification_base_05",
+              "item_name": "信息化工作组意见",
+              "item_type": "文本",
+              "required": false,
+              "instructions": "",
+              "business_data_ref": "data_verification",
+              "data_field_ref": "data_verification_field_05",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_verification_base_06",
+              "item_name": "试点部门",
+              "item_type": "文本",
+              "required": false,
+              "instructions": "",
+              "business_data_ref": "data_verification",
+              "data_field_ref": "data_verification_field_06",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_verification_base_07",
+              "item_name": "试点范围",
+              "item_type": "文本",
+              "required": false,
+              "instructions": "",
+              "business_data_ref": "data_verification",
+              "data_field_ref": "data_verification_field_07",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_verification_base_08",
+              "item_name": "试点时间",
+              "item_type": "文本",
+              "required": false,
+              "instructions": "",
+              "business_data_ref": "data_verification",
+              "data_field_ref": "data_verification_field_08",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_verification_base_09",
+              "item_name": "问题与反馈",
+              "item_type": "文本",
+              "required": false,
+              "instructions": "",
+              "business_data_ref": "data_verification",
+              "data_field_ref": "data_verification_field_09",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_verification_base_10",
+              "item_name": "试点结论",
+              "item_type": "文本",
+              "required": false,
+              "instructions": "",
+              "business_data_ref": "data_verification",
+              "data_field_ref": "data_verification_field_10",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            }
+          ]
+        },
+        {
+          "area_ref": "form_verification_area_detail_1",
+          "area_type": "明细清单",
+          "area_title": "指标核对",
+          "items": [
+            {
+              "item_ref": "form_verification_detail_1_01",
+              "item_name": "指标名称",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_verification",
+              "data_field_ref": "data_verification_field_11",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_verification_detail_1_02",
+              "item_name": "方案要求值",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_verification",
+              "data_field_ref": "data_verification_field_12",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_verification_detail_1_03",
+              "item_name": "实际结果",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_verification",
+              "data_field_ref": "data_verification_field_13",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_verification_detail_1_04",
+              "item_name": "偏差比例",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_verification",
+              "data_field_ref": "data_verification_field_14",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_verification_detail_1_05",
+              "item_name": "结论",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_verification",
+              "data_field_ref": "data_verification_field_15",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            }
+          ]
+        },
+        {
+          "area_ref": "form_verification_area_detail_2",
+          "area_type": "明细清单",
+          "area_title": "试点记录",
+          "items": [
+            {
+              "item_ref": "form_verification_detail_2_01",
+              "item_name": "序号",
+              "item_type": "数字",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": null,
+              "data_field_ref": null,
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_verification_detail_2_02",
+              "item_name": "业务效果记录",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_verification",
+              "data_field_ref": "data_verification_field_16",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_verification_detail_2_03",
+              "item_name": "问题与反馈",
+              "item_type": "文本",
+              "required": false,
+              "instructions": "",
+              "business_data_ref": "data_verification",
+              "data_field_ref": "data_verification_field_09",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "form_ref": "form_result",
+      "form_name": "数字技术研究与应用成果评价报告",
+      "form_no": "GLTX-JY-32-06-A",
+      "form_design_state": "proposed_design",
+      "behavior_links": [
+        {
+          "link_ref": "form_result_link_01",
+          "behavior_ref": "behavior_make_result_report",
+          "operations": [
+            "fill",
+            "confirm"
+          ],
+          "notes": "由评审组出具"
+        }
+      ],
+      "areas": [
+        {
+          "area_ref": "form_result_area_base",
+          "area_type": "基本信息",
+          "area_title": "基本信息",
+          "items": [
+            {
+              "item_ref": "form_result_base_01",
+              "item_name": "项目名称",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_result_report",
+              "data_field_ref": "data_result_report_field_01",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_result_base_02",
+              "item_name": "评价日期",
+              "item_type": "日期",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_result_report",
+              "data_field_ref": "data_result_report_field_02",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_result_base_03",
+              "item_name": "评价组成员",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_result_report",
+              "data_field_ref": "data_result_report_field_03",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_result_base_04",
+              "item_name": "项目完成情况",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_result_report",
+              "data_field_ref": "data_result_report_field_04",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_result_base_05",
+              "item_name": "技术水平说明",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_result_report",
+              "data_field_ref": "data_result_report_field_05",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_result_base_06",
+              "item_name": "业务价值",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_result_report",
+              "data_field_ref": "data_result_report_field_06",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_result_base_07",
+              "item_name": "应用范围与推广条件",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_result_report",
+              "data_field_ref": "data_result_report_field_07",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_result_base_08",
+              "item_name": "费用投入与效果",
+              "item_type": "文本",
+              "required": false,
+              "instructions": "",
+              "business_data_ref": "data_result_report",
+              "data_field_ref": "data_result_report_field_08",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_result_base_09",
+              "item_name": "评价结论",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_result_report",
+              "data_field_ref": "data_result_report_field_09",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_result_base_10",
+              "item_name": "推广应用建议",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_result_report",
+              "data_field_ref": "data_result_report_field_10",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_result_base_11",
+              "item_name": "评价组成员签字",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_result_report",
+              "data_field_ref": "data_result_report_field_11",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_result_base_12",
+              "item_name": "分管领导意见",
+              "item_type": "文本",
+              "required": false,
+              "instructions": "",
+              "business_data_ref": "data_result_report",
+              "data_field_ref": "data_result_report_field_12",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "form_ref": "form_rollout",
+      "form_name": "应用推广方案",
+      "form_no": "GLTX-JY-32-07-A",
+      "form_design_state": "proposed_design",
+      "behavior_links": [
+        {
+          "link_ref": "form_rollout_link_01",
+          "behavior_ref": "behavior_make_rollout",
+          "operations": [
+            "fill"
+          ],
+          "notes": "由数字工程室会同使用部门编制"
+        }
+      ],
+      "areas": [
+        {
+          "area_ref": "form_rollout_area_base",
+          "area_type": "基本信息",
+          "area_title": "基本信息",
+          "items": [
+            {
+              "item_ref": "form_rollout_base_01",
+              "item_name": "推广事项名称",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_rollout_plan",
+              "data_field_ref": "data_rollout_plan_field_01",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_rollout_base_02",
+              "item_name": "编制人",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_rollout_plan",
+              "data_field_ref": "data_rollout_plan_field_02",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_rollout_base_03",
+              "item_name": "编制日期",
+              "item_type": "日期",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_rollout_plan",
+              "data_field_ref": "data_rollout_plan_field_03",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_rollout_base_04",
+              "item_name": "推广范围",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_rollout_plan",
+              "data_field_ref": "data_rollout_plan_field_04",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_rollout_base_05",
+              "item_name": "推广条件",
+              "item_type": "文本",
+              "required": false,
+              "instructions": "",
+              "business_data_ref": "data_rollout_plan",
+              "data_field_ref": "data_rollout_plan_field_05",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_rollout_base_06",
+              "item_name": "时间安排",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_rollout_plan",
+              "data_field_ref": "data_rollout_plan_field_06",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_rollout_base_07",
+              "item_name": "培训要求",
+              "item_type": "文本",
+              "required": false,
+              "instructions": "",
+              "business_data_ref": "data_rollout_plan",
+              "data_field_ref": "data_rollout_plan_field_07",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_rollout_base_08",
+              "item_name": "数据与权限要求",
+              "item_type": "文本",
+              "required": false,
+              "instructions": "",
+              "business_data_ref": "data_rollout_plan",
+              "data_field_ref": "data_rollout_plan_field_08",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_rollout_base_09",
+              "item_name": "分管领导意见",
+              "item_type": "文本",
+              "required": false,
+              "instructions": "",
+              "business_data_ref": "data_rollout_plan",
+              "data_field_ref": "data_rollout_plan_field_09",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            }
+          ]
+        },
+        {
+          "area_ref": "form_rollout_area_detail_1",
+          "area_type": "明细清单",
+          "area_title": "实施步骤",
+          "items": [
+            {
+              "item_ref": "form_rollout_detail_1_01",
+              "item_name": "序号",
+              "item_type": "数字",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": null,
+              "data_field_ref": null,
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_rollout_detail_1_02",
+              "item_name": "实施步骤",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_rollout_plan",
+              "data_field_ref": "data_rollout_plan_field_10",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_rollout_detail_1_03",
+              "item_name": "责任部门与人员",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_rollout_plan",
+              "data_field_ref": "data_rollout_plan_field_11",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "form_ref": "form_effect",
+      "form_name": "应用效果评价表",
+      "form_no": "GLTX-JY-32-08-A",
+      "form_design_state": "proposed_design",
+      "behavior_links": [
+        {
+          "link_ref": "form_effect_link_01",
+          "behavior_ref": "behavior_fill_effect",
+          "operations": [
+            "fill"
+          ],
+          "notes": "由数字工程室会同使用部门填写"
+        }
+      ],
+      "areas": [
+        {
+          "area_ref": "form_effect_area_base",
+          "area_type": "基本信息",
+          "area_title": "基本信息",
+          "items": [
+            {
+              "item_ref": "form_effect_base_01",
+              "item_name": "推广事项名称",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_effect_evaluation",
+              "data_field_ref": "data_effect_evaluation_field_01",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_effect_base_02",
+              "item_name": "评价日期",
+              "item_type": "日期",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_effect_evaluation",
+              "data_field_ref": "data_effect_evaluation_field_02",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_effect_base_03",
+              "item_name": "预期目标",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_effect_evaluation",
+              "data_field_ref": "data_effect_evaluation_field_03",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_effect_base_04",
+              "item_name": "实际效果",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_effect_evaluation",
+              "data_field_ref": "data_effect_evaluation_field_04",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_effect_base_05",
+              "item_name": "差异与原因",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_effect_evaluation",
+              "data_field_ref": "data_effect_evaluation_field_05",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_effect_base_06",
+              "item_name": "使用部门意见",
+              "item_type": "文本",
+              "required": false,
+              "instructions": "",
+              "business_data_ref": "data_effect_evaluation",
+              "data_field_ref": "data_effect_evaluation_field_06",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_effect_base_07",
+              "item_name": "后续建议",
+              "item_type": "文本",
+              "required": false,
+              "instructions": "",
+              "business_data_ref": "data_effect_evaluation",
+              "data_field_ref": "data_effect_evaluation_field_07",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_effect_base_08",
+              "item_name": "评价人",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_effect_evaluation",
+              "data_field_ref": "data_effect_evaluation_field_08",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_effect_base_09",
+              "item_name": "部门负责人意见",
+              "item_type": "文本",
+              "required": false,
+              "instructions": "",
+              "business_data_ref": "data_effect_evaluation",
+              "data_field_ref": "data_effect_evaluation_field_09",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "form_ref": "form_handover",
+      "form_name": "项目资料移交清单",
+      "form_no": "GLTX-JY-32-09-A",
+      "form_design_state": "proposed_design",
+      "behavior_links": [
+        {
+          "link_ref": "form_handover_link_01",
+          "behavior_ref": "behavior_handover_archive",
+          "operations": [
+            "fill",
+            "confirm"
+          ],
+          "notes": "由数字工程室填写并移交，行政人事部核对签收"
+        }
+      ],
+      "areas": [
+        {
+          "area_ref": "form_handover_area_base",
+          "area_type": "基本信息",
+          "area_title": "基本信息",
+          "items": [
+            {
+              "item_ref": "form_handover_base_01",
+              "item_name": "项目名称",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_archive",
+              "data_field_ref": "data_archive_field_01",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_handover_base_02",
+              "item_name": "移交人",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_archive",
+              "data_field_ref": "data_archive_field_02",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_handover_base_03",
+              "item_name": "移交日期",
+              "item_type": "日期",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_archive",
+              "data_field_ref": "data_archive_field_03",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_handover_base_04",
+              "item_name": "归档部门",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_archive",
+              "data_field_ref": "data_archive_field_04",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_handover_base_05",
+              "item_name": "接收人签字",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_archive",
+              "data_field_ref": "data_archive_field_05",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_handover_base_06",
+              "item_name": "接收日期",
+              "item_type": "日期",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_archive",
+              "data_field_ref": "data_archive_field_06",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_handover_base_07",
+              "item_name": "保存期限",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_archive",
+              "data_field_ref": "data_archive_field_07",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            }
+          ]
+        },
+        {
+          "area_ref": "form_handover_area_detail_1",
+          "area_type": "明细清单",
+          "area_title": "归档明细",
+          "items": [
+            {
+              "item_ref": "form_handover_detail_1_01",
+              "item_name": "序号",
+              "item_type": "数字",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": null,
+              "data_field_ref": null,
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_handover_detail_1_02",
+              "item_name": "资料名称",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_archive",
+              "data_field_ref": "data_archive_field_08",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_handover_detail_1_03",
+              "item_name": "表单编号",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_archive",
+              "data_field_ref": "data_archive_field_09",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_handover_detail_1_04",
+              "item_name": "份数",
+              "item_type": "数字",
+              "required": true,
+              "instructions": "",
+              "business_data_ref": "data_archive",
+              "data_field_ref": "data_archive_field_10",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            },
+            {
+              "item_ref": "form_handover_detail_1_05",
+              "item_name": "备注",
+              "item_type": "文本",
+              "required": false,
+              "instructions": "",
+              "business_data_ref": "data_archive",
+              "data_field_ref": "data_archive_field_11",
+              "value_usage_mode": "authoritative_input",
+              "value_origin_mode": "direct_current_process",
+              "source_links": []
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "terms": [
+    {
+      "term_ref": "term_digital_technology",
+      "term_name": "数字技术",
+      "definition": "人工智能、工业软件、大数据、物联网、数字孪生等可以应用于公司业务的技术。"
+    },
+    {
+      "term_ref": "term_digital_research",
+      "term_name": "数字化技术研究",
+      "definition": "针对数字技术开展的技术调研、可行性分析、试验开发和验证活动。"
+    },
+    {
+      "term_ref": "term_digital_application",
+      "term_name": "数字技术应用",
+      "definition": "把研究形成的成果投入公司实际业务场景使用并产生效果的活动。"
+    },
+    {
+      "term_ref": "term_pilot_application",
+      "term_name": "试点应用",
+      "definition": "在限定的部门和业务范围内先行使用数字技术成果并观察效果的应用方式。"
+    },
+    {
+      "term_ref": "term_result_solidification",
+      "term_name": "成果固化",
+      "definition": "把验证有效的成果纳入公司制度、标准、流程文件或者作业指南的活动。"
+    },
+    {
+      "term_ref": "term_review_group",
+      "term_name": "评审组",
+      "definition": "为评审数字技术研究与应用项目而组建的临时评审组织，由数字工程室、提出部门、工程技术部相关人员组成，涉及费用预算时应当有财务部人员参加。"
+    },
+    {
+      "term_ref": "term_interim_digital_engineering",
+      "term_name": "数字工程室过渡期",
+      "definition": "数字工程室是公司规划中的内设机构，正式成立前由经营发展部在信息化工作组内指定人员代行其在本程序中的职责；正式成立后由本程序归口部门更新执行角色。"
+    }
+  ],
+  "migration": {
+    "source_schema_version": "process-governance-v7",
+    "source_process_ref": null,
+    "source_process_count": 1,
+    "legacy_cross_department_records": [],
+    "reference_materials": [
+      {
+        "material_ref": "material_gltx_xz_35",
+        "material_type": "现有制度",
+        "material_name": "公司组织架构及部门职能（经营发展部软件工程-数字化治理、硬件工程）",
+        "document_no": "GLTX-XZ-35-A",
+        "version": "A",
+        "file_sha256": null,
+        "readable_text": "负责公司数字化建设的规划、治理与工程实施；开展人工智能、工业软件等数字技术研究与应用；负责拟定数字化治理管理制度。",
+        "provider_department": "行政人事部",
+        "provider_name": "用户指定来源",
+        "as_of_date": null
+      },
+      {
+        "material_ref": "material_gltx_jy_01",
+        "material_type": "现有制度",
+        "material_name": "管理体系程序文件编制管理规定",
+        "document_no": "GLTX-JY-01-A",
+        "version": "A",
+        "file_sha256": null,
+        "readable_text": "程序文件体例为：1目的、2适用范围、3术语和定义、4职责、5规定、6流程、7规定表格、8记录控制；流程图为“行为名／执行部门”两行节点。",
+        "provider_department": "经营发展部",
+        "provider_name": "用户指定来源",
+        "as_of_date": null
+      },
+      {
+        "material_ref": "material_gltx_jy_02",
+        "material_type": "现有制度",
+        "material_name": "管理体系程序文件编码管理规定",
+        "document_no": "GLTX-JY-02-A",
+        "version": "A",
+        "file_sha256": null,
+        "readable_text": "程序文件编码为GLTX-组织机构缩写-流水号-版次；关联表单编码为GLTX-组织机构缩写-制度流水号-表单流水号-版次。",
+        "provider_department": "经营发展部",
+        "provider_name": "用户指定来源",
+        "as_of_date": null
+      }
+    ],
+    "internal_process_calls": [
+      {
+        "call_ref": "call_procurement_sourcing",
+        "caller_behavior_ref": "behavior_sign_agreement",
+        "target_process_ref": null,
+        "target_process_name": "采购周期管理程序（外部合作单位寻源与比价）",
+        "input_data_refs": [],
+        "output_data_refs": [],
+        "return_behavior_ref": "behavior_sign_agreement"
+      },
+      {
+        "call_ref": "call_contract_approval",
+        "caller_behavior_ref": "behavior_sign_agreement",
+        "target_process_ref": null,
+        "target_process_name": "公司合同审签流程（对外签署合作协议审批）",
+        "input_data_refs": [],
+        "output_data_refs": [],
+        "return_behavior_ref": "behavior_sign_agreement"
+      },
+      {
+        "call_ref": "call_document_revision",
+        "caller_behavior_ref": "behavior_solidify",
+        "target_process_ref": null,
+        "target_process_name": "管理体系程序文件编制管理规定（制度修订与作业指南编制）",
+        "input_data_refs": [],
+        "output_data_refs": [],
+        "return_behavior_ref": "behavior_solidify"
+      },
+      {
+        "call_ref": "call_external_declaration",
+        "caller_behavior_ref": "behavior_solidify",
+        "target_process_ref": null,
+        "target_process_name": "政策研究与项目申报管理程序（政府项目、专利、软件著作权申报）",
+        "input_data_refs": [],
+        "output_data_refs": [],
+        "return_behavior_ref": "behavior_solidify"
+      }
+    ],
+    "work_roles": [],
+    "unresolved_actor_roles": [],
+    "unresolved_join_modes": []
+  }
+}

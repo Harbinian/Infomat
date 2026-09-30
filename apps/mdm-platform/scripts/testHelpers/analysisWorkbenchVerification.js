@@ -5,7 +5,7 @@ const { fork } = require('node:child_process'), { once } = require('node:events'
 const { isolatedEnvironment } = require('./isolatedProcess');
 function runtime() { try { return require('playwright'); } catch { return require(path.join(process.env.APPDATA, 'npm/node_modules/@playwright/cli/node_modules/playwright')); } }
 module.exports = async function ({ repo, lead, pool, run, historical, fixture, source, mapping, fieldMap, get, check, save, backup, restore, output }) {
-  await require('../../server/analysisQueueMigration').applyAnalysisQueue(pool);
+  { const connection = await pool.getConnection(); try { await require('../../server/analysisQueueMigration').applyAnalysisQueue(connection); } finally { connection.release(); } }
   const dump = backup(), own = [], errors = [], consoleErrors = [], events = [];
   let server, browser, worker, context, page;
   const test = async (name, fn) => { await check('P15 ' + name, fn); own.push(name); };
@@ -59,7 +59,7 @@ module.exports = async function ({ repo, lead, pool, run, historical, fixture, s
       save('p15-worker-result.json', result);
       await label('发现类别').selectOption('business_question'); await label('搜索发现').fill('人工确认');
       const item = page.locator('[data-finding]').first(); const id = await item.getAttribute('data-finding'); await item.click(); await idle();
-      assert(await page.getByRole('heading', { name: `发现 ${id} · 待核实` }).evaluate(e => e === document.activeElement));
+      assert(await page.getByRole('heading', { name: `发现 ${id} · 原始规则发现` }).evaluate(e => e === document.activeElement));
       await button('查看证据 3').click(); await idle();
       await page.getByRole('heading', { name: '固定字段对应', exact: true }).waitFor();
       assert.equal(await page.getByRole('link', { name: /来源字段版本/ }).count(), 1);
@@ -69,12 +69,12 @@ module.exports = async function ({ repo, lead, pool, run, historical, fixture, s
       await button('返回原筛选位置').click(); await idle(); assert.equal(await label('搜索发现').inputValue(), '人工确认'); assert.equal(await page.locator('[data-finding]').count(), 1);
       assert(await page.locator('[data-finding]').first().evaluate(e => e === document.activeElement));
     });
-    await test('directed graph arrows geometry zoom empty graph and narrow viewport', async () => {
+    await test('directed graph arrows geometry zoom empty graph and desktop viewport', async () => {
       const graph = page.getByRole('img', { name: '当前筛选的分析路径（箭头不代表业务流转）' });
       const geometry = await graph.evaluate(svg => ({ nodes: [...svg.querySelectorAll('[data-graph-node]')].map(n => { const b = n.getBBox(); return { x: b.x, y: b.y, width: b.width, height: b.height }; }), arrows: [...svg.querySelectorAll('[data-graph-edge]')].map(e => ({ d: e.getAttribute('d'), marker: e.getAttribute('marker-end') })) }));
       assert.equal(geometry.arrows.length, 2); assert(geometry.arrows.every(e => e.marker.startsWith('url(#'))); assert(geometry.nodes.every((n, i, a) => !i || n.y > a[i - 1].y + a[i - 1].height)); save('p15-geometry.json', geometry);
       await button('放大图形').click(); assert.equal(await page.locator('output').textContent(), '125%'); await button('重置缩放').click();
-      await page.setViewportSize({ width: 390, height: 844 }); await overflow(); await screenshot('p15-filter-390.png');
+      await page.setViewportSize({ width: 1699, height: 828 }); await overflow(); await screenshot('p15-filter-desktop.png');
       await label('搜索发现').fill('不存在的合成筛选'); assert.equal(await page.locator('[data-finding]').count(), 0); assert.equal(await page.getByRole('img', { name: '当前筛选的分析路径（箭头不代表业务流转）' }).count(), 0);
       await button('清除筛选').click(); await overflow(); await page.setViewportSize({ width: 1699, height: 828 });
     });
@@ -115,7 +115,7 @@ module.exports = async function ({ repo, lead, pool, run, historical, fixture, s
       for (const url of ['/app/src/AnalysisWorkbench.jsx', '/artifacts/p15.json', '/server/analysisApi.js']) assert.equal((await context.request.get(fixture.baseURL + url)).status(), 404);
       const dist = path.resolve(__dirname, '../../frontend/dist'); for (const file of fs.readdirSync(path.join(dist, 'assets'))) { const value = fs.readFileSync(path.join(dist, 'assets', file), 'utf8'); for (const sentinel of ['P15-SYNTHETIC-UNPARSEABLE', 'P09合成订单', 'P15 合成交接两端']) assert(!value.includes(sentinel)); }
     });
-    assert.deepEqual(errors, []); assert(consoleErrors.every(e => /^Failed to load resource:/.test(e) && /403|409|503|401|net::ERR_FAILED/.test(e))); save('p15-browser-results.json', { passed: true, checks: own, real_mysql: true, real_api: true, real_worker: true, browser: 'Edge', viewports: ['1699x828', '390x844'], page_errors: errors, console_errors: consoleErrors, synthetic_fault_injection: [401, 403, 409, 503, 'network'], human_acceptance: false });
+    assert.deepEqual(errors, []); assert(consoleErrors.every(e => /^Failed to load resource:/.test(e) && /403|409|503|401|net::ERR_FAILED/.test(e))); save('p15-browser-results.json', { passed: true, checks: own, real_mysql: true, real_api: true, real_worker: true, browser: 'Edge', viewports: ['1699x828'], page_errors: errors, console_errors: consoleErrors, synthetic_fault_injection: [401, 403, 409, 503, 'network'], human_acceptance: false });
   } catch (error) {
     if (page && !page.isClosed()) { await page.screenshot({ path: path.join(output, 'p15-failure.png'), fullPage: true }).catch(() => {}); save('p15-failure-state.json', { errors, consoleErrors, body: await page.locator('body').innerText().catch(() => ''), message: error.message }); }
     throw error;

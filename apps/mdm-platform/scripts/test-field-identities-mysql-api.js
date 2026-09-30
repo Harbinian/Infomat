@@ -34,6 +34,9 @@ function makeFakeDataMapRepository() {
 
   return {
     state,
+    identityGovernance() {
+      return { mutate: (id, body, actor, action) => action === 'maintain' ? this.upsertFieldIdentity(id, body) : this.confirmFieldIdentity(id, body, actor.personId) };
+    },
     async getField(fieldId) {
       state.calls.push(['getField', Number(fieldId)]);
       return state.fields.find(field => field.id === Number(fieldId)) || null;

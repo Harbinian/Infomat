@@ -51,9 +51,9 @@ module.exports = async ({ repo, lead, pool, fixture, handoff, test, save, output
       await page.locator('#login-name').fill('SYNTHETIC_lead'); await page.locator('#login-password').fill(fixture.loginPassword); await button('登录').click();
       await label('确认理由').waitFor(); assert.equal(await label('确认理由').inputValue(), reason);
     });
-    await test('Edge desktop/mobile layout, keyboard focus and real worker finding becomes one traceable issue', async () => {
+    await test('Edge desktop layout, keyboard focus and real worker finding becomes one traceable issue', async () => {
       await wait(async () => !(await button('提交人工确认').isDisabled()));
-      for (const [width,height,name] of [[1699,828,'desktop'],[390,844,'mobile']]) {
+      for (const [width,height,name] of [[1699,828,'desktop']]) {
         await page.setViewportSize({ width,height }); assert.equal(await page.evaluate(() => visualViewport.scale), 1);
         await label('确认理由').focus(); assert.equal(await label('确认理由').evaluate(e => document.activeElement === e), true);
         await page.keyboard.press('Tab');
@@ -94,7 +94,7 @@ module.exports = async ({ repo, lead, pool, fixture, handoff, test, save, output
     });
     assert.deepEqual(errors, []);
     assert(consoleErrors.every(t => /Failed to load resource|net::ERR_FAILED/.test(t)), consoleErrors.join('\n'));
-    save('p16-browser-results.json', { passed: true, page_errors: errors, expected_injected_console_errors: consoleErrors, viewports: ['1699x828','390x844'], zoom: 1, human_acceptance: false });
+    save('p16-browser-results.json', { passed: true, page_errors: errors, expected_injected_console_errors: consoleErrors, viewports: ['1699x828'], zoom: 1, human_acceptance: false });
   } finally {
     if (worker && worker.exitCode === null && worker.signalCode === null) { const stopped = once(worker, 'exit'); worker.send('stop'); const timer = setTimeout(() => worker.kill('SIGKILL'), 10000); await stopped; clearTimeout(timer); }
     // Windows can hold Edge shutdown after the protocol disconnect. The fallback

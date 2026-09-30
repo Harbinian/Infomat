@@ -27,6 +27,11 @@ function closeServer(server) {
 
 function sessionForUser(userKey) {
   const sessions = {
+    noPermission: { personId: 40, userId: 40, departmentId: 1 },
+    globalReader: { personId: 98, userId: 98 },
+    missing: { personId: 10, userId: 10, departmentName: 'stale cached department' },
+    unknown: { personId: 10, userId: 10, departmentId: 999 },
+    blank: { personId: 10, userId: 10, departmentId: 4 },
     dept: { personId: 10, userId: 10, userName: '项目管理部主对接人', departmentId: 1 },
     other: { personId: 20, userId: 20, userName: '财务部主对接人', departmentId: 2 },
     reviewer: { personId: 30, userId: 30, userName: '项目管理部MDM审核员', departmentId: 1 },
@@ -61,6 +66,7 @@ async function main() {
 
   const identityCalls = { permissions: 0, roles: 0, departments: 0 };
   const permissionsByUser = new Map([
+    [98, ['governance:read-global']],
     [10, ['governance:read-department', 'governance:draft-department', 'governance:submit-department']],
     [20, ['governance:read-department', 'governance:draft-department', 'governance:submit-department']],
     [30, ['governance:read-department', 'governance:review-department', 'governance:record-department-decision']],
@@ -75,7 +81,8 @@ async function main() {
   const departments = new Map([
     [1, { id: 1, name: '项目管理部' }],
     [2, { id: 2, name: '财务部' }],
-    [3, { id: 3, name: '公司领导' }]
+    [3, { id: 3, name: '公司领导' }],
+    [4, { id: 4, name: '   ' }]
   ]);
 
   auth.setIdentityRepositoryFactory(async () => ({
@@ -119,6 +126,7 @@ async function main() {
       status: 'pending_departments'
     }]
   };
+  const listScopes = [];
   const repoCalls = {
     detail: 0,
     apply: 0,
@@ -128,6 +136,8 @@ async function main() {
   };
 
   processGovernanceRouter.setIssuePoolRepositoryFactory(() => ({
+    async listQueues({ departmentName }) { listScopes.push(departmentName); return { items: [] }; },
+    async listIssues({ departmentName }) { listScopes.push(departmentName); return { items: [] }; },
     async getIssueDetail(issueId) {
       repoCalls.detail += 1;
       assert.strictEqual(issueId, 101);
@@ -175,6 +185,20 @@ async function main() {
   const baseUrl = `http://127.0.0.1:${server.address().port}`;
 
   try {
+    for (const user of ['missing', 'unknown', 'blank', 'noPermission']) {
+      for (const endpoint of ['queues', 'issues']) {
+        const before = listScopes.length;
+        const denied = await request(baseUrl, user, '/api/process-governance/issue-pool/' + endpoint);
+        assert.strictEqual(denied.res.status, 403, user + ' must not get unscoped list');
+        assert.strictEqual(listScopes.length, before, 'denied request must not call repository');
+      }
+    }
+    for (const endpoint of ['queues', 'issues']) {
+      assert.strictEqual((await request(baseUrl, 'dept', '/api/process-governance/issue-pool/' + endpoint)).res.status, 200);
+      assert.strictEqual(listScopes.at(-1), '项目管理部');
+      assert.strictEqual((await request(baseUrl, 'globalReader', '/api/process-governance/issue-pool/' + endpoint)).res.status, 200);
+      assert.strictEqual(listScopes.at(-1), '');
+    }
     const otherDetail = await request(baseUrl, 'other', '/api/process-governance/issue-pool/issues/101');
     assert.strictEqual(otherDetail.res.status, 403, JSON.stringify(otherDetail.body));
 

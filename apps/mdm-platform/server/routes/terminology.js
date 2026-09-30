@@ -1,7 +1,8 @@
 const { sendMysqlUnavailable } = require('../mysqlRuntimeSchema');
 const express = require('express');
 const router = express.Router();
-const { requireAuth, requirePermission, getDepartmentByIdAsync } = require('../auth');
+const { requireAuth, requirePermission } = require('../auth');
+const { terminologyScope } = require('../terminologyAccess');
 const { hasGlobalViewAsync, validateAction } = require('../access');
 const {
   resetTerminologyRepositoryFactory,
@@ -35,17 +36,6 @@ function normalizeProcessId(value) {
 function normalizeTermTypeCode(value) {
   const code = String(value || 'noun').trim();
   return code || 'noun';
-}
-
-async function terminologyScope(req, options = {}) {
-  const canViewAll = options.canViewAll === undefined ? await hasGlobalViewAsync(req) : options.canViewAll;
-  const department = await getDepartmentByIdAsync(req.session.departmentId);
-  return {
-    canViewAll,
-    userId: req.session.userId,
-    departmentId: req.session.departmentId || null,
-    departmentName: department && department.name || req.session.departmentName || ''
-  };
 }
 
 async function validateTermTypeCode(repo, res, code) {

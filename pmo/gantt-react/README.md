@@ -17,7 +17,9 @@ npm run preview
 
 ## 本机 Docker 部署（5173）
 
-容器保留 Vite 服务及交付物插件，因此读取、上传和状态写回仍可使用。它是原有内部开发服务的容器化运行方式，不是带登录鉴权的生产发布服务。只在受信任的内网使用，不对公网开放。
+容器保留 Vite 服务及交付物插件，因此读取、上传、状态写回和行动项发布仍可使用。它是原有内部开发服务的容器化运行方式，不是带登录鉴权的生产发布服务。只在受信任的内网使用，不对公网开放。
+
+`src/` 与 `plugins/` 是**构建进镜像**的（见 `Dockerfile` 的 `COPY`），不随宿主机改动自动更新。修改前端或插件后必须重新执行 `build` 并重建容器，否则容器仍运行旧版本 —— 表现为页面上缺少新功能入口。只有 `pmo/deliverables/`、`artifacts/pmo/deliverables/`、`public/`、名册、流程地图和 ECharts 是挂载的。
 
 在仓库根目录执行以下 PowerShell 命令：
 
@@ -29,7 +31,9 @@ node pmo/gantt-react/scripts/smoke-docker.mjs http://127.0.0.1:5173
 
 默认基镜像为 `node:24-bookworm-slim`。本机无法拉取 Docker Hub 镜像时，可复用已存在且验证过的本地 Node 24 镜像：先设置 `$env:PMO_NODE_IMAGE='infomat-node:24.21.0'`，再运行构建命令。镜像必须事先存在；该名称不是公共镜像。
 
-容器名为 `infomat-pmo-5173`，监听 `0.0.0.0:5173`，使用非 root 用户、只读根文件系统和临时 Vite 缓存。Compose 只将 `pmo/deliverables/` 及 `artifacts/pmo/deliverables/` 挂载为可写目录，分别保存交付物正本和上传、历史产物；重建容器不会删除这些宿主机文件。`public/`、流程地图和 ECharts 从原路径只读挂载，重新生成任务数据后刷新页面即可。
+容器名为 `infomat-pmo-5173`，监听 `0.0.0.0:5173`，使用非 root 用户、只读根文件系统和临时 Vite 缓存。Compose 只将 `pmo/deliverables/` 及 `artifacts/pmo/deliverables/` 挂载为可写目录，分别保存交付物正本和上传、历史产物；重建容器不会删除这些宿主机文件。`public/`、`信息化项目_部门主备对接人名单.md`、流程地图和 ECharts 从原路径只读挂载，重新生成任务数据或调整主备对接人后刷新页面即可。
+
+名册是发布行动项的责任部门来源。它缺失时责任部门下拉会为空（插件启动日志会显式告警），因此修改该文件后无需重建镜像，重启容器或让挂载生效即可。
 
 构建上下文采用白名单，不包含 `.env`、其他应用或交付物正本。更新前应备份上述两个可写目录；回退软件不会自动回退期间发生的数据修改。周会事项仍存储在浏览器 `localStorage`，继续使用原访问地址和端口可保持原浏览器存储空间。
 
@@ -47,7 +51,14 @@ node pmo/gantt-react/scripts/smoke-docker.mjs http://127.0.0.1:5173
 
 任务清单中的“责任人”由前端按 `pmo/信息化项目_工作平衡.md` 的工作组负责人口径派生，不回写 `public/tasks.json`。
 
-任务真源中的 `受控交付物编号` 会生成 `deliverableId`。交付物台账优先使用该显式编号与 `pmo/deliverables/DLV-XXX-*.md` 正本匹配；未填写时继续按任务顺序自动生成编号。
+任务真源中的 `受控交付物编号` 会生成 `deliverableId`，用于把计划任务显式绑定到 `pmo/deliverables/DLV-XXX-*.md` 正本。
+
+交付物台账分两类行，编号规则不同：
+
+- **受控行**：`DLV-###` 编号只来自正本文件本身，不由任务投影生成。绑定的唯一依据是显式锚点 —— 任务侧 `受控交付物编号`，或正本 frontmatter 的 `normalizedWbs` / `taskId`。两侧都声明且指向不同任务时报告冲突，不静默择一。
+- **计划投影行**：来自任务 `deliverable` 自由文本，用 `projectionKey`（`task:<编号>`）标识，不占用 `DLV` 命名空间、不持久化、不可发布行动项。它们显示在台账的「计划候选池」子页签，经「提升为受控」后才会分配编号并创建正本。
+
+历史实现的 `DLV-${counter++}` 顺序发号已删除：counter 无条件递增会让影子编号与正本编号空间重叠，曾导致 `DLV-006`、`DLV-007` 正本在台账上不可见、`DLV-179` 被内容无关的任务顶替。
 
 服务侧同步读取/提供 `public/pmo-source-manifest.json`，用于标识当前 PMO 真源组合：
 
@@ -72,20 +83,72 @@ node pmo/gantt-react/scripts/smoke-docker.mjs http://127.0.0.1:5173
 
 ## 交付物文件系统(dev 模式)
 
-`pmo/deliverables/DLV-XXX-*.md` 是交付物状态正本。frontmatter 包含状态、责任、审批历史和凭证信息,正文末尾有系统维护的 `## 变更记录` 表。`public/deliverable-status.json` 仅作为无正本文件时的过渡兜底。
+`pmo/deliverables/DLV-XXX-*.md` 是交付物状态正本。frontmatter 包含状态、责任、审批历史和凭证信息,正文末尾有系统维护的 `## 变更记录` 表。
 
-### 6 个 HTTP 端点
+`public/deliverable-status.json` 及其覆盖层逻辑已停用（重构前的过渡兜底，当前内容为空数组）。台账数据只来自正本文件与任务投影。
 
-| 方法 | 路径 |
-|---|---|
-| GET | `/api/pmo/deliverables` |
-| GET | `/api/pmo/deliverables/:id` |
-| GET | `/api/pmo/deliverables/:id/raw` |
-| PUT | `/api/pmo/deliverables/:id`(支持 `If-Match` mtime 校验) |
-| POST | `/api/pmo/deliverables/:id/transition` |
-| POST | `/api/pmo/deliverables/:id/upload`(支持 .md / .docx / .xlsx) |
+### HTTP 端点
 
-启动时扫描所有 `DLV-XXX-*.md`,解析失败、字段缺失或同 DLV 多份时只在 console.warn 提示并跳过,不阻塞 dev server。同 DLV 多份正本时,该编号的读取、写回、状态流转和上传接口返回 409,需先保留唯一 Markdown 正本后再操作。
+台账与名册：
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/api/pmo/deliverables` | 受控交付物摘要列表 |
+| GET | `/api/pmo/deliverables/ledger` | 台账索引原始数据（受控记录 + 扫描错误 + 建议编号） |
+| GET | `/api/pmo/deliverables/roster` | 责任部门名册（解析自《信息化项目部门主备对接人名单》） |
+| POST | `/api/pmo/deliverables` | 提升为受控：新建正本骨架（编号已占用返回 409） |
+
+正本读写：
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/api/pmo/deliverables/:id` | 详情（frontmatter + 正文） |
+| GET | `/api/pmo/deliverables/:id/raw` | 正本 Markdown 原文 |
+| PUT | `/api/pmo/deliverables/:id` | 覆盖写回（`If-Match` mtime 校验；不携带 `action` 时保留磁盘上的行动项记录） |
+| POST | `/api/pmo/deliverables/:id/upload` | 上传凭证（.md / .docx / .xlsx） |
+
+行动项：
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| POST | `/api/pmo/deliverables/:id/publish` | 发布行动项（责任部门须在名册内；已发布未关闭时拒绝重复发布） |
+| POST | `/api/pmo/deliverables/:id/acknowledge` | 登记已接收（规则 6.2） |
+| POST | `/api/pmo/deliverables/:id/submit-result` | 登记办理结果或材料位置 |
+| POST | `/api/pmo/deliverables/:id/close` | 确认关闭（规则 6.4：无结果且无凭证时拒绝） |
+| POST | `/api/pmo/deliverables/:id/reopen` | 重新开启 |
+| POST | `/api/pmo/deliverables/:id/due-date` | 期限调整（规则 8.1：须由指定同意人确认） |
+| POST | `/api/pmo/deliverables/publish-text` | 发布文本归档留痕 |
+
+`/transition` 端点保留，与上述行动项端点共用同一分派器，状态迁移与行动项事件都可通过它提交。
+
+启动时扫描所有 `DLV-XXX-*.md`。解析失败、字段缺失或同 DLV 多份的文件不阻塞 dev server，但**不再只写 console.warn** —— 扫描错误随 `GET /ledger` 上报，在台账健康度徽标与对账视图中可见。同 DLV 多份正本时，该编号的读取、写回、状态流转和上传接口返回 409，需先保留唯一 Markdown 正本后再操作。
+
+### 交付物 frontmatter 的可选 `action` 块
+
+交付物被发布为行动项后，frontmatter 才出现 `action` 块；未发布的正本不含该块，因此既有正本无需任何改动：
+
+```yaml
+action:
+  assigneeDepartment: MDM工作组   # 规则 6.3 责任部门，取自部门名册
+  dueDate: '2026-10-15'           # 规则 6.3 截止时间（独立于 plannedFinish）
+  state: 待接收                    # 待接收 / 已接收 / 已提交待确认 / 已关闭
+  publishedAt: '2026-09-24T02:00:00.000Z'
+  publishedBy: 张广懿
+  ackDueDate: '2026-09-25'        # 规则 6.2：publishedAt + 1 个工作日
+  acknowledgedAt: ''
+  acknowledgedBy: ''
+  resultNote: ''
+  closedAt: ''
+  closedBy: ''
+  closureNote: ''
+  criteriaSource: task            # task 时完成判定取自绑定任务，不落盘
+  criteria: ''
+  evidenceRequirement: ''
+```
+
+行动项状态（`action.state`）与交付物状态（`status`）是两条独立的轴：前者表达行动项的承接与关闭，后者表达交付物自身的编制与评审进度。逾期不是状态，而是由 `dueDate < 今天 && state !== '已关闭'` 派生的徽标。
+
+修复历史错配的参考锚点（需 PMO 确认后另行提交）：`DLV-179` 对应 WBS 4.7.1「AI辅助治理文档整理规范制定」，`DLV-006`、`DLV-007` 为 PMO 自持材料、无计划锚点。
 
 ### 测试
 
@@ -97,6 +160,9 @@ npm run test:hmr
 npm run test:task-owner
 npm run test:pmo-week-range
 npm run test:weekly-issue-ledger
+npm run test:deliverable-identity
+npm run test:deliverable-action
+node ../scripts/smoke-deliverable-workflow.mjs
 ```
 
 ## Console 口径
@@ -112,17 +178,35 @@ npm run test:weekly-issue-ledger
 |------|------|
 | 全部任务 | 甘特图 + 任务树 (收起 WBS 时进度条联动隐藏) |
 | 任务清单 | PMO 看板内的任务明细表,按 WBS 排序,展示责任部门和责任人,支持任务类型/里程碑/风险筛选 |
-| 交付物台账 | 所有交付物表格，支持等级/类型/部门/月份/状态筛选 |
+| 交付物台账 | 受控交付物表格（等级/类型/部门/月份/状态筛选）；「计划候选池」子页签列出未纳管的计划投影行，可提升为受控 |
 | 阶段门 | 8个阶段门卡片，区分已满足/疑似匹配/缺失 |
 | 标准治理 | 执行标准覆盖率快照、缺口分桶和高风险缺标准优先队列 |
-| 周会事项 | 行动项、风险、问题、变更和责任池事项的模板试运行台账；浏览器本地保存，不回写 PMO 真源 |
+| 周会事项 | PMO 行动台账：行动项、风险、问题、变更和责任池事项；登记落盘到 `pmo/weekly-issues/ledger.json` |
 | 本周交付物 | 基于 PMO 观察日期的周四至下周三到期交付物 |
 | 延期交付物 | 已延期交付物和分级建议动作 |
 | PMO周会 | 周四至下周三 A/B、延期A/B、阶段门缺失、高风险任务四块视图 |
 
 ## 周会事项台账
 
-“周会事项”页签用于首次周例会 W-A03 的模板试运行。页面固定五类去向：行动项台账、风险台账、问题台账、变更台账和责任池；每类都显示关闭标准。现场登记和建议登记记录保存在当前浏览器 `localStorage`，用于会中试跑和会后整理，不替代 PMO Markdown 真源、交付物正本或 MDM 正式台账。
+“周会事项”页签是《信息化项目协同工作规则》6.1 所说的 **PMO 行动台账**，页面固定五类去向：行动项台账、风险台账、问题台账、变更台账和责任池，每类都显示关闭标准。
+
+登记数据写入 `pmo/weekly-issues/ledger.json`（文件正本），随仓库版本管理；页面标题旁的徽标显示当前存储模式（「文件正本」/「仅本地」）。静态构建下插件不可用，会降级为浏览器 `localStorage` 并显示「仅本地」——那种模式的数据不持久。
+
+规则校验在服务端执行：
+
+- **6.4** 关闭需具备结果、材料位置、记录或明确结论，由「登记结果」或关闭结论承载；两者皆空时拒绝关闭。
+- **8.1** 期限调整必须由「期限调整」动作填写同意人，不能直接改日期。
+- **8.2** 逾期是派生徽标（`截止时间 < 今天 && 未关闭`），不是状态；调整期限后原截止时间保留在事项历史中，不追溯消除已经发生的逾期事实。
+
+每行提供「复制发布文本」，产出与交付物行动项同格式的工作群发布文本。首次接入时若正本为空且浏览器有遗留事项，会自动迁入一次，避免升级即丢数据。
+
+### 周会事项端点
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/api/pmo/weekly-issues` | 台账全量（含 `mtime` 供乐观锁） |
+| POST | `/api/pmo/weekly-issues` | 登记事项（标题必填） |
+| PUT | `/api/pmo/weekly-issues/:id` | 更新事项（`If-Match` 乐观锁；规则校验失败返回 422） |
 
 ## 阶段门规则
 

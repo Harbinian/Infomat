@@ -24,8 +24,13 @@ services:
       - /app/pmo/gantt-react/node_modules/.vite-temp:uid=1000,gid=1000
     volumes:
       - ../deliverables:/app/pmo/deliverables
+      # 周会事项台账正本（PMO 行动台账）。必须可写：登记、状态流转、关闭结论都要落盘。
+      - ../weekly-issues:/app/pmo/weekly-issues
       - ../../artifacts/pmo/deliverables:/app/artifacts/pmo/deliverables
       - ./public:/app/pmo/gantt-react/public:ro
+      # 责任部门名册：发布行动项时校验责任部门、生成发布文本用的主备对接人。只读挂载，
+      # 名册更新后无需重建镜像（该文件状态为「待项目决策组确认」，会随人员调整变化）。
+      - ../信息化项目_部门主备对接人名单.md:/app/pmo/信息化项目_部门主备对接人名单.md:ro
       - ../procedure-management/dashboard.html:/app/pmo/procedure-management/dashboard.html:ro
       - ../../echarts.min.js:/app/echarts.min.js:ro
     logging:

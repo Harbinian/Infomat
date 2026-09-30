@@ -8,6 +8,11 @@ const statuses = { pending: '待处理', done: '已完成' };
 // related_mapping_id cannot distinguish field conflicts from term conflicts.
 function relatedWork(row) {
   if (row.type === 'conflict_resolution') return { path: '/app/conflicts', label: '到冲突列表核对', note: '待办未提供可直接定位的冲突类型和编号，请在当前可见列表核对具体事项。' };
+  if (row.type === 'terminology' && row.related_term_id != null) {
+    const id = String(row.related_term_id);
+    if (/^[1-9]\d*$/.test(id) && Number.isSafeInteger(Number(id))) return { path: `/app/terms?id=${encodeURIComponent(id)}`, label: '查看关联术语', note: `关联术语 #${id}。打开时按当前身份重新读取；待办可见不表示有权查看该术语。` };
+    return { path: '/app/terms', label: '到术语列表核对', note: '术语来源编号无法精确读取，请核对原记录，本页不会猜测关联。' };
+  }
   if (row.type === 'terminology') return { path: '/app/terms', label: '到术语列表核对', note: '待办未提供可直接定位的术语编号，请在当前可见列表核对具体事项。' };
   return null;
 }
@@ -99,7 +104,7 @@ export function TodoInbox({ api, user, onLegacy, onNavigate, onQueryChange }) {
     <section className="card">
       <div className="section-heading"><h1>待办收到</h1><button className="secondary" disabled={action?.phase === 'pending'} onClick={() => { cancelAction(); setState({ busy: true }); setRevision(value => value + 1); }}>刷新待办</button></div>
       <p>按当前身份的数据范围查看收到的待办。列表沿用原接口的紧急程度、截止日期和创建时间排序。</p>
-      <p className="muted">本部门有办理权限的人员可确认完成未关联原映射记录的待办；具备结构核对权限的人员可删除待办。冲突和术语事项可进入相应列表核对，办公室承接的任务请到办公室工作台办理。待办已完成或删除不表示问题关闭或正式审核通过。</p>
+      <p className="muted">本部门有办理权限的人员可确认完成未关联原映射记录的待办；具备结构核对权限的人员可删除待办。有明确来源的术语待办可查看关联术语；其余术语及冲突事项进入相应列表核对，办公室任务请到办公室工作台办理。待办已完成或删除不表示问题关闭或正式审核通过。</p>
       <div className="identity-actions"><a href="/#/todos" onClick={onLegacy}>打开原待办入口</a><a href="/app/offices" onClick={event => onNavigate(event, '/app/offices')}>进入办公室工作台</a></div>
       <div className="identity-fields">
         <label className="identity-field">待办状态<select aria-label="待办状态" disabled={action?.phase === 'pending'} value={filter.status} onChange={event => change('status', event.target.value)}>

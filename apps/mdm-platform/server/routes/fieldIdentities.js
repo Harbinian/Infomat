@@ -6,10 +6,10 @@ const { dataMapRepository } = require('../dataMapMysqlRepository');
 
 function handleError(res, error) {
   if (error && error.statusCode) return res.status(error.statusCode).json({ error: error.message });
+  if (sendMysqlUnavailable(res, error)) return;
   if (error && (String(error.code || '').startsWith('ER_') || String(error.message).includes('constraint'))) {
     return res.status(400).json({ error: '数据不符合约束' });
   }
-  if (sendMysqlUnavailable(res, error)) return;
   console.error(error);
   return res.status(500).json({ error: '服务器错误' });
 }
@@ -59,6 +59,16 @@ router.get('/field/:fieldEntryId', requireAuth, (req, res) => {
   });
 });
 
+for (const view of ['history', 'responsibility-options']) {
+  router.get('/field/:fieldEntryId/' + view, requireAuth, (req, res) => runAction(res, async () => {
+    const repo = await dataMapRepository();
+    const { field, context } = await fieldScope(repo, req.params.fieldEntryId);
+    if (!field) return res.status(404).json({ error: '字段不存在' });
+    if (!await (view === 'history' ? canViewIdentity(req, context) : canMaintainIdentity(req, context))) return res.status(403).json({ error: '无权读取该字段信息' });
+    res.json(view === 'history' ? await repo.identityGovernance().history(field.id, req.query.before) : await repo.identityGovernance().options(context));
+  }));
+}
+
 router.put('/:fieldEntryId', requireAuth, (req, res) => {
   return runAction(res, async () => {
     const repo = await dataMapRepository();
@@ -76,7 +86,7 @@ router.put('/:fieldEntryId', requireAuth, (req, res) => {
     if (existing && existing.owner_user_id && !existing.owner_person_id) {
       return res.status(409).json({ error: '历史负责人尚未关联人员，请先明确人员映射后再维护' });
     }
-    res.json(await repo.upsertFieldIdentity(req.params.fieldEntryId, req.body));
+    res.json(await repo.identityGovernance().mutate(req.params.fieldEntryId, req.body, { personId: req.session.userId, departmentId: req.session.departmentId, contextId: context.id }, 'maintain'));
   });
 });
 
@@ -90,7 +100,7 @@ router.post('/:fieldEntryId/confirm', requireAuth, (req, res) => {
     if (!await canConfirmIdentity(req, context)) {
       return res.status(403).json({ error: '只能由部门MDM审核员确认本部门权威系统' });
     }
-    const identity = await repo.confirmFieldIdentity(req.params.fieldEntryId, req.body, req.session.userId);
+    const identity = await repo.identityGovernance().mutate(req.params.fieldEntryId, req.body, { personId: req.session.userId, departmentId: req.session.departmentId, contextId: context.id }, 'confirm');
     if (!identity) return res.status(404).json({ error: '字段身份不存在' });
     res.json({ success: true, identity });
   });

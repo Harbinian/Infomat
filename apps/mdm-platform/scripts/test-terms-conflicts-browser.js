@@ -55,6 +55,7 @@ async function main() {
       await pool.execute("INSERT INTO mdm_term_conflicts(id,term,term_a_id,dept_a,dept_a_meaning,dept_b,dept_b_meaning,severity,status) VALUES(601,'合成业务记录',?,91,'甲部更新定义',92,'乙部不同定义','warn','pending')", [term.id]);
       await page.getByRole('link', { name: '冲突管理', exact: true }).first().click(); await switchUser('lead');
       await button('查看冲突 term-601').click(); await conflictReady(); await button('指定责任人').click(); await page.getByLabel('冲突处理人', { exact: true }).selectOption('85'); await confirmAction(); await conflictReady();
+      assert.match(await page.locator('[data-conflict-summary]').textContent(), /term-601.*术语冲突.*警告/);
       await switchUser('reviewB'); await conflictReady(); await button('提交协调结果').click(); await page.getByLabel('协调选择', { exact: true }).selectOption('compromise'); await page.getByLabel('协调依据', { exact: true }).fill('合成协调依据'); await confirmAction(); await conflictReady();
       await button('形成处理决定').click(); await page.getByLabel('处理决定与依据', { exact: true }).fill('合成统一口径'); await confirmAction(); await conflictReady();
       assert.equal((await expect('lead', '/api/conflicts/601?type=term', 'GET')).status, 'resolved');
@@ -64,8 +65,26 @@ async function main() {
       await switchUser('lead'); await conflictReady(); await button('归档冲突').click(); await confirmAction(); await conflictReady();
       const detail = await expect('lead', '/api/conflicts/601?type=term', 'GET'); assert.equal(detail.status, 'archived'); assert.equal(detail.assignmentHistory.length, 2); assert.equal(detail.coordinationHistory.length, 1); assert.equal(detail.term_a_id, term.id);
       checks.push('real assignment/coordination/resolution/reopen/escalated decision/archive; stable term reference and histories');
-      await capture('conflicts-desktop'); await page.setViewportSize({ width: 390, height: 844 }); await capture('conflicts-mobile'); await page.setViewportSize({ width: 1699, height: 828 });
-      await page.reload(); await conflictReady(); await page.getByRole('link', { name: '术语词典', exact: true }).first().click(); await termsReady(); await button('查看术语 ' + term.id).click(); await capture('terms-desktop'); await page.setViewportSize({ width: 390, height: 844 }); await capture('terms-mobile');
+      const timeline = page.locator('[data-conflict-timeline]');
+      assert.equal(await timeline.locator('tbody tr').count(),5);
+      await timeline.getByText('合成升级决定',{exact:true}).waitFor();
+      assert.ok(!(await timeline.textContent()).includes('合成统一口径'), 'cleared decision is not reconstructed');
+      assert.ok(!(await timeline.textContent()).includes('协调超期'), 'deadline is not an escalation timestamp');
+      assert.ok((await timeline.textContent()).includes(detail.resolved_at));
+      await page.route('**/api/conflicts/601?type=term', route => route.fulfill({json:{...detail,
+        created_at:null,resolved_at:null,resolution:'旧决定缺少时间 <img src=x onerror=alert(1)>',resolved_by:null,
+        assignmentHistory:[],coordinationHistory:[]}}),{times:1});
+      await button('刷新冲突').click(); await conflictReady();
+      await timeline.getByText('旧决定缺少时间 <img src=x onerror=alert(1)>',{exact:true}).waitFor();
+      assert.equal(await timeline.locator('tbody tr').count(),2);
+      assert.equal(await timeline.locator('img,script').count(),0);
+      assert.equal(await timeline.getByText('时间未记录',{exact:true}).count(),2);
+      await button('刷新冲突').click(); await conflictReady();
+      await timeline.getByText('合成升级决定',{exact:true}).waitFor();
+      checks.push('timeline real retained decision after archive, cleared decision absent; injected legacy missing times and HTML remain literal');
+
+      await capture('conflicts-desktop');
+      await page.reload(); await conflictReady(); await page.getByRole('link', { name: '术语词典', exact: true }).first().click(); await termsReady(); await button('查看术语 ' + term.id).click(); await capture('terms-desktop');
       for (const url of ['/api/terminology', '/api/conflicts/601/assign?type=term', '/api/conflicts/detect']) assert.equal((await request('adminMulti', url, 'POST', {})).status, 403);
       assert.equal((await request('contact', '/api/terminology/' + term.id + '/review', 'POST', { action: 'approve' })).status, 403);
       assert.equal((await request('reviewB', '/api/conflicts/601?type=term')).status, 404);
@@ -74,8 +93,76 @@ async function main() {
       await pool.execute("INSERT INTO data_map_contexts(id,context_key,title,dept_id) VALUES(701,'synthetic_fields','合成字段来源',91)");
       await pool.execute("INSERT INTO data_map_fields(id,context_id,field_key,field_name_cn) VALUES(701,701,'synthetic_a','合成同名字段'),(702,701,'synthetic_b','合成同名字段')");
       await pool.execute("INSERT INTO mdm_field_conflicts(id,field_id_a,field_id_b,conflict_field,value_a,value_b,dept_a,dept_b,status) VALUES(601,701,702,'data_type','文本','整数',91,92,'pending')");
+      await pool.execute("UPDATE data_map_fields SET field_name_cn='合成乙方字段' WHERE id=702");
+      await pool.execute("INSERT INTO mdm_field_conflicts(id,field_id_a,field_id_b,conflict_field,value_a,value_b,dept_a,dept_b,status) VALUES(602,701,702,'sync_mode','定时','实时',91,92,'pending')");
       await page.goto(fixture.baseURL + '/app/conflicts'); await page.locator('[data-conflicts-ready]').waitFor(); await button('查看冲突 field-601').click(); await conflictReady();
       assert.ok((await page.locator('[data-conflict-detail]').textContent()).includes('文本'));
+      await page.locator('[data-conflict-detail] h3').filter({hasText:'合成同名字段 / 合成乙方字段 · 属性：data_type'}).waitFor();
+      assert.match(await page.locator('[data-conflict-summary]').textContent(), /field-601.*字段冲突/);
+      const pairRow = button('查看冲突 field-602').locator('..').locator('..');
+      assert.ok((await pairRow.textContent()).includes('合成同名字段 / 合成乙方字段 · 同步方式'));
+      await page.reload(); await conflictReady();
+      await page.locator('.conflict-comparison').getByText('字段名称：合成乙方字段',{exact:true}).waitFor();
+      const fieldDetail = await expect('lead','/api/conflicts/601?type=field','GET');
+      // Explicit malformed/legacy response injection; no missing business facts are inferred.
+      await page.route('**/api/conflicts/601?type=field',route=>route.fulfill({json:{...fieldDetail,
+        field_name_a:null,field_name_b:null,conflict_field:null,severity:null,value_a:0,value_b:''}}),{times:1});
+      await button('刷新冲突').click(); await conflictReady();
+      await page.locator('[data-conflict-detail] h3').filter({hasText:'字段名称待补充 · 冲突属性待补充'}).waitFor();
+      assert.ok((await page.locator('[data-conflict-summary]').textContent()).includes('严重程度：未提供'));
+      await page.locator('.conflict-comparison').getByText('0',{exact:true}).waitFor();
+      assert.equal(await page.locator('.conflict-comparison').getByText('值未提供',{exact:true}).count(),0);
+      const longName = '合成长中文字段名称'.repeat(24), literal = '<img src=x onerror=alert(1)>';
+      await page.route('**/api/conflicts/601?type=field',route=>route.fulfill({json:{...fieldDetail,
+        field_name_a:longName,field_name_b:literal,conflict_field:literal,severity:'legacy-severity'}}),{times:1});
+      await button('刷新冲突').click(); await conflictReady();
+      await page.locator('[data-conflict-detail] h3').filter({hasText:literal}).waitFor();
+      assert.equal(await page.locator('[data-conflict-detail] img, [data-conflict-detail] script').count(),0);
+      assert.ok((await page.locator('[data-conflict-summary]').textContent()).includes('legacy-severity'));
+      await capture('conflict-subject-long-desktop');
+      await button('刷新冲突').click(); await conflictReady();
+      await page.locator('[data-conflict-detail] h3').filter({hasText:'合成同名字段 / 合成乙方字段 · 属性：data_type'}).waitFor();
+      await capture('conflict-subject-desktop');
+      checks.push('field pair names and distinct attributes, detail type/severity and reload; injected missing values, numeric zero, empty text, unknown codes and long literal HTML');
+      const overview = page.locator('[data-conflict-overview]');
+      const overviewCounts = async expected => {
+        await overview.waitFor();
+        assert.deepEqual(await overview.locator('tbody td').allTextContents(), expected.map(String));
+      };
+      await overviewCounts([2,0,0,1,3]);
+      await page.getByLabel('冲突状态',{exact:true}).selectOption('escalated');
+      await page.getByText('暂无符合条件的冲突记录',{exact:true}).waitFor();
+      await overviewCounts([0,0,0,0,0]);
+      await page.reload(); await page.getByText('暂无符合条件的冲突记录',{exact:true}).waitFor();
+      await overviewCounts([0,0,0,0,0]);
+      assert.equal(await page.getByLabel('冲突状态',{exact:true}).inputValue(),'escalated');
+      await page.getByLabel('冲突状态',{exact:true}).selectOption('');
+      await button('查看冲突 field-602').waitFor(); await overviewCounts([2,0,0,1,3]);
+      await switchUser('reviewB'); await page.locator('[data-conflicts-ready]').waitFor();
+      const visibleConflicts = await expect('reviewB','/api/conflicts','GET');
+      assert.equal(visibleConflicts.length,0,'unassigned handler cannot read global conflicts');
+      await overviewCounts([0,0,0,0,0]);
+      await switchUser('lead'); await button('查看冲突 field-602').waitFor();
+      for (const status of [403,409,503]) {
+        await page.route('**/api/conflicts?*',route=>route.fulfill({status,json:{}}),{times:1});
+        await button('刷新冲突').click(); await page.getByText('冲突读取或办理未完成',{exact:true}).waitFor();
+        assert.equal(await overview.count(),0,'failed list must not display stale or zero counts');
+        await button('刷新冲突').click(); await button('查看冲突 field-602').waitFor();
+        await overviewCounts([2,0,0,1,3]);
+      }
+      // Unknown legacy states count only toward visible total, never a known status.
+      await page.route('**/api/conflicts?*',route=>route.fulfill({json:[
+        {id:801,conflict_type:'term',term:'合成未知状态',status:'legacy-unknown'},
+        {id:802,conflict_type:'term',term:'合成静默',status:'silenced'},
+        {id:803,conflict_type:'term',term:'合成归档',status:'archived'},
+        {id:804,conflict_type:'term',term:'合成升级',status:'escalated'}
+      ]}),{times:1});
+      await button('刷新冲突').click(); await button('查看冲突 term-801').waitFor();
+      await overviewCounts([0,1,1,1,4]);
+      await button('刷新冲突').click(); await button('查看冲突 field-602').waitFor();
+      await overviewCounts([2,0,0,1,3]); await conflictReady();
+      await capture('conflict-overview-desktop');
+      checks.push('overview real visible status counts, filtered empty/reload and restricted handler; injected list failures hide totals and unknown states preserve total');
       await button('指定责任人').click(); await page.getByLabel('冲突处理人', { exact:true }).selectOption('85'); await confirmAction(); await conflictReady();
       await button('改派责任人').click(); await page.getByLabel('冲突处理人', { exact:true }).selectOption('85'); await confirmAction(); await conflictReady();
       assert.equal((await expect('lead', '/api/conflicts/601?type=field', 'GET')).assignmentHistory.length, 2);
@@ -130,8 +217,8 @@ async function main() {
       const [lost]=await pool.execute("SELECT COUNT(*) n FROM terminology_terms WHERE term='合成响应丢失'"); assert.equal(lost[0].n,1); assert.equal(writes,1); await cancelDraft();
       checks.push('real pre-submit concurrent update rejected; delete confirmation; injected write failures preserve input; committed-but-lost response blocks replay');
       await makeDraft('同身份恢复草稿'); await page.getByLabel('术语名称',{exact:true}).focus(); assert.equal(await page.getByLabel('术语名称',{exact:true}).evaluate(el=>el===document.activeElement),true);
-      await page.getByLabel('定义',{exact:true}).fill('合成长中文输入用于检查窄屏表单和未提交内容。'.repeat(12));
-      await capture('term-form-desktop'); await page.setViewportSize({width:390,height:844}); await capture('term-form-mobile'); await page.setViewportSize({width:1699,height:828});
+      await page.getByLabel('定义',{exact:true}).fill('合成长中文输入用于检查桌面表单和未提交内容。'.repeat(12));
+      await capture('term-form-desktop');
       assert.equal(await page.evaluate(()=>{const e=new Event('beforeunload',{cancelable:true});window.dispatchEvent(e);return e.defaultPrevented;}),true);
       await pool.execute('UPDATE user_accounts SET auth_version=auth_version+1 WHERE person_id=83'); await button('刷新术语').click(); await page.getByRole('heading',{name:'请重新登录',exact:true}).waitFor(); await login('contact'); await termsReady();
       assert.equal(await page.getByLabel('术语名称',{exact:true}).inputValue(),'同身份恢复草稿');

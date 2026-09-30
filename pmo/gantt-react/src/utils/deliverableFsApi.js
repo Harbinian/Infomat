@@ -28,6 +28,56 @@ export async function listDeliverables() {
   return parseResponse(response);
 }
 
+/** 台账索引原始数据：受控正本记录 + 扫描错误 + 建议编号。 */
+export async function getDeliverableLedger() {
+  const response = await fetch(`${BASE}/ledger`);
+  return parseResponse(response);
+}
+
+/** 提升为受控：从候选池创建一份新的正本骨架。 */
+export async function createDeliverable(payload) {
+  const response = await fetch(BASE, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json; charset=utf-8' },
+    body: JSON.stringify(payload),
+  });
+  return parseResponse(response);
+}
+
+async function actionRequest(id, action, payload, { ifMatch } = {}) {
+  const headers = { 'Content-Type': 'application/json; charset=utf-8' };
+  if (ifMatch != null) headers['If-Match'] = String(ifMatch);
+  const response = await fetch(`${BASE}/${id}/${action}`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(payload),
+  });
+  return parseResponse(response);
+}
+
+export const publishDeliverable = (id, payload, options) => actionRequest(id, 'publish', payload, options);
+export const acknowledgeDeliverable = (id, payload, options) => actionRequest(id, 'acknowledge', payload, options);
+export const submitDeliverableResult = (id, payload, options) => actionRequest(id, 'submit-result', payload, options);
+export const closeDeliverableAction = (id, payload, options) => actionRequest(id, 'close', payload, options);
+export const reopenDeliverableAction = (id, payload, options) => actionRequest(id, 'reopen', payload, options);
+export const changeDeliverableDueDate = (id, payload, options) => actionRequest(id, 'due-date', payload, options);
+
+/** 责任部门名册（解析自《信息化项目部门主备对接人名单》）。 */
+export async function getDeliverableRoster() {
+  const response = await fetch(`${BASE}/roster`);
+  return parseResponse(response);
+}
+
+/** 发布文本归档留痕（工作群是正式渠道，看板只存档）。 */
+export async function archivePublishText(text) {
+  const response = await fetch(`${BASE}/publish-text`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json; charset=utf-8' },
+    body: JSON.stringify({ text }),
+  });
+  return parseResponse(response);
+}
+
 export async function getDeliverable(id) {
   const response = await fetch(`${BASE}/${id}`);
   return parseResponse(response);

@@ -31,16 +31,19 @@ async function main() {
     const target = cfg.host + ':' + cfg.port + '/' + cfg.database;
     const db = await pool.getConnection();
     try { await applyDefinitions(db); await applyV7Mappings(db); await applyDesignHandoffs(db); } finally { db.release(); }
-    const obj = await repo.saveManaged(contact, { request_id: uuid(), entity_type: 'object', definition: { name: 'P09合成订单' } });
-    const field = await repo.saveManaged(contact, { request_id: uuid(), entity_type: 'field', object_id: obj.entity_id, object_version_id: obj.version_id, definition: { name: '订单编号', data_type: 'text' } });
+    const integrated = process.argv.includes('--p24') ? await require('./testHelpers/upgradeIntegrationVerification').prepare({ pool, fixture, expect, check, save, output }) : null;
+    const obj = integrated ? integrated.obj : await repo.saveManaged(contact, { request_id: uuid(), entity_type: 'object', definition: { name: 'P09合成订单' } });
+    const field = integrated ? integrated.field : await repo.saveManaged(contact, { request_id: uuid(), entity_type: 'field', object_id: obj.entity_id, object_version_id: obj.version_id, definition: { name: '订单编号', data_type: 'text' } });
     const document = structuredClone(fixture.document);
     document.data_objects = [{ data_ref: 'order', data_name: '合成订单', description: '仅用于分析存储测试', information_type: 'business_conclusion', fields: [{ field_ref: 'order_code', field_name: '订单编号', field_type: '文本', definition: '合成唯一编号' }], behavior_links: [], source_relations: [], lifecycle: { applicability: 'pending_confirmation', entry_state: { business_validity: 'pending_confirmation', custody: 'pending_confirmation', identifiability_applicability: 'pending_confirmation', identifiability: 'pending_confirmation' }, routes: [], analysis: { analyzer_version: '', source_fingerprint: '', status: 'not_analyzed' }, decision_reason: '', decision_notes: '' } }];
-    const source = await repo.registerV7Source(lead, { request_id: uuid(), source_kind: 'uploaded_material', original_name: 'P09-synthetic.json' }, Buffer.from(JSON.stringify(document)));
+    const source = integrated ? await require('./testHelpers/upgradeIntegrationVerification').upload(fixture, document) : await repo.registerV7Source(lead, { request_id: uuid(), source_kind: 'uploaded_material', original_name: 'P09-synthetic.json' }, Buffer.from(JSON.stringify(document)));
     const meta = await repo.getV7Source(lead, source.source_id); assert.equal(meta.validation_status, 'valid');
     const mappingBase = { source_digest: meta.content_digest, local_object_ref: 'order', local_field_ref: null, object_version_id: obj.version_id, field_version_id: null, expected_revision: 0, status: 'candidate', basis: '合成材料固定对应，未作业务认定' };
-    const mapping = await repo.saveV7Mapping(lead, source.source_id, { request_id: uuid(), ...mappingBase });
-    const fieldMap = await repo.saveV7Mapping(lead, source.source_id, { request_id: uuid(), ...mappingBase, local_field_ref: 'order_code', field_version_id: field.version_id });
-    const handoff = await repo.saveDesignHandoff(lead, { request_id: uuid(), handoff_id: null, expected_revision: 0, definition: { title: '合成待核实设计交接', claim_status: 'analysis_pending', source: { mapping_version_id: mapping.mapping_version_id, behavior_ref: 'behavior_prepare', operations: ['deliver'] }, target: null, identifier_kind: 'unknown', identity_rule: null, identity_basis: null, delivery_condition: null, reception_requirement: null, evidence: [{ side: 'source', locator: '合成文档第 1 节', note: '待核实' }], pairs: [] } });
+    const saveMapping = body => integrated ? expect('lead', '/api/v7-mappings/sources/' + source.source_id + '/mappings', 'POST', body) : repo.saveV7Mapping(lead, source.source_id, body);
+    const saveHandoff = body => integrated ? expect('lead', '/api/design-handoffs', 'POST', body) : repo.saveDesignHandoff(lead, body);
+    const mapping = await saveMapping( { request_id: uuid(), ...mappingBase });
+    const fieldMap = await saveMapping( { request_id: uuid(), ...mappingBase, local_field_ref: 'order_code', field_version_id: field.version_id });
+    const handoff = await saveHandoff( { request_id: uuid(), handoff_id: null, expected_revision: 0, definition: { title: '合成待核实设计交接', claim_status: 'analysis_pending', source: { mapping_version_id: mapping.mapping_version_id, behavior_ref: 'behavior_prepare', operations: ['deliver'] }, target: null, identifier_kind: 'unknown', identity_rule: null, identity_basis: null, delivery_condition: null, reception_requirement: null, evidence: [{ side: 'source', locator: '合成文档第 1 节', note: '待核实' }], pairs: [] } });
     const template = await repo.registerSource(contact, { request_id: uuid(), department_id: '91', parser_version: 'synthetic-template-v1', template_profile_version: 'synthetic-profile-v1', original_name: 'P09-synthetic-template.xlsx' }, Buffer.from('SYNTHETIC-NOT-A-REAL-XLSX'));
     await pool.execute("INSERT INTO data_map_source_cells(batch_id,sheet_name,cell_address,raw_type,raw_value_json) VALUES (?,'合成表','A16','string',?)", [template.batch_id, JSON.stringify('原始字符串')]);
     const c = await expect('contact', '/api/process-v7-preview/cases', 'POST', { document, source_file_name: 'P09-preview.json' }, 201);
@@ -197,7 +200,10 @@ async function main() {
     if (process.argv.includes('--p13')) await require('./testHelpers/analysisComparisonVerification')({ repo, lead, pool, run, historical, payload, begin, completion, finish, get, check, save });
     if (process.argv.includes('--p14')) await require('./testHelpers/analysisApiVerification')({ repo, lead, contact, pool, run, historical, payload, fixture, source, published, preview, template, fieldMap, handoff, field, begin, completion, finish, get, check, save, expect, backup, restore });
     if (process.argv.includes('--p16')) await require('./testHelpers/analysisIssueVerification')({ repo, lead, contact, pool, run, historical, payload, fixture, source, mapping, fieldMap, handoff, field, begin, completion, finish, get, check, save, expect, backup, restore, output });
-    if (process.argv.includes('--p17')) await require('./testHelpers/analysisTaskVerification')({ repo, lead, contact, pool, run, historical, payload, fixture, source, mapping, fieldMap, handoff, field, begin, completion, finish, get, check, save, expect, backup, restore, output });
+    if (process.argv.includes('--p17')) {
+      const actual = integrated ? await require('./testHelpers/upgradeIntegrationVerification').analyze({ repo, lead, pool, handoff, check, save, integrated, source, mapping, fieldMap, expect }) : { run, historical };
+      await require('./testHelpers/analysisTaskVerification')({ repo, lead, contact, pool, run: actual.run, historical: actual.historical, payload, fixture, source, mapping, fieldMap, handoff, field, begin, completion, finish, get, check, save, expect, backup, restore, output });
+    }
     if (process.argv.includes('--p18-word')) await require('./testHelpers/wordEvidenceVerification')({ repo, lead, pool, fixture, source, field, check, save, backup, restore, output });
     if (process.argv.includes('--p18-pdf')) await require('./testHelpers/pdfEvidenceVerification')({ repo, lead, pool, fixture, source, field, check, save, backup, restore, output });
     if (process.argv.includes('--p18')) await require('./testHelpers/excelEvidenceVerification')({ repo, lead, pool, fixture, source, field, check, save, backup, restore, output });
@@ -251,7 +257,7 @@ async function main() {
       assert.deepEqual(await get(run), historical);
     });
     assert((await inspectAnalysisRuns(pool)).ready);
-    save('results.json', { passed: true, step: process.argv.includes('--p19') ? 'P19' : process.argv.includes('--p18-pdf') ? 'P18-PDF' : process.argv.includes('--p18-word') ? 'P18-DOCX' : process.argv.includes('--p18') ? 'P18' : process.argv.includes('--p17') ? 'P17' : process.argv.includes('--p16') ? 'P16' : process.argv.includes('--p15') ? 'P15' : 'P09', checks, formal_environment: false, worker_started: process.argv.includes('--p19') || process.argv.includes('--p18-pdf') || process.argv.includes('--p18-word') || process.argv.includes('--p18') || process.argv.includes('--p15') || process.argv.includes('--p16'), human_acceptance: false });
+    save('results.json', { passed: true, step: process.argv.includes('--p24') ? 'P24' : process.argv.includes('--p19') ? 'P19' : process.argv.includes('--p18-pdf') ? 'P18-PDF' : process.argv.includes('--p18-word') ? 'P18-DOCX' : process.argv.includes('--p18') ? 'P18' : process.argv.includes('--p17') ? 'P17' : process.argv.includes('--p16') ? 'P16' : process.argv.includes('--p15') ? 'P15' : 'P09', checks, formal_environment: false, worker_started: process.argv.includes('--p24') || process.argv.includes('--p19') || process.argv.includes('--p18-pdf') || process.argv.includes('--p18-word') || process.argv.includes('--p18') || process.argv.includes('--p15') || process.argv.includes('--p16'), human_acceptance: false });
   }, { evidenceDir: output }); }
   finally { for (const [k, v] of Object.entries(oldFlags)) { if (v === undefined) delete process.env[k]; else process.env[k] = v; } }
 }

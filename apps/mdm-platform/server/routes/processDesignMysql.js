@@ -855,6 +855,38 @@ function makeProcessDesignMysqlRepository(pool) {
   return {
 getDraft,
 getDocumentById,
+async searchVersions({ query, beforeId, globalRead, departmentId }) {
+      // Literal substring search; scope is applied before the keyset page limit.
+      return mysqlQuery(pool, `SELECT CAST(id AS CHAR) AS id,
+        CAST(document_id AS CHAR) AS document_id, CAST(department_id AS CHAR) AS department_id,
+        document_no, document_title, edition, schema_version, status, content_hash
+        FROM process_design_versions
+        WHERE schema_version IN ('process-governance-v7','process-governance-v8')
+          AND status IN ('published','superseded','retired')
+          AND (?=1 OR department_id=?)
+          AND (?='' OR LOCATE(?,document_no)>0 OR LOCATE(?,document_title)>0)
+          AND (? IS NULL OR id<CAST(? AS SIGNED))
+        ORDER BY process_design_versions.id DESC LIMIT 21`,
+      [globalRead ? 1 : 0, departmentId, query, query, query, beforeId, beforeId]);
+    },
+async getHistoryAnchor(id) {
+      const [row] = await mysqlQuery(pool, `SELECT CAST(id AS CHAR) AS id,
+        CAST(document_id AS CHAR) AS document_id, department_id, schema_version
+        FROM process_design_drafts WHERE id=CAST(? AS SIGNED)`, [id]);
+      return row || null;
+    },
+async listDocumentDrafts(documentId, { beforeId, departmentId, globalRead }) {
+      // Filter before pagination; unauthorized draft identifiers never enter the response.
+      return mysqlQuery(pool, `
+        SELECT CAST(id AS CHAR) AS id, CAST(document_id AS CHAR) AS document_id,
+               CAST(department_id AS CHAR) AS department_id, schema_version, status,
+               revision_no, content_hash, document_no, document_title
+        FROM process_design_drafts
+        WHERE document_id=CAST(? AS SIGNED) AND schema_version IN ('process-governance-v7','process-governance-v8')
+          AND (?=1 OR department_id=?) AND (? IS NULL OR id<CAST(? AS SIGNED))
+        ORDER BY process_design_drafts.id DESC LIMIT 21
+      `, [documentId, globalRead ? 1 : 0, departmentId, beforeId, beforeId]);
+    },
 async getVersionContent(versionId) {
       const [version] = await mysqlQuery(pool, `
         SELECT id, draft_id, document_id, document_no, document_title, edition, version_no,
@@ -1390,6 +1422,25 @@ async function readableProcessVersion(req) {
   return version;
 }
 
+router.get('/versions', requireAuth, (req, res) => runAction(res, async () => {
+  const query = req.query.q === undefined ? '' : req.query.q;
+  const beforeId = req.query.before_id === undefined ? null : req.query.before_id;
+  if (typeof query !== 'string' || query.length > 200 || (beforeId !== null &&
+    (typeof beforeId !== 'string' || !/^[1-9]\d{0,18}$/.test(beforeId) || BigInt(beforeId) > 9223372036854775807n))) {
+    throw httpError(400, '检索文字最多200字，分页游标须为有效版本编号', { code: 'VERSION_SEARCH_INVALID_QUERY' });
+  }
+  const globalRead = await canViewAcrossDepartments(req);
+  const departmentId = Number(req.session.departmentId || 0);
+  if (!globalRead && (!departmentId || !await hasCurrentPermission(req, 'governance:read-department'))) {
+    throw httpError(403, '无权检索正式流程版本', { code: 'PROCESS_VERSION_SCOPE_DENIED' });
+  }
+  const repo = await repository();
+  const rows = await repo.searchVersions({ query: query.trim(), beforeId, globalRead, departmentId });
+  const items = rows.slice(0, 20);
+  res.json({ items, next_cursor: rows.length > 20 ? items[items.length - 1].id : null,
+    page_size: 20, coverage: 'visible_native_versions' });
+}));
+
 router.get('/versions/:processVersionId/content', requireAuth, (req, res) => runAction(res, async () => {
   res.json(await readableProcessVersion(req));
 }));
@@ -1433,6 +1484,29 @@ router.get('/drafts/:id/export', requireAuth, (req, res) => runAction(res, async
   const filename = `${markdownFileSafe(text(draft.document_no) || `draft-${draft.id}`)}-${draft.schema_version}.json`;
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
   res.json(content.document);
+}));
+
+router.get('/drafts/:id/document-drafts', requireAuth, (req, res) => runAction(res, async () => {
+  const validId = value => typeof value === 'string' && /^[1-9]\d{0,18}$/.test(value) && BigInt(value) <= 9223372036854775807n;
+  const beforeId = req.query.before_id === undefined ? null : req.query.before_id;
+  if (!validId(req.params.id) || (beforeId !== null && !validId(beforeId))) {
+    throw httpError(400, '草稿标识或分页游标无效', { code: 'DOCUMENT_HISTORY_INVALID_CURSOR' });
+  }
+  const repo = await repository();
+  const draft = await repo.getHistoryAnchor(req.params.id);
+  await assertCanViewDraft(req, repo, draft);
+  assertActiveV7Draft(draft);
+  if (!draft.document_id) throw httpError(409, '该草稿缺少主档关联，不能推断历史归属', { code: 'DOCUMENT_HISTORY_UNRESOLVED' });
+  const globalRead = await canViewAcrossDepartments(req);
+  const rows = await repo.listDocumentDrafts(draft.document_id, {
+    beforeId, globalRead, departmentId: Number(req.session.departmentId || 0)
+  });
+  // Keep the same authorization check as direct draft reads, in addition to SQL filtering.
+  for (const row of rows) await assertCanViewDraft(req, repo, row);
+  const items = rows.slice(0, 20);
+  res.json({ anchor_draft_id: req.params.id, document_id: String(draft.document_id), items,
+    next_cursor: rows.length > 20 ? items[items.length - 1].id : null,
+    page_size: 20, coverage: 'visible_native_drafts' });
 }));
 
 router.get('/drafts/:id', requireAuth, (req, res) => runAction(res, async () => {

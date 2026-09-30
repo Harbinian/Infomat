@@ -4,6 +4,13 @@ export const DELIVERABLE_STATUSES = ['未提交', '编制中', '已提交', '待
 export const DELIVERABLE_LEVELS = ['A', 'B', 'C', 'D'];
 export const RISK_LEVELS = ['高', '中', '低'];
 
+// 行动项（action 块）只在交付物被发布为行动项后出现，未发布的正本不含此块。
+// 四要素对齐《信息化项目协同工作规则》6.3：事项、责任部门、截止时间、当前状态。
+export const ACTION_STATES = ['待接收', '已接收', '已提交待确认', '已关闭'];
+export const ACTION_CRITERIA_SOURCES = ['task', 'manual'];
+const ACTION_DAY_FIELDS = ['dueDate', 'ackDueDate'];
+const ACTION_INSTANT_FIELDS = ['publishedAt', 'acknowledgedAt', 'closedAt'];
+
 const REQUIRED_FIELDS = [
   'deliverableId',
   'status',
@@ -50,6 +57,24 @@ function normalizeEvidence(evidence) {
   };
 }
 
+/**
+ * 归一化 action 块的日期字段。
+ *
+ * 必须递归处理：gray-matter 会把 `2026-10-15` 解析成 Date 对象，不归一化会让
+ * round-trip 断言失败，且每次写回都把 YAML 漂移成完整 ISO 时间戳。
+ */
+function normalizeAction(action) {
+  if (!action || typeof action !== 'object') return null;
+  const normalized = { ...action };
+  for (const key of ACTION_DAY_FIELDS) {
+    if (key in normalized) normalized[key] = toIsoDay(normalized[key]) || '';
+  }
+  for (const key of ACTION_INSTANT_FIELDS) {
+    if (key in normalized) normalized[key] = toIsoInstant(normalized[key]) || '';
+  }
+  return normalized;
+}
+
 function normalizeHistoryItem(item = {}) {
   return {
     action: item.action || '',
@@ -68,6 +93,11 @@ export function normalizeDeliverableFrontmatter(frontmatter = {}) {
     if (key in normalized) normalized[key] = toIsoDay(normalized[key]) || '';
   }
   if ('evidence' in normalized) normalized.evidence = normalizeEvidence(normalized.evidence);
+  if ('action' in normalized) {
+    const action = normalizeAction(normalized.action);
+    if (action) normalized.action = action;
+    else delete normalized.action;
+  }
   if ('workflowHistory' in normalized) {
     normalized.workflowHistory = Array.isArray(normalized.workflowHistory)
       ? normalized.workflowHistory.map(normalizeHistoryItem)
@@ -91,6 +121,28 @@ export function parseDeliverableFrontmatter(raw) {
 
 export function stringifyDeliverableFrontmatter({ frontmatter, body }) {
   return matter.stringify((body || '').replace(/\s+$/u, '') + '\n', normalizeDeliverableFrontmatter(frontmatter || {}));
+}
+
+/**
+ * action 块的条件校验：只有存在时才校验，缺失一律放行 ——
+ * 未发布行动项的既有正本无需任何改动即可继续通过。
+ */
+function validateAction(action) {
+  if (!ACTION_STATES.includes(action.state)) {
+    throw new DeliverableFsError('SCHEMA_INVALID', `action.state 枚举越界: ${action.state}`);
+  }
+  if (!String(action.assigneeDepartment || '').trim()) {
+    throw new DeliverableFsError('SCHEMA_INVALID', 'action.assigneeDepartment 必填');
+  }
+  if (!ISO_DAY.test(String(action.dueDate || ''))) {
+    throw new DeliverableFsError('SCHEMA_INVALID', `action.dueDate 必须是 ISO 日期 YYYY-MM-DD,当前: ${action.dueDate}`);
+  }
+  if (action.ackDueDate && !ISO_DAY.test(action.ackDueDate)) {
+    throw new DeliverableFsError('SCHEMA_INVALID', `action.ackDueDate 必须是 ISO 日期 YYYY-MM-DD,当前: ${action.ackDueDate}`);
+  }
+  if (action.criteriaSource && !ACTION_CRITERIA_SOURCES.includes(action.criteriaSource)) {
+    throw new DeliverableFsError('SCHEMA_INVALID', `action.criteriaSource 枚举越界: ${action.criteriaSource}`);
+  }
 }
 
 export function validateDeliverableFrontmatter(frontmatter) {
@@ -121,6 +173,7 @@ export function validateDeliverableFrontmatter(frontmatter) {
   if (fm.workflowHistory && !Array.isArray(fm.workflowHistory)) {
     throw new DeliverableFsError('SCHEMA_INVALID', 'workflowHistory 必须是数组');
   }
+  if (fm.action) validateAction(fm.action);
   return true;
 }
 
@@ -157,32 +210,6 @@ export function upsertChangeLogTable(body = '', history = []) {
   return `${mainBody.trimEnd()}\n\n${buildChangeLogTable(history)}\n`;
 }
 
-export function frontmatterToDeliverablePatch(frontmatter, record = {}) {
-  const fm = normalizeDeliverableFrontmatter(frontmatter || {});
-  return {
-    deliverableId: fm.deliverableId,
-    deliverableName: fm.title || '',
-    deliverableType: fm.deliverableType || '',
-    deliverableLevel: fm.deliverableLevel || '',
-    department: fm.department || '',
-    owner: fm.owner || '',
-    reviewer: fm.reviewer || '',
-    plannedFinish: fm.plannedFinish || '',
-    taskRisk: fm.risk || '中',
-    deliverableStatus: fm.status || '未提交',
-    _actualSubmitDate: fm.actualSubmitDate || '',
-    _actualPassDate: fm.actualPassDate || '',
-    _actualArchiveDate: fm.actualArchiveDate || '',
-    reviewOpinion: fm.reviewOpinion || '',
-    _ownerNote: fm.ownerNote || '',
-    evidence: fm.evidence || null,
-    workflowHistory: fm.workflowHistory || [],
-    canonicalFileName: record.fileName || '',
-    canonicalMtime: record.mtime || 0,
-    canonicalBody: record.body || '',
-  };
-}
-
 export function deliverableToFrontmatter(deliverable, existing = {}) {
   return normalizeDeliverableFrontmatter({
     ...existing,
@@ -202,25 +229,9 @@ export function deliverableToFrontmatter(deliverable, existing = {}) {
     reviewOpinion: deliverable.reviewOpinion || existing.reviewOpinion || '',
     ownerNote: deliverable._ownerNote || deliverable.ownerNote || existing.ownerNote || '',
     evidence: deliverable.evidence || existing.evidence || null,
+    action: deliverable.action || existing.action || null,
     workflowHistory: deliverable.workflowHistory || existing.workflowHistory || [],
   });
-}
-
-export function mergeDeliverableWithFrontmatter(deliverable, record) {
-  if (!record?.frontmatter) return deliverable;
-  return {
-    ...deliverable,
-    ...frontmatterToDeliverablePatch(record.frontmatter, record),
-    taskId: deliverable.taskId,
-    taskName: deliverable.taskName,
-    originalWbs: deliverable.originalWbs,
-    normalizedWbs: deliverable.normalizedWbs,
-    nodeKey: deliverable.nodeKey,
-    vendor: deliverable.vendor,
-    isPhaseGate: deliverable.isPhaseGate,
-    isRequiredForGate: deliverable.isRequiredForGate,
-    notes: record.frontmatter.ownerNote || record.frontmatter.reviewOpinion || deliverable.notes || '',
-  };
 }
 
 export function safeDeliverableFileName(deliverableId, title) {

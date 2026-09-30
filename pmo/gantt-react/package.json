@@ -11,11 +11,14 @@
     "test:frontmatter": "node ../scripts/smoke-frontmatter.mjs",
     "test:writeback": "node ../scripts/smoke-writeback.mjs",
     "test:plugin": "node ../scripts/smoke-plugin-endpoints.mjs",
+    "test:deliverable-identity": "node ../scripts/smoke-deliverable-identity.mjs",
+    "test:deliverable-action": "node ../scripts/smoke-deliverable-action.mjs",
     "test:hmr": "node ../scripts/smoke-hmr.mjs",
     "test:task-owner": "node ../scripts/smoke-task-owner.mjs",
     "test:milestone-rules": "node ../scripts/smoke-milestone-rules.mjs",
     "test:pmo-week-range": "node ../scripts/smoke-pmo-week-range.mjs",
-    "test:weekly-issue-ledger": "node ../scripts/smoke-weekly-issue-ledger.mjs"
+    "test:weekly-issue-ledger": "node ../scripts/smoke-weekly-issue-ledger.mjs",
+    "test:weekly-issue-ledger-fs": "node ../scripts/smoke-weekly-issue-ledger-fs.mjs"
   },
   "dependencies": {
     "gray-matter": "^4.0.3",

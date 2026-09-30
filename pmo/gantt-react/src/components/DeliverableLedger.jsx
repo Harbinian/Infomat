@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { formatDate, parseDate, unique } from '../utils/dateUtils';
 import { filterAndSortDeliverables } from '../utils/deliverableWorkflow';
+import { deliverableRowKey } from '../utils/deliverableIndex.js';
+import DeliverablePool from './DeliverablePool';
 
 const LEVEL_COLORS = { A: '#B88919', B: '#6E879F', C: '#6F8A6A', D: '#9A8F7A' };
 
@@ -70,6 +72,9 @@ function getCellValue(deliverable, key) {
 
 export default function DeliverableLedger({
   deliverables,
+  projections = [],
+  health = null,
+  suggestedNextId = '',
   filters: controlledFilters,
   sort: controlledSort,
   onFilterChange,
@@ -77,7 +82,9 @@ export default function DeliverableLedger({
   onSelectDeliverable,
   onUploadDeliverable,
   onDownloadDeliverable,
+  onPromoteProjection,
 }) {
+  const [view, setView] = useState('controlled');
   const [localFilters, setLocalFilters] = useState({});
   const [localSort, setLocalSort] = useState({ key: 'plannedFinish', direction: 'asc' });
   const [searchInput, setSearchInput] = useState('');
@@ -127,8 +134,46 @@ export default function DeliverableLedger({
     return sort.direction === 'asc' ? '▲' : '▼';
   };
 
+  const tabsNode = (
+    <div className="dlv-view-tabs">
+      <button
+        type="button"
+        className={`dlv-view-tab${view === 'controlled' ? ' active' : ''}`}
+        onClick={() => setView('controlled')}
+      >
+        受控交付物<span className="dlv-view-tab-count">{deliverables.length}</span>
+      </button>
+      <button
+        type="button"
+        className={`dlv-view-tab${view === 'pool' ? ' active' : ''}`}
+        onClick={() => setView('pool')}
+      >
+        计划候选池<span className="dlv-view-tab-count">{projections.length}</span>
+      </button>
+      {health && health.total > 0 && (
+        <span className={`dlv-health-badge${health.error > 0 ? ' has-error' : ''}`}>
+          对账 {health.error > 0 ? `${health.error} 错误 · ` : ''}{health.warn} 提醒 · {health.info} 提示
+        </span>
+      )}
+    </div>
+  );
+
+  if (view === 'pool') {
+    return (
+      <div className="deliverable-view">
+        {tabsNode}
+        <DeliverablePool
+          projections={projections}
+          suggestedNextId={suggestedNextId}
+          onPromote={onPromoteProjection}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="deliverable-view">
+      {tabsNode}
       <div className="dlv-filter-bar">
         <select value={filters.level || 'all'} onChange={event => updateFilter('level', event.target.value)}>
           <option value="all">全部等级</option>
@@ -191,7 +236,7 @@ export default function DeliverableLedger({
           <tbody>
             {filtered.map(deliverable => (
               <tr
-                key={deliverable.deliverableId}
+                key={deliverableRowKey(deliverable)}
                 className={`dlv-row dlv-level-${deliverable.deliverableLevel} ${deliverable.taskRisk === '高' ? 'dlv-high-risk' : ''}`}
                 onClick={() => onSelectDeliverable && onSelectDeliverable(deliverable)}
               >

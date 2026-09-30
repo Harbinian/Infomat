@@ -44,6 +44,8 @@ const server = await createServer({
   logLevel: 'silent',
 });
 
+let createdFileName = '';
+
 try {
   await server.listen();
   const address = server.httpServer.address();
@@ -113,11 +115,62 @@ try {
     'runtime uploads must not be written under pmo/deliverables/_history'
   );
 
+  // ---- 台账索引端点 ----
+  const ledger = await fetch(`${base}/ledger`).then(r => r.json());
+  assert.equal(ledger.ok, true);
+  assert.ok(Array.isArray(ledger.data.controlled), '/ledger 返回 controlled 数组');
+  assert.ok(ledger.data.controlled.some(item => item.deliverableId === 'DLV-200'), '/ledger 包含已有正本');
+  assert.ok(Array.isArray(ledger.data.errors), '/ledger 返回扫描错误数组');
+  assert.match(ledger.data.suggestedNextId, /^DLV-\d{3}$/u, 'suggestedNextId 形如 DLV-###');
+  assert.equal(
+    ledger.data.controlled.some(item => 'body' in item),
+    false,
+    '/ledger 不返回正文，正文走详情端点',
+  );
+
+  // ---- 提升为受控：创建正本骨架 ----
+  const createPayload = {
+    deliverableId: 'DLV-250',
+    title: '端点创建测试',
+    deliverableType: '过程记录类',
+    deliverableLevel: 'C',
+    department: '测试部门',
+    plannedFinish: '2026-06-30',
+    normalizedWbs: '9.9.9',
+  };
+  const created = await fetch(base, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(createPayload),
+  }).then(r => r.json());
+  assert.equal(created.ok, true);
+  assert.equal(created.data.deliverableId, 'DLV-250');
+  createdFileName = created.data.fileName;
+
+  const createdRaw = await fetch(`${base}/DLV-250/raw`).then(r => r.text());
+  assert.ok(createdRaw.includes('normalizedWbs'), '创建时写入正本锚点');
+
+  const duplicateId = await fetch(base, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(createPayload),
+  });
+  assert.equal(duplicateId.status, 409, '重复编号必须拒绝');
+
+  const missingRequired = await fetch(base, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ deliverableId: 'DLV-251', title: '缺计划完成时间' }),
+  });
+  assert.equal(missingRequired.status, 400, '缺 plannedFinish 必须拒绝');
+
   console.log('结果: 6 端点 + If-Match + schema + upload 错误码/归档全部通过');
+  console.log('结果: 台账索引 + 提升为受控（创建/重复拒绝/必填校验）通过');
 } finally {
   await server.close();
   await fsp.rm(fixturePath, { force: true });
   await fsp.rm(path.join(deliverablesDir, '_history', 'DLV-200'), { recursive: true, force: true });
+  if (createdFileName) await fsp.rm(path.join(deliverablesDir, createdFileName), { force: true });
   await fsp.rm(runtimeRoot, { recursive: true, force: true });
 }
 

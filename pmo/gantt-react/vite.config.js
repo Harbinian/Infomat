@@ -4,6 +4,7 @@ import fsp from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { pmoDeliverablesPlugin } from './plugins/pmoDeliverablesPlugin.js'
+import { pmoWeeklyIssuesPlugin } from './plugins/pmoWeeklyIssuesPlugin.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = path.resolve(__dirname, '../..')
@@ -61,7 +62,7 @@ function pmoProcedureDashboardPlugin() {
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [pmoProcedureDashboardPlugin(), pmoDeliverablesPlugin(), react()],
+  plugins: [pmoProcedureDashboardPlugin(), pmoDeliverablesPlugin(), pmoWeeklyIssuesPlugin(), react()],
   server: {
     host: '0.0.0.0',
     port: 5174,
