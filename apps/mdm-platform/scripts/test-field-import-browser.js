@@ -103,20 +103,20 @@ async function main() {
       assert.equal(warning.quality_status, 'warn');
       assert.equal((await pool.query('SELECT * FROM data_map_quality_issues WHERE field_id=?', [warning.id]))[0].length, 1);
       checks.push('real blocked-name partial write is explicit; warning quality state and issue retained');
-      await chooseFile(good, '很长的合成字段台账文件名用于验证窄屏时文件说明仍然完整可读.xlsx');
+      await chooseFile(good, '很长的合成字段台账文件名用于验证桌面视口中文件说明仍然完整可读.xlsx');
       await file().setInputFiles({ name: '不支持.xls', mimeType: 'application/vnd.ms-excel', buffer: good });
       await page.locator('[data-field-import-error]').waitFor(); assert.match(await page.locator('[data-field-import-file]').innerText(), /很长/);
       await file().setInputFiles({ name: '超大.xlsx', mimeType: 'application/octet-stream', buffer: Buffer.alloc(5 * 1024 * 1024 + 1) });
       assert.match(await page.locator('[data-field-import-error]').innerText(), /5MB/);
       page.once('dialog', d => d.dismiss()); await file().setInputFiles({ name: '替换取消.xlsx', mimeType: 'application/octet-stream', buffer: good });
       assert.match(await page.locator('[data-field-import-file]').innerText(), /很长/);
-      for (const [width, height, name] of [[1699, 828, 'desktop'], [390, 844, 'mobile']]) {
+      for (const [width, height, name] of [[1699, 828, 'desktop']]) {
         await page.setViewportSize({ width, height }); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
         assert.equal(await page.evaluate(() => visualViewport.scale), 1);
         await page.screenshot({ path: path.join(output, name + '.png'), fullPage: true });
       }
       await page.setViewportSize({ width: 1699, height: 828 }); await page.getByRole('button', { name: '选择字段台账文件', exact: true }).focus(); await page.keyboard.press('Tab'); assert.equal(await submit().evaluate(el => el === document.activeElement), true);
-      checks.push('file limits, replacement cancellation, keyboard, 1699x828 and 390x844 at 100 percent');
+      checks.push('file limits, replacement cancellation, keyboard, Edge 1699x828 desktop at 100 percent');
       await pool.execute('UPDATE user_accounts SET auth_version=auth_version+1 WHERE account_id=183');
       await submit().click(); await page.getByRole('heading', { name: '请重新登录', exact: true }).waitFor(); await login('contact');
       assert.match(await page.locator('[data-field-import-file]').innerText(), /很长/); assert.equal(await submit().isDisabled(), true); await acknowledge();

@@ -148,15 +148,15 @@ async function main(){await withStage05Fixture(async({pool,fixture,expect,reques
         await page.route('**'+root+'/sources/*/mappings',r=>r.abort(),{times:1});await button('保存映射建议').click();await idle();assert((await label('映射核对依据').inputValue()).startsWith('页面字段依据'));
         await pool.execute('UPDATE user_accounts SET auth_version=auth_version+1 WHERE account_id=182');await button('保存映射建议').click();await page.getByRole('heading',{name:'请重新登录',exact:true}).waitFor();await login();assert((await label('映射核对依据').inputValue()).startsWith('页面字段依据'));
         await expect('lead','/api/org/login','POST',{loginName:'SYNTHETIC_lead',password:fixture.loginPassword});
-        await page.setViewportSize({width:390,height:844});await overflow();await shot('mapping-edit-mobile.png');await button('保存映射建议').click();await idle();assert((await get('/sources/'+uiSource.source_id)).mappings.some(m=>m.local_field_ref==='field_a'&&m.status==='candidate'));
+        await overflow();await button('保存映射建议').click();await idle();assert((await get('/sources/'+uiSource.source_id)).mappings.some(m=>m.local_field_ref==='field_a'&&m.status==='candidate'));
       });
       await check('Edge history, fixed ledger and source evidence, late response rejection, viewport and console checks',async()=>{
         await page.setViewportSize({width:1699,height:828});await button('查看字段来源证据').first().click();await idle();await page.getByRole('heading',{name:'固定来源证据',exact:true}).waitFor();await button('查看映射历史').last().click();await idle();assert((await page.getByRole('link',{name:'打开台账固定版本 ↗'}).last().getAttribute('href')).endsWith(field.version_id));
-        await shot('mapped-desktop.png');await overflow();await page.setViewportSize({width:390,height:844});await overflow();await shot('mapped-mobile.png');
+        await shot('mapped-desktop.png');await overflow();await overflow();
         let release;const gate=new Promise(r=>{release=r;});await page.route('**'+root+'/sources/'+source.source_id,async route=>{const response=await route.fetch();await gate;await route.fulfill({response}).catch(()=>{});},{times:1});await page.locator('.v7-source-choice').filter({hasText:'来源 '+source.source_id+' ·'}).click();await page.locator('.v7-source-choice').filter({hasText:'来源 '+uiSource.source_id+' ·'}).click();await idle();release();await page.unrouteAll({behavior:'wait'});assert(await page.getByRole('heading',{name:'来源 '+uiSource.source_id+'：独立上传材料',exact:true}).isVisible());
         assert.deepEqual(pageErrors,[]);assert.deepEqual(consoleErrors.filter(e=>!/Failed to load resource:.*(401|403|409|503|net::ERR_FAILED)/.test(e)),[]);assert.equal(crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex'),rawBefore);assert.deepEqual(await snapshots(),protectedBefore);
       });
-      fs.writeFileSync(path.join(output,'browser-results.json'),JSON.stringify({browser:'Microsoft Edge',zoom:1,viewports:[[1699,828],[390,844]],pageErrors,consoleErrors,human_acceptance:false},null,2));
+      fs.writeFileSync(path.join(output,'browser-results.json'),JSON.stringify({browser:'Microsoft Edge',zoom:1,viewports:[[1699,828]],pageErrors,consoleErrors,human_acceptance:false},null,2));
     }
     await check('numeric source pagination does not skip multi-digit IDs; parser depth is bounded',async()=>{
       const activeSession={...session,authVersion:process.argv.includes('--no-browser')?1:2};

@@ -36,7 +36,7 @@ npm run test:pmo-task-data
 ## 流程地图驾驶舱
 
 - 主文件是 `procedure-management/dashboard.html`。
-- 该页面是展示副本，流程数据来自 `docs/norms/` 和 `docs/organization/`，由 `scripts/parse-sankey-data.mjs` 注入。
+- 该页面是历史展示副本，旧消费链由parser读取`docs/`资料；当前治理依据回到外部原始材料及明确业务确认，不因页面维护自动运行生成或同步。
 - 修改页面样式或交互前先读 `procedure-management/AGENTS.md`。
 
 ## 甘特图 / PMO 看板

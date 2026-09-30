@@ -1,5 +1,8 @@
+# Connects only to the supplied instance; writes CLI evidence and synthetic page data, never starts services or writes a database.
 param(
   [string]$BaseUrl = 'http://127.0.0.1:3001',
+  [ValidateSet('process-governance-v7', 'process-governance-v8')]
+  [string]$ExpectedSchemaVersion = 'process-governance-v8',
   [switch]$Headed
 )
 
@@ -21,7 +24,7 @@ try {
 } catch {
   throw "Cannot connect to the candidate 3001 instance at $BaseUrl. This script does not start the service. Original error: $($_.Exception.Message)"
 }
-if ($health.status -ne 'ok' -or $health.schema_version -ne 'process-governance-v7' -or $health.release_status -ne 'released') {
+if ($health.status -ne 'ok' -or $health.schema_version -ne $ExpectedSchemaVersion -or $health.release_status -notin @('candidate', 'released')) {
   throw "Candidate health response is unexpected: $($health | ConvertTo-Json -Compress)"
 }
 
@@ -51,4 +54,4 @@ try {
   Pop-Location
 }
 
-Write-Host '3001 import normalization browser regression passed in Microsoft Edge.'
+Write-Host "3001 $ExpectedSchemaVersion import normalization browser regression passed in Microsoft Edge (1699x828)."

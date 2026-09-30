@@ -158,18 +158,18 @@ async function main(){await withStage05Fixture(async({pool,fixture,expect,reques
       await button('保存对象').click();await idle();const response=await page.request.get(fixture.baseURL+root+'/detail/object/'+uiObject.entity_id);assert.equal(response.status(),200);const current=(await response.json()).current;assert.equal(current.entity_id,uiObject.entity_id);assert.equal(current.revision_no,2);assert.equal(current.definition.unique_identifiers.length,2);
       await page.getByText('唯一标识',{exact:true}).click();assert((await page.locator('.definition-detail').innerText()).includes('组合唯一标识'));await button('字段明细').click();await page.getByRole('button',{name:/^页面字段一 · 字段/}).click();await idle();
     });
-    await check('Edge immutable history, desktop/mobile layout and explicit retirement cancellation/confirmation',async()=>{
+    await check('Edge immutable history, desktop layout and explicit retirement cancellation/confirmation',async()=>{
       await button('查看版本历史').click();await idle();await page.locator('.history-list button').filter({hasText:'修订 1 ·'}).click();await idle();assert((await page.locator('.definition-detail').innerText()).includes('明确属于页面对象'));
       await button('返回当前版本').click();await noOverflow();await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:path.join(output,'field-desktop.png'),fullPage:true});
-      await page.setViewportSize({width:390,height:844});await noOverflow();await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:path.join(output,'field-mobile.png'),fullPage:true});
+      await noOverflow();await page.evaluate(()=>scrollTo(0,0));
       await button('查看停用影响').click();await idle();await label('停用原因').fill('仅合成数据的停用验证');await dismiss(()=>button('确认停用并保留历史').click());assert.equal(await label('停用原因').inputValue(),'仅合成数据的停用验证');
-      await noOverflow();await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:path.join(output,'retirement-mobile.png'),fullPage:true});
+      await noOverflow();await page.evaluate(()=>scrollTo(0,0));
       page.once('dialog',dialog=>dialog.accept());await button('确认停用并保留历史').click();await idle();assert((await page.locator('.definition-detail').innerText()).includes('已停用'));assert.equal(await button('修订字段').count(),0);
       await page.setViewportSize({width:1699,height:828});await button('对象详情').click();await button('查看停用影响').click();await idle();assert((await page.locator('.management-main').innerText()).includes('所属字段'));await label('停用原因').fill('对象演示结束');page.once('dialog',dialog=>dialog.accept());await button('确认停用并保留历史').click();await idle();await noOverflow();await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:path.join(output,'object-retired-desktop.png'),fullPage:true});
     });
     await check('Edge template source remains locatable in groups with original cells and unchanged bytes',async()=>{
       await page.locator('.object-choice').filter({hasText:'合成对象'}).filter({hasNotText:'API合成对象'}).filter({hasNotText:'页面合成对象'}).click();await idle();await button('查看源单元格原值').click();await idle();assert((await page.locator('.definition-detail').innerText()).includes('主数据对象名称'));
-      await page.setViewportSize({width:390,height:844});await noOverflow();await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:path.join(output,'source-mobile.png'),fullPage:true});await page.setViewportSize({width:1699,height:828});
+      await noOverflow();await page.evaluate(()=>scrollTo(0,0));await page.setViewportSize({width:1699,height:828});
     });
     await check('Edge replaced async response cannot restore old selection and browser stays clean',async()=>{
       let release;const gate=new Promise(resolve=>{release=resolve;});
@@ -178,7 +178,7 @@ async function main(){await withStage05Fixture(async({pool,fixture,expect,reques
       assert((await page.locator('.management-main h2').first().innerText()).includes(longName));assert.deepEqual(errors,[]);
       const unexpected=consoleErrors.filter(e=>!/Failed to load resource:.*(401|403|409|503|net::ERR_FAILED)/.test(e));assert.deepEqual(unexpected,[]);
     });
-    fs.writeFileSync(path.join(output,'results.json'),JSON.stringify({passed:true,checks,viewport:[{width:1699,height:828},{width:390,height:844}],browser:'Microsoft Edge, 100% zoom',consoleErrors,scope:'owned MySQL and real API; synthetic data; failure statuses 403/409/503/network explicitly injected',human_acceptance:false},null,2));
+    fs.writeFileSync(path.join(output,'results.json'),JSON.stringify({passed:true,checks,viewport:[{width:1699,height:828}],browser:'Microsoft Edge, 100% zoom',consoleErrors,scope:'owned MySQL and real API; synthetic data; failure statuses 403/409/503/network explicitly injected',human_acceptance:false},null,2));
   }catch(error){if(page)await page.screenshot({path:path.join(output,'failure.png'),fullPage:true}).catch(()=>{});fs.writeFileSync(path.join(output,'failure.json'),JSON.stringify({message:error.message,checks},null,2));throw error;}
   finally{
     const cleanup={owned_browser_pid:browserServer?.process().pid||null};

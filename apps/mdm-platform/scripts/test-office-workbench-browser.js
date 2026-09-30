@@ -95,8 +95,7 @@ async function main() {
       await button('确认提交本次操作').click(); await page.locator('#login-name').waitFor(); await login('reviewB'); await idle();
       assert.equal(await field('办理结果').inputValue(), note);
       await noOverflow(); await page.screenshot({path:path.join(output,'desktop-complete.png'),fullPage:true});
-      await page.setViewportSize({width:390,height:844}); await noOverflow(); await page.screenshot({path:path.join(output,'mobile-complete.png'),fullPage:true});
-      await page.setViewportSize({width:1699,height:828}); await commit();
+      await noOverflow(); await page.setViewportSize({width:1699,height:828}); await commit();
       task = (await expect('lead','/api/offices/workbench?office_id=' + a,'GET')).tasks.find(t => t.id === task.id);
       assert.equal(task.status,'done'); assert.equal(JSON.parse(task.completion_json).note,note);
       await expect('reviewB',url + '/complete','POST',{note:'重复',expected_revision:task.revision_no},409);

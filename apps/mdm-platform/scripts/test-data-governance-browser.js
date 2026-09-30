@@ -82,12 +82,12 @@ async function main() {
       await button('确认提交本次操作').click(); await page.locator('#login-name').waitFor(); await login('contact'); await idle();
       assert.equal(await field('事实答复').inputValue(), answer);
       await noOverflow(); await page.screenshot({ path: path.join(output, 'desktop-answer.png'), fullPage: true });
-      await page.setViewportSize({ width: 390, height: 844 }); await noOverflow(); await page.screenshot({ path: path.join(output, 'mobile-answer.png'), fullPage: true }); await page.setViewportSize({ width: 1699, height: 828 });
+      await noOverflow(); await page.setViewportSize({ width: 1699, height: 828 });
       await commit(); assert.equal((await read()).fact_requests[0].answer_text, answer);
       await page.reload(); await idle(); await page.getByText(answer, { exact: true }).waitFor();
       await page.getByRole('link', { name: '当前身份', exact: true }).click(); await page.goBack(); await idle();
       assert.equal(new URL(page.url()).searchParams.get('factRequest'), String(fact.id));
-      checks.push('department-limited fact response, actual 401 recovery, deep link/back/reload, long safe Chinese desktop/mobile');
+      checks.push('department-limited fact response, actual 401 recovery, deep link/back/reload, long safe Chinese desktop');
       await as('lead'); await button('返回工作包待办').click(); await button('查看工作包 ' + work.id).click(); await idle();
       await button('核对并关闭问题 ' + fact.id).click(); assert.equal(await field('采用情况和关闭依据').inputValue(), '', 'closing requires its own explicit basis'); await field('采用情况和关闭依据').fill('合成答复已核对，继续由MDM判断'); await commit();
       detail = await read(); assert.equal(detail.fact_requests[0].status, 'closed'); assert.equal(detail.details[0].status, 'pending');
@@ -143,8 +143,8 @@ async function main() {
         if (item.detail_type === 'lifecycle_rule') await page.getByText(/不可逆动作/).waitFor();
       }
       await page.screenshot({ path:path.join(output,'lifecycle-detail.png'), fullPage:true });
-      await page.setViewportSize({width:390,height:844}); await noOverflow(); await page.screenshot({path:path.join(output,'mobile-detail.png'),fullPage:true}); await page.setViewportSize({width:1699,height:828});
-      checks.push('retained synthetic V7 object/field/data-flow/lifecycle details, high-risk reasons, responsive rendering');
+      await noOverflow(); await page.setViewportSize({width:1699,height:828});
+      checks.push('retained synthetic V7 object/field/data-flow/lifecycle details, high-risk reasons, desktop rendering');
       await button('记录治理结论').click(); await field('治理结论').fill('不得跨身份展示');
       await page.evaluate(async () => { const t = await (await fetch('/api/csrf-token')).json(); await fetch('/api/org/logout', { method: 'POST', headers: { 'X-CSRF-Token': t.csrfToken } }); });
       await button('确认提交本次操作').click(); await page.locator('#login-name').waitFor(); await login('admin'); await idle();

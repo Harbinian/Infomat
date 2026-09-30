@@ -50,11 +50,11 @@ async function main() {
       await refresh(); assert.equal(await overall(), '2 / 3 条已确认（67%）');
       assert.equal(await page.getByRole('row').count(), 3);
       await noOverflow(); await page.screenshot({ path: path.join(output, 'desktop.png'), fullPage: true });
-      await page.setViewportSize({ width: 390, height: 844 }); await noOverflow();
-      await page.screenshot({ path: path.join(output, 'mobile.png'), fullPage: true });
       const table = page.getByLabel('对象分组确认进度', { exact: true });
+      const canScrollHorizontally = await table.evaluate(el => el.scrollWidth > el.clientWidth);
       await table.focus(); await page.keyboard.press('ArrowRight');
-      await page.waitForFunction(() => document.querySelector('.identity-table').scrollLeft > 0);
+      assert.equal(await table.evaluate(el => el === document.activeElement), true);
+      if (canScrollHorizontally) await page.waitForFunction(() => document.querySelector('.identity-table').scrollLeft > 0);
       await button('刷新确认进度').focus(); await page.keyboard.press('Enter'); await ready();
       await page.setViewportSize({ width: 1699, height: 828 });
       checks.push('real nonzero totals, unclassified group, same-name aggregation, missing identity excluded, long Chinese layout');

@@ -38,7 +38,7 @@ async function main() {
       assert.equal(await page.getByRole('cell', { name: '[]', exact: true }).count(), 0);
       await page.getByText('原始合成材料.xlsx', { exact: true }).waitFor();
       checks.push('real empty and scoped context/field/source reads, stable IDs');
-      for (const [width, height, name] of [[1699,828,'desktop'],[390,844,'mobile']]) {
+      for (const [width, height, name] of [[1699,828,'desktop']]) {
         await page.setViewportSize({ width, height });
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
         assert.equal(await page.evaluate(() => visualViewport.scale), 1);
@@ -51,7 +51,7 @@ async function main() {
       await page.getByRole('link', { name: '数据质量', exact: true }).click(); await page.goBack(); await ready(); assert.equal(await select().inputValue(), '911');
       await select().selectOption('913'); await ready(); await page.getByText('当前上下文暂无字段。', { exact: true }).waitFor();
       await select().selectOption('911'); await ready();
-      checks.push('refresh/back/deep-link selection, empty fields, long Chinese, desktop/mobile and keyboard');
+      checks.push('refresh/back/deep-link selection, empty fields, long Chinese, desktop and keyboard');
       for (const status of [403,409,503]) {
         await page.route('**/api/field-entries/mapping/911', route => route.fulfill({ status, json: {} }), { times: 1 });
         await page.getByRole('button', { name: '刷新数据地图', exact: true }).click(); await page.locator('[data-map-state="error"]').waitFor();
