@@ -9,7 +9,7 @@ COPY pmo/gantt-react/plugins ./plugins
 COPY pmo/gantt-react/public ./public
 COPY pmo/procedure-management/dashboard.html /app/pmo/procedure-management/dashboard.html
 COPY echarts.min.js /app/echarts.min.js
-RUN mkdir -p /app/pmo/deliverables /app/artifacts/pmo/deliverables node_modules/.vite node_modules/.vite-temp && chown -R node:node /app/artifacts /app/pmo/deliverables node_modules/.vite node_modules/.vite-temp
+RUN mkdir -p /app/pmo/deliverables /app/pmo/weekly-issues /app/artifacts/pmo/deliverables node_modules/.vite node_modules/.vite-temp && chown -R node:node /app/artifacts /app/pmo/deliverables /app/pmo/weekly-issues node_modules/.vite node_modules/.vite-temp
 ENV PMO_DELIVERABLE_RUNTIME_DIR=/app/artifacts/pmo/deliverables
 USER node
 EXPOSE 5173

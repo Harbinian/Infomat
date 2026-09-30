@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { formatDate, getPmoDeliveryWeekRange, parseDate } from '../utils/dateUtils';
+import { deliverableRowKey } from '../utils/deliverableIndex.js';
 
 export default function ThisWeekDeliverables({ deliverables, pmoDate, onSelectDeliverable }) {
   const date = useMemo(() => pmoDate || new Date(), [pmoDate]);
@@ -50,7 +51,7 @@ export default function ThisWeekDeliverables({ deliverables, pmoDate, onSelectDe
           <tbody>
             {weekDeliverables.map(deliverable => (
               <tr
-                key={deliverable.deliverableId}
+                key={deliverableRowKey(deliverable)}
                 className={`dlv-row dlv-level-${deliverable.deliverableLevel} ${deliverable.taskRisk === '高' ? 'dlv-high-risk' : ''}`}
                 onClick={() => onSelectDeliverable && onSelectDeliverable(deliverable)}
               >

@@ -1,4 +1,5 @@
-import { parseDate } from './dateUtils.js';
+import { formatDate, parseDate } from './dateUtils.js';
+import { APPROVERS, addWorkingDays } from './pmoRoster.js';
 
 export const DELIVERABLE_STATUSES = ['未提交', '编制中', '已提交', '待评审', '通过', '退回整改', '已归档'];
 
@@ -74,6 +75,25 @@ function validateProjectDate(value, field, deliverableId) {
     throw new Error(`${deliverableId || '交付物'} 的 ${field} 日期无效: ${value}`);
   }
   return day;
+}
+
+const ISO_DAY_TEXT = /^\d{4}-\d{2}-\d{2}$/u;
+
+/**
+ * 校验并原样返回 ISO 日期文本。
+ *
+ * 刻意不走 Date 往返：parseDate 构造的是本地时区 Date，而 formatIsoDay 用
+ * toISOString() 转 UTC，会让东八区的 `2026-10-20` 回退成 `2026-10-19`。
+ * 行动项截止时间本来就是 YYYY-MM-DD 文本，只需要格式与真实性校验。
+ */
+function requireIsoDay(value, field, deliverableId) {
+  const text = String(value || '').trim();
+  if (!text) throw new Error(`${deliverableId || '交付物'} 的 ${field} 不能为空`);
+  const parsed = ISO_DAY_TEXT.test(text) ? parseDate(text) : null;
+  if (!parsed || formatDate(parsed) !== text) {
+    throw new Error(`${deliverableId || '交付物'} 的 ${field} 必须是有效日期 YYYY-MM-DD，当前: ${text}`);
+  }
+  return text;
 }
 
 function normalizeHistoryItem(item) {
@@ -346,4 +366,179 @@ export function createDashboardCardIntents({ tasks = [], deliverables = [], phas
     { key: 'gateRisks', value: gateRisks.length, label: '阶段门风险', target: { page: 'pmo', pmoView: 'phasegates', gateStatus: '风险' }, highlight: true },
     { key: 'highRiskDeliverables', value: highRiskDeliverables.length, label: '高风险交付物', target: { page: 'pmo', pmoView: 'deliverables', ledgerFilters: { risk: '高' } }, highlight: true },
   ];
+}
+
+// ===== 行动项事件（双轴状态模型的第二轴）=====
+//
+// 轴一 status：交付物自身的编制/评审进度，沿用 DELIVERABLE_ACTIONS（本文件上半部分，未改动）。
+// 轴二 action.state：行动项的承接与关闭，由本组事件驱动。两轴互不干扰。
+//
+// 逾期不是状态而是派生态（dueDate < today && state !== '已关闭'）——事实写进
+// workflowHistory，徽标由计算得出，符合《协同工作规则》8.2「标记逾期并说明事实和影响」。
+
+export const DELIVERABLE_EVENTS = {
+  publish: { label: '发布行动项', to: '待接收', from: [null] },
+  acknowledge: { label: '已接收', to: '已接收', from: ['待接收'] },
+  submitResult: { label: '提交结果', to: '已提交待确认', from: ['待接收', '已接收'] },
+  close: { label: '确认关闭', to: '已关闭', from: ['已接收', '已提交待确认'] },
+  reopen: { label: '重新开启', to: '已接收', from: ['已关闭', '已提交待确认'] },
+  changeDueDate: { label: '期限调整', to: null, from: ['待接收', '已接收', '已提交待确认'] },
+  markOverdue: { label: '标记逾期', to: null, from: ['待接收', '已接收', '已提交待确认'] },
+};
+
+export function canApplyDeliverableEvent(state, action) {
+  const definition = DELIVERABLE_EVENTS[action];
+  if (!definition) return false;
+  return definition.from.includes(state || null);
+}
+
+function requireText(value, message) {
+  const text = String(value || '').trim();
+  if (!text) throw new Error(message);
+  return text;
+}
+
+function resolveNextAction(action, current, command, deliverable, at, { departments, approvers } = {}) {
+  switch (action) {
+    case 'publish': {
+      const assigneeDepartment = requireText(command.assigneeDepartment, '发布行动项必须指定责任部门');
+      if (Array.isArray(departments) && departments.length && !departments.includes(assigneeDepartment)) {
+        throw new Error(`责任部门不在主备对接人名单内: ${assigneeDepartment}`);
+      }
+      const dueDate = requireIsoDay(command.dueDate, 'dueDate', deliverable?.deliverableId);
+
+      const manualCriteria = command.criteriaSource === 'manual';
+      return {
+        assigneeDepartment,
+        dueDate,
+        state: DELIVERABLE_EVENTS.publish.to,
+        publishedAt: at,
+        publishedBy: String(command.actor || '').trim(),
+        // 规则 6.2：主对接人应在 1 个工作日内回复「已接收」。固化下来以便对账。
+        ackDueDate: command.ackDueDate || addWorkingDays(at.slice(0, 10), 1),
+        acknowledgedAt: '',
+        acknowledgedBy: '',
+        resultNote: '',
+        closedAt: '',
+        closedBy: '',
+        closureNote: '',
+        criteriaSource: manualCriteria ? 'manual' : 'task',
+        criteria: manualCriteria ? String(command.criteria || '') : '',
+        evidenceRequirement: manualCriteria ? String(command.evidenceRequirement || '') : '',
+      };
+    }
+
+    case 'acknowledge':
+      return {
+        ...current,
+        state: DELIVERABLE_EVENTS.acknowledge.to,
+        acknowledgedAt: at,
+        acknowledgedBy: String(command.actor || '').trim(),
+      };
+
+    case 'submitResult':
+      return {
+        ...current,
+        state: DELIVERABLE_EVENTS.submitResult.to,
+        resultNote: requireText(command.resultNote, '提交结果必须填写结果或材料位置'),
+      };
+
+    case 'close': {
+      const closureNote = requireText(command.closureNote, '确认关闭必须填写关闭结论');
+      // 规则 6.4：没有结果或可核对依据的事项不得关闭
+      const hasResult = Boolean(String(current?.resultNote || '').trim());
+      const hasEvidence = Boolean(deliverable?.evidence);
+      if (!hasResult && !hasEvidence) {
+        throw new Error('缺少可核对依据：需先登记办理结果或上传凭证，才能确认关闭');
+      }
+      return {
+        ...current,
+        state: DELIVERABLE_EVENTS.close.to,
+        closedAt: at,
+        closedBy: String(command.actor || '').trim(),
+        closureNote,
+      };
+    }
+
+    case 'reopen':
+      return {
+        ...current,
+        state: DELIVERABLE_EVENTS.reopen.to,
+        closedAt: '',
+        closedBy: '',
+        closureNote: '',
+      };
+
+    case 'changeDueDate': {
+      const dueDate = requireIsoDay(command.dueDate, 'dueDate', deliverable?.deliverableId);
+
+      const scope = command.scope === 'gate' ? 'gate' : 'normal';
+      const approvedBy = requireText(command.approvedBy, '期限调整必须记录同意人');
+      const allowed = (approvers && approvers[scope]) || APPROVERS[scope];
+      if (allowed && !allowed.includes(approvedBy)) {
+        const scopeLabel = scope === 'gate' ? '跨部门/阶段门/项目基线' : '普通行动项';
+        throw new Error(`${scopeLabel}的期限调整需由 ${allowed.join(' 或 ')} 同意后生效`);
+      }
+      // 规则 8.2：调整生效，但不得追溯消除已经发生的逾期事实 ——
+      // 原截止时间保留在 workflowHistory 的历史条目里，此处只更新当前期限。
+      return { ...current, dueDate };
+    }
+
+    case 'markOverdue':
+      return { ...current };
+
+    default:
+      throw new Error(`未实现的交付物事件: ${action}`);
+  }
+}
+
+/**
+ * 应用一次行动项事件。
+ *
+ * @param options.departments  可选责任部门列表；提供时校验归属（服务端总是传入）
+ * @param options.approvers    期限调整同意人；缺省用 APPROVERS 常量
+ */
+export function applyDeliverableEvent(deliverable, command, options = {}) {
+  const action = command?.action;
+  const definition = DELIVERABLE_EVENTS[action];
+  if (!definition) throw new Error(`未知交付物事件: ${action || ''}`);
+
+  const current = deliverable?.action || null;
+  const fromState = current?.state || null;
+  if (!definition.from.includes(fromState)) {
+    throw new Error(`不允许从“${fromState || '未发布'}”执行“${definition.label}”`);
+  }
+
+  const at = formatIsoInstant(command.at);
+  const nextAction = resolveNextAction(action, current, command, deliverable, at, options);
+
+  const historyItem = {
+    action,
+    label: definition.label,
+    from: fromState || '未发布',
+    to: nextAction.state || fromState || '未发布',
+    actor: command.actor || '',
+    at,
+    note: command.note || '',
+  };
+
+  return {
+    ...deliverable,
+    action: nextAction,
+    workflowHistory: [...(deliverable.workflowHistory || []), historyItem],
+  };
+}
+
+/**
+ * 单一分派入口：状态迁移与行动项事件共用 /transition 端点。
+ * 保持既有调用方（前端与 smoke-writeback）零改动。
+ */
+export function applyDeliverableCommand(deliverable, command, options) {
+  if (DELIVERABLE_ACTIONS[command?.action]) {
+    return transitionDeliverableStatus(deliverable, command);
+  }
+  if (DELIVERABLE_EVENTS[command?.action]) {
+    return applyDeliverableEvent(deliverable, command, options);
+  }
+  throw new Error(`未知交付物动作: ${command?.action || ''}`);
 }

@@ -34,7 +34,7 @@ module.exports = async ctx => {
     await publish('roster',['工号','姓名','部门编码','办公室编码'],[['SYNTHETIC_reviewB','合成reviewB','SYNTHETIC_92','P17_A'],['SYNTHETIC_outsider','合成outsider','SYNTHETIC_93','P17_A']]);
     const [offices]=await pool.execute("SELECT CAST(org_unit_id AS CHAR) id FROM org_unit WHERE org_unit_code IN ('P17_A','P17_B') ORDER BY org_unit_code"); const officeId=offices[0].id;
     const f=historical.attempts[0].findings[0], evidence=historical.attempts[0].evidence.filter(e=>f.evidence_keys.includes(e.evidence_key)&&e.locator_kind==='json_pointer');
-    const created=await repo.decideAnalysisFinding(lead,{request_id:uuid(),run_id:run.run_id,finding_id:f.finding_id,expected_revision:1,action:'create',title:'P17合成问题',owner_department_id:'91',owner_basis:'合成业务明确归口',reason:'合成核验依据',evidence_ids:evidence.map(e=>e.evidence_id)});
+    const created=await expect('lead',`/api/analysis/runs/${run.run_id}/findings/${f.finding_id}/review`,'POST',{request_id:uuid(),expected_revision:1,action:'create',title:'P17合成问题',owner_department_id:'91',owner_basis:'合成业务明确归口',reason:'合成核验依据',evidence_ids:evidence.map(e=>e.evidence_id)});
     const issueId=created.issue_id,url='/api/analysis/issues/'+issueId, initial=await repo.getAnalysisIssueTasks(lead,issueId);
     const payload={request_id:uuid(),expected_revision:initial.revision_no,expected_issue_digest:initial.issue_digest,office_id:officeId,purpose:'verify',round_no:1,instruction:'P17_ONLY_ASSIGNEE_CONTEXT：请核对合成接收条件，记录结果，不含原材料。'};
     let dispatched;

@@ -673,6 +673,20 @@ async function currentIssuePoolDepartmentNameAsync(req) {
   return await currentDepartmentNameAsync(req);
 }
 
+async function issuePoolListScopeAsync(req, res) {
+  if (await canViewAllProcessGovernanceAsync(req)) return { departmentName: '' };
+  const departmentId = req.identity
+    ? req.identity.current_department_id || req.identity.department_id
+    : req.session && req.session.departmentId;
+  const department = departmentId ? await getDepartmentByIdAsync(departmentId) : null;
+  const departmentName = String(department && department.name || '').trim();
+  if (!departmentName || !await requestHasAnyPermissionAsync(req, ['governance:read-department'])) {
+    res.status(403).json({ error: '当前账户缺少有效的部门读取范围。', code: 'ISSUE_POOL_SCOPE_REQUIRED' });
+    return null;
+  }
+  return { departmentName };
+}
+
 async function currentInputBaselineReviewDepartmentName(req) {
   if (await canViewAllInputBaselineReviewsAsync(req)) return '';
   return await currentDepartmentNameAsync(req);
@@ -1884,9 +1898,11 @@ router.post('/quality-cases/:id/reopen', requireAuth, (req, res) => {
 
 router.get('/issue-pool/queues', requireAuth, (req, res) => {
   return runAsyncAction(res, async () => {
+    const scope = await issuePoolListScopeAsync(req, res);
+    if (!scope) return null;
     const repo = await issuePoolRepositoryOrSendUnavailable(res);
     if (!repo) return null;
-    const departmentName = await currentIssuePoolDepartmentNameAsync(req);
+    const { departmentName } = scope;
     const queues = await repo.listQueues({ departmentName });
     return res.json({
       dataStatus: 'ready',
@@ -1898,9 +1914,11 @@ router.get('/issue-pool/queues', requireAuth, (req, res) => {
 
 router.get('/issue-pool/issues', requireAuth, (req, res) => {
   return runAsyncAction(res, async () => {
+    const scope = await issuePoolListScopeAsync(req, res);
+    if (!scope) return null;
     const repo = await issuePoolRepositoryOrSendUnavailable(res);
     if (!repo) return null;
-    const departmentName = await currentIssuePoolDepartmentNameAsync(req);
+    const { departmentName } = scope;
     return res.json(await repo.listIssues({
       departmentName,
       queue: req.query.queue,

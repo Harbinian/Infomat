@@ -87,9 +87,76 @@ export function createWeeklyIssueItem(input = {}) {
     related: String(input.related || '').trim(),
     closeCriteria: String(input.closeCriteria || '').trim() || type.closeRule,
     note: String(input.note || '').trim(),
+    // 规则 6.4：关闭需具备结果、材料位置、记录或明确结论
+    resultNote: String(input.resultNote || '').trim(),
+    closureNote: String(input.closureNote || '').trim(),
+    history: Array.isArray(input.history) ? input.history : [],
     createdAt: input.createdAt || now,
     updatedAt: input.updatedAt || now,
   };
+}
+
+/**
+ * 应用一次台账事项更新，内置《协同工作规则》校验。
+ *
+ * - 6.4 关闭需具备结果、材料位置、记录或明确结论
+ * - 8.1 期限调整必须记录在信息化工作群明确同意的人员
+ * - 8.2 调整生效，但不得追溯消除已经发生的逾期事实 —— 原截止时间保留在 history 中
+ */
+export function applyWeeklyIssuePatch(item, patch = {}) {
+  if (!item) throw new Error('事项不存在');
+
+  const next = { ...item };
+  const history = [];
+  const at = new Date().toISOString();
+  const actor = String(patch.actor || '').trim();
+
+  if (patch.title !== undefined) next.title = String(patch.title || '').trim();
+  if (patch.owner !== undefined) next.owner = String(patch.owner || '').trim() || 'PMO';
+  if (patch.related !== undefined) next.related = String(patch.related || '').trim();
+  if (patch.closeCriteria !== undefined) next.closeCriteria = String(patch.closeCriteria || '').trim();
+  if (patch.note !== undefined) next.note = String(patch.note || '').trim();
+  if (patch.resultNote !== undefined) next.resultNote = String(patch.resultNote || '').trim();
+  if (patch.closureNote !== undefined) next.closureNote = String(patch.closureNote || '').trim();
+
+  if (patch.dueDate !== undefined) {
+    const dueDate = coerceDateText(patch.dueDate);
+    if (dueDate && dueDate !== next.dueDate) {
+      const approvedBy = String(patch.approvedBy || '').trim();
+      if (!approvedBy) {
+        throw new Error('规则 8.1：期限调整须记录在信息化工作群明确同意的人员');
+      }
+      history.push({ field: 'dueDate', from: next.dueDate, to: dueDate, approvedBy, at, actor });
+      next.dueDate = dueDate;
+    }
+  }
+
+  if (patch.status !== undefined && patch.status !== next.status) {
+    if (!STATUS_KEYS.has(patch.status)) throw new Error(`未知状态: ${patch.status}`);
+    if (patch.status === 'closed') {
+      const hasResult = Boolean(String(next.resultNote || '').trim());
+      const hasClosure = Boolean(String(next.closureNote || '').trim());
+      if (!hasResult && !hasClosure) {
+        throw new Error('规则 6.4：没有结果或可核对依据的事项不得关闭');
+      }
+    }
+    history.push({ field: 'status', from: next.status, to: patch.status, at, actor });
+    next.status = patch.status;
+  }
+
+  next.updatedAt = at;
+  next.history = [...(item.history || []), ...history];
+  return next;
+}
+
+/**
+ * 规则 8.2 的逾期是派生态而非状态：到期未完成且未取得有效调整决定。
+ * 与交付物行动项同一口径。
+ */
+export function isWeeklyIssueOverdue(item, referenceDate = new Date()) {
+  if (!item?.dueDate || item.status === 'closed') return false;
+  const due = parseDate(item.dueDate);
+  return Boolean(due && due < referenceDate);
 }
 
 export function normalizeWeeklyIssueItems(rawItems) {

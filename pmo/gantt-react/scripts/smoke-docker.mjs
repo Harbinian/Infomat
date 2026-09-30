@@ -34,4 +34,24 @@ const id = list.data[0].deliverableId;
 const detail = await (await get('/api/pmo/deliverables/' + id)).json();
 assert.equal(detail.ok, true);
 assert.ok((await (await get('/api/pmo/deliverables/' + id + '/raw')).text()).includes(id));
-console.log(JSON.stringify({ base, generatedDataMatches: true, procedureAssetsMatch: true, deliverables: list.data.length, detailRead: true }));
+
+// 台账索引与责任部门名册：镜像必须带新版插件，否则前端拿不到受控行，行动项入口不会出现
+const ledger = await (await get('/api/pmo/deliverables/ledger')).json();
+assert.equal(ledger.ok, true);
+assert.ok(Array.isArray(ledger.data.controlled), 'ledger.controlled must be an array');
+assert.ok(ledger.data.controlled.length > 0, 'ledger must expose controlled deliverables');
+assert.match(ledger.data.suggestedNextId, /^DLV-\d{3}$/, 'suggestedNextId must look like DLV-###');
+
+const roster = await (await get('/api/pmo/deliverables/roster')).json();
+assert.equal(roster.ok, true);
+assert.ok(Array.isArray(roster.data) && roster.data.length > 0, 'roster must resolve department contacts');
+
+console.log(JSON.stringify({
+  base,
+  generatedDataMatches: true,
+  procedureAssetsMatch: true,
+  deliverables: list.data.length,
+  controlled: ledger.data.controlled.length,
+  departments: roster.data.length,
+  detailRead: true,
+}));

@@ -231,6 +231,7 @@ function makeDataMapDefinitionRepository(pool) {
       
   }
   return {
+    ...require('./historicalReviews')({transaction,actor,scope,request}),
     ...require('./dataMapManagement')({transaction,actor,scope,entityScope,current,unchanged,version,request,save:saveDefinitionInTransaction,event}),
     ...require('./dataMapFacts')({transaction,actor,scope,entityScope,current,unchanged,version,request,event}),
     ...require('./v7Mappings')({transaction,actor,scope,entityScope,version,request}),

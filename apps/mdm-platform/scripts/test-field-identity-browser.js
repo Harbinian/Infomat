@@ -13,7 +13,7 @@ assert.ok(output.startsWith(path.resolve(__dirname, '../../../artifacts') + path
 assert.ok(!fs.existsSync(output)); fs.mkdirSync(output, { recursive: true });
 
 async function main() {
-  await withStage05Fixture(async ({ fixture, pool, owner, expect }) => {
+  await withStage05Fixture(async ({ fixture, pool, owner, expect, request }) => {
     fs.writeFileSync(path.join(output, 'owned-fixture.json'), JSON.stringify({ owner, baseURL: fixture.baseURL }, null, 2));
     await pool.execute("INSERT INTO data_map_contexts(id,context_key,title,dept_id,dept_name) VALUES(911,'SYNTHETIC_A','合成上下文甲',91,'合成甲部'),(912,'SYNTHETIC_B','其他部门上下文',92,'合成乙部'),(913,'SYNTHETIC_C','同部门另一上下文',91,'合成甲部')");
     await pool.execute("INSERT INTO data_map_fields(id,context_id,field_key,field_name_cn,field_name_en,business_definition) VALUES(921,911,'a','合成甲字段','alpha','原定义'),(922,912,'b','其他部门字段','beta','原文保留'),(923,911,'c','无身份字段','gamma','中文长说明'),(924,913,'d','另一上下文字段','delta','原文')");
@@ -171,6 +171,113 @@ async function main() {
       await page.locator('#dataMapContextSelect option[value="911"]').waitFor({ state: 'attached' }); await page.locator('#dataMapContextSelect').selectOption('911');
       await page.waitForFunction(() => document.querySelector('#dataMap')?.textContent.includes('合成甲字段'));
       checks.push('read failures clear stale detail, invalid response blocked, cross-identity draft hidden, unseen target not fetched, keyboard/desktop geometry and old entry preserved');
+      // Prior expiry tests invalidated the fixture's original HTTP client session.
+      const freshClients = {};
+      request = async (who, url, method = 'GET', body) => {
+        const client = freshClients[who] || (freshClients[who] = {});
+        const response = await fetch(fixture.baseURL + url, { method, headers: { 'Content-Type':'application/json', Cookie:client.cookie || '', ...(client.csrf ? {'X-CSRF-Token':client.csrf} : {}) }, body:body === undefined ? undefined : JSON.stringify(body) });
+        if (response.headers.get('set-cookie')) client.cookie = response.headers.get('set-cookie').split(';')[0];
+        const result = await response.json(); if (url === '/api/csrf-token') client.csrf = result.csrfToken;
+        return { status:response.status, body:result };
+      };
+      expect = async (who,url,method,body,status=200) => { const result = await request(who,url,method,body); assert.equal(result.status,status,`${who} ${method} ${url}: ${JSON.stringify(result.body)}`); return result.body; };
+      for (const who of ['contact','reviewA','reviewB','admin']) {
+        await expect(who,'/api/org/login','POST',{loginName:'SYNTHETIC_'+who,password:fixture.loginPassword}); await expect(who,'/api/csrf-token','GET');
+      }
+      await page.goto(fixture.baseURL + '/app/data-map?context=911&identityField=921'); await ready(); await identityReady(); await relogin('contact');
+      await pool.execute("INSERT INTO person(person_id,employee_no,person_name,current_department_id,status,employment_status) VALUES(901,'SYNTHETIC_INACTIVE','合成停用人员',91,'inactive','inactive')");
+      const options = await expect('contact', '/api/field-identities/field/921/responsibility-options', 'GET');
+      assert.equal(options.department.id, 91); assert.ok(options.people.some(p => p.person_id === 84));
+      assert.ok(!options.people.some(p => [85,901].includes(p.person_id)));
+      await expect('admin', '/api/field-identities/field/921/responsibility-options', 'GET', undefined, 403);
+      await expect('reviewB', '/api/field-identities/field/921/history', 'GET', undefined, 403);
+      assert.equal((await fetch(fixture.baseURL + '/api/field-identities/field/921/history')).status, 401);
+      for (const body of [{ maintain_dept_id: 92, owner_person_id: 85 }, { maintain_dept_id: 91, owner_person_id: 85 }, { maintain_dept_id: 91, owner_person_id: 901 }, { maintain_dept_id: 91, owner_person_id: 999999 }, { owner_user_id: 901 }, { maintain_dept_id: 91, owner_person_id: '84.5' }]) {
+        const previous = await row();
+        await expect('contact', '/api/field-identities/921', 'PUT', { authoritative_system: 'REJECTED', ...body }, 400);
+        assert.deepEqual(await row(), previous);
+      }
+      await edit('责任范围验证');
+      await page.getByLabel('维护部门', { exact: true }).selectOption('91');
+      await page.getByLabel('维护负责人', { exact: true }).selectOption('84');
+      await save(); assert.equal((await row()).owner_person_id, 84); assert.equal((await row()).owner_user_id, 83);
+      await button('查阅维护与确认记录').click(); await page.locator('[data-field-identity-history]').waitFor();
+      assert.match(await page.locator('[data-field-identity-history]').innerText(), /维护字段身份信息/);
+      await page.locator('[data-field-identity-history] summary').first().click();
+      assert.match(await page.locator('[data-field-identity-history]').innerText(), /负责人员编号/);
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+      await page.locator('[aria-labelledby="field-identity-heading"]').screenshot({ path: path.join(output, 'responsibility-history.png') });
+      const history = await expect('contact', '/api/field-identities/field/921/history', 'GET');
+      assert.equal(history.legacy_history_available, false); assert.equal(history.items[0].operated_by_person_id, '83');
+      assert.equal(history.items[0].changes.find(c => c.field_name === 'owner_person_id').new_value, '84');
+      assert.ok(history.items.some(item => item.description === '部门确认字段身份'));
+      const historical = await expect('admin', '/api/field-identities/field/924/history', 'GET'); assert.deepEqual(historical.items, []);
+      checks.push('same-department active responsibility options and writes; foreign/inactive/malformed identities rejected; legacy user ID preserved; authorized operation history and honest legacy gap');
+
+      // The new compare-and-write check is under the field lock, including concurrent requests.
+      const snapshot = await expect('contact', '/api/field-identities/field/921', 'GET');
+      const simultaneous = await Promise.all(['并发甲','并发乙'].map(authoritative_system => request('contact', '/api/field-identities/921', 'PUT', { authoritative_system, expected_identity: snapshot })));
+      assert.deepEqual(simultaneous.map(r => r.status).sort(), [200,409]);
+      await expect('reviewA', '/api/field-identities/921/confirm', 'POST', { authoritative_system: '不匹配的系统' }, 409);
+      await expect('reviewA', '/api/field-identities/921/confirm', 'POST', { authoritative_system_name: '不匹配的旧调用字段' }, 409);
+      const confirmedSnapshot = await expect('reviewA', '/api/field-identities/field/921', 'GET');
+      await expect('reviewA', '/api/field-identities/921/confirm', 'POST', { authoritative_system: confirmedSnapshot.authoritative_system, expected_identity: confirmedSnapshot });
+      await expect('reviewA', '/api/field-identities/921/confirm', 'POST', {}, 409);
+      const beforeRollback = await row();
+      const beforeCount = (await pool.query("SELECT COUNT(*) n FROM data_map_change_sets WHERE entity_type='data_map_field_identity'"))[0][0].n;
+      const failingPool = { async getConnection() {
+        const connection = await pool.getConnection();
+        return new Proxy(connection, { get(target, key) {
+          if (key === 'execute') return (sql, params) => { if (sql.startsWith('INSERT INTO data_map_version_log')) throw new Error('SYNTHETIC_AUDIT_FAILURE'); return target.execute(sql, params); };
+          return typeof target[key] === 'function' ? target[key].bind(target) : target[key];
+        } });
+      } };
+      await assert.rejects(require('../server/fieldIdentityGovernance').makeFieldIdentityGovernance(failingPool).mutate(921, { authoritative_system: '必须回滚' }, { personId:83, departmentId:91, contextId:911 }, 'maintain'), /SYNTHETIC_AUDIT_FAILURE/);
+      assert.deepEqual(await row(), beforeRollback);
+      assert.equal((await pool.query("SELECT COUNT(*) n FROM data_map_change_sets WHERE entity_type='data_map_field_identity'"))[0][0].n, beforeCount);
+      // Real missing audit dependency must fail closed, with no partial business write.
+      await pool.execute('RENAME TABLE data_map_version_log TO p21_owned_audit_unavailable');
+      try {
+        await expect('contact', '/api/field-identities/field/921/history', 'GET', undefined, 503);
+        await expect('contact', '/api/field-identities/921', 'PUT', { authoritative_system:'必须完整回滚' }, 503);
+        assert.deepEqual(await row(), beforeRollback);
+        assert.equal((await pool.query("SELECT COUNT(*) n FROM data_map_change_sets WHERE entity_type='data_map_field_identity'"))[0][0].n, beforeCount);
+      } finally { await pool.execute('RENAME TABLE p21_owned_audit_unavailable TO data_map_version_log'); }
+      for (let i=0; i<22; i++) await expect('contact', '/api/field-identities/923', 'PUT', { authoritative_system: '历史分页' + i });
+      const firstPage = await expect('contact', '/api/field-identities/field/923/history', 'GET');
+      const secondPage = await expect('contact', '/api/field-identities/field/923/history?before=' + firstPage.next_cursor, 'GET');
+      assert.equal(firstPage.items.length, 20); assert.ok(secondPage.items.length >= 3);
+      assert.equal(new Set([...firstPage.items, ...secondPage.items].map(i => i.id)).size, firstPage.items.length + secondPage.items.length);
+      checks.push('locked compare-and-write yields one success/one conflict; mismatched/repeated confirmation rejected; audit failure rolls back identity and header; history pagination has no duplicates');
+
+      await refresh(); await edit('查历史时保留输入');
+      for (const status of [403,409,503]) {
+        await page.route('**/api/field-identities/field/921/history', r => r.fulfill({ status, json: { error:'injected' } }), { times:1 });
+        await button('查阅维护与确认记录').click(); await page.getByText('记录读取失败，请重试；失败不表示没有记录。', { exact:true }).waitFor();
+        assert.equal(await page.locator('[data-field-identity-history]').count(), 0);
+        assert.equal(await page.getByLabel('权威系统名称', { exact:true }).inputValue(), '查历史时保留输入');
+      }
+      await button('查阅维护与确认记录').click(); await page.locator('[data-field-identity-history]').waitFor();
+      await discard();
+      await page.route('**/api/field-identities/field/921/responsibility-options', r => r.fulfill({ status:503, json:{error:'injected'} }), { times:1 });
+      await edit('名单失败保留输入'); await button('重试责任名单').waitFor();
+      assert.equal(await button('保存黄金源信息（待核实）').isDisabled(), true);
+      await button('重试责任名单').click(); await page.getByLabel('维护负责人', { exact:true }).selectOption('84');
+      assert.equal(await page.getByLabel('权威系统名称', { exact:true }).inputValue(), '名单失败保留输入');
+      await page.locator('[data-field-identity-form]').screenshot({path:path.join(output,'responsibility-form.png')}); await discard();
+      checks.push('history read faults clear stale results and preserve active input; responsibility options failure blocks save and explicit retry preserves input');
+      let releaseHistory, enteredHistory;
+      const historyHold = new Promise(resolve => { releaseHistory = resolve; }), historyArrived = new Promise(resolve => { enteredHistory = resolve; });
+      await page.route('**/api/field-identities/field/921/history', async route => { const response = await route.fetch(); enteredHistory(); await historyHold; await route.fulfill({response}).catch(() => {}); }, {times:1});
+      await button('查阅维护与确认记录').click(); await historyArrived; await choose('923'); releaseHistory();
+      await button('查阅维护与确认记录').click(); await page.locator('[data-field-identity-history]').waitFor();
+      const pageOne = await page.locator('[data-field-identity-history] summary').allTextContents(); assert.equal(pageOne.length,20);
+      await button('查看更早记录').click(); await page.locator(`[data-field-identity-history="${firstPage.next_cursor}"]`).waitFor();
+      assert.ok((await page.locator('[data-field-identity-history] summary').count()) < 20);
+      assert.doesNotMatch(await page.locator('[data-field-identity-history]').innerText(), /部门确认字段身份/);
+      await page.reload(); await ready(); await identityReady(); assert.equal(await target().inputValue(),'923');
+      assert.equal(await page.locator('[data-field-identity-history]').count(),0);
+      checks.push('missing real audit table returns 503 and rolls back writes; delayed history cannot cross fields; history UI pagination/reload preserve target without stale history');
       assert.deepEqual((await pool.query('SELECT * FROM data_map_fields ORDER BY id'))[0], originalFields);
       assert.deepEqual((await pool.query('SELECT * FROM data_map_contexts ORDER BY id'))[0], originalContexts);
       assert.deepEqual((await pool.query('SELECT * FROM data_map_field_identities WHERE field_id=922'))[0], otherIdentity);

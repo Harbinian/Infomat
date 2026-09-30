@@ -7,7 +7,7 @@ module.exports = async function (ctx) {
   const ownChecks = [], test = async (name, fn) => { await check('P14 ' + name, fn); ownChecks.push(name); };
   // Include the queue tables in the backup so a following UI/worker extension
   // cannot inherit orphan queue rows after restoring the older run IDs.
-  await require('../../server/analysisQueueMigration').applyAnalysisQueue(pool);
+  { const connection = await pool.getConnection(); try { await require('../../server/analysisQueueMigration').applyAnalysisQueue(connection); } finally { connection.release(); } }
   const dump = backup(), clients = {};
   async function http(who, url, method = 'GET', body, headers = {}) {
     const c = clients[who] || {};

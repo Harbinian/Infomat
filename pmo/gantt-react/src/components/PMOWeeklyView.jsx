@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { formatDate, getPmoDeliveryWeekRange, parseDate } from '../utils/dateUtils';
+import { deliverableRowKey } from '../utils/deliverableIndex.js';
 
 function numberValue(value) {
   return Number.isFinite(Number(value)) ? Number(value) : 0;
@@ -47,7 +48,7 @@ export default function PMOWeeklyView({ deliverables, phaseGates, tasks, pmoDate
       <tbody>
         {rows.map(deliverable => (
           <tr
-            key={deliverable.deliverableId}
+            key={deliverableRowKey(deliverable)}
             className={`dlv-row dlv-level-${deliverable.deliverableLevel} ${deliverable.taskRisk === '高' ? 'dlv-high-risk' : ''}`}
             onClick={() => onSelectDeliverable && onSelectDeliverable(deliverable)}
           >

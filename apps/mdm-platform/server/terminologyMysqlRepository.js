@@ -228,13 +228,14 @@ function makeTerminologyMysqlRepository(pool) {
       );
     },
 
-    async getTerm(termId) {
+    async getTerm(termId, scope = null, forShare = false) {
+      const scoped = scope ? scopedTermSql(scope) : { sql: '', params: [] };
       return await first(
         pool,
         `${TERM_SELECT}
-         WHERE t.id=?
-         LIMIT 1`,
-        [termId]
+         WHERE t.id=?${scoped.sql}
+         LIMIT 1${forShare ? ' FOR SHARE' : ''}`,
+        [termId, ...scoped.params]
       );
     },
 

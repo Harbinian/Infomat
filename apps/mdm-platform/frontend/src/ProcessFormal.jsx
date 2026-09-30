@@ -114,6 +114,10 @@ function PublishedHistory({ api, draftId, documentId }) {
           <option value="">请选择固定版本</option>{state.rows.map(row => <option key={row.id} value={row.id}>版本 #{row.id} · {row.edition || row.version_no} · {label(row.status)}</option>)}
         </select></label>
         <div className="import-actions"><button disabled={!selected || state.loading} onClick={() => read()}>核对所选历史正文</button><button disabled={!selected || state.loading} onClick={() => read(true)}>下载所选历史程序文件</button></div>
+        {selected && state.rows.some(row => String(row.id) === selected) && <p>
+          {['process', 'data'].map(mode => <ReactDiagramLink key={mode} versionId={selected} mode={mode} />)}
+          <span className="muted">在新标签页读取所选固定版本，当前未提交意见保留。</span>
+        </p>}
       </>}
     </>}
     {state.content && <div data-published-history-result>
@@ -122,6 +126,51 @@ function PublishedHistory({ api, draftId, documentId }) {
       <JsonDetails title="所选历史版本原生正文" value={state.content.document} />
     </div>}
     <p className="muted">查阅和下载只读取所选固定版本，不提交或清除未提交意见。这里不是跨草稿的完整审核历史；程序文件由该版本正文生成，并非原始上传文件。</p>
+  </section>;
+}
+
+function ReactDiagramLink({ versionId, mode }) {
+  return <a style={{ marginRight: 16 }} href={'/app/data-map?diagramVersion=' + encodeURIComponent(versionId) + '&diagramMode=' + mode} target="_blank" rel="noopener noreferrer">{mode === 'data' ? '查阅所选版本数据关系图' : '查阅所选版本流程图'}</a>;
+}
+
+function DocumentDraftHistory({ api, draftId, documentId }) {
+  const [state, setState] = useState({}), [selected, setSelected] = useState('');
+  const active = useRef(null), sequence = useRef(0);
+  useEffect(() => () => { ++sequence.current; active.current?.abort(); }, []);
+  async function load(cursor = null) {
+    active.current?.abort(); const controller = new AbortController(); active.current = controller;
+    const token = ++sequence.current; setSelected(''); setState({ loading: true, cursor });
+    try {
+      const result = await api.request('/api/process-design/drafts/' + encodeURIComponent(draftId) + '/document-drafts'
+        + (cursor ? '?before_id=' + encodeURIComponent(cursor) : ''), { signal: controller.signal });
+      if (token !== sequence.current) return;
+      if (String(result.anchor_draft_id) !== String(draftId) || String(result.document_id) !== String(documentId)
+        || result.coverage !== 'visible_native_drafts' || !Array.isArray(result.items)
+        || result.items.some(row => String(row.document_id) !== String(documentId)
+          || !/^[1-9]\d*$/.test(row.id) || !['process-governance-v7', 'process-governance-v8'].includes(row.schema_version))) {
+        throw new Error('历史草稿列表与当前主档不一致，请重新读取。');
+      }
+      setState({ data: result, cursor });
+    } catch (error) { if (token === sequence.current && !controller.signal.aborted) setState({ error, cursor }); }
+  }
+  return <section data-document-history aria-labelledby="document-history-heading" style={{ overflowWrap: 'anywhere' }}>
+    <h3 id="document-history-heading">同一主档的历次草稿</h3>
+    <p>按草稿标识从新到旧，每页20条，仅列出当前身份有权查阅的原生 V7/V8 草稿，包括未发布、需要修改和审核拒绝记录。历史只反映系统实际保存的内容，不补造缺失记录。</p>
+    <button type="button" disabled={state.loading} onClick={() => load()}>读取或刷新主档草稿列表</button>
+    {state.loading && <StatusPanel kind="loading" title="正在读取主档草稿…" />}
+    {state.error && <StatusPanel kind="error" title="主档草稿历史暂不可用">{state.error.message} 读取失败不表示没有历史。<button onClick={() => load(state.cursor)}>重试本页草稿</button></StatusPanel>}
+    {state.data && <>
+      {!state.data.items.length && <p>本页没有可查阅的原生草稿。</p>}
+      {state.data.items.length > 0 && <><label htmlFor="document-history-draft">选择历史草稿</label><select id="document-history-draft" value={selected} onChange={e => setSelected(e.target.value)}>
+        <option value="">请选择草稿后读取其审核和操作记录</option>
+        {state.data.items.map(row => <option key={row.id} value={row.id}>草稿 #{row.id} · {label(row.status)} · 修订 {row.revision_no ?? '未记录'} · {row.schema_version}</option>)}
+      </select></>}
+      <p role="status">本页 {state.data.items.length} 条。{state.data.next_cursor ? '仍有更早草稿。' : '已到当前可见范围的末页。'}新草稿需刷新首页后查看。</p>
+      {state.cursor && <button onClick={() => load()}>返回最新草稿</button>}
+      {state.data.next_cursor && <button onClick={() => load(state.data.next_cursor)}>读取更早草稿</button>}
+      {selected && <FormalHistory key={selected} api={api} draftId={selected} documentId={documentId} />}
+    </>}
+    <p className="muted">查阅不会保存、清除或应用当前办理意见。旧版退役数据不在本入口恢复；草稿正文及历史事件不代表完整的逐修订正文快照。</p>
   </section>;
 }
 
@@ -145,8 +194,8 @@ function FormalHistory({ api, draftId, documentId }) {
   }
   const show = value => value === undefined || value === null || value === '' ? '未记录' : String(value);
   const eventNames = { submitted: '提交正式审核', review_approve: '审核通过', review_needs_changes: '要求修改', review_reject: '审核拒绝', publish: '发布正式版本' };
-  return <section aria-labelledby="formal-history-heading" data-formal-history style={{ overflowWrap: 'anywhere' }}>
-    <h3 id="formal-history-heading">历次正式审核与操作记录</h3>
+  return <section aria-label={'草稿 #' + draftId + ' 的审核和操作记录'} data-formal-history style={{ overflowWrap: 'anywhere' }}>
+    <h3>历次正式审核与操作记录</h3>
     <p>读取正式草稿 #{draftId} 的历次记录，与上方预览案例历史分别展示。历史意见只适用于各自绑定的修订和摘要，不代表当前修订已通过。</p>
     <button type="button" disabled={state.loading} onClick={read}>{state.loading ? '正在读取正式历史…' : '读取或刷新正式历史'}</button>
     {state.error && <StatusPanel kind="error" title="正式历史暂不可用">{state.error.message} 请重试；读取失败不表示没有历史。</StatusPanel>}
@@ -319,6 +368,7 @@ export function ProcessFormal({ api, draft, setDraft }) {
         <JsonDetails title="正式提升依据与修订绑定" value={formal.promotion} />
         <FormalContent key={'content-' + snapshot(detail)} api={api} draft={formalDraft} />
         <FormalHistory key={snapshot(detail)} api={api} draftId={formalDraft.id} documentId={formal.document.id} />
+        <DocumentDraftHistory key={'document-' + snapshot(detail)} api={api} draftId={formalDraft.id} documentId={formal.document.id} />
         <PublishedHistory key={'published-' + snapshot(detail)} api={api} draftId={formalDraft.id} documentId={formal.document.id} />
       </> : <StatusPanel title="尚未提升为正式草稿">部门核对与范围条件满足后，由有权人员明确选择主档并提升。</StatusPanel>}
       {formal?.current_version && <><h3>已发布固定版本</h3><p>版本标识：{formal.current_version.id} · 版本号：{formal.current_version.version_no} · {label(formal.current_version.status)}</p><p>此处为该主档当前正式版本，可能早于正在办理的预览修订；不能用新修订替换已发布正文。</p>

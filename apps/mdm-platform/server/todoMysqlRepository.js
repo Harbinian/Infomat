@@ -75,7 +75,8 @@ function publicTodo(row) {
     from_dept_id: row.from_dept_id == null ? null : Number(row.from_dept_id),
     to_dept_id: row.to_dept_id == null ? null : Number(row.to_dept_id),
     related_mapping_id: row.related_mapping_id == null ? null : Number(row.related_mapping_id),
-    related_field_id: row.related_field_id == null ? null : Number(row.related_field_id)
+    related_field_id: row.related_field_id == null ? null : Number(row.related_field_id),
+    related_term_id: row.related_term_id == null ? null : String(row.related_term_id)
   };
 }
 
@@ -141,7 +142,7 @@ function makeTodoMysqlRepository(pool) {
 
       return (await rows(
         pool,
-        `SELECT t.*, fd.name AS from_dept_name, td.name AS to_dept_name${filters.includeFieldContext ? ', fe.process_governance_a1_code AS a1_code' : ''}
+        `SELECT t.*, CAST(t.related_term_id AS CHAR) AS related_term_id, fd.name AS from_dept_name, td.name AS to_dept_name${filters.includeFieldContext ? ', fe.process_governance_a1_code AS a1_code' : ''}
          FROM mdm_todos t
          LEFT JOIN departments fd ON fd.id = t.from_dept_id
          LEFT JOIN departments td ON td.id = t.to_dept_id
@@ -159,7 +160,7 @@ function makeTodoMysqlRepository(pool) {
     async getTodo(todoId) {
       return publicTodo(await first(
         pool,
-        `SELECT t.*, fd.name AS from_dept_name, td.name AS to_dept_name
+        `SELECT t.*, CAST(t.related_term_id AS CHAR) AS related_term_id, fd.name AS from_dept_name, td.name AS to_dept_name
          FROM mdm_todos t
          LEFT JOIN departments fd ON fd.id = t.from_dept_id
          LEFT JOIN departments td ON td.id = t.to_dept_id
@@ -170,6 +171,9 @@ function makeTodoMysqlRepository(pool) {
     },
 
     async createTodo(payload = {}, actor = {}) {
+      if (payload.related_term_id != null || payload.request_id != null) {
+        return require('./todoTermSource').createTermTodo(pool, payload, actor);
+      }
       const normalized = normalizeTodoPayload(payload);
       const actorPersonId = personIdFromActor(actor);
       const result = await pool.execute(

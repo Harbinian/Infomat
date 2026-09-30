@@ -57,7 +57,7 @@ npm run dev
 
 开发模式默认访问 `http://localhost:5174`，顶部可在“甘特图 / PMO看板 / 流程地图”之间切换。
 
-PMO 看板内的“周会事项”页签用于首次周例会 W-A03 模板试运行，登记行动项、风险、问题、变更和责任池事项。该页签数据保存在浏览器本地，不回写 PMO Markdown 真源或 `tasks.json`。
+PMO 看板内的“周会事项”页签是 PMO 行动台账，登记行动项、风险、问题、变更和责任池事项，数据写入 `pmo/weekly-issues/ledger.json` 正本并随仓库版本管理。规则校验（关闭依据、期限调整同意人）在服务端执行，见 `pmo/weekly-issues/README.md`。
 
 
 流程地图驾驶舱的独立路由为：

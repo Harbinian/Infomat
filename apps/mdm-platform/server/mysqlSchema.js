@@ -1774,7 +1774,7 @@ CREATE TABLE IF NOT EXISTS data_map_field_system_links (
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_data_map_field_system_links_field (field_id),
   INDEX idx_data_map_field_system_links_system (system_name),
-  CHECK (relation_type IN ('producer','consumer','reviewItem_authority','authority')),
+  CHECK (relation_type IN ('producer','consumer','candidate_authority','reviewItem_authority','authority')),
   CHECK (status IN ('active','inactive','archived')),
   CONSTRAINT fk_data_map_field_system_links_field FOREIGN KEY (field_id)
     REFERENCES data_map_fields(id) ON DELETE CASCADE
@@ -1801,7 +1801,7 @@ CREATE TABLE IF NOT EXISTS data_map_field_identities (
   INDEX idx_data_map_field_identities_dept (maintain_dept_id),
   INDEX idx_data_map_field_identities_owner (owner_user_id),
   CHECK (confidence_level IN ('low','medium','high')),
-  CHECK (status IN ('needs_review','confirmed','rejected','archived')),
+  CHECK (status IN ('candidate','needs_review','confirmed','rejected','archived')),
   CONSTRAINT fk_data_map_field_identities_field FOREIGN KEY (field_id)
     REFERENCES data_map_fields(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -1908,6 +1908,7 @@ CREATE TABLE IF NOT EXISTS mdm_todos (
   type VARCHAR(64) NOT NULL DEFAULT 'general',
   related_mapping_id BIGINT NULL,
   related_field_id BIGINT NULL,
+  related_term_id BIGINT NULL,
   content TEXT NOT NULL,
   due_date DATE NULL,
   urgency VARCHAR(16) NOT NULL DEFAULT 'medium',
