@@ -1,0 +1,177 @@
+{
+  "date": "2026-09-30",
+  "method": "Microsoft Edge, 1699x828 CSS pixels, deviceScaleFactor=1, visualViewport.scale=1; actual UI clicks and read-only runtime geometry",
+  "source": {
+    "path": "E:/CA001/Infomat/artifacts/single-process-authoring/gltx-jy-34-20260929/GLTX-JY-34-A公司IT基础设施与硬件设备管理-process-v8.json",
+    "fileSha256": "4aa2e9e6543d520bfcf43974055a2e4545ff3a176b474c7f21a4220a45418f3c",
+    "compactJsonSha256": "3587e9ccedd21e05f64df7635a802f27dcce435a511714d2210dcbd290691cba",
+    "schema": "process-governance-v8",
+    "behaviors": 31,
+    "relations": 44,
+    "dataObjects": 8,
+    "forms": 8
+  },
+  "scope": {
+    "service3001": "existing local candidate; imported via chooser into owned isolated browser tab",
+    "service3000": "current frontend built locally; owned temporary HTTP/MySQL fixture; synthetic identity and organization; formal writes disabled; native preview only",
+    "applicationSourceModified": false,
+    "sourceFileModified": false,
+    "formalDatabaseTouched": false,
+    "businessAcceptance": false,
+    "realRoleReviewActionsVerified": false
+  },
+  "observations": [
+    {
+      "id": "W01",
+      "status": "reproduced",
+      "title": "Overview labels cannot be read on this sample",
+      "metrics": {
+        "normal3001Zoom": 0.021931243508317867,
+        "normal3001FontPx": 0.986905957874304,
+        "fullscreen3001Zoom": 0.04527573665850219,
+        "fullscreen3001FontPx": 2.0374081496325984,
+        "preview3000": {
+          "canvas": {
+            "x": 426.5,
+            "y": 375.453125,
+            "width": 1066,
+            "height": 430,
+            "top": 375.453125,
+            "right": 1492.5,
+            "bottom": 805.453125,
+            "left": 426.5
+          },
+          "zoom": 0.028204557262673496,
+          "effectiveFont": 1.2692050768203074,
+          "nodeCount": 31,
+          "controls": "图形视图\n流程图\n数据关系图\n完整视图\n清晰视图\n下载图形PNG\n\n点击节点查看原文；拖动空白处平移，滚轮缩放。图形内容的修改仍在3001完成。"
+        },
+        "native3000": {
+          "canvas": {
+            "x": 426.5,
+            "y": 183.6875,
+            "width": 790,
+            "height": 460,
+            "top": 183.6875,
+            "right": 1216.5,
+            "bottom": 643.6875,
+            "left": 426.5
+          },
+          "zoom": 0.025200497198998792,
+          "effectiveFont": 1.1340223739549455,
+          "bounds": {
+            "x1": 24.000000000000007,
+            "x2": 764,
+            "y1": 59.236850618944615,
+            "y2": 398.7631493810553,
+            "w": 740,
+            "h": 339.5262987621107
+          }
+        }
+      },
+      "screenshots": [
+        "jy34-3001-fullscreen-overview.png",
+        "jy34-3000-preview-overview.png"
+      ]
+    },
+    {
+      "id": "W02",
+      "status": "reproduced",
+      "title": "3001 node locator changes graph selection without changing the current object details",
+      "steps": [
+        "Click decision_disposal_route",
+        "Inspect relation_11 supplier branch",
+        "Choose decision_confirm in node locator"
+      ],
+      "actual": "Graph shows decision_confirm; inspector still shows relation_11",
+      "screenshot": "jy34-3001-focus-details-mismatch.png"
+    },
+    {
+      "id": "W03",
+      "status": "reproduced",
+      "title": "3000 keyboard lookup updates inspector without focusing chart; clear view returns to a different node",
+      "steps": [
+        "Open native diagrams with same preview",
+        "Choose decision_confirm from keyboard original-content lookup",
+        "Click clear view"
+      ],
+      "actual": {
+        "visibleGraphRefs": [
+          "behavior_inspect"
+        ],
+        "inspectorTitle": "处置结果是否经发起人确认通过"
+      },
+      "screenshot": "jy34-3000-native-clear-mismatch.png"
+    },
+    {
+      "id": "W04",
+      "status": "reproduced",
+      "title": "Decision inspector presents action fields as missing",
+      "nodeRef": "decision_confirm",
+      "actual": "Decision node has no execution role or action fields by its source type; native inspector displays seven original-not-filled fields instead of connected branch conditions",
+      "screenshot": "jy34-3000-native-clear-mismatch.png"
+    },
+    {
+      "id": "W05",
+      "status": "reproduced",
+      "title": "3001 return route endpoints are far apart at readable zoom",
+      "relationRef": "relation_18",
+      "metrics": {
+        "zoom": 0.4,
+        "canvasWidth": 692,
+        "targetRenderedX1": -6848.558807335936,
+        "targetRenderedX2": -6523.758807335937
+      },
+      "actual": "Source node visible; target node outside viewport by many canvas widths. Inspector retains readable endpoint names and condition.",
+      "screenshot": "jy34-3001-return-relation.png"
+    },
+    {
+      "id": "W06",
+      "status": "observed",
+      "title": "3001 normal canvas competes with an initially empty inspector",
+      "metrics": {
+        "canvasWidth": 694.4375,
+        "canvasHeight": 529.90625,
+        "canvasTop": 491.671875,
+        "canvasBottom": 1021.578125,
+        "viewportHeight": 828
+      },
+      "screenshot": "jy34-3001-initial.png"
+    },
+    {
+      "id": "W07",
+      "status": "passed",
+      "title": "Unapplied relation input protection",
+      "steps": [
+        "Edit relation_11 condition in memory",
+        "Return to summary",
+        "Continue editing",
+        "Return again",
+        "Discard and continue"
+      ],
+      "actual": "Prompt shown; continue retains input; JSON condition unchanged; discard restores original"
+    },
+    {
+      "id": "W08",
+      "status": "passed",
+      "title": "Integrity and technical checks",
+      "actual": {
+        "modelReportedCollisions": 0,
+        "browser3001ConsoleErrors": 0,
+        "browser3000Errors": [],
+        "storage3001": {
+          "localStorage": 0,
+          "sessionStorage": 0
+        },
+        "page3001CompactJsonMatchesSource": true,
+        "isolated3000DocumentMatchesSource": true,
+        "sourcePhysicalHashUnchanged": true
+      }
+    }
+  ],
+  "limits": [
+    "No inference about real department assignment from synthetic fixture card gates",
+    "No formal review, publication or business confirmation",
+    "No application fix implemented"
+  ]
+}
