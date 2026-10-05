@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const { execFileSync } = require('node:child_process');
 const Review = require('../public/review-workspace');
+const References = require('../public/element-references');
 const EditSession = require('../public/edit-session-manager');
 const { createReviewLayoutFixture } = require('./review-layout-fixture');
 const { processGovernanceValidationResult } = require('../server');
@@ -29,6 +30,26 @@ assert.equal(Review.resolve(source, { ...field, parentRef: 'data_unlinked' }), n
 assert.equal(Review.resolve(source, { kind: 'form-item', ref: 'item_amount', parentRef: 'form_unlinked' }), null);
 assert.equal(Review.linkedObjects(source, 'behavior_review').forms.length, 1);
 assert.equal(JSON.stringify(source), original, 'Reading and navigation must not add or change business facts');
+assert.equal(Review.resolve(source, { kind: 'process', ref: source.process.process_ref }), source.process);
+const area = source.forms[0].areas[0];
+assert.equal(Review.resolve(source, { kind: 'form-area', ref: area.area_ref, parentRef: source.forms[0].form_ref }), area);
+assert.equal(Review.resolve(source, { kind: 'form-area', ref: area.area_ref, parentRef: 'wrong_form' }), null);
+assert.equal(Review.resolve(source, { kind: 'form-area', ref: area.area_ref }), null);
+const termDocument = structuredClone(source);
+termDocument.terms = [{ term_ref: 'term_review_test', term_name: '申请', definition: '合成验证术语' }];
+assert.equal(Review.resolve(termDocument, { kind: 'term', ref: 'term_review_test' }), termDocument.terms[0]);
+
+// The actual review resolver must reject ambiguity, including collisions with other kinds.
+for (const inject of [
+  document => document.behaviors.push(structuredClone(document.behaviors[1])),
+  document => { document.data_objects[0].data_ref = 'behavior_review'; }
+]) {
+  const duplicate = structuredClone(source);
+  inject(duplicate);
+  assert.equal(References.lookup(References.buildCatalog(duplicate), behavior).status, 'ambiguous');
+  assert.equal(Review.resolve(duplicate, behavior), null, 'Review cannot edit the first object behind an ambiguous identity');
+  assert.equal(Review.label(duplicate, behavior), '标识重复，无法唯一定位');
+}
 
 const html = fs.readFileSync(require.resolve('../public/index.html'), 'utf8');
 for (const [, script] of html.matchAll(/<script>([\s\S]*?)<\/script>/g)) new vm.Script(script);

@@ -1,5 +1,41 @@
 # 3001 单流程治理编制工具
 
+## React 候选工作台（2026-10-05）
+
+候选入口为 `/workbench/`，默认进入流程图，选中对象后展开420像素详情。原首页 `/` 保留。本次候选没有替换正式3001，也没有修改3000；下载未审核JSON后仍由用户手工上传3000。设计与实施记录见独立工作树的 `artifacts/3001-frontend-redesign-20261005/workbench-implementation-plan.md`。
+
+`frontend/` 使用 React/react-dom 19.2.6、Ant Design 6.6.5、@vitejs/plugin-react 6.0.2及Vite 8.0.16，构建产物位于 `public/workbench/`，资源基路径固定为 `/workbench/`。Vite从确认的8.0.14调整到8.0.16，以修复8.0.14包含的Windows开发服务器路径访问漏洞；没有增加收费服务、远程CDN、字体或分析组件。构建工具要求Node 20.19+或22.12+，本次运行与验证使用Node 25.2.1。
+
+从本应用目录构建并启动一个已确认空闲的隔离候选端口，例如本次使用的3027：
+
+```powershell
+npm.cmd ci
+npm.cmd run build:workbench
+$env:STRUCTURED_OUTPUT_HOST = '127.0.0.1'
+$env:STRUCTURED_OUTPUT_PORT = '3027'
+npm.cmd start
+```
+
+这是独立进程启动示例；先核对端口与进程，不启停其他服务。检查候选 `/workbench/`、`/api/health` 的 `candidate`／V8状态及 `/api/schema` 的摘要，浏览器另行核对实际导入、编辑与下载。需要开发服务器时执行 `npm.cmd run dev:workbench -- --port 5187 --strictPort`；本地API与领域静态脚本代理指向3027，按需调整配置中的候选目标。
+
+Controller的 `getSnapshot / subscribe / dispatch / destroy` 是业务状态唯一入口，统一拥有文档、修订、选择、编辑会话、检查和下载基线。`bridge.mjs` 每页只加载一次既有领域模块；新版不加载旧首页脚本、事件委派或旧页面render。React Form、图实例与网格不独立提交JSON。单项应用只提交所拥有字段的补丁；九类表格及旁边详情共用完整文档副本，通过稳定行标识读写，一次整体校验与提交。取消、超时、来源变化及旧异步响应不提交。
+
+状态明确区分未应用输入、已应用但未下载、实际当前内容已下载。离开会话先显式选择应用、放弃或继续编辑；结构检查不阻止草稿下载。引用按稳定标识及父级解析，缺失、歧义和错父级值保持原样。字段引用选择器属于同一受控会话，新增引用的必填性由用户明确选择。阅读演示仅为页面内存中的阅读位置，不写JSON、图坐标、撤销历史或下载基线。
+
+相关验证入口如下；浏览器脚本拒绝正式3000／3001端口，只在显式本地候选使用虚构合成数据，不连接数据库：
+
+```powershell
+npm.cmd test
+node scripts/smoke-workbench.mjs http://127.0.0.1:3027 ../../artifacts/3001-frontend-redesign-20261005/live-candidate-evidence.json
+npm.cmd run test:workbench-browser -- -BaseUrl http://127.0.0.1:3027 -Headed
+npm.cmd run test:workbench-graph-browser -- -BaseUrl http://127.0.0.1:3027 -Headed
+node scripts/test-element-references-browser.js --BaseUrl http://127.0.0.1:3027 --PlaywrightModule <local-playwright-module-path>
+```
+
+仅验证Microsoft Edge100%、1699×828 CSS像素桌面工作区。中文Composition事件及焦点自动化不等于Windows输入法候选窗人工体验或业务验收。技术契约和 `docs/` 说明用于实现兼容，不是业务治理真源。
+
+V8与3000的只读兼容专项会引用3000校验模块。在未安装3000依赖的新工作树中，可仅在当前终端为它提供3001已安装的Ajv，不修改3000：`$env:NODE_PATH = Join-Path (Get-Location) 'node_modules'`，再执行 `npm.cmd run test:v8-decision-data`。该专项使用合成数据，不开启3000服务或数据库。
+
 ## V8 候选：判断节点的数据依据（2026-09-22）
 
 本工作区默认新建、校验、下载和健康检查已切换到 `process-governance-v8`，状态为 `candidate`。下方V7发布记录及版本细节只用于历史兼容，不覆盖本工作区V8默认版本；交互要求仍适用时沿用。候选源码不表示服务已部署。正式容器仍需按批准的部署范围处理。
