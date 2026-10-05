@@ -282,7 +282,9 @@ export function createWorkbenchController(options = {}) {
   async function executeAction(action) {
     if(destroyed)return {ok:false,destroyed:true};
     try {
-      if(typeof action==='string')action={type:action};state.error=null;
+      if(typeof action==='string')action={type:action};
+      // Camera and resize feedback must not erase a failure before the user can read it.
+      if(action.type!=='viewport')state.error=null;
       const protectedActions=['new','import','choose-import','select','select-reference','view','close-detail','exit-edit','add','delete','undo','redo','download','relations','return-flow','focus-issue','reuse-fields','reuse-picker-open'];
       const preserveGrid=grid && ['select','select-reference','close-detail','expand-detail','grid-table','grid-select','reuse-fields','reuse-picker-open'].includes(action.type);
       const pickerNavigation=pickerPending() && ['grid-table','grid-select','grid-start','grid-add','grid-delete','grid-cancel','cancel','edit'].includes(action.type);
