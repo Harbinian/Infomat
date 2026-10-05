@@ -37,6 +37,7 @@ fs.writeFileSync(snapshotPath, JSON.stringify({
 
 execFileSync(process.execPath, [
   path.join(repoRoot, 'scripts', 'build-project-governance-report.mjs'),
+  '--legacy-display',
   '--date', '2026-06-29',
   '--workbench-json', path.relative(repoRoot, snapshotPath),
   '--out', outputPath,

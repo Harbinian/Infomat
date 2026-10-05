@@ -1,3 +1,4 @@
+# Starts only an owned loopback V8 candidate and Edge session; removes its own temporary evidence.
 param(
   [int]$Port = 0,
   [switch]$Headed
@@ -88,20 +89,26 @@ try {
   if (-not $health) {
     throw "Independent 3001 did not become healthy within 20 seconds at $baseUrl."
   }
-  if ($health.status -ne 'ok' -or $health.schema_version -ne 'process-governance-v7' -or $health.release_status -ne 'released') {
+  if ($health.status -ne 'ok' -or $health.schema_version -ne 'process-governance-v8' -or $health.release_status -ne 'candidate') {
     throw "Independent 3001 health response is unexpected: $($health | ConvertTo-Json -Compress)"
   }
 
   Push-Location $runTempRoot
   try {
-    $openArguments = @('--yes', '--package', '@playwright/cli', 'playwright-cli', "-s=$sessionName", 'open', $baseUrl)
+    $openArguments = @('--yes', '--package', '@playwright/cli', 'playwright-cli', "-s=$sessionName", 'open', $baseUrl, '--browser', 'msedge')
     if ($Headed) { $openArguments += '--headed' }
     & $npxCommand.Source @openArguments
     if ($LASTEXITCODE -ne 0) {
       throw "Playwright CLI failed to open the independent 3001 page. Exit code: $LASTEXITCODE"
     }
 
-    & $npxCommand.Source --yes --package '@playwright/cli' playwright-cli "-s=$sessionName" run-code --filename $scenarioPath
+    $scenarioOutput = & $npxCommand.Source --yes --package '@playwright/cli' playwright-cli "-s=$sessionName" run-code --filename $scenarioPath
+    $scenarioExitCode = $LASTEXITCODE
+    $scenarioOutput | Write-Output
+    if ($scenarioExitCode -eq 0 -and (($scenarioOutput -join "`n") -notmatch '### Result\s*\r?\n[^\r\n]*"passed"\s*:\s*true')) {
+      throw 'Browser scenario did not return a complete passing result.'
+    }
+    $LASTEXITCODE = $scenarioExitCode
     if ($LASTEXITCODE -ne 0) {
       throw "Multi-candidate atomic browser regression failed. Exit code: $LASTEXITCODE"
     }

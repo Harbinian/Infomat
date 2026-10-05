@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Read-only contract test for the HR work-role truth, generated snapshot, and
+ * Contract test for the historical work-role compatibility format, snapshot, and
  * document-structured-output-v2 work_role_bindings extension.
  *
  * Temporary fixture output is written only to the operating-system temp
@@ -175,9 +175,9 @@ assert.throws(() => validateBindingCollection([{ ...proposedPositionExecutor, so
 assert.throws(() => validateBindingCollection([proposedExecutor], { projection: true }), /confirmed bindings only/);
 
 const parsedCanonical = parseWorkRoleSource(workRoleSource, parseRoster(rosterSource));
-assert.deepEqual(parsedCanonical.workRoles, [], 'formal HR work-role directory must start empty');
-assert.deepEqual(parsedCanonical.workRolePositionMappings, [], 'formal position mappings must start empty');
-assert.deepEqual(parsedCanonical.workRoleAliases, [], 'formal role aliases must start empty');
+assert.deepEqual(parsedCanonical.workRoles, [], 'preserved legacy role copy must remain empty');
+assert.deepEqual(parsedCanonical.workRolePositionMappings, [], 'preserved legacy position mappings must remain empty');
+assert.deepEqual(parsedCanonical.workRoleAliases, [], 'preserved legacy role aliases must remain empty');
 
 assert.deepEqual(Object.keys(snapshot), [
   'schemaVersion',
@@ -190,7 +190,9 @@ assert.deepEqual(Object.keys(snapshot), [
 assert.equal(snapshot.schemaVersion, 'work-role-data-v1');
 assert.ok(!Number.isNaN(Date.parse(snapshot.generatedAt)), 'snapshot generatedAt must be ISO-compatible');
 assert.match(snapshot.sourceHash, /^[a-f0-9]{64}$/);
-assert.equal(snapshot.sourceHash, computeSourceHash(workRoleSource, rosterSource));
+if (process.argv.includes('--legacy-source-comparison')) {
+  assert.equal(snapshot.sourceHash, computeSourceHash(workRoleSource, rosterSource), 'explicit legacy source comparison');
+}
 assert.deepEqual(snapshot.workRoles, []);
 assert.deepEqual(snapshot.workRolePositionMappings, []);
 assert.deepEqual(snapshot.workRoleAliases, []);

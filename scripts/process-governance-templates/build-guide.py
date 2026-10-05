@@ -31,7 +31,9 @@ MUTED = "706A65"
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", required=True)
-    parser.add_argument("--output", required=True)
+    destination = parser.add_mutually_exclusive_group(required=True)
+    destination.add_argument("--output")
+    destination.add_argument("--output-dir", help="Derive the packaged Word name from packageDate (legacy generatedAt/snapshotDate fallback).")
     parser.add_argument("--asset-dir", required=True)
     return parser.parse_args()
 
@@ -272,7 +274,7 @@ def build_document(data: dict, output: Path, asset_dir: Path) -> None:
     for row, values in enumerate(
         [
             ["适用对象", "工程技术部、质量管理部、财务部、行政人事部、经营发展部、物资保障部、项目管理部、复材车间、运维安环部"],
-            ["填报真源", "各部门 Excel 工作簿；Word 仅解释口径，不重复维护流程数据"],
+            ["本批次填报载体", "各部门 Excel 工作簿；Word 仅解释本历史复核包口径；预填值需按当前外部材料和业务确认复核"],
             ["数据范围", f"{data['totals']['processes']} 条 L3、{data['totals']['behaviors']} 条 A1；其中 {data['totals']['unmappedProcesses']} 条系统承接方向待确认"],
             ["证据阻断", f"{data['totals']['blockingProcessEvidence']} 条 L3、{data['totals']['blockingBehaviorEvidence']} 条 A1 标记为缺原文证据；其中编号—名称不唯一分别为 {data['totals']['ambiguousProcessTitles']} / {data['totals']['ambiguousBehaviorTitles']} 条"],
         ]
@@ -291,7 +293,8 @@ def build_document(data: dict, output: Path, asset_dir: Path) -> None:
     )
     p = document.add_paragraph()
     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    p.add_run("编制日期：2026-07-17\n").bold = True
+    package_date = str(data.get("packageDate") or data.get("generatedAt") or data["snapshotDate"])[:10]
+    p.add_run(f"编制日期：{package_date}\n").bold = True
     p.add_run(f"流程映射快照：{data['snapshotDate']}｜预填内容均需部门确认")
     document.add_page_break()
 
@@ -317,7 +320,7 @@ def build_document(data: dict, output: Path, asset_dir: Path) -> None:
 
     document.add_heading("3. 完整示例：从 L3 到 A1", level=1)
     process, behaviors = find_example(data)
-    add_callout(document, "示例原文出处", process["citationDisplay"] + "。下列内容来自当前流程映射，均须由财务部确认；责任角色归纳单独标记为待确认。", LIGHT_BLUE)
+    add_callout(document, "示例原文出处", process["citationDisplay"] + "。下列内容来自历史流程映射，均须按当前外部材料及业务确认复核；责任角色归纳单独标记为待确认。", LIGHT_BLUE)
     process_rows = [
         ["1 解决什么事", process["purposeAndBoundary"]],
         ["2 谁负总责", "财务部成本会计（由 A1 执行角色归纳，待部门确认）"],
@@ -442,8 +445,13 @@ def build_document(data: dict, output: Path, asset_dir: Path) -> None:
 def main() -> None:
     args = parse_args()
     data = json.loads(Path(args.data).read_text(encoding="utf-8"))
-    build_document(data, Path(args.output), Path(args.asset_dir))
-    print(json.dumps({"output": args.output, "snapshotDate": data["snapshotDate"], "processes": data["totals"]["processes"], "behaviors": data["totals"]["behaviors"]}, ensure_ascii=False))
+    package_date = str(data.get("packageDate") or data.get("generatedAt") or data["snapshotDate"])[:10]
+    from datetime import date
+    if date.fromisoformat(package_date).isoformat() != package_date:
+        raise ValueError(f"Invalid package date: {package_date}")
+    output = Path(args.output) if args.output else Path(args.output_dir) / f"流程与数据梳理填写及评审标准_{package_date}.docx"
+    build_document(data, output, Path(args.asset_dir))
+    print(json.dumps({"output": str(output), "packageDate": package_date, "snapshotDate": data["snapshotDate"], "processes": data["totals"]["processes"], "behaviors": data["totals"]["behaviors"]}, ensure_ascii=False))
 
 
 if __name__ == "__main__":

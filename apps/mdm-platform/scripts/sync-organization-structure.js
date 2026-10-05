@@ -1,7 +1,11 @@
+// Historical fixed organization fixture, retained for compatibility tests.
+// CLI writes only an explicitly selected isolated SQLite database and source.
+// Names and assignments below are historical fixture data, not current authority.
 const fs = require('fs');
 const path = require('path');
+const { assertRuntimeConfig, legacyTestMode } = require('../server/runtimeBoundary');
 
-const DEFAULT_SOURCE_PATH = path.join(__dirname, '..', '..', '..', 'docs', 'organization', '组织架构和部门职责.md');
+const DEFAULT_SOURCE_PATH = path.join(__dirname, 'fixtures', 'legacy-organization-structure.md');
 
 const ORGANIZATION_STRUCTURE_UNITS = [
   {
@@ -182,7 +186,7 @@ function validateOrganizationStructureUnits(units = ORGANIZATION_STRUCTURE_UNITS
 
 function readSource(sourcePath) {
   if (!fs.existsSync(sourcePath)) {
-    throw new Error(`组织架构真源不存在：${sourcePath}`);
+    throw new Error(`历史组织夹具输入不存在：${sourcePath}`);
   }
   return fs.readFileSync(sourcePath, 'utf8');
 }
@@ -196,16 +200,22 @@ function assertSourceCoversOrganization(sourceText) {
     .filter(code => !sourceText.includes(code));
   if (missingLabels.length || missingCodes.length) {
     const missing = missingLabels.concat(missingCodes);
-    throw new Error(`组织架构真源缺少：${missing.join('、')}`);
+    throw new Error(`历史组织夹具输入缺少：${missing.join('、')}`);
   }
 }
 
 function syncOrganizationStructure(options = {}) {
-  const database = options.db || require('../server/db');
+  if (!options.db) {
+    if (!legacyTestMode(process.env)) {
+      throw new Error('LEGACY_ORGANIZATION_SYNC_ISOLATED_ONLY: select non-production legacy test mode');
+    }
+    assertRuntimeConfig(process.env);
+  }
   const sourcePath = options.sourcePath || DEFAULT_SOURCE_PATH;
   const sourceText = readSource(sourcePath);
   validateOrganizationStructureUnits();
   assertSourceCoversOrganization(sourceText);
+  const database = options.db || require('../server/db');
 
   const findByCode = database.prepare('SELECT org_unit_id FROM org_unit WHERE org_unit_code = ?');
   const findByMnemonic = database.prepare('SELECT org_unit_id FROM org_unit WHERE org_mnemonic = ?');
@@ -422,11 +432,31 @@ module.exports = {
   DEFAULT_SOURCE_PATH,
   ORGANIZATION_STRUCTURE_UNITS,
   LEADERSHIP_OFFICE_ASSIGNMENTS,
+  assertSourceCoversOrganization,
   validateOrganizationStructureUnits,
   syncOrganizationStructure
 };
 
 if (require.main === module) {
-  const result = syncOrganizationStructure();
-  console.log(`Organization structure synchronized: ${result.synced} org units`);
+  let database;
+  try {
+    if (!legacyTestMode(process.env)) {
+      throw new Error('LEGACY_ORGANIZATION_SYNC_ISOLATED_ONLY: select non-production legacy test mode');
+    }
+    assertRuntimeConfig(process.env);
+    const args = process.argv.slice(2);
+    if (args.length !== 2 || args[0] !== '--source' || !String(args[1]).trim()) {
+      throw new Error('LEGACY_ORGANIZATION_SOURCE_REQUIRED: use --source <historical fixture file>');
+    }
+    const sourcePath = path.resolve(args[1]);
+    assertSourceCoversOrganization(readSource(sourcePath));
+    database = require('../server/db');
+    const result = syncOrganizationStructure({ db: database, sourcePath });
+    console.log(`Legacy SQLite organization fixture synchronized: ${result.synced} org units`);
+  } catch (error) {
+    console.error(error.message);
+    process.exitCode = 1;
+  } finally {
+    if (database) database.close();
+  }
 }

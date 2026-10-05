@@ -72,12 +72,14 @@ for (const repoPath of filesToCheck) {
     }
 
     if (repoPath === 'apps/mdm-platform/public/index.html') {
-      const machineIdentifierOccurrences = content.split(handoffCandidateCreatedIdentifier).length - 1;
-      assert.strictEqual(machineIdentifierOccurrences, 1, 'the stable machine event identifier must appear exactly once');
       const eventMappingPattern = new RegExp(
         handoffCandidateCreatedIdentifier + "\\s*:\\s*['\"]生成承接待核对项['\"]"
       );
-      assert.ok(eventMappingPattern.test(content), 'the stable machine event identifier must only map to the approved user label');
+      // The legacy handoff UI is retired. Keep the identifier allowed for historical
+      // payloads, without requiring that retired UI to exist in the current page.
+      if (content.includes(handoffCandidateCreatedIdentifier)) {
+        assert.ok(eventMappingPattern.test(content), 'a retained machine event mapping must use the approved user label');
+      }
     }
   }
 

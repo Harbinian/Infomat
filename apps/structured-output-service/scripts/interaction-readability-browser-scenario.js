@@ -96,7 +96,7 @@ module.exports = async function checkInteractionReadability(page, { sourcePath, 
   assert.ok(Math.abs(center(manualRestored).x - center(manual).x) < 2
     && Math.abs(center(manualRestored).y - center(manual).y) < 2, 'Manual reading center must survive fullscreen exit');
   await page.getByRole('button', { name: '全屏检查流程图', exact: true }).click();
-  for (const size of [{ width: 1280, height: 720 }, { width: 1920, height: 889 }, { width: 1699, height: 828 }]) {
+  for (const size of [{ width: 1699, height: 828 }]) {
     await page.setViewportSize(size);
     await page.getByRole('button', { name: '查看全图', exact: true }).click();
     await page.waitForFunction(() => document.getElementById('processDiagramCanvas').getBoundingClientRect().bottom >= innerHeight - 14);

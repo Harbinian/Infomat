@@ -41,7 +41,7 @@ function assert(condition, message) {
 
 const args = parseArgs(process.argv.slice(2));
 const pkg = JSON.parse(await fs.readFile(args.data, 'utf8'));
-const packageDate = String(pkg.generatedAt || pkg.snapshotDate).slice(0, 10);
+const packageDate = String(pkg.packageDate || pkg.generatedAt || pkg.snapshotDate).slice(0, 10);
 const reports = [];
 
 for (const department of pkg.departments) {

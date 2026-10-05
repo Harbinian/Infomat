@@ -9,7 +9,7 @@
 - PMO 计划、日期、阶段门和任务字段的真源仍在 `pmo/` 根目录 Markdown，不在交付物正文里单独改口径。
 - 交付物与计划任务的绑定只认显式锚点：任务侧 `受控交付物编号`，或正本 frontmatter 的 `normalizedWbs` / `taskId`。不要依赖标题文本相似度建立关联，也不要用任务顺序推断编号。
 - `DLV-###` 编号是正本的唯一身份。新增编号前先确认未被占用（`GET /api/pmo/deliverables/ledger` 的 `suggestedNextId` 取「已有最大号 +1」，历史空缺号不回收）。
-- 流程输入基线和组织口径变化必须回到 `docs/norms/` 或 `docs/organization/` 修改。
+- 流程和组织口径变化依据用户指定外部材料、业务说明及有权确认；3001编制并由用户下载/上传3000治理。`docs/`旧资料仅用于追溯及明确授权的兼容维护。
 - 上传原件、状态快照、运行历史和临时导出默认写入被忽略的 `artifacts/pmo/deliverables/`。
 
 ## 行动项字段（action 块）

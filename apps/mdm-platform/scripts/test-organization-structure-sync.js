@@ -6,11 +6,13 @@ const db = require('../server/db');
 const {
   LEADERSHIP_OFFICE_ASSIGNMENTS,
   ORGANIZATION_STRUCTURE_UNITS,
+  DEFAULT_SOURCE_PATH,
   syncOrganizationStructure,
   validateOrganizationStructureUnits
 } = require('./sync-organization-structure');
 
-const sourcePath = path.join(__dirname, '..', '..', '..', 'docs', 'organization', '组织架构和部门职责.md');
+// Frozen technical fixture; current documentation is never a business test oracle.
+const sourcePath = DEFAULT_SOURCE_PATH;
 const EXPECTED_STRUCTURE_CODES = new Map([
   ['沈阳昌兴复材航空科技有限责任公司', { code: 'OU-COM-CXF', mnemonic: 'CXF', parent: null }],
   ['工程技术部', { code: 'OU-DEP-ENG', mnemonic: 'ENG', parent: 'OU-COM-CXF' }],
@@ -200,10 +202,7 @@ function main() {
       'OU-OFC-CXF-MVP',
       'POS-CXF-CEO',
       'POS-CXF-BVP',
-      'POS-CXF-MVP',
-      '马成文',
-      '李洪哲',
-      '赵亮'
+      'POS-CXF-MVP'
     ].forEach(label => assert.ok(sourceText.includes(label), `source document missing ${label}`));
     EXPECTED_STRUCTURE_CODES.forEach(({ code, mnemonic, parent }) => {
       assert.ok(sourceText.includes(code), `source document missing structure code ${code}`);

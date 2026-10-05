@@ -1,10 +1,12 @@
+// Legacy schema smoke only: creates and removes its own temporary SQLite fixture.
+// Never opens MDM_DB_PATH from the caller or the shared data/platform.db.
+const { cleanupDb } = require('./testHelpers/isolatedDb');
 const db = require('../server/db');
 const { verifyPassword } = require('../server/auth');
 
 function assert(condition, message) {
   if (!condition) {
-    console.error(`FAIL: ${message}`);
-    process.exit(1);
+    throw new Error(`FAIL: ${message}`);
   }
 }
 
@@ -33,6 +35,7 @@ const tables = [
   'conflict_coordination_history'
 ];
 
+try {
 tables.forEach(table => {
   const row = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?").get(table);
   assert(row, `missing table ${table}`);
@@ -46,4 +49,8 @@ if (defaultAdmin) {
 const fk = db.prepare('PRAGMA foreign_keys').get();
 assert(fk.foreign_keys === 1, 'SQLite foreign_keys pragma must be enabled');
 
-console.log('Smoke test passed');
+console.log('Legacy SQLite isolated schema smoke passed');
+} finally {
+  db.close();
+  cleanupDb();
+}

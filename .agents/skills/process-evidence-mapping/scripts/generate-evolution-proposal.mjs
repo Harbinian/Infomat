@@ -111,6 +111,7 @@ function issueClass(issueType) {
     表单字段待确认: '规则缺失',
     主数据需求待确认: '规则缺失',
     抽取结果待复核: '证据不足',
+    'OCR/抽取待复核': '证据不足',
   };
   return mapping[issueType] || '测试缺失';
 }

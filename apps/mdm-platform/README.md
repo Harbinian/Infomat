@@ -346,29 +346,19 @@ API 前缀为 `/api/data-map-facts`：GET `capabilities`、`targets`、根清单
 
 ## 流程治理统一入口与3001格式适配
 
-- 3001继续作为独立、无状态的单流程编制工具运行。MDM不停止、不代管、不远程读取3001。现有V3编制路径由用户选择v1至v3文件并统一规范化为v3；原生V7另走默认关闭、精确单流程的受控上传路径。
-- 分组侧栏保留“流程治理”，并提供“数据治理”直达入口。流程治理保留“流程编制、跨部门承接待办、承接冲突待办、V7预览核对”；数据治理页面展示实际启用状态，并提供已发布V7流程版本的选择入口。
-- “流程编制”直接显示MDM本地工作台，包含文字编制、条目侧栏、稳定排序、结构评分和跨职能流程图。该路径使用v3结构规则，不通过浏览器调用3001服务。
-- 部门主对接人可以新建、导入、保存草稿和提交审核；管理员只能打开已有草稿查看。导出备份不替代保存草稿。
-- MDM兼容`process-governance-v1`、`process-governance-v2`和`process-governance-v3`，服务端统一规范化、保存和导出为v3；3001源文件不被修改。v1、v2表单状态设为`unspecified`，不得按名称或明细数量推断。
+- 3001继续作为独立、无状态的单流程编制工具运行。MDM不停止、不代管、不远程读取3001。本工作区3001默认为V8候选；3000现有预览与正式链路支持原生V7/V8，格式按应用入口和实时健康核对，候选不等于正式服务已升级。
+- 分组侧栏保留“流程治理”和“数据治理”。流程治理使用“V7预览核对”现有入口接收V7/V8；旧V1至V3编制器、导入及跨部门承接办理入口已退役。历史数据库记录、迁移结构及兼容资产继续保留，不重新开放旧版写入。
 - 用户可把3001导出的`process-governance-v7`文件上传到“V7预览核对”。3000保存案例、修订、双方部门核对结果和操作记录；预览阶段不转换为V3、不写正式草稿和版本，核对结果也不写回V7文件。预览和正式写入默认关闭，分别通过`PROCESS_V7_PREVIEW_ENABLED=1`、`PROCESS_V7_FORMAL_ENABLED=1`开启。按2026-09-15用户确认，开启后不再限制单一流程，旧`PROCESS_V7_TRIAL_PROCESS_REF`不再生效；权限、部门核对、修订绑定、正式审核及发布要求保持原样。同一案例只能修订同一`process_ref`，其他流程另建案例。已有案例、版本和历史审核记录保留，不需要改表或重建。运行状态以实时健康和内容检查为准；隔离MySQL验证不替代业务验收，真实流程仍由用户提供材料并按实际职责核对。
 - 原生V7正式草稿在3000中只读。V7主档不能通过通用“创建下一版草稿”或旧`document-structured-output-v2`导入路径降级生成V3草稿；新修订必须回到3001修改、重新上传预览并完成受控提升。提交、审核和发布必须携带当前`expected_revision_no`和`expected_content_hash`；HTTP路由不透传事务或定位器字段。服务端在同一事务内按固定顺序锁定提升依据、正式主档、当前版本、草稿和审核任务，然后用同一连接复核账号、`auth_version`、部门、角色和权限，并通过状态、修订号、内容摘要和版本指针条件更新防止过期或并发操作。
 - `npm run init:mysql`不创建V7预览表，也不写入M1迁移记录。M1预检返回固定六种`consistency_status`；发现记录与结构不一致时，dry-run只报告，apply停止且不自动补表或补记录。
-- `process_design_drafts.process_content_json`是完整流程JSON真源。保存必须携带`expected_revision`，并发不一致返回`409 DRAFT_REVISION_CONFLICT`。
-- `POST /api/process-design/import-structured-output/preview`只返回摘要、承接候选、治理提示和内容哈希，不写数据库。
-- `POST /api/process-design/import-structured-output/approve`仅允许归口部门`department_mdm_reviewer`执行，并在单一MySQL事务中写入流程草稿、承接投影、参与关系、事件和导入审计。
-- `admin`对治理材料只读，执行审核导入、承接补充、部门决定或结构卡口时返回403。
-- 前置输入和后续承接统一保存在`process_design_cross_dept_handoffs`；待办直接按承接状态、角色、部门和参与关系生成，不再建立“待确认问题”第二份业务事实。
-- 承接事件继续使用稳定机器标识`handoff_candidate_created`，以便读取既有事件记录；页面把该事件显示为“生成承接待核对项”。机器标识不代表业务人员已经确认承接内容。
+- `admin`对治理材料全局只读，不能因叠加业务角色获得上传、核对、提升、提交、审核或发布写入旁路。
 - V7预览核对页面把尚未确认的执行角色显示为“执行角色待确认”，核对项双方均确认后显示为“执行角色”。该显示状态只反映本案例的核对进度，不代替业务审核、批准或发布。
 - V7核对项使用`process-v7-review-item-v2`摘要。相关业务行为、流程关系、数据字段或生命周期、表单操作或字段变化时，双方重新核对；缺少摘要版本的历史核对项不得沿用原结论。
 - 第05阶段已将V7当前部门核对、退回修改、归口/范围核对、提升、提交、正式审核和待发布事项接入“我的工作台”。每项使用原案例或审核对象标识，保留来源角色及权限；可变待办即时读取，失败显示不可用。完成的事项在下一次读取消失，修订影响时重新出现。管理员叠加业务角色仍只读。
 - V7可编辑字段使用页面内存保护。保存同页另一项不清除其他意见；切换、上传、退出和浏览器离页需要明确处理未提交内容；401后可由原账号恢复当前页面，409需先读取和核对当前修订。没有自动保存或长期浏览器存储。各角色第一步、完成条件、退回处理及合成截图见[角色使用手册第11节](docs/role-based-usage-guide.md#11-v7实际办理与未提交意见)。
-- 承接详情使用固定故事链，不显示推测进度百分比。部门普通退回只回到上一责任步骤；明确拒绝或结构卡口提请争议处理时创建承接冲突。
-- 相同流程与内容版本重复导入返回既有对象；内容变化保留旧修订和原决定，并重新进入审核。
-- 任何当前承接未`confirmed`或未按决定关闭为`closed_not_required`时，流程不得发布。
+- 相同案例和内容重复上传返回既有修订；内容变化保留旧修订、原决定和事件，再按现行摘要规则重新核对。
 - 固定角色模型为每个角色返回只读`visibleTabs`。创建账号、编辑账号和授权角色时显示多角色标签并集，但菜单可见性不替代服务端权限校验。
-- 登录后的“待办优先”视图只显示“我现在该做什么”，最多给出3个下一步动作；职责图、角色说明和活动信息移到“全量职责”。历史V3流程编制器默认折叠并延迟加载，只用于旧草稿。
+- 登录后的“待办优先”视图只显示“我现在该做什么”，最多给出3个下一步动作；职责图、角色说明和活动信息移到“全量职责”。旧版流程办理不再生成可执行事项。
 - 流程发布后的数据对象身份、主数据认定、统一对象匹配、关键字段和生命周期规则由MDM工作组处理。业务部门只答复MDM定向提出的具体事实问题并提供可核对依据，不填写完整治理工作包。
 - 数据生命周期治理默认关闭，设置`PROCESS_DATA_GOVERNANCE_ENABLED=1`后，MDM工作组可在“数据治理”选择任一已发布的原生V7流程版本并点击“建立治理工作包”。当前版本和被后续版本替代的历史已发布版本均可选择；未发布、撤销及非V7版本不能建立工作包。重复选择同一版本返回原工作包，不复制记录。流程发布和迁移均不自动创建工作包。
 - 旧`PROCESS_DATA_GOVERNANCE_TRIAL_PROCESS_VERSION_ID`配置不再生效；状态接口保留兼容字段`configured_process_version_id:null`，范围标识为`published_v7_versions`。已有工作包保持原`process_version_id`、来源摘要、稳定标识和审核记录，不需要重建或回填。每次办理复核固定来源内容及摘要，发现不一致时停止写入，不猜测修复。工作包不读取原始3001文件；固定规则只生成待核对内容，不调用AI、不自动确认。
@@ -427,7 +417,7 @@ npm run smoke:infomat-services
 | MDM | `127.0.0.1:3000` |
 | PMO | 本机访问 `127.0.0.1:5173`，服务监听 `0.0.0.0:5173` |
 | MySQL | `localhost:3307` |
-| MySQL 用户 / 库 | `mdm_user` / `infomat_mdm` |
+| 固定启动配置的 MySQL 用户 / 库 | `sa` / `infomat_mdm`；来源为`scripts/infomat-services.config.json`，不替代独立运维目标授权 |
 | MySQL 连接池 | `MYSQL_CONNECTION_LIMIT=16` |
 | 读模型 | `MDM_IDENTITY_READ_MODEL=mysql`、`PROCESS_GOVERNANCE_READ_MODEL=mysql` |
 | 管理员工号 | `ADMIN001` |
@@ -452,7 +442,7 @@ $env:MYSQL_PASSWORD = ($localEnv | Where-Object { $_ -like 'MYSQL_PASSWORD=*' })
 $env:MDM_ADMIN_PASSWORD = ($localEnv | Where-Object { $_ -like 'MDM_ADMIN_PASSWORD=*' }).Split('=',2)[1]
 $env:MYSQL_HOST = "localhost"
 $env:MYSQL_PORT = "3307"
-$env:MYSQL_USER = "mdm_user"
+$env:MYSQL_USER = "sa" # 固定共同启动配置；独立运维使用获准的实际目标账号
 $env:MYSQL_DATABASE = "infomat_mdm"
 $env:MYSQL_CONNECTION_LIMIT = "16"
 $env:MDM_IDENTITY_READ_MODEL = "mysql"
@@ -609,7 +599,8 @@ P04无DDL、角色、权限项或正式审批链变更。复用P02七张增量�
 
 ```bash
 npm run init:mysql
-npm run smoke
+npm run legacy-sqlite:smoke
+npm run test:legacy-sqlite-entrypoints
 npm run test:org
 npm run test:catalog
 npm run test:mappings
@@ -651,7 +642,7 @@ npm run import:process-input-baseline-review -- --review-run artifacts/process-i
 
 仓库级流程治理主线会调用 `node scripts/test-no-banned-terminology.js`。该检查只读取受控术语入口：用户页面 `apps/mdm-platform/public/index.html`，以及问题卡编制指引 `AGENTS.md`、`.agents/skills/process-evidence-mapping/SKILL.md`、`apps/mdm-platform/docs/role-based-usage-guide.md`；两类入口分别应用各自的禁止用语清单。检查不会启动服务、连接数据库或修改文件。
 
-正式运行和正式流程治理同步使用MySQL。`legacy-sqlite:init-db`、`legacy-sqlite:sync-process-org`、`legacy-sqlite:import-process-governance`和`legacy-sqlite:check-process-governance`只服务遗留迁移或隔离测试，不是当前正式入口。执行`legacy-sqlite:init-db`时必须显式设置`MDM_ALLOW_LEGACY_TEST_MODE=1`，并通过`MDM_DB_PATH`指定非共享隔离库；脚本拒绝写入默认共享`data/platform.db`。
+正式运行使用MySQL。现有公开SQLite入口仅为`legacy-sqlite:smoke`、`legacy-sqlite:sync-organization-structure`和`legacy-sqlite:setup-local-baseline`。smoke自行建立并清理临时夹具，不采用调用者的库路径；组织同步与历史基线建立必须显式设置非production遗留测试模式、独立`MDM_DB_PATH`及`--source <历史夹具文件>`，并在加载SQLite前拒绝共享库、缺失配置或输入。默认兼容读取apps内冻结的组织技术夹具，不再自动消费docs组织副本；固定组织和领导安排只用于历史兼容测试，不代表当前任命。旧初始化、流程组织同步、快照导入和检查脚本保留为兼容实现，已取消的四个`legacy-sqlite:` npm命令不恢复；含糊的`smoke`、`sync:organization-structure`和`setup:local-baseline`入口已撤出。`test:legacy-sqlite-entrypoints`验证拒绝路径及共享库未改变。
 
 历史批量开户脚本已改为拒绝执行。新账号只能通过管理员接口创建为待启用状态；管理员明确启用时系统生成一次性临时密码，并要求首次登录改密。
 
@@ -688,7 +679,7 @@ npm run migrate:process-v7-formal:dry-run
 npm run test:process-data-governance
 npm run migrate:process-data-governance:dry-run
 npm run rehearse:process-v7-migrations-isolated
-npm run import:process-governance-mysql
+npm run import:process-governance-mysql -- --snapshot <已授权历史快照JSON>
 npm run smoke:process-governance-mysql
 ```
 
@@ -697,7 +688,7 @@ npm run smoke:process-governance-mysql
 数据库安全约定：
 
 - MySQL 连接统一使用 `MYSQL_HOST`、`MYSQL_PORT`、`MYSQL_USER`、`MYSQL_PASSWORD`、`MYSQL_DATABASE`、`MYSQL_CONNECTION_LIMIT`。
-- 旧 SQLite `platform.db` 不迁移；MySQL 通过组织真源、流程快照和基线脚本重建。遗留 SQLite 只保留为隔离测试和待删除实现，不作为运行回退路径。
+- 遗留SQLite只保留为历史兼容与隔离测试，不作为正式回退。历史库与记录不自动迁移、清空或重建；确需迁移时先核对外部权威输入、目标、旧数据影响、备份和恢复方案。
 - 流程治理、统一问题池、流程设计和指导意见以 MySQL 身份/RBAC、流程治理读模型和对应治理表为正式口径；问题池详情和写动作必须按 MySQL 角色、部门和权限二次校验。
 - 质量问题和映射待办关闭只支持 MySQL 路径；除“说明这条核验项不是问题”且填写原因外，关闭必须同时满足 `source_resolved` 和最新导入批次中对应问题指纹已消失。
 - MySQL基础结构包含`process_import_fingerprints`，用于保存每次导入的质量问题和映射待办指纹；`npm run init:mysql`以幂等建表补齐已有实例。本次只修复仓库结构定义并通过静态测试，没有对任何运行实例执行初始化或迁移。
@@ -711,22 +702,20 @@ npm run smoke:process-governance-mysql
 - `/api/org/accounts`是唯一普通账号写入口。旧`/api/org/users*`写操作和`/api/import-rbac/*`批量写入返回`410 LEGACY_IDENTITY_API_RETIRED`；角色矩阵写操作返回`405 CORE_GOVERNANCE_MODEL_READ_ONLY`。
 - 流程治理保留`#/processGovernance`历史页面及独立前端的核对、正式流转入口。V1至V3编制、导入和旧承接办理已于2026-09-15退役；新文件由3001编制，用户手工上传后按3000受控流程办理，实际开启状态须实时核对。
 - `public/process-governance-editor/`保留为历史兼容资产，不是当前编制入口。旧V1至V3记录、标识和审核历史继续保留，不重新开放写入或猜测转换；受支持的V7/V8正文按其实际版本办理。
-- 3001当前V7文件只通过用户主动下载和上传进入V7预览核对。MDM不反向调用3001服务；预览上传、后续提升和发布必须分别重新校验结构、语义、身份、部门范围、修订号和内容摘要，上传文件中的任何审核状态不作为凭证。
-- 跨部门承接待办和承接冲突待办均直接进入流程治理对应队列。角色工作台使用深链接跳转到承接或冲突对象；故事链展示处理人、部门、时间、依据及退回或冲突分支。
+- 3001受支持V7/V8文件只通过用户主动下载和上传进入现有预览核对。MDM不反向调用3001服务；预览上传、后续提升和发布必须分别重新校验结构、语义、身份、部门范围、修订号和内容摘要，上传文件中的任何审核状态不作为凭证。
+- 旧跨部门承接和承接冲突办理队列已退役；历史对象、状态、事件及深链接只作追溯，不作为当前可执行事项。
 - `npm run test:mainline` 用于验证“流程治理 -> 字段台账 -> 主数据对象 -> 权限 -> 导入导出”主线，详见 `docs/plans/流程治理字段台账主线稳定性检查.md`。
 - 不直接运行会删除共享数据库的旧式测试逻辑。
-- `seed-demo-data.js` 和 `setup-mdm-project-users.js` 需要显式环境变量才可运行。
+- `seed-demo-data.js`、`setup-mdm-project-users.js`及旧批量开户脚本已经拒绝执行，不能靠提供环境变量恢复正式开户。
 
 流程治理口径：
 
-- 组织真源为 `docs/organization/组织架构和部门职责.md`。
-- 流程输入基线为 `docs/norms/{部门}部门-能力-流程-系统映射关系.md`。
-- 快照来源为 `docs/company-sankey-data.json`。
-- PMO 静态驾驶舱仍通过 parser 和内嵌快照运行。
+- 当前业务依据为用户指定的外部原始材料、实际业务说明和明确确认；3001编制、人工下载上传交接、3000核对审核后形成正式版本。
+- `docs/organization/`、`docs/norms/`、`docs/company-sankey-data.json`和PMO内嵌快照仅保留历史资料、副本或展示兼容用途，不决定当前组织任命或业务治理，也不自动同步数据库。
 - 指导意见默认隐藏；打开待确认问题只聚焦当前治理对象，不自动展开指导意见。只有已有指导意见被主动刷新、创建或响应时，才显示对应区域。
 - 统一问题池前端按 `display_status` 做视觉引导：待确认项优先展示；已提交待审核、等待协同/裁决和已完成项用不同状态标签与卡片颜色区分；已提交或已完成不等于关闭，默认不抢占“当前优先”。问题提交后，详情页只展示处理记录和下一步入口，不再让上传者在同页重复提交审核动作。
 - 统一问题池详情页的 `在哪发现` 固定展示源文件编号、制度或表单名称、大概位置、业务流程和业务行为；能定位制度或表单源文件锚点时优先显示原文位置。流程输入基线里的条款号必须能在制度或表单源文件中核到才显示为原文条款；条款号对不上但摘录能在源文件中找到时，显示摘录所在原文段落并标明残留问题；不能定位时才回退到流程输入基线并标明残留问题。
-- 统一问题池详情页的“结构化字段确认”会把待确认事项映射到 `meta`、`l3_catalog`、`a1_catalog`、`evidence_catalog` 或 `mdm_requirement_catalog` 等文档结构块字段。用户处理的是制度、流程、行为、表单、字段和证据是否能进入正式结构化输出，不需要理解 `selected_option`、`point_status` 等内部状态字段。文档结构化输出的数据模型以 `../../docs/contracts/document-structured-output.schema.json` 为准，说明见 `../../docs/contracts/document-structured-output-schema.md`。
+- 历史文档结构化问题池兼容说明：旧“结构化字段确认”将事项映射到`meta`、`l3_catalog`、`a1_catalog`、`evidence_catalog`或`mdm_requirement_catalog`等块，`selected_option`、`point_status`仅为旧技术字段。`../../docs/contracts/document-structured-output.schema.json`及其说明只记录历史合同，不是当前编制入口或业务依据；不按这些历史块创建新的流程事实或恢复退役页面。
 - `npm run test:process-governance-issue-pool` 覆盖统一问题池 MySQL 权限、前端钩子和来源解析；其中来源解析会防止 `GLTX-XM-08-A` 这类制度编号被误挂到 `GLTX-XM-08-A-01` 表单。
 
 ### 前端查看与办理口径
@@ -737,7 +726,7 @@ npm run smoke:process-governance-mysql
 
 花名册搜索支持回车，中文输入法组合输入期间不触发查询。冲突显示实际字段与部门名称；名称缺失时明确标注待补充。状态、系统生成的旧待办文案和时间仅调整展示，不改写原始值。
 
-导航分工：侧边栏负责模块与流程工作区切换。“流程治理”展开预览核对、跨部门承接待办、承接冲突待办和历史流程草稿；“数据治理”保留独立入口。主屏不再显示第二套流程工作区标签，保留当前对象的筛选、详情、视图选项及办理操作。原有工作区URL和深链接继续有效；浏览器前进、后退和任务跳转均按同一路由更新侧边栏选中项，切换前保留未提交修改保护。
+导航分工：侧边栏负责模块与流程工作区切换。“流程治理”提供现有预览核对与正式流转；旧承接待办和V1至V3编制/导入已退役，历史数据仅按保留权限查阅；“数据治理”保留独立入口。主屏不再显示第二套流程工作区标签，保留当前对象的筛选、详情、视图选项及办理操作。原有工作区URL和深链接继续有效；浏览器前进、后退和任务跳转均按同一路由更新侧边栏选中项，切换前保留未提交修改保护。
 
 ### P12：固定交接关系检查
 
@@ -1053,3 +1042,7 @@ getHistoricalReview复用当前账号/人员/auth_version验证，仅既有gover
 系统维护权限取既有固定admin角色当前有效权限，并限制在其原权限集合。账号维护操作在原事务中重查系统账号状态/auth_version，原人员审计保留且同事务追加系统账号操作者关联。首次改密、CSRF、旧会话撤销及治理写入拒绝仍强制执行；系统账号编号不能冒充person_id。首次登录改密仍使用原入口；新前端登录后从统一/app/进入账号与授权办理，身份页明确不关联员工/部门。
 
 新增验证test:system-admin -- --output <新的ignored证据目录>，只运行自有tmpfs MySQL、随机回环HTTP、合成身份及Edge100%/1699×828桌面；备份仅在内存，按归属清理容器/进程。正式启用、实际开户、凭据交付和业务验收须有当次放行；本地通过不代表已开启。回退时保留新表及审计、停止系统维护写入，并撤销系统会话；旧人员链仍兼容，不能删表或伪造员工来回退。
+
+2026-10-05 P25本地补修：原入口在登录及恢复会话时，先读取本人密码状态；需要首次改密时打开改密对话框并暂停权限模型与业务数据加载。改密失败显示原接口错误并保留输入；成功后清空密码字段，返回登录页，要求使用新密码重新登录。沿用原密码、CSRF及会话失效规则，不放宽后端限制，不涉及结构或旧数据迁移。当前独立运行副本的更新须另按P25明确放行，工作区修复不表示已切换运行版本。
+
+P25会话提示补修：首次改密框及顶部身份区显示当前已认证身份，弹窗明确本次登录或已恢复本浏览器的登录会话；“当前密码”指该账号的现有密码。普通修改密码使用独立提示，失败消息不覆盖身份说明。改密条件及接口保持，提示补修仍为本地成果，待对应更新包获准后再部署。

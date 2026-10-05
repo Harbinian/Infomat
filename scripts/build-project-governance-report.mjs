@@ -4,8 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..');
-const DEFAULT_MARKDOWN_OUTPUT = path.join('docs', 'reports', 'project-governance-weekly-report.md');
-const DEFAULT_JSON_OUTPUT = path.join('pmo', 'gantt-react', 'public', 'project-governance-weekly-report.json');
+// Preserved legacy sample inputs and confirmers must not be mistaken for live facts.
 const INPUT_BASELINE_PATH = path.join('docs', 'norms', '流程治理', '输入基线问题待办.md');
 const QUALITY_REPORT_PATH = path.join('docs', 'reports', 'dcm-bbm-quality-report.md');
 const sampleDepartments = ['工程技术部', '项目管理部'];
@@ -213,6 +212,8 @@ function renderReport({ date, outputPath, jsonOutputPath, workbenchSnapshot }) {
   const lines = [
     '# 项目治理周报（双部门样板）',
     '',
+    '> 历史兼容样板：旧副本、人员与工作台结构仅供追溯和隔离验证，不证明当前责任、治理状态或有效流程。',
+    '',
     `- 生成日期：${date}`,
     '- 样板部门：工程技术部、项目管理部',
     '- MDM 定位：承接、分派、记录、追踪和验证；规则制定和发布仍由人工回源核验后受控完成。',
@@ -263,10 +264,13 @@ function renderReport({ date, outputPath, jsonOutputPath, workbenchSnapshot }) {
   return { outputPath, jsonOutputPath };
 }
 
-const date = argValue('--date', new Date().toISOString().slice(0, 10));
-const outputArg = argValue('--out', DEFAULT_MARKDOWN_OUTPUT);
+if (!process.argv.includes('--legacy-display') || !argValue('--out') || !argValue('--json-out')) {
+  throw new Error('Historical sample report requires --legacy-display --out <md> --json-out <json>; docs copies do not establish current governance facts');
+}
+const date = argValue('--date', new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Shanghai' }));
+const outputArg = argValue('--out');
 const outputPath = path.resolve(repoRoot, outputArg);
-const jsonOutputArg = argValue('--json-out', DEFAULT_JSON_OUTPUT);
+const jsonOutputArg = argValue('--json-out');
 const jsonOutputPath = path.resolve(repoRoot, jsonOutputArg);
 const workbenchSnapshot = argValue('--workbench-json', '');
 const written = renderReport({ date, outputPath, jsonOutputPath, workbenchSnapshot });

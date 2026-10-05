@@ -1,29 +1,29 @@
 /**
- * 从 norms 目录下的部门映射文件解析全域映射表 + A1 行为明细，
- * 并只读 docs/work-role-data.json 合并正式工作角色目录和已确认流程绑定，
- * 生成流程地图驾驶舱使用的数据快照。
+ * 历史展示/兼容工具：解析旧部门映射和 A1 明细，合并旧工作角色快照。
+ * docs 输入不作为现行治理、组织任命或审批依据。
  *
- * 用法: node scripts/parse-sankey-data.mjs
+ * 用法: node scripts/parse-sankey-data.mjs --legacy-display --domain-map <json>
+ *       --out <json> [--dashboard <html>] [--diagnose-a1]
  * 输出:
  *   - stdout (紧凑 JSON)
- *   - docs/company-sankey-data.json
- *   - pmo/procedure-management/dashboard.html 内嵌数据快照
+ *   - 显式 --out 路径；仅指定 --dashboard 时注入该 HTML
  */
 
 import { createHash } from 'crypto';
-import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'fs';
 import { basename, dirname, extname, join, relative, resolve } from 'path';
 import { pathToFileURL } from 'url';
 import { classifySourceBoundary, sourceBoundaryFromCitation } from './source-boundary-rules.mjs';
+import { readLegacyDepartmentDomains } from './legacy-department-domains.mjs';
 
-const NORMS = resolve(import.meta.dirname || '.', '..', 'docs', 'norms');
+let NORMS = resolve(import.meta.dirname || '.', '..', 'docs', 'norms');
 const REPO_ROOT = resolve(NORMS, '..', '..');
-const COMPANY_DATA_PATH = resolve(NORMS, '..', 'company-sankey-data.json');
-const CROSS_DEPT_REPORT = resolve(NORMS, '流程治理', '跨部门完整性检查报告.md');
-const CROSS_CHAIN_REPORT = resolve(NORMS, '流程治理', '跨部门流程识别报告.md');
-const DASHBOARD_PATH = resolve(NORMS, '..', '..', 'pmo', 'procedure-management', 'dashboard.html');
-const ORGANIZATION_SOURCE = resolve(NORMS, '..', 'organization', '组织架构和部门职责.md');
-const WORK_ROLE_DATA_PATH = resolve(NORMS, '..', 'work-role-data.json');
+let COMPANY_DATA_PATH;
+let CROSS_DEPT_REPORT = resolve(NORMS, '流程治理', '跨部门完整性检查报告.md');
+let CROSS_CHAIN_REPORT = resolve(NORMS, '流程治理', '跨部门流程识别报告.md');
+let DASHBOARD_PATH;
+let DOMAIN_MAP_PATH = resolve(REPO_ROOT, 'docs', 'contracts', 'dcm-bbm-contract.json');
+let WORK_ROLE_DATA_PATH = resolve(NORMS, '..', 'work-role-data.json');
 const STRUCTURE_BLOCK_VERSION = 1;
 const STRUCTURE_ARRAY_SECTIONS = new Set([
   'l3_catalog',
@@ -75,45 +75,9 @@ const WORK_ROLE_PARTICIPATION_TYPES = new Set([
   'receiver',
 ]);
 
-function parseOrganizationDomainMap(text) {
-  const blockMatch = text.match(/```([\s\S]*?)```/);
-  if (!blockMatch) {
-    throw new Error('组织真源缺少组织架构图代码块');
-  }
-
-  const result = {};
-  let currentDomain = '总经理直辖域';
-  for (const rawLine of blockMatch[1].split(/\r?\n/)) {
-    const line = rawLine.trim();
-    if (!line) continue;
-
-    const nodeMatch = line.match(/[├└]──\s*(.+)$/);
-    if (!nodeMatch) continue;
-
-    const name = nodeMatch[1].replace(/（.*?）/g, '').trim();
-    if (name === '经营副总') {
-      currentDomain = '经营域';
-      continue;
-    }
-    if (name === '生产副总') {
-      currentDomain = '生产域';
-      continue;
-    }
-
-    result[name] = currentDomain;
-  }
-
-  if (Object.keys(result).length === 0) {
-    throw new Error('组织真源未解析出部门到域映射');
-  }
-  return result;
-}
-
-function buildDeptDomainMap() {
-  return parseOrganizationDomainMap(readFileSync(ORGANIZATION_SOURCE, 'utf-8'));
-}
-
-const DEPT_DOMAIN = buildDeptDomainMap();
+// Pure compatibility imports use the preserved technical contract map, never
+// an organization Markdown code block. CLI generation requires an explicit map.
+let DEPT_DOMAIN = readLegacyDepartmentDomains(DOMAIN_MAP_PATH);
 
 // 全域映射表文件名 — 自动发现 norms 目录下所有符合命名规范的文件
 // 规范: {部门名}部门-能力-流程-系统映射关系.md
@@ -324,12 +288,12 @@ function buildSourceManifest(mappingFiles, mdmRequirementFiles) {
     });
   }
 
-  addFile(ORGANIZATION_SOURCE, '全公司', {
-    assetType: 'organization_source',
-    fileNo: '组织口径',
+  addFile(DOMAIN_MAP_PATH, '全公司', {
+    assetType: 'legacy_department_domains',
+    fileNo: '历史部门域映射',
     revision: '?',
     status: '纳入',
-    reason: '部门清单与部门到域映射依据',
+    reason: '显式选择的历史展示部门域映射；不证明现行组织口径',
   });
 
   for (const file of mappingFiles) {
@@ -2098,6 +2062,27 @@ function printA1Diagnostics(perDeptDiagnostics, allMappings, allA1) {
 // ---- 主流程 ----
 
 function main() {
+  const args = process.argv.slice(2);
+  if (!args.includes('--legacy-display')) {
+    throw new Error('Historical display generation requires --legacy-display; docs are not current governance authority');
+  }
+  const values = new Map();
+  for (let index = 0; index < args.length; index += 1) {
+    if (['--legacy-display', '--diagnose-a1'].includes(args[index])) continue;
+    if (!['--domain-map', '--out', '--dashboard', '--norms', '--cross-report', '--chain-report', '--work-roles'].includes(args[index])) throw new Error(`Unknown argument: ${args[index]}`);
+    const value = args[++index];
+    if (!value || value.startsWith('--')) throw new Error(`Missing value for ${args[index - 1]}`);
+    values.set(args[index - 1], resolve(value));
+  }
+  if (!values.has('--domain-map') || !values.has('--out')) throw new Error('Historical display generation requires explicit --domain-map <json> and --out <json>');
+  DOMAIN_MAP_PATH = values.get('--domain-map');
+  DEPT_DOMAIN = readLegacyDepartmentDomains(DOMAIN_MAP_PATH);
+  COMPANY_DATA_PATH = values.get('--out');
+  DASHBOARD_PATH = values.get('--dashboard');
+  NORMS = values.get('--norms') || NORMS;
+  CROSS_DEPT_REPORT = values.get('--cross-report') || resolve(NORMS, '流程治理', '跨部门完整性检查报告.md');
+  CROSS_CHAIN_REPORT = values.get('--chain-report') || resolve(NORMS, '流程治理', '跨部门流程识别报告.md');
+  WORK_ROLE_DATA_PATH = values.get('--work-roles') || WORK_ROLE_DATA_PATH;
   const allMappings = []; // { dept, l1, l2, l3, systems }
   const allA1 = [];       // { dept, l3Name, a1Name }
   const allProcessRoleBindings = [];
@@ -2125,13 +2110,17 @@ function main() {
     }
 
     const deptName = file.replace('部门-能力-流程-系统映射关系.md', '');
+    if (!Object.hasOwn(DEPT_DOMAIN, deptName)) throw new Error(`Selected historical domain map has no department: ${deptName}`);
     const diagnostics = { l3Headings: 0, a1Tables: 0, a1Rows: 0, rejectedHeaders: 0 };
     const parsed = parseProcessGovernanceDocument({
       text,
-      sourceFile: `docs/norms/${file}`,
+      sourceFile: toRepoPath(filePath),
       fallbackDeptName: deptName,
       diagnostics,
     });
+    for (const mapping of parsed.mappings) {
+      if (!Object.hasOwn(DEPT_DOMAIN, mapping.dept)) throw new Error(`Selected historical domain map has no parsed department: ${mapping.dept}`);
+    }
 
     allMappings.push(...parsed.mappings);
     allA1.push(...parsed.a1Entries);
@@ -2147,7 +2136,7 @@ function main() {
         deptCode: parsed.meta?.dept_code || '',
         source: 'structured',
         parserSchemaVersion: parsed.meta?.parser_schema_version || STRUCTURE_BLOCK_VERSION,
-        sourceFile: `docs/norms/${file}`,
+        sourceFile: toRepoPath(filePath),
       });
     } else if (parsed.sourceMode === 'hybrid') {
       for (const warning of parsed.hybridWarnings || []) {
@@ -2158,7 +2147,7 @@ function main() {
         deptCode: parsed.meta?.dept_code || '',
         source: 'hybrid',
         parserSchemaVersion: parsed.meta?.parser_schema_version || STRUCTURE_BLOCK_VERSION,
-        sourceFile: `docs/norms/${file}`,
+        sourceFile: toRepoPath(filePath),
       });
     } else {
       console.error(`[WARN] ${deptName} 未提供结构块(schema v1)，回退旧 Markdown 解析，存在漂移风险。`);
@@ -2167,7 +2156,7 @@ function main() {
         deptCode: '',
         source: 'legacy',
         parserSchemaVersion: null,
-        sourceFile: `docs/norms/${file}`,
+        sourceFile: toRepoPath(filePath),
       });
     }
     perDeptDiagnostics.push({ dept: deptName, mappings: parsed.mappings.length, ...parsed.diagnostics });
@@ -2324,7 +2313,7 @@ function main() {
 
   const finalData = {
     snapshotDate: new Date().toISOString().slice(0, 10),
-    meta: buildParserMeta(departmentParsers),
+    meta: { ...buildParserMeta(departmentParsers), historicalDisplayOnly: true, domainMapSource: toRepoPath(DOMAIN_MAP_PATH) },
     nodes: Array.from(allNodes).map(name => ({ name, ...(nodeMetadata.get(name) || {}) })),
     links: Array.from(merged2.values()),
     systems: (() => {
@@ -2396,36 +2385,35 @@ function main() {
     sourceReports: crossDeptSourceReports,
   };
 
+  const selectedInputs = new Set([DOMAIN_MAP_PATH, CROSS_DEPT_REPORT, CROSS_CHAIN_REPORT, WORK_ROLE_DATA_PATH,
+    ...sourceManifest.files.map(file => resolve(REPO_ROOT, file.path))]);
+  for (const output of [COMPANY_DATA_PATH, DASHBOARD_PATH].filter(Boolean)) {
+    if (selectedInputs.has(output)) throw new Error(`Output cannot overwrite selected historical input: ${output}`);
+  }
+  if (COMPANY_DATA_PATH === DASHBOARD_PATH) throw new Error('Snapshot and dashboard outputs must be different files');
+  // Validate all HTML tags before either output is changed.
+  const dash = DASHBOARD_PATH ? injectLegacyDashboard(readFileSync(DASHBOARD_PATH, 'utf-8'), finalData) : null;
+  mkdirSync(dirname(COMPANY_DATA_PATH), { recursive: true });
   writeFileSync(COMPANY_DATA_PATH, `${JSON.stringify(finalData, null, 2)}\n`, 'utf-8');
-  console.error(`Wrote ${COMPANY_DATA_PATH}`);
-
-  // 输出到 stdout (管道友好)
+  console.error(`Wrote historical display snapshot ${COMPANY_DATA_PATH}`);
   process.stdout.write(JSON.stringify(finalData));
-
-  // 同步注入到 PMO 驾驶舱的内嵌 JSON 标签，使页面保持单文件可双击打开。
-  try {
-    let dash = readFileSync(DASHBOARD_PATH, 'utf-8');
-    const sankeyTagRe = /(<script type="application\/json" id="sankey-data">)[\s\S]*?(<\/script>)/g;
-    const crossTagRe = /(<script type="application\/json" id="cross-dept-data">)[\s\S]*?(<\/script>)/g;
-    const sankeyDataBlocks = [...dash.matchAll(sankeyTagRe)];
-    const crossDeptDataBlocks = [...dash.matchAll(crossTagRe)];
-
-    if (sankeyDataBlocks.length !== 1) {
-      throw new Error(`Expected exactly one sankey-data script tag in ${DASHBOARD_PATH}, found ${sankeyDataBlocks.length}`);
-    }
-    if (crossDeptDataBlocks.length !== 1) {
-      throw new Error(`Expected exactly one cross-dept-data script tag in ${DASHBOARD_PATH}, found ${crossDeptDataBlocks.length}`);
-    }
-
-    dash = dash.replace(sankeyTagRe, `$1\n${JSON.stringify(finalData)}\n$2`);
-    dash = dash.replace(crossTagRe, `$1\n${JSON.stringify(finalData.crossDept)}\n$2`);
+  if (DASHBOARD_PATH) {
     writeFileSync(DASHBOARD_PATH, dash, 'utf-8');
     const sizeKB = (Buffer.byteLength(dash, 'utf-8') / 1024).toFixed(0);
     console.error(`Inlined dashboard data into ${DASHBOARD_PATH} (${sizeKB} KB)`);
-  } catch (e) {
-    console.error(`内嵌 dashboard.html 失败: ${e.message}`);
-    throw e;
   }
+}
+
+function injectLegacyDashboard(html, data) {
+  const sankeyTagRe = /(<script type="application\/json" id="sankey-data">)[\s\S]*?(<\/script>)/g;
+  const crossTagRe = /(<script type="application\/json" id="cross-dept-data">)[\s\S]*?(<\/script>)/g;
+  const sankeyDataBlocks = [...html.matchAll(sankeyTagRe)];
+  const crossDeptDataBlocks = [...html.matchAll(crossTagRe)];
+  if (sankeyDataBlocks.length !== 1) throw new Error(`Expected exactly one sankey-data script tag, found ${sankeyDataBlocks.length}`);
+  if (crossDeptDataBlocks.length !== 1) throw new Error(`Expected exactly one cross-dept-data script tag, found ${crossDeptDataBlocks.length}`);
+  const embeddedJson = value => JSON.stringify(value).replace(/</g, '\\u003c');
+  return html.replace(sankeyTagRe, (_, open, close) => `${open}\n${embeddedJson(data)}\n${close}`)
+    .replace(crossTagRe, (_, open, close) => `${open}\n${embeddedJson(data.crossDept)}\n${close}`);
 }
 
 export {
@@ -2433,6 +2421,7 @@ export {
   buildNodeMetadata,
   buildParserMeta,
   buildProcessRoleBindings,
+  injectLegacyDashboard,
   parseProcessGovernanceDocument,
   parseProcessGovernanceStructureBlock,
   readWorkRoleData,

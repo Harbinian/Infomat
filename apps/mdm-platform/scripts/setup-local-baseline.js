@@ -1,6 +1,8 @@
 const path = require('path');
+const fs = require('fs');
 const { spawnSync } = require('child_process');
-const { syncOrganizationStructure } = require('./sync-organization-structure');
+const { syncOrganizationStructure, assertSourceCoversOrganization } = require('./sync-organization-structure');
+const { assertRuntimeConfig } = require('../server/runtimeBoundary');
 
 const APP_ROOT = path.join(__dirname, '..');
 
@@ -53,16 +55,21 @@ function tableCount(database, tableName, where = '1=1') {
   return database.prepare(`SELECT COUNT(*) AS count FROM ${tableName} WHERE ${where}`).get().count;
 }
 
-function setupLocalBaseline(env = process.env) {
+function setupLocalBaseline(env = process.env, options = {}) {
   if (env.MDM_ALLOW_LEGACY_TEST_MODE !== '1') {
     throw new Error('LEGACY_ACCOUNT_SCRIPT_RETIRED：SQLite账号基线仅允许在隔离测试模式使用。');
   }
+  assertRuntimeConfig(env);
+  if (!options.sourcePath || !fs.existsSync(options.sourcePath) || !fs.statSync(options.sourcePath).isFile()) {
+    throw new Error('LEGACY_SOURCE_REQUIRED: select an explicit historical fixture with --source.');
+  }
+  assertSourceCoversOrganization(fs.readFileSync(options.sourcePath, 'utf8'));
   assertAdminEnv(env);
 
   runExistingScript('init-legacy-sqlite-db.js', env);
 
   const db = require('../server/db');
-  const organization = syncOrganizationStructure({ db });
+  const organization = syncOrganizationStructure({ db, sourcePath: options.sourcePath });
   const adminRbac = ensureAdminRbac(db, env.MDM_ADMIN_EMPLOYEE_NO);
   const counts = {
     org_unit: tableCount(db, 'org_unit'),
@@ -86,7 +93,11 @@ function setupLocalBaseline(env = process.env) {
 
 function main() {
   try {
-    const summary = setupLocalBaseline();
+    const args = process.argv.slice(2);
+    if (args.length !== 2 || args[0] !== '--source' || !args[1] || args[1].startsWith('--')) {
+      throw new Error('LEGACY_SOURCE_REQUIRED: --source <historical-fixture.md> is required.');
+    }
+    const summary = setupLocalBaseline(process.env, { sourcePath: path.resolve(args[1]) });
     console.log(JSON.stringify(summary, null, 2));
   } catch (error) {
     console.error(error.message || error);

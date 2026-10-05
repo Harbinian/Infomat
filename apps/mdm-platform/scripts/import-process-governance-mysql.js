@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 /**
- * Import docs/company-sankey-data.json into the MDM MySQL process governance read model.
+ * Import an explicitly selected historical snapshot into the MySQL display read model.
+ * Writes the selected MySQL target; never supplies current business authority.
  *
  * Usage:
- *   node scripts/import-process-governance-mysql.js --snapshot docs/company-sankey-data.json
+ *   node scripts/import-process-governance-mysql.js --snapshot <authorized-snapshot.json>
  */
 const assert = require('assert');
 const fs = require('fs');
@@ -18,7 +19,7 @@ const REPO_ROOT = path.resolve(APP_ROOT, '..', '..');
 
 function parseArgs(argv) {
   const args = {
-    snapshot: path.join(REPO_ROOT, 'docs', 'company-sankey-data.json'),
+    snapshot: null,
     a1Sources: [],
     qualityFindings: null,
     note: 'Imported from process governance Sankey snapshot'
@@ -27,17 +28,29 @@ function parseArgs(argv) {
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === '--snapshot') {
-      args.snapshot = path.resolve(REPO_ROOT, argv[++index] || '');
+      const value = argv[++index];
+      if (!value || value.startsWith('--')) throw new Error('Missing --snapshot value');
+      args.snapshot = path.resolve(REPO_ROOT, value);
     } else if (arg.startsWith('--snapshot=')) {
-      args.snapshot = path.resolve(REPO_ROOT, arg.slice('--snapshot='.length));
+      const value = arg.slice('--snapshot='.length);
+      if (!value.trim()) throw new Error('Missing --snapshot value');
+      args.snapshot = path.resolve(REPO_ROOT, value);
     } else if (arg === '--a1-source') {
-      args.a1Sources.push(path.resolve(REPO_ROOT, argv[++index] || ''));
+      const value = argv[++index];
+      if (!value || value.startsWith('--')) throw new Error('Missing --a1-source value');
+      args.a1Sources.push(path.resolve(REPO_ROOT, value));
     } else if (arg.startsWith('--a1-source=')) {
-      args.a1Sources.push(path.resolve(REPO_ROOT, arg.slice('--a1-source='.length)));
+      const value = arg.slice('--a1-source='.length);
+      if (!value.trim()) throw new Error('Missing --a1-source value');
+      args.a1Sources.push(path.resolve(REPO_ROOT, value));
     } else if (arg === '--quality-findings') {
-      args.qualityFindings = path.resolve(REPO_ROOT, argv[++index] || '');
+      const value = argv[++index];
+      if (!value || value.startsWith('--')) throw new Error('Missing --quality-findings value');
+      args.qualityFindings = path.resolve(REPO_ROOT, value);
     } else if (arg.startsWith('--quality-findings=')) {
-      args.qualityFindings = path.resolve(REPO_ROOT, arg.slice('--quality-findings='.length));
+      const value = arg.slice('--quality-findings='.length);
+      if (!value.trim()) throw new Error('Missing --quality-findings value');
+      args.qualityFindings = path.resolve(REPO_ROOT, value);
     } else if (arg === '--note') {
       args.note = argv[++index] || '';
     } else if (arg.startsWith('--note=')) {
@@ -47,7 +60,7 @@ function parseArgs(argv) {
     } else if (arg.startsWith('--imported-by=')) {
       args.importedBy = Number(arg.slice('--imported-by='.length)) || null;
     } else if (arg === '--help' || arg === '-h') {
-      console.log('Usage: node scripts/import-process-governance-mysql.js --snapshot docs/company-sankey-data.json [--a1-source docs/norms/...md] [--quality-findings findings.json] [--note "..."] [--imported-by 1]');
+      console.log('Historical display read-model maintenance only. Writes the explicitly configured MySQL target.\nUsage: node scripts/import-process-governance-mysql.js --snapshot <authorized-snapshot.json> [--a1-source <authorized-historical.md>] [--quality-findings findings.json] [--note "..."] [--imported-by 1]');
       process.exit(0);
     } else {
       throw new Error(`Unknown argument: ${arg}`);
@@ -66,6 +79,15 @@ function loadQualityFindings(filePath) {
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   assert.ok(args.snapshot, 'Missing --snapshot');
+  assert.ok(fs.existsSync(args.snapshot) && fs.statSync(args.snapshot).isFile(), 'Snapshot file is missing');
+  for (const inputPath of [...args.a1Sources, ...(args.qualityFindings ? [args.qualityFindings] : [])]) {
+    assert.ok(fs.existsSync(inputPath) && fs.statSync(inputPath).isFile(), 'Historical input file is missing');
+  }
+  for (const key of ['MYSQL_HOST', 'MYSQL_PORT', 'MYSQL_USER', 'MYSQL_PASSWORD', 'MYSQL_DATABASE']) {
+    if (!String(process.env[key] || '').trim()) throw new Error(`MYSQL_CONFIG_REQUIRED: ${key}`);
+  }
+  const configuredPort = Number(process.env.MYSQL_PORT);
+  assert.ok(Number.isInteger(configuredPort) && configuredPort >= 1 && configuredPort <= 65535, 'MYSQL_PORT must be a valid port');
 
   const config = mysqlConfigFromEnv();
   const pool = mysql.createPool(config);
@@ -86,6 +108,6 @@ async function main() {
 }
 
 main().catch(error => {
-  console.error(error);
+  console.error(error.message);
   process.exit(1);
 });

@@ -26,6 +26,7 @@ function parseArgs(argv) {
     excludeExt: '',
     deferExt: '',
     deferReason: 'Deferred by --defer-ext for a separate extraction batch.',
+    visualTranscripts: '',
   };
   for (let i = 2; i < argv.length; i += 1) {
     const key = argv[i];
@@ -41,6 +42,7 @@ function parseArgs(argv) {
     else if (key === '--exclude-ext') { args.excludeExt = value; i += 1; }
     else if (key === '--defer-ext') { args.deferExt = value; i += 1; }
     else if (key === '--defer-reason') { args.deferReason = value; i += 1; }
+    else if (key === '--visual-transcripts') { args.visualTranscripts = value; i += 1; }
     else throw new Error(`Unknown argument: ${key}`);
   }
   if (!args.input) throw new Error('Missing --input');
@@ -55,6 +57,7 @@ function printHelp() {
   node .agents/skills/process-evidence-mapping/scripts/extract-evidence-chunks.mjs --input <file-or-dir> --out artifacts/evidence-index/<run-id>/chunks.jsonl
 
 Supported inputs: .docx, .doc, .xlsx, .xls, .md, .txt, .html, .pdf, .vsd/.vsdx.
+Use --visual-transcripts <json> to import existing OCR source/blocks records or process-visual-transcripts-v1 records as review-only text.
 Use --defer-ext .vsd,.vsdx to keep Visio files in the source index without invoking Visio.
 Use --defer-reason to record why deferred files are not extracted in this run.
 Outputs are review retrieval artifacts only; raw_text is never corrected.`);
@@ -114,6 +117,7 @@ function main() {
   if (args.excludeExt) pyArgs.push('--exclude-ext', args.excludeExt);
   if (args.deferExt) pyArgs.push('--defer-ext', args.deferExt);
   if (args.deferReason) pyArgs.push('--defer-reason', args.deferReason);
+  if (args.visualTranscripts) pyArgs.push('--visual-transcripts', args.visualTranscripts);
 
   const result = spawnSync(args.python, pyArgs, {
     cwd: process.cwd(),

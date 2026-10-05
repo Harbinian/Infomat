@@ -4,7 +4,7 @@
 
 ## 演进提案的适用条件
 
-调整候选抽取、问题解释或证据规则，并有真实评测批次时，先用既有案例形成可审查提案：
+调整候选抽取、问题解释或证据规则时，按影响面验证行为；确需比较真实评测批次时，可用既有案例形成可审查提案：
 
 ```powershell
 node .agents/skills/process-evidence-mapping/scripts/generate-evolution-proposal.mjs `

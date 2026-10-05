@@ -4,19 +4,19 @@
 
 所有接口要求用户已登录。写接口继续使用3000现有CSRF保护、人员身份、部门范围和固定权限。
 
-预览和正式写接口还要求运行实例配置一个精确的`PROCESS_V7_TRIAL_PROCESS_REF`。该配置只接受一个符合V7技术标识规则的`process_ref`，不接受列表、`*`、前缀或正则匹配。只读接口不受该配置限制。
+2026-09-15起已取消单流程试点配置。预览和正式写接口不读取旧`PROCESS_V7_TRIAL_PROCESS_REF`；开关、权限、部门范围、稳定标识、状态、修订和摘要检查通过后，可以办理不同流程。同一案例的新修订保持原`process_ref`，另一流程另建案例；仓储复核锁定案例与来源正文，不自动合并或回填旧记录。
 
-JSON请求正文上限为2MB。接口不接受文件路径或任意数据库查询，只接收用户浏览器上传并解析后的V7 JSON。
+JSON请求正文上限为2MB。接口不接受文件路径或任意数据库查询，只接收用户浏览器上传并解析后的原生V7/V8 JSON。路径与机器标识保留V7兼容命名，下文正式链路门槛也适用于受支持V8；后续数据治理工作包仍只支持已发布原生V7，不把V8降级。
 
 ## 第05阶段只读聚合与兼容补充
 
-`GET /cases/:id`沿用原响应，增加只读`handling_summary`：`return_reasons`来自各部门已保存的退回依据或当前正式审核意见；`prerequisites`列明未完成的核对、当前提升/审核绑定及下一办理角色；`current_promotion`表示提升记录是否绑定当前预览修订和摘要。该摘要是当前记录的投影，不是新增业务事实或审批决定。原字段、写请求和V3/V7格式不变，无数据库迁移或历史回填。旧客户端可以忽略新增字段。
+`GET /cases/:id`沿用原响应，增加只读`handling_summary`：`return_reasons`来自各部门已保存的退回依据或当前正式审核意见；`prerequisites`列明未完成的核对、当前提升/审核绑定及下一办理角色；`current_promotion`表示提升记录是否绑定当前预览修订和摘要。该摘要是当前记录的投影，不是新增业务事实或审批决定。原字段与写请求兼容保持；旧V3格式仅历史保留，现行原生V7/V8按实际版本办理，无数据库迁移或历史回填。旧客户端可以忽略新增字段。
 
 `GET /api/role-workbench?mode=todo|all`从既有案例、当前核对项、提升记录、草稿及审核任务读取V7事项，复用原`workItems`、`nextActions`和`governance`聚合结构；`governance.v7Tasks`补充V7来源集合。事项类型为`v7_preview_review`、`v7_returned`、`v7_scope`、`v7_promote`、`v7_submit`、`v7_formal_review`和`v7_publish`。类型只标识只读投影，不写通用待办表。
 
 事项的`id`由类型和原对象ID组成，`caseId/revisionNo/contentHash`绑定当前预览，按需带`reviewItemId/reviewTaskId/draftId`；`sourceRoles`、`requiredPermissions`保留来源角色及所需权限。`target`沿用`#/processGovernance?workspace=v7Preview&v7Case=...`，部门项增加`v7Item`定位。办理入口仍以详情返回的`allowed_actions/formal_allowed_actions`和服务端实时检查为准；工作台的`canAct`表示可进入当前事项，不是写接口授权凭证。
 
-聚合只读取实例明确限定的流程和当前人员范围。管理员（包括叠加业务角色）不生成V7办理任务；范围卡口解除后不再作为待办。可变MySQL响应不再缓存15秒，并返回`Cache-Control: no-store`。任一已启用来源查询失败时返回503，不伪装成空待办；正式功能已启用时缺少正式表也必须报错。正常完成后在下一次读取消失，相关修订变化后依据既有重开规则重新出现。
+聚合按当前案例、身份权限和部门范围读取原生V7/V8事项，不用旧精确试点变量限定单流程。管理员（包括叠加业务角色）不生成V7办理任务；范围卡口解除后不再作为待办。可变MySQL响应不再缓存15秒，并返回`Cache-Control: no-store`。任一已启用来源查询失败时返回503，不伪装成空待办；正式功能已启用时缺少正式表也必须报错。正常完成后在下一次读取消失，相关修订变化后依据既有重开规则重新出现。
 
 意见保留发生在前端当前页面内存中，不改变业务正文或服务器保存合同。409不会自动更新请求绑定或重试；办理人须读取并核对当前修订再明确继续。未提交输入不迁移到其他账号、案例或不相关的业务项。
 
@@ -26,13 +26,13 @@ JSON请求正文上限为2MB。接口不接受文件路径或任意数据库查�
 |---|---|---|
 | `GET /cases` | 查询当前人员可以查看的案例和本人待核对数量 | 治理材料读取权限 |
 | `POST /cases` | 上传V7文件并建立预览案例 | `governance:draft-department`或`governance:assign-work` |
-| `GET /cases/:id` | 查看当前修订、只读V7预览、核对项和操作记录 | 案例参与部门或全局读取权限 |
+| `GET /cases/:id` | 查看当前修订、只读原生V7/V8预览、核对项和操作记录 | 案例参与部门或全局读取权限 |
 | `POST /cases/:id/revisions` | 上传3001修改后的新修订 | 归口部门`governance:draft-department`或`governance:assign-work` |
 | `POST /cases/:id/revisions/preview` | 只读比较拟上传修订与当前修订 | 与正式上传相同；取消后不写数据库 |
 | `POST /cases/:id/assign-owner` | 为归口部门待定的案例选择有效部门 | `governance:assign-work` |
 | `POST /cases/:id/scope-decision` | 记录归口变化或零跨部门范围决定 | `mdm_lead`且具有`governance:assign-work` |
 | `GET /cases/:id/formal-targets?document_no=...` | 按完整制度编号精确查找可承接的已有主档 | `mdm_lead`且具有`governance:assign-work` |
-| `POST /cases/:id/promote` | 把核对完成的当前修订提升为原生V7正式草稿 | `mdm_lead`且具有`governance:assign-work`；正式开关已开启 |
+| `POST /cases/:id/promote` | 把核对完成的当前修订提升为原生V7/V8正式草稿 | `mdm_lead`且具有`governance:assign-work`；正式开关已开启 |
 
 上传正文：
 
@@ -105,7 +105,7 @@ JSON请求正文上限为2MB。接口不接受文件路径或任意数据库查�
 }
 ```
 
-提升时，服务端重新校验V7正文、当前有效部门、未解决卡口、案例状态、当前修订号、内容摘要、`process_ref`、归口部门和目标主档。路由完成检查后，仓储在事务内锁定案例，再次检查功能开关、精确试点范围和未解决卡口。相同案例修订和摘要重复提升时，接口返回原主档和原草稿，不创建第二份记录。正式草稿的V7正文在3000中只读；内容需要修改时，编制人员必须回到3001修改并上传新修订。已发布V7主档也不能使用通用下一版草稿或旧结构化导入入口生成V3草稿；路由层和仓储层均执行该门禁。正式草稿处于`draft`或`needs_changes`时，新修订完成预览核对后可以受控重新提升到同一草稿；已经提交、审核通过、拒绝或发布时不能覆盖。
+提升时，服务端按实际版本重新校验原生V7/V8正文、当前有效部门、未解决卡口、案例状态、当前修订号、内容摘要、`process_ref`、归口部门和目标主档。路由完成检查后，仓储在事务内锁定案例，再次检查功能开关、案例稳定标识与内容绑定和未解决卡口。相同案例修订和摘要重复提升时，接口返回原主档和原草稿，不创建第二份记录。正式草稿的原生V7/V8正文在3000中只读；内容需要修改时，编制人员必须回到3001修改并上传新修订。已发布原生V7/V8主档也不能使用通用下一版草稿或旧结构化导入入口生成V3草稿；路由层和仓储层均执行该门禁。正式草稿处于`draft`或`needs_changes`时，新修订完成预览核对后可以受控重新提升到同一草稿；已经提交、审核通过、拒绝或发布时不能覆盖。
 
 `ZERO_CROSS_DEPARTMENT_SCOPE_PENDING`只能由`confirmed_no_cross_department`解除；`OWNING_DEPARTMENT_CHANGE_PENDING`只能在保留当前归口部门，或按源文件归口部门重新投影成功后解除；`ACTOR_DEPARTMENT_UNRESOLVED`不能通过范围决定解除。任一未解决卡口都会阻止提升。正式审核阶段出现卡口时，系统禁止审核通过，但保留“需要修改”和“拒绝”处理入口。
 
@@ -116,9 +116,9 @@ JSON请求正文上限为2MB。接口不接受文件路径或任意数据库查�
 | `POST /api/process-design/drafts/:id/submit` | 提交正式审核 | 重新校验提升证据；审核任务绑定修订号和内容摘要 |
 | `POST /api/process-design/review-tasks/:id/decision` | 记录正式审核结论 | 审核任务必须仍绑定当前修订号和内容摘要 |
 | `POST /api/process-design/drafts/:id/publish` | 发布原生V7正式版本 | 草稿已审核通过；重新校验V7、提升证据、版次、当前版本指针和审核摘要 |
-| `GET /api/process-design/versions/:processVersionId/content` | 读取不可变正式版本正文 | 按当前身份和部门范围读取；V7重新计算并返回摘要核对结果 |
+| `GET /api/process-design/versions/:processVersionId/content` | 读取不可变正式版本正文 | 按当前身份和部门范围读取；原生V7/V8按实际版本重新计算并返回摘要核对结果 |
 | `PUT /api/process-design/drafts/:id/content` | 修改正式草稿正文 | V7固定返回`409 V7_CONTENT_READ_ONLY` |
-| `POST /api/process-design/documents/:id/drafts` | 通过通用入口创建下一版草稿 | 当前主档或正式版本为V7时返回`409 V7_CONTENT_READ_ONLY` |
+| `POST /api/process-design/documents/:id/drafts` | 通过通用入口创建下一版草稿 | 当前主档或正式版本为原生V7/V8时返回`409 V7_CONTENT_READ_ONLY` |
 | `POST /api/process-design/import-structured-output` | 导入旧`document-structured-output-v2` | 目标主档或正式版本为V7时返回`409 V7_CONTENT_READ_ONLY` |
 
 V7的提交、审核和发布请求必须同时携带用户当前页面显示的修订号和内容摘要。三个请求的主要字段如下：
@@ -132,7 +132,7 @@ V7的提交、审核和发布请求必须同时携带用户当前页面显示的
 }
 ```
 
-`decision`只用于审核请求，允许`approve`、`needs_changes`或`reject`；`note`按对应操作传入。服务端先核对正式开关、精确试点范围、管理员只读规则、人员权限和两个必填字段，再调用状态变更方法。HTTP请求中的其他字段不会透传为仓储选项。`draft`或`needs_changes`可以提交为`submitted`；`submitted`或`under_review`可以审核为`approved`、`needs_changes`或`rejected`；只有`approved`可以发布为`published`。
+`decision`只用于审核请求，允许`approve`、`needs_changes`或`reject`；`note`按对应操作传入。服务端先核对正式开关、案例稳定标识与内容绑定、管理员只读规则、人员权限和两个必填字段，再调用状态变更方法。HTTP请求中的其他字段不会透传为仓储选项。`draft`或`needs_changes`可以提交为`submitted`；`submitted`或`under_review`可以审核为`approved`、`needs_changes`或`rejected`；只有`approved`可以发布为`published`。
 
 事务内按“预览案例 → 当前修订 → 最新提升记录 → 流程主档 → 当前正式版本 → 正式草稿 → 审核任务（按标识升序）”锁定并重读。完成业务对象锁定后，服务端还使用同一数据库连接重读当前账号、`auth_version`、人员状态、所属部门、有效角色、角色范围和权限。管理员、授权版本变化或角色范围不符合时，事务在写入前回滚。草稿状态、修订号、内容摘要和主档当前版本指针都通过条件更新再核对；状态变更和操作事件在同一事务中提交或回滚。提交、审核通过和发布会按当前有效部门重新投影V7正文，并只阻断尚未由合法范围决定解除的卡口。`needs_changes`和`reject`用于收敛风险，即使当前仍有卡口也可以记录，但仍必须通过权限、任务绑定和条件更新检查。
 
@@ -183,8 +183,7 @@ V7发布成功时返回`process_version_id`。后续治理对象只能绑定该�
 | 403 | `V7_FORMAL_ACTOR_SCOPE_DENIED` | 事务内重读的角色、部门范围或权限不允许当前正式操作 |
 | 401 | `SESSION_AUTHORIZATION_CHANGED` | 账号、人员状态或`auth_version`已变化，需要重新登录 |
 | 401 | `V7_FORMAL_ACTOR_CONTEXT_REQUIRED` | 服务端内部调用未携带受控的当前操作人上下文 |
-| 403 | `V7_TRIAL_PROCESS_SCOPE_DENIED` | 当前流程不是运行实例获批的单流程试点对象 |
-| 503 | `V7_TRIAL_SCOPE_NOT_CONFIGURED` | 运行实例没有配置合法且唯一的试点`process_ref` |
+| 422 | `V7_PROCESS_REF_INVALID` | 流程稳定标识不符合当前技术格式 |
 | 503 | `V7_FORMAL_DISABLED` | 原生V7正式功能开关未开启 |
 
 `V7_REVIEW_CONTENT_STALE`、`V7_FORMAL_PROMOTION_EVIDENCE_MISMATCH`、`V7_FORMAL_DRAFT_STATE_CONFLICT`和`V7_FORMAL_BASE_VERSION_CONFLICT`只附带`actual_status`、`actual_revision_no`和`actual_content_hash`三项当前状态，不返回问题正文、数据库信息或文件路径。`V7_FORMAL_BLOCKING_ISSUES`只返回`error`和`code`。
@@ -192,8 +191,8 @@ V7发布成功时返回`process_version_id`。后续治理对象只能绑定该�
 ## 5. 功能开关与当前边界
 
 - `PROCESS_V7_PREVIEW_ENABLED`默认关闭；关闭时本路由返回`503 V7_PREVIEW_DISABLED`。
-- `PROCESS_V7_FORMAL_ENABLED`默认关闭。M0、M1、M2和正式接口技术门禁通过后，只能在受控试点环境开启。
-- `PROCESS_V7_TRIAL_PROCESS_REF`默认不配置。预览或正式开关开启但该配置缺失、含通配符或不符合技术标识规则时，所有写接口返回`503 V7_TRIAL_SCOPE_NOT_CONFIGURED`；流程不匹配时返回`403 V7_TRIAL_PROCESS_SCOPE_DENIED`。路由和仓储分别检查，仓储以锁定后的案例`process_ref`为准。
+- `PROCESS_V7_FORMAL_ENABLED`默认关闭。开启前仍须核对M0、M1、M2、正式接口门禁、目标环境及相应运行授权；取消单流程限制不表示已开启。
+- 旧`PROCESS_V7_TRIAL_PROCESS_REF`不再读取。`process_ref`仍须符合稳定标识格式，非法值返回`422 V7_PROCESS_REF_INVALID`；新修订必须匹配原案例，路由和仓储继续复核权限、开关、锁定来源及未解决卡口。旧试点配置错误不再构成当前拒绝码。
 - 案例详情中的`allowed_actions`和`formal_allowed_actions`只提示当前能够执行的动作。正式开关关闭或流程越界时，`formal_allowed_actions`最多包含`view_formal_draft`和`read_formal_version`。待处理审核任务通过`formal_allowed_decisions`返回当前可选结论：卡口存在时只返回`needs_changes`和`reject`，没有卡口时才返回`approve`、`needs_changes`和`reject`。前端审核下拉框只渲染该字段中的结论，不自行补充“审核通过”。
-- 截至2026-08-26，正式库M1、M2结构已准备，当前只读检查确认迁移记录与目标结构一致，V7业务记录仍为0。历史事后演练不替代本次代码对应的隔离验收。本轮未启动3000、未开启两个V7开关，也未配置试点`process_ref`；新的全库备份恢复、隔离MySQL验收和真实脱敏流程试点均待分别批准。
+- 历史检查记录（2026-08-26，不能据此判断当前实例）：当时正式库M1、M2结构已准备，只读检查确认迁移记录与目标结构一致，V7业务记录仍为0。历史事后演练不替代本次代码对应的隔离验收。当时未启动3000、未开启两个V7开关，也未配置试点`process_ref`；新的全库备份恢复、隔离MySQL验收和真实脱敏流程试点均待分别批准。
 - `review_complete`只允许进入受控提升，不表示正式审核或发布完成。只有本次代码对应的隔离验收通过后，才能记录相应技术验收结论；只有有效业务角色完成真实脱敏单流程试点后，才能记录该`process_ref`的业务验收结论。

@@ -1,5 +1,8 @@
+# Uses only the explicitly supplied candidate; edits synthetic page memory and writes browser evidence.
 param(
-  [string]$BaseUrl = 'http://127.0.0.1:3001',
+  [Parameter(Mandatory = $true)][string]$BaseUrl,
+  [ValidateSet('process-governance-v7', 'process-governance-v8')]
+  [string]$ExpectedSchemaVersion = 'process-governance-v8',
   [switch]$Headed
 )
 
@@ -16,18 +19,24 @@ try {
 } catch {
   throw "Cannot connect to the candidate 3001 instance at $BaseUrl. This script does not start the service. Original error: $($_.Exception.Message)"
 }
-if ($health.status -ne 'ok' -or $health.schema_version -ne 'process-governance-v7') {
+if ($health.status -ne 'ok' -or $health.schema_version -ne $ExpectedSchemaVersion -or $health.release_status -notin @('candidate', 'released')) {
   throw "Candidate health response is unexpected: $($health | ConvertTo-Json -Compress)"
 }
 
 New-Item -ItemType Directory -Path $artifactRoot -Force | Out-Null
 Push-Location $appRoot
 try {
-  $openArguments = @('--yes', '--package', '@playwright/cli', 'playwright-cli', "-s=$sessionName", 'open', $BaseUrl)
+  $openArguments = @('--yes', '--package', '@playwright/cli', 'playwright-cli', "-s=$sessionName", 'open', $BaseUrl, '--browser', 'msedge')
   if ($Headed) { $openArguments += '--headed' }
   & $npx.Source @openArguments
   if ($LASTEXITCODE -ne 0) { throw "Playwright CLI failed to open the page. Exit code: $LASTEXITCODE" }
-  & $npx.Source --yes --package '@playwright/cli' playwright-cli "-s=$sessionName" run-code --filename $scenarioPath
+  $scenarioOutput = & $npx.Source --yes --package '@playwright/cli' playwright-cli "-s=$sessionName" run-code --filename $scenarioPath
+    $scenarioExitCode = $LASTEXITCODE
+    $scenarioOutput | Write-Output
+    if ($scenarioExitCode -eq 0 -and (($scenarioOutput -join "`n") -notmatch '### Result\s*\r?\n[^\r\n]*"passed"\s*:\s*true')) {
+      throw 'Browser scenario did not return a complete passing result.'
+    }
+    $LASTEXITCODE = $scenarioExitCode
   if ($LASTEXITCODE -ne 0) {
     throw "Deletion-safety browser regression failed. Exit code: $LASTEXITCODE."
   }

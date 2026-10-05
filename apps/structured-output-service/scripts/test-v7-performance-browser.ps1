@@ -1,6 +1,6 @@
 # Connects only to the supplied instance; writes CLI evidence and synthetic page data, never starts services or writes a database.
 param(
-  [string]$BaseUrl = 'http://127.0.0.1:3001',
+  [Parameter(Mandatory = $true)][string]$BaseUrl,
   [ValidateSet('process-governance-v7', 'process-governance-v8')]
   [string]$ExpectedSchemaVersion = 'process-governance-v8',
   [switch]$Headed
@@ -33,7 +33,13 @@ try {
   & $npx.Source @openArguments
   if ($LASTEXITCODE -ne 0) { throw "Playwright CLI failed to open the page. Exit code: $LASTEXITCODE" }
 
-  & $npx.Source --yes --package '@playwright/cli' playwright-cli "-s=$sessionName" run-code --filename $scenarioPath
+  $scenarioOutput = & $npx.Source --yes --package '@playwright/cli' playwright-cli "-s=$sessionName" run-code --filename $scenarioPath
+  $scenarioExitCode = $LASTEXITCODE
+  $scenarioOutput | Write-Output
+  if ($scenarioExitCode -eq 0 -and (($scenarioOutput -join "`n") -notmatch '### Result\s*\r?\n[^\r\n]*"passed"\s*:\s*true')) {
+    throw 'Browser scenario did not return a complete passing result.'
+  }
+  $LASTEXITCODE = $scenarioExitCode
   if ($LASTEXITCODE -ne 0) {
     throw "Browser performance regression failed for $ExpectedSchemaVersion. Exit code: $LASTEXITCODE"
   }

@@ -1,12 +1,11 @@
 /**
- * 校验文档结构化输出标准 schema 是否仍与前端字段、MySQL 表和结构块 parser 关键枚举对齐。
+ * 校验 v2 证据草稿/历史转换技术合同、保留表结构和结构块 parser。
+ * 现行 3000 的 V7/V8 路由和页面由应用隔离回归检查；不要求恢复退役 UI。
  *
  * 用法: node scripts/test-document-structured-output-schema.mjs
  * 输入:
  *   - docs/contracts/document-structured-output.schema.json
  *   - apps/mdm-platform/server/mysqlSchema.js
- *   - apps/mdm-platform/server/routes/processDesignMysql.js
- *   - apps/mdm-platform/public/index.html
  *   - scripts/parse-sankey-data.mjs
  * 输出: 只读校验结果，不写文件，不写数据库。
  */
@@ -21,16 +20,12 @@ const repoRoot = resolve(__dirname, '..');
 
 const schemaPath = resolve(repoRoot, 'docs/contracts/document-structured-output.schema.json');
 const mysqlSchemaPath = resolve(repoRoot, 'apps/mdm-platform/server/mysqlSchema.js');
-const mysqlRoutePath = resolve(repoRoot, 'apps/mdm-platform/server/routes/processDesignMysql.js');
-const frontendPath = resolve(repoRoot, 'apps/mdm-platform/public/index.html');
 const parserPath = resolve(repoRoot, 'scripts/parse-sankey-data.mjs');
 const reportPath = resolve(repoRoot, 'docs/reports/2026-07-02-mdm-process-governance-pending-issue-fields.md');
 
 const schemaText = readFileSync(schemaPath, 'utf8');
 const schema = JSON.parse(schemaText);
 const mysqlSchema = readFileSync(mysqlSchemaPath, 'utf8');
-const mysqlRoute = readFileSync(mysqlRoutePath, 'utf8');
-const frontend = readFileSync(frontendPath, 'utf8');
 const parser = readFileSync(parserPath, 'utf8');
 const report = readFileSync(reportPath, 'utf8');
 
@@ -95,16 +90,6 @@ assertEnum('fieldType', ['文本', '长文本', '数字', '日期', '日期时�
 assertEnum('evidenceType', ['制度条款', '表单样例', '访谈记录', '会议纪要', '流程图', '台账记录', '暂无证据']);
 assertEnum('evidenceStatus', ['verified', 'pending_review', 'source_missing', 'ocr_extracted_not_confirmed', 'review_only']);
 
-assertAllIncluded(mysqlRoute, schema.$defs.processType.enum.map(value => `'${value}'`), 'processDesignMysql PROCESS_TYPES');
-assertAllIncluded(mysqlRoute, schema.$defs.fieldType.enum.map(value => `'${value}'`), 'processDesignMysql FIELD_TYPES');
-assertAllIncluded(mysqlRoute, schema.$defs.evidenceType.enum.map(value => `'${value}'`), 'processDesignMysql EVIDENCE_TYPES');
-assertAllIncluded(mysqlRoute, schema.$defs.evidenceStatus.enum.map(value => `'${value}'`), 'processDesignMysql EVIDENCE_STATUSES');
-assertAllIncluded(mysqlRoute, ['nextEdition', 'confirm_complete_rewrite', 'superseded'], 'processDesignMysql edition control');
-assertAllIncluded(frontend, schema.$defs.fieldType.enum, 'frontend field type options');
-assertAllIncluded(frontend, schema.$defs.evidenceType.enum, 'frontend evidence type options');
-assertAllIncluded(frontend, ['pgDesignDocumentNo', 'pgDesignDocumentTitle', 'pgDesignPlannedEdition', 'pgDesignCurrentEdition'], 'frontend document edition fields');
-assert.ok(!frontend.includes('id="pgDesignReason"'), 'frontend should not expose removed why-new field');
-assert.ok(!frontend.includes('id="pgDesignBasisDescription"'), 'frontend should not expose removed basis description field');
 assert.ok(schema.$defs.step.required.includes('step_type'), 'step schema should require action/decision node type');
 assert.ok(schema.$defs.stepTransition, 'schema should define step transition objects for decision branches');
 assert.ok(schema.properties.step_transitions.items.$ref === '#/$defs/stepTransition', 'top-level step_transitions should use the transition definition');
@@ -112,7 +97,6 @@ for (const field of ['transition_ref', 'process_ref', 'from_step_ref', 'conditio
   assert.ok(Object.prototype.hasOwnProperty.call(schema.$defs.stepTransition.properties, field), `stepTransition missing ${field}`);
 }
 assert.ok(mysqlSchema.includes('CREATE TABLE IF NOT EXISTS process_design_step_transitions'), 'MySQL schema should persist decision branch transitions');
-assert.ok(frontend.includes('判断分支'), 'MDM frontend should display imported decision branches');
 assertAllIncluded(parser, schema.$defs.evidenceStatus.enum.map(value => `'${value}'`), 'parse-sankey evidence statuses');
 assert.ok(parser.includes('const STRUCTURE_BLOCK_VERSION = 1'), 'parser structure block version drifted');
 
@@ -122,7 +106,7 @@ for (const block of ['meta', 'l3_catalog', 'a1_catalog', 'evidence_catalog', 'md
 }
 
 const mysqlTables = collectMysqlTables(schema);
-assert.ok(mysqlTables.length >= 12, 'schema should map current process_design tables');
+assert.ok(mysqlTables.length >= 12, 'schema should preserve historical process_design table annotations');
 for (const table of mysqlTables) {
   assert.ok(
     mysqlSchema.includes(`CREATE TABLE IF NOT EXISTS ${table}`),
@@ -131,12 +115,9 @@ for (const table of mysqlTables) {
 }
 
 const uiIds = collectUiIds(schema);
-assert.ok(uiIds.length >= 40, 'schema should map current process design UI fields');
+assert.ok(uiIds.length >= 40, 'schema should preserve historical UI annotations for old conversions');
 for (const id of uiIds) {
-  assert.ok(
-    frontend.includes(`id="${id}"`) || frontend.includes(`'${id}'`) || frontend.includes(`"${id}"`),
-    `frontend missing UI id declared by document schema: ${id}`
-  );
+  assert.match(id, /^[A-Za-z][A-Za-z0-9_-]*$/, `invalid historical UI annotation: ${id}`);
 }
 
 const pendingProps = schema.$defs.pendingIssue.properties;
@@ -170,4 +151,4 @@ assert.ok(
   'pending issue report should point reviewers to the canonical schema'
 );
 
-console.log('document structured output schema checks passed');
+console.log('v2 evidence/history compatibility schema checks passed; no current UI or business authority asserted');

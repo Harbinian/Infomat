@@ -5,11 +5,13 @@
 - 治理模型版本：`rbac-raci-v3-2026-07-31`
 - 正式身份存储：MySQL
 - 正式身份链路：`person -> user_accounts -> person_roles -> roles -> role_permissions -> permissions`
-- 遗留`users/user_roles`和SQLite人员接口：仅保留隔离测试或一个版本的只读兼容，不参与正式授权
+- 遗留`users/user_roles`和SQLite人员接口：仅保留明确的历史兼容或隔离测试，不参与正式授权
 
-2026-09-09第02阶段已在应用入口实施MySQL运行边界：两种读模型及必要连接变量显式校验，旧SQLite路由在正式模式返回410，公共初始化只加载运行能力与部门。非production的显式遗留测试使用独立数据库路径；无正式回退。运行仓储的隐式初始化改为必要表列的只读探测，结构维护仍使用已有显式迁移。该探测不替代类型、索引、外键及迁移记录核验。维护命令、账号权限、历史数据去向及未验证项见[README](README.md#正式运行与结构维护分离)。V3/V7正文、状态与正式发布事务合同不变。
+当前原生V7/V8核对与正式治理使用保留V7名称的兼容接口；3001工作树为V8候选，实际服务版本另查健康状态。V1至V3本地编制、结构化导入和旧承接办理已退役。以下明确标为历史的模块、字段和状态用于解释既有资产，不授权恢复旧入口、清空或转换旧数据。技术文档不构成业务真源。
 
-本规格改变流程治理入口、完整流程JSON草稿、V7预览核对、身份、授权、责任证据、3001格式适配、跨部门承接和承接冲突对象；不停止3001，不修改`docs/norms/`流程输入基线，也不重做数据地图和术语治理对象。
+2026-09-09第02阶段已在应用入口实施MySQL运行边界：两种读模型及必要连接变量显式校验，旧SQLite路由在正式模式返回410，公共初始化只加载运行能力与部门。非production的显式遗留测试使用独立数据库路径；无正式回退。运行仓储的隐式初始化改为必要表列的只读探测，结构维护仍使用已有显式迁移。该探测不替代类型、索引、外键及迁移记录核验。维护命令、账号权限、历史数据去向及未验证项见[README](README.md#正式运行与结构维护分离)。旧正文和历史状态继续保留，当前正式事务按原生V7/V8合同核对。
+
+本规格说明现行身份、授权、责任证据、原生V7/V8核对与正式治理，以及历史流程JSON和承接资产的兼容边界。3001独立编制并由用户主动下载、上传交接；业务依据回到用户指定的外部材料、实际说明和明确确认。
 
 ## 2. 组成模块
 
@@ -24,17 +26,17 @@
 | 模型接口 | `server/routes/rbac.js` | 固定模型只读接口 |
 | 责任接口 | `server/routes/governance.js` | 部门决定读取和追加接口 |
 | 会话与中间件 | `server/auth.js` | 登录、会话校验、权限校验和首次改密限制 |
-| 前端 | `public/index.html` | 四类流程治理工作区、故事链、V7预览核对、角色责任页、账号管理和角色可见标签 |
-| v1/v2规范化 | `server/processGovernanceV2.js` | 结构校验、v1兼容、引用检查、治理提示和规范化内容哈希 |
-| 承接迁移 | `server/crossDeptHandoffV2Migration.js` | 盘点、备份、v2字段和状态迁移、核对与补偿 |
-| 统一入口迁移 | `server/processGovernanceUnifiedMigration.js` | 完整JSON、草稿修订、承接冲突和只追加事件的dry-run、迁移、回滚与补偿 |
-| v3表单迁移 | `server/processGovernanceV3Migration.js` | 把草稿和发布版本中的v1/v2完整JSON无损规范化为v3，补表单状态、重算摘要并按批次备份和恢复 |
-| 流程设计接口 | `server/routes/processDesignMysql.js` | 两阶段导入、事务写入、承接状态机、双方决定和发布卡口 |
-| 角色工作台 | `server/routes/roleWorkbench.js` | 直接读取承接和冲突队列，并生成统一入口深链接 |
-| V7预览核对 | `server/processV7PreviewReview*.js`、`server/routes/processV7PreviewReview.js` | 校验V7、生成固定跨部门核对项、隔离保存修订与部门结果，并保持预览边界 |
+| 前端 | `public/index.html` | 原生V7/V8核对与正式办理、角色责任页、账号管理和角色可见标签；旧编制和承接工作区退役 |
+| 历史v1/v2规范化 | `server/processGovernanceV2.js` | 保留旧结构校验、引用检查和摘要兼容，旧在线导入退役 |
+| 历史承接迁移 | `server/crossDeptHandoffV2Migration.js` | 保留旧字段和状态迁移、盘点、核对与恢复工具，不恢复办理入口 |
+| 历史统一入口迁移 | `server/processGovernanceUnifiedMigration.js` | 保留旧完整JSON、草稿、承接冲突和事件维护工具，执行须具体授权 |
+| 历史v3表单迁移 | `server/processGovernanceV3Migration.js` | 保留旧数据映射、批次备份与恢复，不自动转换当前原生V7/V8 |
+| 流程设计接口 | `server/routes/processDesignMysql.js` | 当前正式草稿、审核、发布和准确版本正文；旧V1至V3编制、导入及承接入口拒绝 |
+| 角色工作台 | `server/routes/roleWorkbench.js` | 当前原生V7/V8事项只读聚合，旧编制及承接队列退役 |
+| V7预览核对 | `server/processV7PreviewReview*.js`、`server/routes/processV7PreviewReview.js` | 按实际V7/V8版本校验、生成固定跨部门核对项、隔离保存修订与部门结果，路径保留V7名称 |
 | V7迁移基线 | `server/processV7M0Baseline.js`、`scripts/inspect-process-v7-m0-baseline.js` | 只读核对正式三表、JSON摘要、引用关系和live schema差异 |
 | V7正式基础迁移 | `server/processV7FormalMigration.js` | 以幂等DDL增加原生V7所需可空列、审核正文绑定和提升审计；不创建业务行 |
-| 流程版本后续数据治理 | `server/processDataGovernance*.js`、`server/routes/processDataGovernance.js` | 精确版本范围、确定性待定候选、工作包状态、定向事实问题、来源摘要复核和审核卡口 |
+| 流程版本后续数据治理 | `server/processDataGovernance*.js`、`server/routes/processDataGovernance.js` | 用户选择已发布原生V7版本、工作包固定来源、确定性待定候选、工作包状态、定向事实问题、来源摘要复核和审核卡口 |
 | 后续数据治理迁移 | `server/processDataGovernanceMigration.js` | 六张专用表的dry-run、结构一致性检查、显式应用和空表回退 |
 
 ## 3. 授权计算
@@ -95,13 +97,13 @@ HTTPS Cookie为`__Host-infomat.mdm.sid`，固定Secure、HttpOnly、SameSite=Lax
 - 角色授予或撤销、账号必要状态变化、`auth_version`递增和审计。
 - 账号启用、恢复、停用、密码重置和审计。
 - 部门决定追加及被替代记录关联。
-- 3001审核导入的草稿、流程、行为、承接修订、参与关系、事件和导入审计。
+- 原生V7/V8提升、审核和发布中的正文绑定及审计，详见9.3。旧3001结构化导入事务仅为历史合同，在线入口已退役。
 
 事务失败时不保留部分账号、部分授权或部分责任记录。
 
 ## 7. 数据结构
 
-身份字段见[RBAC-RACI-DB-Schema.md](docs/RBAC-RACI-DB-Schema.md)，承接字段见[Cross-Department-Handoff-DB-Schema.md](docs/Cross-Department-Handoff-DB-Schema.md)。关键变化如下：
+身份字段见[RBAC-RACI-DB-Schema.md](docs/RBAC-RACI-DB-Schema.md)，历史承接字段见[Cross-Department-Handoff-DB-Schema.md](docs/Cross-Department-Handoff-DB-Schema.md)。以下`process_design`中的V3正文、承接和冲突字段为退役链路的历史结构，保留既有数据；当前原生V7/V8不经该旧编制链。
 
 - `roles`增加状态、分组、核心标记和模型版本。
 - `person_roles`增加范围、部门、授权依据、有效期、状态和撤销信息。
@@ -111,7 +113,7 @@ HTTPS Cookie为`__Host-infomat.mdm.sid`，固定Secure、HttpOnly、SameSite=Lax
 - `identity_migration_*`表保存迁移批次和恢复所需快照。
 - `process_design_cross_dept_handoffs`统一保存前置输入和后续承接，并以`handoff_ref`、候选哈希、修订号和当前标记保留历史。
 - `process_design_structured_imports`保存受控导入、审核依据、规范化JSON和内容哈希。
-- `process_design_drafts.process_content_json`保存完整v3 JSON真源；`revision_no`和`content_hash`用于乐观并发与内容核对。
+- 历史`process_design_drafts.process_content_json`保存当时完整v3 JSON；`revision_no`和`content_hash`用于历史修订及内容核对，不赋予业务权威。
 - `process_design_handoff_conflicts`保存承接冲突当前状态和协调方案。
 - `process_design_handoff_events`只追加承接、冲突和项目决策事件。
 - `process_v7_preview_cases`、`process_v7_preview_revisions`、`process_v7_preview_review_items`和`process_v7_preview_events`只保存V7预览核对，不引用或写入正式流程版本。
@@ -121,7 +123,7 @@ HTTPS Cookie为`__Host-infomat.mdm.sid`，固定Secure、HttpOnly、SameSite=Lax
 
 ## 8. 接口
 
-身份接口见[RBAC-RACI-API-Contract.md](docs/RBAC-RACI-API-Contract.md)，承接接口见[Cross-Department-Handoff-API-Contract.md](docs/Cross-Department-Handoff-API-Contract.md)。
+身份接口见[RBAC-RACI-API-Contract.md](docs/RBAC-RACI-API-Contract.md)，当前原生V7/V8核对及正式办理见[Process-V7-Preview-Review-API-Contract.md](docs/Process-V7-Preview-Review-API-Contract.md)。[Cross-Department-Handoff-API-Contract.md](docs/Cross-Department-Handoff-API-Contract.md)是退役承接链的历史合同。
 
 核心接口：
 
@@ -133,6 +135,9 @@ HTTPS Cookie为`__Host-infomat.mdm.sid`，固定Secure、HttpOnly、SameSite=Lax
 - `POST /api/org/accounts/:personId/activate|enable|disable|reset-password`
 - `GET|POST /api/governance/decision-records`
 - `GET /api/org/me`
+
+以下旧编制、V1至V3导入、承接和冲突路由已退役，列表仅供历史路径识别；当前不能按旧合同办理：
+
 - `GET /api/process-design/drafts`
 - `POST /api/process-design/drafts/canonical`
 - `GET|PUT /api/process-design/drafts/:id/content`
@@ -151,6 +156,9 @@ HTTPS Cookie为`__Host-infomat.mdm.sid`，固定Secure、HttpOnly、SameSite=Lax
 - `PUT /api/process-design/cross-dept-handoffs/:id/counterparty-response`
 - `POST /api/process-design/cross-dept-handoffs/:id/department-decision`
 - `POST /api/process-design/cross-dept-handoffs/:id/structure-gate`
+
+当前后续数据治理接口（须总开关、角色权限和来源版本门槛通过）：
+
 - `GET /api/process-data-governance/status`
 - `GET /api/process-data-governance/workbench`
 - `POST /api/process-data-governance/creation-tasks/reconcile`
@@ -185,30 +193,34 @@ HTTPS Cookie为`__Host-infomat.mdm.sid`，固定Secure、HttpOnly、SameSite=Lax
 
 MDM工作组组长只能在卡口通过后发布，不能以角色权限跳过部门决定。
 
-### 9.1 承接状态与决定
+### 9.1 旧承接状态与决定（历史，已退役）
+
+以下描述仅解释旧数据和事件，不能按这些状态重新开放承接办理或推断当前责任。
 
 承接状态依次覆盖分派、归口审核、外部门范围确认、外部门补充、外部门审核和结构卡口，并使用`returned`表示退回上一责任步骤、`conflict_open`表示存在未关闭冲突。历史`rejected`迁移为待分派冲突，历史`escalated`迁移为待项目决策。每个写接口在通用权限之外继续校验固定角色、参与人、部门、`can_act`、当前修订、对象状态和事项关联。
 
 双方决定写入`governance_decision_records`，`subject_type='cross_dept_handoff'`，`subject_version`为候选内容哈希。最终责任人从决定发生时当前部门表读取。承接待办直接从承接状态和参与关系生成，不通过问题池复制业务事实。
 
-### 9.2 完整流程JSON与并发
+### 9.2 旧完整流程JSON与并发（历史，已退役）
+
+以下为旧V1至V3本地编制器合同。当前用户在3001编制，再主动下载、上传原生V7/V8；历史内容、稳定标识和修订继续保留。
 
 - MDM接受`process-governance-v1`、`process-governance-v2`和`process-governance-v3`，在服务端规范化后统一保存和导出v3。v1、v2表单只补`form_design_state=unspecified`，不推断现状或拟设计状态。
 - 本地流程编辑器按整张纸质表单同时渲染全部字段。字段归属变化只在`forms[].areas[].items[]`之间移动同一字段对象；字段级不保存重复归属值，MDM也不创建与主表或明细表一一对应的物理数据库表。
 - `form_design_state`允许`current_state`、`proposed_design`和兼容迁移使用的`unspecified`。主表标题不参与提示和评分；多张明细表合法；多张明细表中的空标题逐张形成可定位业务提示。
-- `process_content_json`是编制内容真源，承接及待办表是治理投影。
+- 当时`process_content_json`是完整技术内容存储，承接及待办表是旧治理投影；这些历史记录不是业务真源。
 - 保存请求必须携带`expected_revision`。更新语句同时匹配`id + revision_no`，不匹配时返回`409 DRAFT_REVISION_CONFLICT`。
 - 内容哈希未变化时不增加修订号；变化时增加修订并更新时间、更新人和哈希。
 - 浏览器不使用`localStorage`或`sessionStorage`保存业务内容。
 
 ### 9.3 V7预览核对隔离
 
-- V7通过`/api/process-v7-preview`进入专用案例，不经过正式V3导入、草稿或发布接口。
-- 服务端加载V1至V7完整规则链校验文件，按归口部门和固定执行部门生成核对项。不能识别部门时只返回提示，不推测业务事实。
+- 原生V7/V8通过`/api/process-v7-preview`进入专用案例，路径和机器标识保留V7兼容命名，不经过旧V3导入。数据治理工作包仍仅支持已发布原生V7，不降级V8。
+- 服务端按实际V7/V8版本调用共享纯校验入口，按归口部门和固定执行部门生成核对项。不能识别部门时只返回提示，不推测业务事实。
 - 新修订以`process_ref`、内容摘要、核对项稳定标识和核对内容摘要进行并发与变化判断。未变化项沿用双方结果，变化项重新打开。
 - 部门核对写入同时校验权限、当前人员部门、核对方和修订号。管理员不得执行写操作。
 - 运行时路由不得自动建表；数据库结构只能通过空库初始化或明确授权的迁移命令建立。
-- `PROCESS_V7_PREVIEW_ENABLED`和`PROCESS_V7_FORMAL_ENABLED`默认关闭。M0、M1、M2及相应接口门禁通过后，只能在受控试点运行实例开启；本机技术验收开启不等于向全部流程开放。
+- `PROCESS_V7_PREVIEW_ENABLED`和`PROCESS_V7_FORMAL_ENABLED`默认关闭，开启仍须目标授权和M0/M1/M2门槛。2026-09-15已取消单流程配置，旧`PROCESS_V7_TRIAL_PROCESS_REF`不再读取；同一案例保持原稳定标识，另一流程另建案例，权限、部门、修订和摘要绑定继续复核。
 - V7提升事务按预览案例、当前修订、目标主档、活动草稿的顺序加锁；相同修订和摘要使用提升审计唯一约束保证幂等。
 - V7审核任务保存`draft_revision_no`和`content_hash`。审核或发布发现绑定过期时返回409，不允许旧结论覆盖当前正文。
 - V7发布事务按草稿、主档、当前版本、审核任务的顺序加锁。发布版本不填伪造的L1、L2、L3或V3投影，成功响应返回`process_version_id`。
@@ -222,15 +234,15 @@ MDM工作组组长只能在卡口通过后发布，不能以角色权限跳过�
 - 多角色任务保留来源角色和所需权限，部门范围及状态规则复用V7详情投影；管理员叠加业务角色仍只读。查询失败向上返回503，前端显示不可用并清除旧动作，不能转换成空列表。
 - `public/index.html`的V7编辑会话以当前人员、案例及修订绑定页面内存字段。核对项按稳定键恢复；保存只清除该提交组内与请求快照一致的输入，其他项及请求期间新输入的值保留。没有自动保存、长期浏览器缓存或服务端草稿表。
 - 切换案例/工作区、上传和退出需要明确处理未提交输入；刷新/关闭使用原生离页提示。401后同人重新登录可恢复当前页面内存；409保留原意见，读取并人工核对当前修订后才允许继续。旧项消失时保留只读原文，不推断迁移到其他业务项。
-- 正式审核结论为空起始值。页面只呈现办理人主动填写的意见，未预选批准、代写部门意见或认定主数据。四个工作区、V3/V7正文格式、写接口及正式事务模型不变；只读响应增量字段见[V7接口约定](docs/Process-V7-Preview-Review-API-Contract.md)。
+- 正式审核结论为空起始值。页面只呈现办理人主动填写的意见，未预选批准、代写部门意见或认定主数据。当前V7/V8正文、预览及正式事务门槛保持；旧V1至V3编制、导入和承接办理已退役；只读响应增量字段见[V7接口约定](docs/Process-V7-Preview-Review-API-Contract.md)。
 
 ### 9.5 流程版本后续数据治理
 
-- `PROCESS_DATA_GOVERNANCE_ENABLED`默认关闭；`PROCESS_DATA_GOVERNANCE_TRIAL_PROCESS_VERSION_ID`只接受一个正整数正式版本标识。
+- `PROCESS_DATA_GOVERNANCE_ENABLED`默认关闭。旧`PROCESS_DATA_GOVERNANCE_TRIAL_PROCESS_VERSION_ID`不再读取，`configured_process_version_id`兼容返回`null`、`scope_mode=published_v7_versions`；工作包固定绑定用户选择的已发布原生V7版本和来源摘要。
 - `PROCESS_DATA_GOVERNANCE_READ_ONLY`缺省或`0`保留原办理模式；`1`关闭所有工作包写入口，仅按原权限查阅准确版本的`completed`工作包及定向事实。总开关关闭仍返回不可用；只读参数非法返回`PROCESS_DATA_GOVERNANCE_READ_ONLY_INVALID`，ready为不可用。该配置不改变表结构、既有数据、角色、审批状态或默认启用策略。
 - `/status`及工作台`feature`增量返回`read_only`布尔值。只读模式的`allowed_actions`只有`view`，工作包待办为空；工作台仅返回已完成包，部门事实列表包含该包中本部门已关闭的记录。未完成详情返回`PROCESS_DATA_GOVERNANCE_COMPLETED_ONLY`；所有写方法返回409及`PROCESS_DATA_GOVERNANCE_READ_ONLY`，在路由和每个仓储写入口操作数据库前拒绝，包含发布事务调用的创建任务函数。
 - 只读页面显示已存治理结论、判断依据、责任部门和统一对象标识；不生成编辑控件，不修改空值或历史内容。正式版本正文仍复用`GET /api/process-design/versions/:processVersionId/content`及原有权限、摘要校验；部门收到事实问题不自动取得完整正式版本或MDM工作包权限。结束方案另须关闭V7写开关，该参数不是全平台只读开关。
-- 正式V7发布只有在功能已启用且新版本标识与试点配置完全相等时，才在同一事务记录唯一创建任务。已有正式版本由`mdm_lead`通过公开补偿接口显式补建。
+- 流程发布与迁移不自动创建任务或工作包；具有所需权限的`mdm_lead`在页面选择任一已发布原生V7版本并主动建包，包括历史已发布版本。既有包保持原版本、摘要、标识和记录，不合并、重建或回填。
 - 候选规则只读取V7结构，使用单值`behavior_links[].operation`。每个已声明字段进入关键字段判断；字段、数据流或生命周期范围为空时生成范围缺失待定项。
 - 每次写入在工作包行锁和`expected_revision`检查后，再复核正式版本内容摘要。来源变化、规则版本变化或并发修订冲突均停止写入。
 - `admin`只读；MDM专业治理要求`mdm_lead`及固定权限；业务答复要求目标部门的固定部门角色和权限。
@@ -266,7 +278,7 @@ MDM工作组组长只能在卡口通过后发布，不能以角色权限跳过�
 
 ## 12. 验证
 
-最低验证入口：
+现行本地验证入口（按改动选择，隔离检查不表示运行开启或业务验收）：
 
 ```powershell
 npm run test:rbac-raci-v2
@@ -275,8 +287,13 @@ npm run test:project-roles
 npm run test:role-workbench
 npm run test:process-data-governance
 npm run test:process-governance
-npm run test:process-governance-unified
+npm run test:retired-capabilities
 npm run test:mainline
+```
+
+以下为连接目标环境的结构维护检查，其中旧承接和统一入口命令保留历史维护用途；必须有具体目标、只读权限或变更授权及恢复条件，不能作为普通文档检查自动执行：
+
+```powershell
 npm run migrate:rbac-raci-v2:dry-run
 npm run migrate:cross-dept-handoff-v2:dry-run
 npm run migrate:process-governance-unified:dry-run
@@ -291,6 +308,6 @@ npm run service:start
 npm run service:check
 ```
 
-浏览器至少核对登录页、首次改密、管理员账号管理、只读角色责任页、角色可见标签、多角色标签并集、四个流程治理工作区、V7案例与修订上传、双方部门核对、承接故事链、冲突处理、管理员业务写按钮不可用和代表性角色的数据范围。3001继续单独验证首页和`/api/health`，不得因MDM上线而停止。
+浏览器仅采用Edge100%、1699×828 CSS内容可视区，按当前入口核对登录、首次改密、管理员账号管理、只读角色责任页、角色可见标签、原生V7/V8案例与修订上传、双方核对、正式办理及角色范围。旧四工作区、承接故事链和旧冲突办理不再作为现行验收入口。3001单独核对首页与`/api/health`实际版本，保持独立运行。
 
 第05阶段的`test:launch-stage05`在净化环境运行相关回归，再新建隔离MySQL和Edge合成办理验证。`test:stage05-mysql-isolated`与`test:stage05-browser`可定向复验。实际证据及人工IME、真实历史数据和业务验收的限制见[整改与证据第11节](../../docs/plans/2026-09-09-mdm-3000-launch/02-整改与证据.md#11-第05阶段实际整改与证据2026-09-10)。

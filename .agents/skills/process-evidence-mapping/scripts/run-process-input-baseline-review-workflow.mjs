@@ -11,6 +11,7 @@ import {
   readJsonl,
   requireArg,
   sha1File,
+  sourceCoverage,
   writeJson,
   writeJsonl,
 } from './review-item-utils.mjs';
@@ -91,15 +92,14 @@ function aggregateRetrieval({ chunksPath, vectorsPath, reviewEvidencePath, manif
   writeJsonl(reviewEvidencePath, all);
 }
 
-function assertReadableSources(sourceManifestPath) {
+function checkSourceCoverage(sourceManifestPath, chunksPath, coveragePath) {
   const sources = readJsonl(sourceManifestPath);
-  if (!sources.length) {
-    throw new Error('没有发现可直接读取的受支持源文件。请提供文本型制度、表单、台账或可提取文本的 PDF。');
-  }
-  const blocked = sources.filter((source) => ['blocked_unreadable', 'failed'].includes(source.extraction_status));
-  if (!blocked.length) return;
-  const labels = blocked.map((source) => source.source_file).filter(Boolean).slice(0, 8);
-  throw new Error(`存在不可直接读取的来源，工作流已阻断：${labels.join('；')}。请由资料责任人提供可读取原件或经人工确认的文字版。`);
+  const chunks = readJsonl(chunksPath);
+  const coverage = sourceCoverage(sources, chunks);
+  writeJson(coveragePath, coverage);
+  if (!chunks.length) throw new Error('没有可用的来源内容，未生成结构化草稿。来源状态已保留；请提供可读原件或带原文件摘要与定位的待复核视觉转录。');
+  if (coverage.gaps.length) console.error(`来源覆盖不完整：继续生成可用部分，${coverage.gaps.length} 项缺口保留待复核，不表示完整通过。`);
+  return coverage;
 }
 
 function assertArtifactPath(targetPath, label) {
@@ -128,6 +128,7 @@ function main() {
   ensureDir(outDir);
 
   const sourceManifestPath = path.join(outDir, 'source_manifest.jsonl');
+  const coveragePath = path.join(outDir, 'source_coverage.json');
   const chunksPath = path.join(outDir, 'chunks.jsonl');
   const warningsPath = path.join(outDir, 'chunking_warnings.md');
   const embeddingManifestPath = path.join(outDir, 'embedding_manifest.json');
@@ -151,8 +152,9 @@ function main() {
   if (args.excludeExt) chunkArgs.push('--exclude-ext', args.excludeExt);
   if (args.deferExt) chunkArgs.push('--defer-ext', args.deferExt);
   if (args.deferReason) chunkArgs.push('--defer-reason', args.deferReason);
+  if (args.visualTranscripts) chunkArgs.push('--visual-transcripts', repoResolve(args.visualTranscripts));
   runNode(chunkArgs, { inherit: false });
-  assertReadableSources(sourceManifestPath);
+  const coverage = checkSourceCoverage(sourceManifestPath, chunksPath, coveragePath);
 
   if (args.noEmbedding) {
     writeSkippedEmbeddingManifest({
@@ -219,6 +221,7 @@ function main() {
     '--objects', objectChainsPath,
     '--issues', mappingItemsPath,
     '--chunks', chunksPath,
+    '--source-manifest', sourceManifestPath,
     '--department', args.department,
     '--out', structuredOutputPath,
   ]);
@@ -238,6 +241,8 @@ function main() {
   console.error(`input_baseline_review_workflow_out=${outDir}`);
   console.error(`input_baseline_review_todo=${todoPath}`);
   console.error(`document_structured_output_v2=${structuredOutputPath}`);
+  console.error(`input_baseline_review_source_status=${coverage.status}`);
+  console.error(`input_baseline_review_source_coverage=${coveragePath}`);
 }
 
 try {

@@ -3,8 +3,8 @@
  * Contract checks for the MySQL-backed input baseline review service.
  */
 import assert from 'node:assert/strict';
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { basename, join, resolve } from 'node:path';
 import {
   buildReviewAppHtml,
   inputBaselineReviewSchemaSql,
@@ -21,10 +21,9 @@ import {
 } from './input-baseline-review-core.mjs';
 
 const root = resolve(import.meta.dirname, '..');
-const runDir = join(root, 'artifacts', 'process-input-baseline-review', 'test-input-baseline-review-mysql');
-
-rmSync(runDir, { recursive: true, force: true });
-mkdirSync(runDir, { recursive: true });
+const testParent = join(root, 'artifacts', 'process-input-baseline-review');
+mkdirSync(testParent, { recursive: true });
+const runDir = mkdtempSync(join(testParent, 'test-input-baseline-review-mysql-'));
 
 writeFileSync(
   join(runDir, 'mapping_diff_items.json'),
@@ -34,7 +33,7 @@ writeFileSync(
         id: 'IBR-APPROVAL',
         stable_key: 'approval-chain-001',
         department: '财务部',
-        source_file: 'docs/norms/财务部业务资料/GLTX-CW-01-A财务成本核算管理程序.docx.md.md',
+        source_file: 'docs/norms/财务部业务资料/GLTX-CW-01-A财务成本核算管理程序.docx.md',
         source_anchor: 'GLTX-CW-01-A §5.4 P71',
         issue_type: '审批链待确认',
         content: '盈亏处理需查明原因，按照规定审批权限报有关部门审核批准',
@@ -53,7 +52,7 @@ writeFileSync(
   join(runDir, 'chunks.jsonl'),
   JSON.stringify({
     chunk_id: 'test-P0071',
-    source_file: 'docs/norms/财务部业务资料/GLTX-CW-01-A财务成本核算管理程序.docx.md.md',
+    source_file: 'docs/norms/财务部业务资料/GLTX-CW-01-A财务成本核算管理程序.docx.md',
     doc_no: 'GLTX-CW-01-A',
     clause: '5.4',
     paragraph_id: 'P71',
@@ -93,9 +92,9 @@ assert.equal(schema.includes('sqlite_master'), false, 'schema must not use SQLit
 assert.equal(schema.includes('correction_note'), false, 'input baseline review schema must not keep concatenated correction note fields');
 
 const bundle = loadReviewRunBundle(runDir);
-assert.equal(bundle.run.run_id, 'test-input-baseline-review-mysql');
+assert.equal(bundle.run.run_id, basename(runDir), 'review run id must preserve the unique fixture directory identity');
 assert.equal(bundle.items.length, 1);
-assert.equal(bundle.items[0].document_name, 'GLTX-CW-01-A财务成本核算管理程序.docx.md.md');
+assert.equal(bundle.items[0].document_name, 'GLTX-CW-01-A财务成本核算管理程序.docx.md');
 assert.equal(bundle.items[0].source_excerpts.length, 1);
 assert.equal(bundle.items[0].source_excerpts[0].raw_text.includes('盈亏处理需查明原因'), true);
 
@@ -113,12 +112,12 @@ const highlighted = highlightEvidenceHtml(
 assert.ok(highlighted.includes('<mark>盈亏处理需查明原因</mark>'), 'evidence text should highlight review phrase');
 
 const businessSource = formatSourceForBusiness(
-  'docs/norms/财务部业务资料/GLTX-CW-01-A财务成本核算管理程序.docx.md.md',
+  'docs/norms/财务部业务资料/GLTX-CW-01-A财务成本核算管理程序.docx.md',
   'GLTX-CW-01-A §5.4 P71',
 );
 assert.equal(
   businessSource,
-  'GLTX-CW-01-A财务成本核算管理程序.docx.md.md · 第5.4条',
+  'GLTX-CW-01-A财务成本核算管理程序.docx.md · 第5.4条',
   'business source should hide parent directories and hide Pxx extraction anchors from business users',
 );
 assert.equal(businessSource.includes('docs/norms'), false, 'business source should not expose parent directories');
@@ -144,7 +143,7 @@ const grouped = groupReviewItemsForReview([
   { ...bundle.items[0], stable_key: 'other', department: '财务部', document_name: '制度B.docx', issue_type: '角色待确认' },
 ]);
 assert.equal(grouped[0].department, '财务部');
-const financeDocGroup = grouped[0].documents.find((doc) => doc.document_name === 'GLTX-CW-01-A财务成本核算管理程序.docx.md.md');
+const financeDocGroup = grouped[0].documents.find((doc) => doc.document_name === 'GLTX-CW-01-A财务成本核算管理程序.docx.md');
 const otherDocGroup = grouped[0].documents.find((doc) => doc.document_name === '制度B.docx');
 assert.ok(financeDocGroup, 'grouping should include the source document name');
 assert.ok(otherDocGroup, 'grouping should separate another document');

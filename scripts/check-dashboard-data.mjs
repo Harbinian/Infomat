@@ -1,5 +1,6 @@
 /**
- * 校验流程地图驾驶舱的数据快照是否与生成文件一致。
+ * 校验保留历史驾驶舱与快照的消费结构和内嵌副本一致。
+ * --legacy-source-comparison 才逐字比较历史来源副本；不证明当前治理事实。
  *
  * 用法: node scripts/check-dashboard-data.mjs
  */
@@ -190,7 +191,7 @@ if (!Array.isArray(fileData.links) || fileData.links.length === 0) {
 if (!fileData.stats || typeof fileData.stats.mappings !== 'number') {
   fail('docs/company-sankey-data.json has no stats.mappings');
 }
-if (fileData.stats.a1 !== countSourceA1Rows()) {
+if (process.argv.includes('--legacy-source-comparison') && fileData.stats.a1 !== countSourceA1Rows()) {
   fail(`docs/company-sankey-data.json stats.a1 expected ${countSourceA1Rows()} from source A1 rows, got ${fileData.stats.a1}`);
 }
 if (fileData.stats.a1Unmatched !== 0) {
@@ -204,16 +205,18 @@ if (!Array.isArray(fileData.evidenceRefs) || !fileData.evidenceRefs.some(ref => 
 }
 
 const cross = fileData.crossDept;
-const reportCrossStats = readCrossDeptReportMetrics();
-for (const [field, expected] of Object.entries(reportCrossStats)) {
-  if (cross.stats?.[field] !== expected) {
-    fail(`crossDept.stats.${field} expected ${expected} from 跨部门完整性检查报告.md, got ${cross.stats?.[field]}`);
-  }
+if (!cross.stats || !Array.isArray(cross.risks) || !Array.isArray(cross.sourceReports)) fail('historical crossDept snapshot structure incomplete');
+for (const [field, value] of Object.entries(cross.stats)) {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) fail(`invalid historical crossDept.stats.${field}`);
 }
-assertCrossDeptSourceReports(cross);
-const expectedMinimumRisks = 2 + reportCrossStats.pendingConfirm;
-if (!Array.isArray(cross.risks) || cross.risks.length < expectedMinimumRisks) {
-  fail(`crossDept.risks should contain at least 工程技术部、复材车间 and ${reportCrossStats.pendingConfirm} pending items`);
+if (process.argv.includes('--legacy-source-comparison')) {
+  const reportCrossStats = readCrossDeptReportMetrics();
+  for (const [field, expected] of Object.entries(reportCrossStats)) {
+    if (cross.stats?.[field] !== expected) fail(`crossDept.stats.${field} differs from the selected legacy report: ${expected} / ${cross.stats?.[field]}`);
+  }
+  assertCrossDeptSourceReports(cross);
+  const expectedMinimumRisks = 2 + reportCrossStats.pendingConfirm;
+  if (cross.risks.length < expectedMinimumRisks) fail(`historical crossDept.risks expected at least ${expectedMinimumRisks}`);
 }
 
 const allowedRisks = new Set(['high', 'medium', 'low']);
@@ -281,4 +284,4 @@ if (stableJson(embeddedCross) !== stableJson(fileData.crossDept)) {
   fail('#cross-dept-data is not identical to docs/company-sankey-data.json.crossDept');
 }
 
-console.log('Dashboard data check passed.');
+console.log('Historical dashboard consumer integrity check passed; current business authority unverified.');

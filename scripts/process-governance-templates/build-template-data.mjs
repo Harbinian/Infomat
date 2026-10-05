@@ -1,6 +1,6 @@
 /**
- * Build the normalized data package used by the department process-governance
- * workbooks and the common Word guide.
+ * Build a historical review package for legacy department workbooks and guide.
+ * docs inputs and preserved counts are a compatibility snapshot, not current facts.
  *
  * Inputs (read-only):
  *   - docs/company-sankey-data.json
@@ -36,11 +36,18 @@ const PLACEHOLDER_RE = /^(?:[-—–/]+|无|暂无|待补|待确认|未明确|�
 const INFERENCE_RE = /(上下文推断|分析拆分|同上|继承所属流程)/;
 
 function parseArgs(argv) {
-  const args = { out: '' };
+  const args = { out: '', packageDate: '', legacyDisplay: false };
   for (let index = 0; index < argv.length; index += 1) {
-    if (argv[index] === '--out') args.out = resolve(argv[index + 1] || '');
+    if (argv[index] === '--legacy-display') { args.legacyDisplay = true; continue; }
+    if (!['--out', '--package-date'].includes(argv[index])) throw new Error(`Unknown argument: ${argv[index]}`);
+    const value = argv[++index];
+    if (!value || value.startsWith('--')) throw new Error(`Missing value for ${argv[index - 1]}`);
+    if (argv[index - 1] === '--out') args.out = resolve(value);
+    else args.packageDate = value;
   }
-  if (!args.out) throw new Error('Usage: node build-template-data.mjs --out <template-data.json>');
+  if (!args.legacyDisplay || !args.out) throw new Error('Usage: node build-template-data.mjs --legacy-display --out <template-data.json> [--package-date YYYY-MM-DD]');
+  args.packageDate ||= new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Shanghai' });
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(args.packageDate) || new Date(`${args.packageDate}T00:00:00Z`).toISOString().slice(0, 10) !== args.packageDate) throw new Error(`Invalid package date: ${args.packageDate}`);
   return args;
 }
 
@@ -463,7 +470,7 @@ function buildEvidenceRows({ objectType, objectId, objectName, refs, citationMod
     rawCitation: rawCitation || ref.raw || '',
     citationMode,
     evidenceStatus: ref.title && ref.locator && ref.titleMatchStatus === '编号-名称唯一匹配' ? '待部门确认' : '缺原文证据',
-    sourceVerification: '未逐条核验（来自当前流程映射基线）',
+    sourceVerification: '未逐条核验（来自历史流程映射副本）',
     matchStatus: ref.matchStatus || '未匹配源文件',
     titleMatchStatus: ref.titleMatchStatus || '缺原文制度名称',
   }));
@@ -752,5 +759,6 @@ function buildPackage(snapshot) {
 const args = parseArgs(process.argv.slice(2));
 const snapshot = JSON.parse(readFileSync(SNAPSHOT_PATH, 'utf8'));
 const packageData = buildPackage(snapshot);
+packageData.packageDate = args.packageDate;
 writeFileSync(args.out, `${JSON.stringify(packageData, null, 2)}\n`, 'utf8');
-process.stdout.write(`${JSON.stringify({ out: args.out, snapshotDate: packageData.snapshotDate, totals: packageData.totals })}\n`);
+process.stdout.write(`${JSON.stringify({ out: args.out, packageDate: packageData.packageDate, snapshotDate: packageData.snapshotDate, totals: packageData.totals })}\n`);

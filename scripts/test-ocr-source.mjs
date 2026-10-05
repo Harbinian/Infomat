@@ -6,11 +6,13 @@
 
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
-const outDir = join(root, 'artifacts', 'ocr', 'test-ocr-source');
+const testParent = join(root, 'artifacts', 'ocr');
+mkdirSync(testParent, { recursive: true });
+const outDir = mkdtempSync(join(testParent, 'test-ocr-source-'));
 const samplePdf = join(
   root,
   'docs',
@@ -18,10 +20,8 @@ const samplePdf = join(
   '项目管理部业务资料',
   '14.3-装配生产过程管理',
   'DOPC837884-31-包装物制造及产品包装管理标准',
-  '包装物制造及产品包装管理标准.pdf.md.md',
+  '包装物制造及产品包装管理标准.pdf.md',
 );
-
-rmSync(outDir, { recursive: true, force: true });
 
 const result = spawnSync(
   process.execPath,
@@ -64,7 +64,7 @@ const reviewRecords = readFileSync(reviewPath, 'utf8')
   .filter(Boolean)
   .map((line) => JSON.parse(line));
 assert.equal(reviewRecords.length >= 1, true);
-assert.equal(reviewRecords[0].source_file.endsWith('包装物制造及产品包装管理标准.pdf.md.md'), true);
+assert.equal(reviewRecords[0].source_file.endsWith('包装物制造及产品包装管理标准.pdf.md'), true);
 assert.equal(reviewRecords[0].artifact_type, 'image_or_scanned_pdf');
 assert.equal(reviewRecords[0].review_required, true);
 assert.equal(reviewRecords[0].evidence_status, 'ocr_extracted_not_confirmed');

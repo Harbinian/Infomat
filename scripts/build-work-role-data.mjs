@@ -1,14 +1,15 @@
 #!/usr/bin/env node
 
 /**
- * Build the read-only work-role snapshot consumed by document structured output.
+ * Build a historical compatibility work-role snapshot after explicit selection.
+ * CLI: --legacy-display --source <md> --roster <md> --out <json>.
+ * The docs copies do not establish current HR authority or governance approval.
  *
  * Inputs:
- * - docs/organization/工作角色目录与岗位映射.md (HR-owned truth)
- * - docs/organization/花名册.md (read-only department/position validation)
+ * - explicitly selected role and roster Markdown (compatibility format)
  *
  * Output:
- * - docs/work-role-data.json
+ * - explicitly selected --out JSON; no implicit CLI overwrite
  *
  * The output is replaced only after all parsing and validation succeeds. This
  * script never writes the roster, process baselines, databases, or applications.
@@ -377,6 +378,10 @@ function parseCliArgs(argv) {
     ['--generated-at', 'generatedAt'],
   ]);
   for (let index = 0; index < argv.length; index += 1) {
+    if (argv[index] === '--legacy-display') {
+      options.legacyDisplay = true;
+      continue;
+    }
     const optionName = keys.get(argv[index]);
     if (!optionName) throw new Error(`Unknown argument: ${argv[index]}`);
     const value = argv[index + 1];
@@ -384,6 +389,10 @@ function parseCliArgs(argv) {
     options[optionName] = optionName === 'generatedAt' ? value : resolve(value);
     index += 1;
   }
+  if (!options.legacyDisplay || !options.sourcePath || !options.rosterPath || !options.outputPath) {
+    throw new Error('Historical compatibility build requires --legacy-display --source <md> --roster <md> --out <json>; docs are not current HR authority');
+  }
+  if ([options.sourcePath, options.rosterPath].includes(options.outputPath)) throw new Error('Output must not overwrite a selected input');
   return options;
 }
 

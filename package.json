@@ -8,7 +8,7 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "npm run test:process-governance-mainline",
     "analyze:layout": "node scripts/analyze-layout.js",
     "sync:process-governance": "node scripts/sync-process-governance-mainline.mjs",
     "build:pmo-task-data": "python pmo/build_pmo_task_data.py",
@@ -45,6 +45,7 @@
     "test:process-evidence-skill": "node scripts/test-process-evidence-skill.mjs",
     "test:database-to-process-json": "node .agents/skills/database-to-process-json/scripts/test-database-to-process-json.mjs",
     "test:process-governance-mainline": "node scripts/test-process-governance-mainline.mjs",
+    "test:root-script-safety": "node scripts/test-root-script-safety.mjs",
     "test:customer-file-boundary": "node scripts/test-customer-file-boundary.mjs",
     "audit:customer-file-acceptance": "node scripts/audit-customer-file-acceptance.mjs",
     "test:customer-file-acceptance-audit": "node scripts/test-customer-file-acceptance-audit.mjs",
