@@ -4,6 +4,12 @@
   "description": "MDM Platform",
   "main": "server/index.js",
   "scripts": {
+    "manage:system-admin": "node scripts/manage-system-admin.js",
+    "bootstrap:system-admin": "node scripts/bootstrap-system-admin.js",
+    "test:system-admin": "node scripts/test-system-admin.js",
+    "manage:process-v7-authoring": "node scripts/manage-process-v7-authoring.js",
+    "test:process-v7-authoring": "node scripts/test-process-v7-authoring.js",
+    "test:process-v7-authoring-issues": "node scripts/test-process-v7-authoring-issues.js",
     "test:upgrade-integration": "node scripts/test-analysis-runs.js --p24 --p13 --p14 --p16 --p17 --p15",
     "test:issue-pool-list-scope": "node scripts/test-issue-pool-list-scope.js",
     "import:historical-review": "node scripts/import-historical-review.js",

@@ -132,6 +132,7 @@ export function OfficeWorkbench({ api, draft, setDraft, onLegacy }) {
           <h3>任务 {t.id} · {stateLabel(t)}</h3><p>{t.content}</p><p>办理人：{t.assignee_name || '等待负责人分配'}；截止日期：{t.due_date || '未设定'}；紧急程度：{{high:'紧急',medium:'普通',low:'较低'}[t.urgency] || '待核对'}</p>
           {t.process_version_id && <p>{t.process_name} · 正式版 {t.process_edition}（固定版本 {t.process_version_id}）<br />流程归口：{t.owning_department_name || '待明确'}；业务行为：{t.behavior_name || t.behavior_ref || '整个流程'}</p>}
           {t.analysis_task && <details><summary>问题办理说明</summary><p>{t.analysis_task.instruction}</p><p>问题 {t.analysis_task.issue_id} · 修订 {t.analysis_task.source_revision} · 轮次 {t.analysis_task.round_no}；任务办结不会关闭问题。</p></details>}
+          {t.analysis_task?.compiler_replies?.length > 0 && <details open><summary>流程编制者答复</summary>{t.analysis_task.compiler_replies.map(r => <p key={r.id}>{new Date(r.created_at).toLocaleString()} · {r.actor_name}：{r.content}</p>)}<p>编制者答复是办理依据，请按任务分配填写办理结果；问题仍须独立复核。</p></details>}
           <div className="import-actions">{mayAct(data,t,'assign') && <button className="secondary" disabled={saving} onClick={() => start('assign',t)}>{t.assignee_person_id ? '重新分配' : '分配人员'} {t.id}</button>}{mayAct(data,t,'complete') && <button className="primary" disabled={saving} onClick={() => start('complete',t)}>填写结果并办结 {t.id}</button>}</div>
           {t.status === 'done' && <><p>{completion(t)}</p><p>办结时间：{t.done_epoch ? new Date(Number(t.done_epoch)*1000).toLocaleString() : '未记录'}</p></>}
         </article>)}

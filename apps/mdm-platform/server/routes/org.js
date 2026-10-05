@@ -60,6 +60,7 @@ function runAsyncAction(res, action, unavailableMessage) {
 
 function requireOrgPermission(permCode) {
   return (req, res, next) => {
+    if (req.session && req.session.identityKind === 'system_admin') return requirePermission(permCode)(req, res, next);
     if (!useMysqlIdentityReadModel()) {
       return requirePermission(permCode)(req, res, next);
     }
@@ -86,6 +87,7 @@ function useMysqlIdentityReadModel() {
 }
 
 function requestPersonId(req) {
+  if (req.session && req.session.identityKind === 'system_admin') return null;
   return req.session && (req.session.personId || req.session.userId) || null;
 }
 
@@ -616,7 +618,8 @@ function writeLoginSession(req, user) {
     req.session.regenerate(error => {
       if (error) return reject(error);
       const personId = user.personId || user.person_id || user.id;
-      req.session.personId = personId;
+      if (user.identityKind === 'system_admin') req.session.identityKind = 'system_admin';
+      else req.session.personId = personId;
       req.session.accountId = user.accountId || user.account_id || null;
       req.session.authVersion = Number(user.authVersion || user.auth_version || 0);
       if (!req.session.accountId) {
@@ -649,12 +652,13 @@ async function loginWithMysqlIdentity(req, res) {
   }
 
   await writeLoginSession(req, user);
-  await repo.recordSuccessfulLogin(user.personId || user.id);
+  await repo.recordSuccessfulLogin(user.identityRef || user.personId || user.id);
   await new Promise((resolve, reject) => req.session.save(error => error ? reject(error) : resolve()));
   clearLoginFailures(req);
   return res.json({
-    id: user.personId || user.id,
-    personId: user.personId || user.id,
+    id: user.identityRef || user.personId || user.id,
+    personId: user.identityKind === 'system_admin' ? null : user.personId || user.id,
+    ...(user.identityKind === 'system_admin' ? { identityKind: 'system_admin' } : {}),
     accountId: user.accountId || null,
     employeeNo: user.employeeNo || user.employee_no,
     name: user.personName || user.name,
@@ -727,7 +731,7 @@ async function currentUserPayload(req) {
 }
 
 router.get('/session', (req, res, next) => {
-  if (!req.session || !requestPersonId(req)) {
+  if (!req.session || (!requestPersonId(req) && req.session.identityKind !== 'system_admin')) {
     return res.json({ authenticated: false });
   }
   return requireAuth(req, res, next);

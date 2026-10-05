@@ -512,6 +512,7 @@ router.get('/', requireAuth, (req, res) => {
         loadProcessDataGovernanceWorkItems(identity),
         useMysqlProcessGovernanceReadModel() ? require('./processV7PreviewReview').listV7WorkbenchItems({
           userId: identity.user.id, personId: identity.user.personId, departmentId: identity.user.departmentId,
+          accountId: Number(req.session.accountId || 0), authVersion: Number(req.session.authVersion || 0),
           departmentName: identity.user.departmentName, roleCodes: new Set(roleCodes), permissions: permSet,
           canReadGlobal: canViewAll, canReviewDepartment: permSet.has('governance:review-department')
         }) : []

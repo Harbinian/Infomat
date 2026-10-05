@@ -45,6 +45,7 @@ class MysqlSessionStore extends session.Store {
     for (const key of ['personId', 'accountId', 'authVersion', 'csrfSecret']) {
       if (value[key] !== undefined) stored[key] = value[key];
     }
+    if (value.identityKind === 'system_admin' && !value.personId) stored.identityKind = 'system_admin';
     this.run(connection => connection.execute(
       'INSERT INTO mdm_http_sessions (sid_hash, session_json, expires_at) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE session_json=VALUES(session_json), expires_at=VALUES(expires_at)',
       [this.key(sid), JSON.stringify(stored), expires]), callback);

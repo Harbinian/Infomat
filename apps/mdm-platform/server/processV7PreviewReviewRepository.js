@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const authoring = require('./processV7Authoring');
 const {
   caseStatusFromItems,
   itemStatus,
@@ -494,6 +495,8 @@ function makeProcessV7PreviewReviewRepository(pool) {
       const limit = Math.min(Math.max(Number(options.limit || 100), 1), 200);
       const departmentId = Number(actor.departmentId || 0);
       const canReadGlobal = actor.canReadGlobal ? 1 : 0;
+      const scopedDepartment = [...(actor.permissions || [])].some(p => ['governance:read-department', 'governance:read-assigned-context', 'governance:read-escalated-context'].includes(p)) ? departmentId : 0;
+      const assignedClause = authoring.enabled() ? ' OR EXISTS (SELECT 1 FROM process_v7_authoring a WHERE a.case_id=c.id AND a.compiler_person_id=? AND c.owning_department_id=?)' : '';
       const result = await rows(pool, `
         SELECT ${previewColumns('cases', 'c')},
           (SELECT COUNT(*) FROM process_v7_preview_review_items i
@@ -507,10 +510,10 @@ function makeProcessV7PreviewReviewRepository(pool) {
             SELECT 1 FROM process_v7_preview_review_items i
             WHERE i.case_id=c.id AND i.is_current=1
               AND (i.origin_department_id=? OR i.target_department_id=?)
-          ))
+          ) ${assignedClause})
         ORDER BY c.updated_at DESC, c.id DESC
         LIMIT ${limit}
-      `, [text(options.processRef), text(options.processRef), canReadGlobal, departmentId, departmentId, departmentId]);
+      `, [text(options.processRef), text(options.processRef), canReadGlobal, scopedDepartment, scopedDepartment, scopedDepartment, ...(authoring.enabled() ? [actor.personId, departmentId] : [])]);
       let myActionCount = 0;
       if (actor.canReviewDepartment && departmentId) {
         const action = await one(pool, `
@@ -536,6 +539,48 @@ function makeProcessV7PreviewReviewRepository(pool) {
 
     async getCaseDetail(caseId) {
       return await getCaseDetailFrom(pool, caseId);
+    },
+
+    async canReadAssigned(caseId, actor) { return authoring.canReadAssigned(pool, caseId, actor); },
+    async departmentOverview(actor, before) {
+      if (!authoring.enabled()) throw repositoryError(503, 'V7_AUTHORING_DISABLED', '编制归属尚未启用');
+      const current = await authoring.activeActor(pool, actor);
+      if (!authoring.isContact(current, { owning_department_id: actor.departmentId })) throw repositoryError(403, 'V7_AUTHORING_SCOPE_DENIED', '仅本部门主对接人可读取部门编制全貌');
+      const cursor = before == null || before === '' ? null : String(before);
+      if (cursor != null && (!/^[1-9]\d{0,18}$/.test(cursor) || BigInt(cursor) > 9223372036854775807n)) throw repositoryError(422, 'V7_AUTHORING_CURSOR_INVALID', '分页游标无效');
+      const data = await rows(pool, `SELECT c.id,c.process_name,c.status,c.current_revision_no,c.blocking_issues_json,
+        a.compiler_person_id,p.person_name AS compiler_name,a.started_at,
+        (SELECT d.status FROM process_v7_promotions pr JOIN process_design_drafts d ON d.id=pr.draft_id WHERE pr.preview_case_id=c.id ORDER BY pr.id DESC LIMIT 1) AS formal_status,
+        (SELECT COUNT(*) FROM process_v7_preview_review_items i WHERE i.case_id=c.id AND i.is_current=1 AND i.status<>'confirmed') AS pending_item_count,
+        (SELECT CASE WHEN t.status IN ('needs_changes','rejected') THEN t.decision_note ELSE NULL END FROM process_design_review_tasks t JOIN process_v7_promotions pr ON pr.draft_id=t.draft_id WHERE pr.preview_case_id=c.id ORDER BY pr.id DESC,t.id DESC LIMIT 1) AS return_reason
+        FROM process_v7_preview_cases c LEFT JOIN process_v7_authoring a ON a.case_id=c.id LEFT JOIN person p ON p.person_id=a.compiler_person_id
+        WHERE c.owning_department_id=? AND (? IS NULL OR c.id<CAST(? AS SIGNED)) ORDER BY c.id DESC LIMIT 21`, [current.current_department_id, cursor, cursor]);
+      return { items: data.slice(0,20).map(r => ({ ...r, id: String(r.id), compiler_person_id: r.compiler_person_id == null ? null : String(r.compiler_person_id), blocking_issues: parseJson(r.blocking_issues_json, []), blocking_issues_json: undefined })), next_cursor: data.length > 20 ? String(data[19].id) : null,
+        coverage: 'current_department_cases', snapshot: false };
+    },
+    async describeAuthoring(caseRow, actor) { return authoring.describe(pool, caseRow, actor); },
+    async authoringIssues(caseId, actor, after) {
+      assertPreviewFeatureEnabled();
+      return withTransaction(pool, db => require('./processV7AuthoringIssues').list(db, caseId, actor, after));
+    },
+    async replyAuthoringIssue(caseId, issueId, body, actor) {
+      assertPreviewFeatureEnabled();
+      return withTransaction(pool, db => require('./processV7AuthoringIssues').reply(db, caseId, issueId, body, actor));
+    },
+    async authoringCandidates(caseRow, actor) { return authoring.candidates(pool, caseRow, actor); },
+    async recordAuthoring(caseId, body, actor) {
+      assertPreviewFeatureEnabled();
+      return withTransaction(pool, async connection => {
+        // Idempotent replay remains valid after a later revision; fresh writes bind current source.
+        const locked = await one(connection, 'SELECT * FROM process_v7_preview_cases WHERE id=? FOR UPDATE', [caseId]);
+        if (!locked) throw repositoryError(404, 'V7_PREVIEW_CASE_NOT_FOUND', '案例不存在');
+        assertPreviewWriteScope(locked.process_ref);
+        const result = await authoring.record(connection, locked, body, actor);
+        if (!result.idempotent && (Number(body.expected_revision_no) !== Number(locked.current_revision_no) || text(body.expected_content_hash) !== text(locked.current_content_hash))) {
+          throw repositoryError(409, 'V7_PREVIEW_REVISION_CONFLICT', '来源已变化，请重新核对');
+        }
+        return { ...result, authoring: await authoring.describe(connection, locked, actor) };
+      });
     },
 
     async createCase(preview, meta, actor) {
@@ -581,6 +626,7 @@ function makeProcessV7PreviewReviewRepository(pool) {
           actor.personId || null
         ]);
         const caseId = caseResult.insertId;
+        await authoring.initialize(connection, { id: caseId, owning_department_id: owner && owner.id }, actor);
         const [revisionResult] = await connection.execute(`
           INSERT INTO process_v7_preview_revisions
             (case_id, revision_no, source_file_name, source_schema_version, source_exported_at,
@@ -679,6 +725,7 @@ function makeProcessV7PreviewReviewRepository(pool) {
       return await withTransaction(pool, async connection => {
         const state = await lockCurrentPreviewWriteState(connection, caseRow.id, meta);
         const { lockedCase: locked } = state;
+        await authoring.assertCompiler(connection, locked, actor, { start: true });
         projectLockedPreview(state, { owningDepartmentName: locked.owning_department_name });
         const candidatePreview = projectCandidatePreview(preview && preview.document, state, {
           owningDepartmentName: locked.owning_department_name
@@ -759,6 +806,9 @@ function makeProcessV7PreviewReviewRepository(pool) {
           throw repositoryError(409, 'V7_PREVIEW_ITEM_SUPERSEDED', '当前核对项已经被新修订替代');
         }
         const actorDepartmentId = Number(actor && actor.departmentId || 0);
+        if (Number(item.origin_department_id) === actorDepartmentId) {
+          await authoring.assertCompiler(connection, caseRowLocked, actor, { start: true });
+        }
         const lockedParty = actorDepartmentId && Number(item.origin_department_id) === actorDepartmentId
           ? 'origin'
           : actorDepartmentId && Number(item.target_department_id) === actorDepartmentId

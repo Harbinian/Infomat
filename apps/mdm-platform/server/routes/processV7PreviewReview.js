@@ -1,6 +1,7 @@
 const express = require('express');
 const mysql = require('mysql2/promise');
 const router = express.Router();
+const authoring = require('../processV7Authoring');
 const {
   getDepartmentByIdAsync,
   getUserEffectivePermissionsAsync,
@@ -88,16 +89,20 @@ function resetProcessV7PreviewRepositoryFactory() {
 }
 
 async function currentActor(req) {
-  const personId = Number(req.session.personId || req.session.userId || 0);
-  const userId = Number(req.session.userId || personId || 0);
-  const roleRows = await getUserRoleCodesAsync(personId, req.session.role);
+  const systemIdentity = req.identity && req.identity.identityKind === 'system_admin';
+  const personId = systemIdentity ? null : Number(req.session.personId || req.session.userId || 0);
+  const userId = systemIdentity ? null : Number(req.session.userId || personId || 0);
+  const principal = systemIdentity ? req.identity.identityRef : personId;
+  const roleRows = await getUserRoleCodesAsync(principal, req.session.role);
   const roleCodes = new Set((Array.isArray(roleRows) ? roleRows : []).map(item => text(item && (item.code || item.role_code))).filter(Boolean));
-  const permissionResult = await getUserEffectivePermissionsAsync(personId);
+  const permissionResult = await getUserEffectivePermissionsAsync(principal);
   const permissions = permissionResult && permissionResult.permSet || new Set();
   const department = req.session.departmentId ? await getDepartmentByIdAsync(Number(req.session.departmentId)) : null;
   return {
     userId,
     personId,
+    accountId: Number(req.session.accountId || 0),
+    authVersion: Number(req.session.authVersion || 0),
     departmentId: department ? Number(department.id || department.department_id) : null,
     departmentName: department ? text(department.name || department.department_name) : '',
     roleCodes,
@@ -115,6 +120,7 @@ async function currentActor(req) {
 }
 
 function assertCanRead(actor) {
+  if (authoring.enabled() && actor.personId) return; // repository restricts roleless accounts to exact assigned cases
   if ([
     'governance:read-global',
     'governance:read-department',
@@ -136,8 +142,15 @@ function assertCreatePermission(actor) {
   throw httpError(403, '无权建立V7预览核对案例', 'V7_PREVIEW_SCOPE_DENIED');
 }
 
-function assertUploadPermission(actor, caseRow) {
+async function assertUploadPermission(actor, caseRow, repo) {
   assertAdminCannotWrite(actor);
+  if (repo.describeAuthoring) {
+    const binding = await repo.describeAuthoring(caseRow, actor);
+    if (binding.managed) {
+      if (authoring.enabled() && binding.is_compiler) return;
+      throw httpError(403, '该流程仅允许当前编制者上传修订', 'V7_AUTHORING_COMPILER_REQUIRED');
+    }
+  }
   if (actor.permissions.has('governance:assign-work')) return;
   if (
     actor.permissions.has('governance:draft-department') &&
@@ -147,11 +160,13 @@ function assertUploadPermission(actor, caseRow) {
   throw httpError(403, '只有归口部门主对接人或MDM工作组组长可以上传新修订', 'V7_PREVIEW_SCOPE_DENIED');
 }
 
-function assertVisible(actor, detail) {
+async function assertVisible(actor, detail, repo) {
   if (!detail || !detail.case) throw httpError(404, 'V7预览核对案例不存在', 'V7_PREVIEW_CASE_NOT_FOUND');
   if (actor.canReadGlobal) return;
-  if (Number(detail.case.owning_department_id) === Number(actor.departmentId)) return;
-  if ((detail.items || []).some(item => Number(item.origin_department_id) === Number(actor.departmentId) || Number(item.target_department_id) === Number(actor.departmentId))) return;
+  if (repo?.canReadAssigned && await repo.canReadAssigned(detail.case.id, actor)) return;
+  const departmentReader = [...actor.permissions].some(p => ['governance:read-department', 'governance:read-assigned-context', 'governance:read-escalated-context'].includes(p));
+  if (departmentReader && Number(detail.case.owning_department_id) === Number(actor.departmentId)) return;
+  if (departmentReader && (detail.items || []).some(item => Number(item.origin_department_id) === Number(actor.departmentId) || Number(item.target_department_id) === Number(actor.departmentId))) return;
   throw httpError(403, '当前人员不是该案例的参与部门', 'V7_PREVIEW_SCOPE_DENIED');
 }
 
@@ -161,6 +176,7 @@ function listAllowedActions(actor) {
     !actor.roleCodes.has('admin') &&
     (actor.permissions.has('governance:draft-department') || actor.permissions.has('governance:assign-work'))
   ) actions.push('create_case');
+  if (authoring.enabled() && !actor.roleCodes.has('admin') && actor.roleCodes.has('department_contact') && actor.permissions.has('governance:read-department')) actions.push('department_overview');
   return actions;
 }
 
@@ -228,8 +244,8 @@ function formalAllowedActions(actor, detail) {
     !hasBlockingIssues &&
     sameDepartment &&
     ['draft', 'needs_changes'].includes(text(draft.status)) &&
-    actor.permissions.has('governance:draft-department') &&
-    actor.permissions.has('governance:submit-department')
+    (detail.authoring?.can_record || (actor.permissions.has('governance:draft-department') &&
+    actor.permissions.has('governance:submit-department')))
   ) actions.push('submit_formal_draft');
   if (
     promotionEvidenceMatches &&
@@ -334,6 +350,21 @@ function validatedPreview(body, departments, options = {}) {
   return preview;
 }
 
+router.get('/department-overview', requireAuth, (req, res) => runAction(res, async () => {
+  const actor = await currentActor(req), repo = await repository();
+  res.json(previewBoundary(await repo.departmentOverview(actor, req.query.before)));
+}));
+
+router.get('/cases/:id/authoring-issues', requireAuth, (req, res) => runAction(res, async () => {
+  const actor = await currentActor(req), repo = await repository();
+  res.json(await repo.authoringIssues(req.params.id, actor, req.query.after));
+}));
+
+router.post('/cases/:id/authoring-issues/:issueId/reply', requireAuth, (req, res) => runAction(res, async () => {
+  const actor = await currentActor(req), repo = await repository();
+  res.json({ ...(await repo.replyAuthoringIssue(req.params.id, req.params.issueId, req.body || {}, actor)), authoring_reply_only: true });
+}));
+
 router.get('/cases', requireAuth, (req, res) => runAction(res, async () => {
   const actor = await currentActor(req);
   assertCanRead(actor);
@@ -371,7 +402,8 @@ router.post('/cases', requireAuth, (req, res) => runAction(res, async () => {
 }));
 
 async function describeCaseForActor(repo, actor, detail) {
-  assertVisible(actor, detail);
+  await assertVisible(actor, detail, repo);
+  const binding = repo.describeAuthoring ? await repo.describeAuthoring(detail.case, actor) : null;
   const departments = await repo.listDepartments();
   const preview = validateAndProjectV7(detail.revision.document, departments, {
     owningDepartmentName: detail.case.owning_department_name
@@ -379,7 +411,7 @@ async function describeCaseForActor(repo, actor, detail) {
   const items = (detail.items || []).map(item => {
     const isOrigin = Number(item.origin_department_id) === Number(actor.departmentId);
     const isCounterparty = Number(item.target_department_id) === Number(actor.departmentId);
-    const canAct = Boolean(actor.canReviewDepartment && !actor.roleCodes.has('admin') &&
+    const canAct = Boolean((isOrigin && binding?.managed ? binding.can_record : actor.canReviewDepartment) && !actor.roleCodes.has('admin') &&
       detail.case.status !== 'closed' && isV7TrialProcessRefAllowed(detail.case.process_ref) && (isOrigin || isCounterparty));
     return {
       ...item,
@@ -392,6 +424,7 @@ async function describeCaseForActor(repo, actor, detail) {
   });
   const formalDetail = {
     ...detail,
+    authoring: binding,
     case: { ...detail.case, blocking_issues: preview.blockingIssues || [] }
   };
   const formalActions = formalAllowedActions(actor, formalDetail);
@@ -404,6 +437,16 @@ async function describeCaseForActor(repo, actor, detail) {
     formal_allowed_actions: formalActions,
     formal_allowed_decisions: formalAllowedDecisions(formalActions, formalDetail)
   };
+  if (binding) result.authoring = binding;
+  if (binding?.managed) {
+    result.allowed_actions = result.allowed_actions.filter(a => a !== 'upload_revision');
+    if (binding.can_record) result.allowed_actions.push('upload_revision');
+    if (binding.transfer_available) result.allowed_actions.push('transfer_authoring');
+    if (binding.can_coordinate) result.allowed_actions.push('coordinate_authoring');
+    if (binding.can_record) result.allowed_actions.push('record_authoring');
+    result.formal_allowed_actions = result.formal_allowed_actions.filter(a => a !== 'submit_formal_draft');
+    if (binding.can_record && formalActions.includes('submit_formal_draft')) result.formal_allowed_actions.push('submit_formal_draft');
+  }
   result.handling_summary = caseHandlingSummary(result);
   if (result.handling_summary.current_promotion) result.allowed_actions = result.allowed_actions.filter(action => action !== 'promote_to_formal_draft');
   return result;
@@ -483,16 +526,17 @@ async function listV7WorkbenchItems(actor) {
     }
     for (const item of detail.items || []) {
       const status = item.my_party === 'origin' ? item.origin_status : item.counterparty_status;
-      if (item.can_act && ['pending', 'pending_evidence'].includes(status)) add('v7_preview_review', item.id, '核对本部门事实', ['governance:review-department'], {
-        target: '#/processGovernance?workspace=v7Preview&v7Case=' + c.id + '&v7Item=' + item.id,
+      if (item.can_act && ['pending', 'pending_evidence'].includes(status)) add('v7_preview_review', item.id, '核对本部门事实', detail.authoring?.can_record && item.my_party === 'origin' ? [] : ['governance:review-department'], {
+        target: detail.authoring?.can_record ? '/app/process-preview?case=' + c.id : '#/processGovernance?workspace=v7Preview&v7Case=' + c.id + '&v7Item=' + item.id,
         reviewItemId: item.id, currentStatus: status, sample: item.behavior_name + '：查看当前修订和原文依据，填写本部门结论；保存后交另一参与部门核对。'
       });
     }
     if (allowed.includes('upload_revision') && detail.handling_summary.return_reasons.length &&
       ((detail.items || []).some(item => item.origin_status === 'needs_changes' || item.counterparty_status === 'needs_changes') ||
        (draft.status === 'needs_changes' && detail.handling_summary.current_promotion))) {
-      const permission = actor.permissions.has('governance:assign-work') ? 'governance:assign-work' : 'governance:draft-department';
-      add('v7_returned', c.id, '按退回原因上传新修订', [permission], {
+      const permissions = detail.authoring?.can_record ? [] : [actor.permissions.has('governance:assign-work') ? 'governance:assign-work' : 'governance:draft-department'];
+      add('v7_returned', c.id, '按退回原因上传新修订', permissions, {
+        ...(detail.authoring?.can_record ? { target: '/app/process-preview?case=' + c.id } : {}),
         sample: detail.handling_summary.return_reasons.map(r => r.department + '：' + r.reason).join('；') +
           '。回3001修改并下载后，上传至案例 ' + c.case_ref + '；受影响部门重新核对。'
       });
@@ -501,7 +545,7 @@ async function listV7WorkbenchItems(actor) {
       ['ZERO_CROSS_DEPARTMENT_SCOPE_PENDING', 'OWNING_DEPARTMENT_CHANGE_PENDING'].includes(issue.code));
     if (allowed.includes('assign_owner') || (allowed.includes('record_scope_decision') && unresolvedScope)) add('v7_scope', c.id, '核对归口与范围依据', ['governance:assign-work']);
     if (allowed.includes('promote_to_formal_draft') && !detail.handling_summary.current_promotion) add('v7_promote', c.id, '将核对完成修订提升为正式草稿', ['governance:assign-work']);
-    if (formalAllowed.includes('submit_formal_draft') && draft.status === 'draft') add('v7_submit', draft.id, '提交当前修订正式审核', ['governance:draft-department', 'governance:submit-department']);
+    if (formalAllowed.includes('submit_formal_draft') && draft.status === 'draft') add('v7_submit', draft.id, '提交当前修订正式审核', detail.authoring?.can_record ? [] : ['governance:draft-department', 'governance:submit-department'], detail.authoring?.can_record ? { target: '/app/process-formal?case=' + c.id } : {});
     if (formalAllowed.includes('review_formal_draft')) add('v7_formal_review', task.id, '办理当前修订正式审核', ['governance:review-department'], { reviewTaskId: task.id });
     if (formalAllowed.includes('publish_formal_draft')) add('v7_publish', draft.id, '核对依据并发布正式版本', ['governance:publish'], { draftId: draft.id });
     else if (draft.status === 'approved' && actor.permissions.has('governance:publish')) add('v7_publish', draft.id, '查看发布缺少的前置条件', ['governance:publish'], { draftId: draft.id });
@@ -527,7 +571,7 @@ router.get('/cases/:id/formal-targets', requireAuth, (req, res) => runAction(res
   }
   const repo = await repository();
   const detail = await repo.getCaseDetail(req.params.id);
-  assertVisible(actor, detail);
+  await assertVisible(actor, detail, repo);
   const documentNo = text(req.query && req.query.document_no);
   if (!documentNo) throw httpError(422, '请输入已有流程主档的制度编号', 'V7_FORMAL_DOCUMENT_NO_REQUIRED');
   const document = await repo.findFormalDocumentByNumber(documentNo);
@@ -576,7 +620,7 @@ router.post('/cases/:id/revisions', requireAuth, (req, res) => runAction(res, as
   const repo = await repository();
   const detail = await repo.getCaseDetail(req.params.id);
   if (!detail) throw httpError(404, 'V7预览核对案例不存在', 'V7_PREVIEW_CASE_NOT_FOUND');
-  assertUploadPermission(actor, detail.case);
+  await assertUploadPermission(actor, detail.case, repo);
   assertV7TrialProcessRef(detail.case.process_ref);
   const departments = await repo.listDepartments();
   const preview = validatedPreview(req.body || {}, departments, {
@@ -603,7 +647,7 @@ router.post('/cases/:id/revisions/preview', requireAuth, (req, res) => runAction
   const repo = await repository();
   const detail = await repo.getCaseDetail(req.params.id);
   if (!detail) throw httpError(404, 'V7预览核对案例不存在', 'V7_PREVIEW_CASE_NOT_FOUND');
-  assertUploadPermission(actor, detail.case);
+  await assertUploadPermission(actor, detail.case, repo);
   const expectedRevision = expectedRevisionNo(req.body || {});
   const expectedHash = expectedContentHash(req.body || {});
   if (Number(expectedRevision) !== Number(detail.case.current_revision_no)) {
@@ -696,7 +740,7 @@ router.post('/cases/:id/promote', requireAuth, (req, res) => runAction(res, asyn
     throw httpError(403, '只有MDM工作组组长可以把核对完成的V7提升为正式草稿', 'V7_FORMAL_SCOPE_DENIED');
   }
   const detail = await repo.getCaseDetail(req.params.id);
-  assertVisible(actor, detail);
+  await assertVisible(actor, detail, repo);
   assertV7TrialProcessRef(detail.case.process_ref);
   const expectedRevision = expectedRevisionNo(req.body || {});
   const expectedHash = expectedContentHash(req.body || {});
@@ -731,9 +775,6 @@ router.post('/cases/:id/promote', requireAuth, (req, res) => runAction(res, asyn
 router.post('/items/:id/decision', requireAuth, (req, res) => runAction(res, async () => {
   const actor = await currentActor(req);
   assertAdminCannotWrite(actor);
-  if (!actor.canReviewDepartment) {
-    throw httpError(403, '只有部门MDM审核员可以记录本部门核对结果', 'V7_PREVIEW_SCOPE_DENIED');
-  }
   const decision = text(req.body && req.body.decision);
   if (!DECISIONS.has(decision)) {
     throw httpError(422, '核对结果必须从系统选项中选择', 'V7_PREVIEW_DECISION_INVALID');
@@ -749,6 +790,10 @@ router.post('/items/:id/decision', requireAuth, (req, res) => runAction(res, asy
   if (Number(item.origin_department_id) === Number(actor.departmentId)) party = 'origin';
   else if (Number(item.target_department_id) === Number(actor.departmentId)) party = 'counterparty';
   if (!party) throw httpError(403, '当前审核员所在部门不是该核对项的参与部门', 'V7_PREVIEW_SCOPE_DENIED');
+  const binding = repo.describeAuthoring ? await repo.describeAuthoring(caseRow, actor) : null;
+  if (party === 'origin' && binding?.managed ? !binding.can_record : !actor.canReviewDepartment) {
+    throw httpError(403, '当前人员无权记录该参与方的核对结果', 'V7_PREVIEW_SCOPE_DENIED');
+  }
   const result = await repo.decideItem(
     item,
     party,
@@ -759,6 +804,19 @@ router.post('/items/:id/decision', requireAuth, (req, res) => runAction(res, asy
     actor
   );
   res.json(previewBoundary({ item: { ...result, allowed_actions: ['record_department_decision'] } }));
+}));
+
+router.get('/cases/:id/authoring-candidates', requireAuth, (req, res) => runAction(res, async () => {
+  const actor = await currentActor(req), repo = await repository();
+  const detail = await repo.getCaseDetail(req.params.id);
+  await assertVisible(actor, detail, repo);
+  res.json(await repo.authoringCandidates(detail.case, actor));
+}));
+router.post('/cases/:id/authoring-records', requireAuth, (req, res) => runAction(res, async () => {
+  const actor = await currentActor(req); assertAdminCannotWrite(actor);
+  const repo = await repository(), detail = await repo.getCaseDetail(req.params.id);
+  await assertVisible(actor, detail, repo);
+  res.json(previewBoundary(await repo.recordAuthoring(detail.case.id, req.body || {}, actor)));
 }));
 
 router.setProcessV7PreviewRepositoryFactory = setProcessV7PreviewRepositoryFactory;

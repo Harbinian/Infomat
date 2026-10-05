@@ -4,6 +4,7 @@ const express = require('express');
 
 const mysql = require('mysql2/promise');
 const router = express.Router();
+const authoring = require('../processV7Authoring');
 const { requireAuth, requirePermission, getUserEffectivePermissionsAsync, getUserRoleCodesAsync, getDepartmentByIdAsync } = require('../auth');
 const { mysqlConfigFromEnv } = require('../mysqlConfig');
 
@@ -666,6 +667,11 @@ function makeProcessDesignMysqlRepository(pool) {
       });
     }
 
+    if (operation === 'submit' && await authoring.assertCompiler(pool, context.previewCase, { personId, accountId, authVersion }, { start: true })) {
+      if (assignments.some(g => g.perm_code === 'governance:submit-department' && g.effect === 'deny')) throw httpError(403, '当前身份禁止提交治理材料', { code: 'V7_FORMAL_ACTOR_SCOPE_DENIED' });
+      return { personId, accountId, authVersion, departmentId: Number(account.current_department_id) };
+    }
+
     const requirements = {
       submit: { role: 'department_contact', permissions: ['governance:draft-department', 'governance:submit-department'], departmentScoped: true },
       review: { role: 'department_mdm_reviewer', permissions: ['governance:review-department'], departmentScoped: true },
@@ -853,6 +859,15 @@ function makeProcessDesignMysqlRepository(pool) {
   }
 
   return {
+    async authoringAccess(draftId, actor) {
+      const [caseRow] = await mysqlQuery(pool, `SELECT c.* FROM process_v7_promotions p
+        JOIN process_v7_preview_cases c ON c.id=p.preview_case_id WHERE p.draft_id=? ORDER BY p.id DESC LIMIT 1`, [draftId]);
+      if (!caseRow) return null;
+      const binding = await authoring.state(pool, caseRow.id);
+      if (!binding) return null;
+      const current = await authoring.activeActor(pool, actor);
+      return { managed: true, compiler: authoring.isCompiler(current, caseRow, binding) };
+    },
 getDraft,
 getDocumentById,
 async searchVersions({ query, beforeId, globalRead, departmentId }) {
@@ -1323,6 +1338,7 @@ function draftRequiredErrors(body) {
 
 async function assertCanViewDraft(req, repo, draft) {
   if (!draft) throw httpError(404, '制度结构草稿不存在');
+  if (repo.authoringAccess && (await repo.authoringAccess(draft.id, authoringActor(req)))?.compiler) return;
   if (await canViewAcrossDepartments(req)) return;
   const deptIds = await authorizedDepartmentIds(req);
   if (deptIds.has(Number(draft.department_id)) && await hasCurrentPermission(req, 'governance:read-department')) return;
@@ -1333,6 +1349,13 @@ async function assertCanEditDraft(req, repo, draft) {
   await assertCanViewDraft(req, repo, draft);
   assertAdminCannotWrite(await currentRoleCodes(req));
   if (draft.status === 'published') throw httpError(409, '已发布流程不能直接修改草稿');
+  if (repo.authoringAccess) {
+    const access = await repo.authoringAccess(draft.id, authoringActor(req));
+    if (access?.managed) {
+      if (authoring.enabled() && access.compiler) return;
+      throw httpError(403, '该流程只能由当前编制者提交', { code: 'V7_AUTHORING_COMPILER_REQUIRED', error: '该流程只能由当前编制者提交' });
+    }
+  }
   const deptIds = await authorizedDepartmentIds(req);
   if (
     deptIds.has(Number(draft.department_id)) &&
@@ -1370,6 +1393,10 @@ async function currentRoleCodes(req) {
   return new Set(arrayItems(rows).map(item => text(item && (item.code || item.role_code))).filter(Boolean));
 }
 
+function authoringActor(req) {
+  return { personId: Number(req.session.personId || 0), accountId: Number(req.session.accountId || 0), authVersion: Number(req.session.authVersion || 0) };
+}
+
 async function currentDepartmentIdentity(req) {
   const department = req.session.departmentId
     ? await getDepartmentByIdAsync(Number(req.session.departmentId))
@@ -1400,7 +1427,8 @@ async function readableProcessVersion(req) {
   const repo = await repository();
   const version = await repo.getVersionContent(req.params.processVersionId);
   if (!version) throw httpError(404, '正式流程版本不存在', { error: '正式流程版本不存在', code: 'PROCESS_VERSION_NOT_FOUND' });
-  if (!await canViewAcrossDepartments(req)) {
+  const assignedCompiler = repo.authoringAccess && (await repo.authoringAccess(version.draft_id, authoringActor(req)))?.compiler;
+  if (!assignedCompiler && !await canViewAcrossDepartments(req)) {
     const departmentIds = await authorizedDepartmentIds(req);
     if (!departmentIds.has(Number(version.department_id)) || !await hasCurrentPermission(req, 'governance:read-department')) {
       throw httpError(403, '无权查看该正式流程版本', { error: '无权查看该正式流程版本', code: 'PROCESS_VERSION_SCOPE_DENIED' });
@@ -1517,7 +1545,7 @@ router.get('/drafts/:id', requireAuth, (req, res) => runAction(res, async () => 
   res.json(await repo.detail(draft.id));
 }));
 
-router.post('/drafts/:id/submit', requireAuth, requirePermission('governance:submit-department'), (req, res) => runAction(res, async () => {
+router.post('/drafts/:id/submit', requireAuth, (req, res) => runAction(res, async () => {
   const repo = await repository();
   const draft = await repo.getDraft(req.params.id);
   await assertCanViewDraft(req, repo, draft);

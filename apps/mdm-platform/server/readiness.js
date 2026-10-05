@@ -17,6 +17,7 @@ function probesFromSql(sql) {
 function requiredProbes(env) {
   const domains = ['identity', 'processGovernance', 'inputBaseline', 'issuePool', 'guidance', 'dataMap', 'mapping', 'conflict', 'todo', 'terminology', 'audit'];
   const probes = domains.flatMap(runtimeSchemaProbes);
+  if (env.MDM_SYSTEM_ADMIN_ENABLED === '1') probes.push(...probesFromSql(require('./systemAdminMigration').SCHEMA_SQL).map(p => p.sql));
   probes.push(...probesFromSql(mdmMysqlSchemaSql()).filter(p => p.table.startsWith('process_design_') && !p.table.includes('migration_backups')).map(p => p.sql));
   if (env.PROCESS_V7_PREVIEW_ENABLED === '1' || env.PROCESS_V7_FORMAL_ENABLED === '1') {
     probes.push(...probesFromSql(require('./processV7PreviewReviewMigration').PROCESS_V7_PREVIEW_SCHEMA_SQL).map(p => p.sql));
@@ -25,6 +26,7 @@ function requiredProbes(env) {
     probes.push(...probesFromSql(require('./processV7FormalMigration').PROCESS_V7_FORMAL_SCHEMA_SQL).map(p => p.sql));
     probes.push('SELECT process_ref FROM process_design_documents LIMIT 0', 'SELECT draft_revision_no, content_hash FROM process_design_review_tasks LIMIT 0');
   }
+  if (env.PROCESS_V7_AUTHORING_ENABLED === '1') probes.push(...probesFromSql(require('./processV7AuthoringMigration').SCHEMA_SQL).map(p => p.sql));
   if (env.PROCESS_DATA_GOVERNANCE_ENABLED === '1') {
     probes.push(...probesFromSql(require('./processDataGovernanceMigration').PROCESS_DATA_GOVERNANCE_SCHEMA_SQL).map(p => p.sql));
   }
@@ -47,6 +49,7 @@ function createReadiness({ env = process.env, version, pool, now = Date.now } = 
     try {
       assertRuntimeConfig(env);
       sessionConfig(env);
+      if (env.PROCESS_V7_AUTHORING_ENABLED === '1' && env.PROCESS_V7_PREVIEW_ENABLED !== '1') throw new Error('AUTHORING_REQUIRES_PREVIEW');
       if (env.PROCESS_V7_PREVIEW_ENABLED === '1' || env.PROCESS_V7_FORMAL_ENABLED === '1') require('./processV7TrialScope').assertV7TrialScopeConfigured({ env });
       if (env.PROCESS_DATA_GOVERNANCE_ENABLED === '1') require('./processDataGovernanceScope').assertProcessVersionScopeConfigured(env);
       if (legacyTestMode(env) || env.MDM_SESSION_STORE === 'memory') return body(false, 'ISOLATED_TEST_MODE');
@@ -61,8 +64,10 @@ function createReadiness({ env = process.env, version, pool, now = Date.now } = 
           const sessions = await inspectSessionSchema(connection);
           if (sessions.state !== 'applied') throw new Error('SESSION_SCHEMA_UNAVAILABLE');
           for (const [enabled, modulePath] of [
+            [env.MDM_SYSTEM_ADMIN_ENABLED === '1', './systemAdminMigration'],
             [env.PROCESS_V7_PREVIEW_ENABLED === '1' || env.PROCESS_V7_FORMAL_ENABLED === '1', './processV7PreviewReviewMigration'],
             [env.PROCESS_V7_FORMAL_ENABLED === '1', './processV7FormalMigration'],
+            [env.PROCESS_V7_AUTHORING_ENABLED === '1', './processV7AuthoringMigration'],
             [env.PROCESS_DATA_GOVERNANCE_ENABLED === '1', './processDataGovernanceMigration']
           ]) if (enabled) {
             const [rows] = await connection.execute('SELECT migration_key FROM schema_migrations WHERE migration_key=?', [require(modulePath).MIGRATION_KEY]);

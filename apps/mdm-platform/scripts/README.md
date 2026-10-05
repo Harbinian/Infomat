@@ -582,3 +582,21 @@ test:historical-review使用freshMysql创建自有标签、tmpfs和随机回环�
 `npm.cmd run test:issue-pool-list-scope -- --output <新目录>`使用自有隔离MySQL和真实HTTP身份，验证队列/列表的正常读取以及当前部门缺失后的403；不读取私有配置。替身回归使用`node -r ./scripts/testHelpers/blockRealMysql.js scripts/test-process-governance-issue-pool-mysql-permission-api.js`，验证缺部门、未知部门、空白名称、无权限、缓存名称、正常部门和全局读取，拒绝时不得调用列表仓储。
 
 两项集成脚本只创建带唯一归属标签的tmpfs MySQL、随机回环HTTP和必要的合成身份；浏览器只用Edge100%、1699×828，不执行窄屏。结束关闭本轮自有资源。故障注入、部分结果、恢复快照及控制台预期错误分别保留，不连接正式库、发通知或调用真实模型。迁移测试使用同一专用连接取得/释放会话锁。P24试用和候选包说明位于原批次evidence/p24。
+
+## P25 流程编制归属维护与验证
+
+`npm.cmd run manage:process-v7-authoring -- --inspect|--dry-run|--apply --target host:port/database`（三种模式每次只选一个）要求安全注入全部MySQL连接变量，并逐字核对目标。inspect/dry-run只读；apply在同一连接的命名锁内新增两张编制归属/记录表并最后登记迁移标记，不回填旧案例、JSON、角色或人员。未知漂移拒绝，未登记的部分DDL可核对后续建。正式apply需另有准确目标、停写、备份恢复及迁移授权；不读取私有配置、不启动平台、不发通知。回退保留新增表，已分派案例须继续强制原流程级授权，不能运行忽略归属的旧版本或删除历史来回滚。
+
+`npm.cmd run test:process-v7-authoring -- --output <本仓artifacts下不存在的目录>` 要求本机已有mysql:8.4镜像、Docker与Edge。先构建前端。脚本复用freshMysql及stage05合成身份，仅创建自有标签/tmpfs MySQL、随机回环HTTP和Edge100%、1699×828桌面，显式authoring选项不改变旧stage05默认测试。覆盖显式迁移/重复/漂移/部分结构续建、候选人员与越权、转办幂等、失败事务、保存转办并发、原生修订/事实核对/正式提交、审核发布拒绝、来源不变、旧案例无推断、部门全貌分页、身份变化、内存备份恢复及浏览器未提交输入/401/403/409/503/丢响应结果核对。输出results.json、失败failure.json、桌面PNG和合成服务日志。成功或失败均关闭本轮自有资源；不连接正式库、操作3001/5173/63805、发送模型材料或改变实际账号。
+
+`npm.cmd run test:process-v7-authoring-issues -- --output <本仓artifacts下不存在的目录>` 先构建前端，复用同一隔离设施，全部为合成数据。测试固定V7案例到人工确认问题、手动办公室交办及编制者答复的HTTP衔接，包括缺迁移拒绝、无全局角色的案例级读取、原主对接人/管理员/他人不得代答、故障事务、并发同键重试、案例锁下答复/转办竞争、问题与任务修订冲突、固定来源篡改和跨案例隐藏、既有成员分配及任务办结/独立复核边界、内存备份恢复、Edge桌面输入及丢响应核对。结果写results.json、失败写failure.json，并保存桌面PNG和合成服务日志。测试只使用自有临时容器/HTTP/Edge，不读私有配置、不操作正式库、模型或外部通知；成功与失败均按归属清理。此测试不自动开通实际人员、加入办公室或放行部署。
+
+## P25 独立系统维护身份（2026-09-30，本地实现，正式未开启）
+
+用户确认admin不关联真实员工或部门，由本人使用独立admin维护登录和另一个mdm_lead治理登录。普通人员继续person→user_accounts→person_roles、一人一账号；旧人员admin及历史审计保留。新增system_admin_accounts/system_admin_events，不改写旧身份表，不新增固定角色或权限。MDM_SYSTEM_ADMIN_ENABLED默认关闭；打开时readiness检查增量表及迁移标记，应用启动不执行DDL。
+
+显式入口：manage:system-admin使用--inspect/--dry-run/--apply及准确--target <host>:<port>/<database>，默认只检查；bootstrap:system-admin要求--apply、同一准确target、受控环境注入MDM_SYSTEM_ADMIN_PASSWORD（至少12字符）及MDM_SYSTEM_ADMIN_AUTHORIZATION_BASIS，不加载私有环境文件、不打印密码。先维护结构，再在已迁移目标显式初始化唯一admin。bootstrap不执行DDL、不创建person、不重复初始化或复制旧密码；已有人员登录名admin时拒绝冲突。
+
+系统维护权限取既有固定admin角色当前有效权限，并限制在其原权限集合。账号维护操作在原事务中重查系统账号状态/auth_version，原人员审计保留且同事务追加系统账号操作者关联。首次改密、CSRF、旧会话撤销及治理写入拒绝仍强制执行；系统账号编号不能冒充person_id。首次登录改密仍使用原入口；新前端登录后从统一/app/进入账号与授权办理，身份页明确不关联员工/部门。
+
+新增验证test:system-admin -- --output <新的ignored证据目录>，只运行自有tmpfs MySQL、随机回环HTTP、合成身份及Edge100%/1699×828桌面；备份仅在内存，按归属清理容器/进程。正式启用、实际开户、凭据交付和业务验收须有当次放行；本地通过不代表已开启。回退时保留新表及审计、停止系统维护写入，并撤销系统会话；旧人员链仍兼容，不能删表或伪造员工来回退。

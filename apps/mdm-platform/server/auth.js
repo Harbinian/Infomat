@@ -44,13 +44,14 @@ function verifyPasswordAsync(password, hash) {
 }
 
 function requireAuth(req, res, next) {
-  if (!req.session || (!req.session.personId && !req.session.userId)) {
+  const systemIdentity = req.session && req.session.identityKind === 'system_admin' && require('./systemAdminIdentity').enabled();
+  if (!req.session || (!req.session.personId && !req.session.userId && !systemIdentity)) {
     return res.status(401).json({ error: '未登录' });
   }
   if (!useMysqlIdentityReadModel() || (require('./runtimeBoundary').legacyTestMode() && (!req.session.accountId || !req.session.authVersion))) {
     return next();
   }
-  if (!req.session.personId || !Number.isSafeInteger(Number(req.session.accountId)) || Number(req.session.accountId) < 1 ||
+  if ((!req.session.personId && !systemIdentity) || (systemIdentity && req.session.personId) || !Number.isSafeInteger(Number(req.session.accountId)) || Number(req.session.accountId) < 1 ||
       !Number.isSafeInteger(Number(req.session.authVersion)) || Number(req.session.authVersion) < 1) {
     return req.session.destroy(() => res.status(401).json({ error: '登录信息已失效，请重新登录', code: 'SESSION_IDENTITY_INVALID' }));
   }
@@ -319,7 +320,7 @@ async function getDepartmentByIdAsync(departmentId) {
 function attachRequestIdentityCompatibility(req, user = {}) {
   if (!req.session) return;
   const compatibilityValues = {
-    userId: user.personId || user.person_id || null,
+    userId: user.identityKind === 'system_admin' ? user.identityRef : user.personId || user.person_id || null,
     userName: user.personName || user.person_name || user.name || '',
     departmentId: user.current_department_id || user.department_id || null
   };
@@ -412,7 +413,7 @@ function requireAnyPermission(...permCodes) {
         return res.status(401).json({ error: '未登录' });
       }
       const check = useMysqlIdentityReadModel()
-        ? getUserEffectivePermissionsAsync(req.session.personId)
+        ? getUserEffectivePermissionsAsync(req.session.personId || req.session.userId)
         : Promise.resolve(getUserEffectivePermissions(req.session.userId));
       return check
         .then(({ permSet, fieldConstraints }) => {
