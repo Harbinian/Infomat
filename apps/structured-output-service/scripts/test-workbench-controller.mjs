@@ -99,6 +99,16 @@ await test('discard then failed import leaves original visible session intact',a
   const {controller:c}=await make();await c.dispatch({type:'select',target:objectTarget});await c.dispatch('edit');await c.dispatch({type:'update',field:'timing',value:'原输入'});await c.dispatch({type:'viewport',view:'flow',viewport:{zoom:2,pan:{x:40,y:50}}});const before=c.getSnapshot();await c.dispatch({type:'import',text:'invalid'});assert.equal((await c.dispatch({type:'resolve-guard',choice:'discard'})).ok,false);
   assert.equal(c.getSnapshot().pending,true);assert.equal(c.getSnapshot().selection.ref,before.selection.ref);assert.equal(c.getSnapshot().session.values.timing,'原输入');assert.deepEqual(c.getSnapshot().viewport,before.viewport);c.destroy();
 });
+await test('passive viewport feedback preserves failed import diagnostics and pending inputs',async()=>{
+  const {controller:c}=await make();await c.dispatch({type:'select',target:objectTarget});await c.dispatch('edit');await c.dispatch({type:'update',field:'timing',value:'保留输入'});
+  await c.dispatch({type:'import',text:'invalid'});assert.equal((await c.dispatch({type:'resolve-guard',choice:'discard'})).ok,false);
+  const failed=c.getSnapshot();assert.match(failed.error,/文件不是有效 JSON/);
+  for(const view of ['flow','relations']) {
+    await c.dispatch({type:'viewport',view,viewport:{zoom:0.4,pan:{x:24,y:36},width:1200,height:500}});
+    const after=c.getSnapshot();assert.equal(after.error,failed.error);assert.equal(after.pending,true);assert.strictEqual(after.document,failed.document);assert.equal(after.candidateKey,failed.candidateKey);assert.deepEqual(after.selection,failed.selection);assert.equal(after.session.values.timing,'保留输入');assert.deepEqual(after.history,failed.history);
+  }
+  c.destroy();
+});
 await test('discard then cancel second dirty guard restores all original inputs',async()=>{
   const {controller:c}=await make();await c.dispatch({type:'select',target:objectTarget});await c.dispatch('edit');await c.dispatch({type:'update',field:'timing',value:'已应用'});await c.dispatch('apply');await c.dispatch({type:'update',field:'timing',value:'未应用'});await c.dispatch({type:'new'});await c.dispatch({type:'resolve-guard',choice:'discard'});assert.equal(c.getSnapshot().guard.reason,'dirty');await c.dispatch({type:'resolve-guard',choice:'continue'});assert.equal(c.getSnapshot().session.values.timing,'未应用');assert.equal(c.getSnapshot().document.behaviors[0].timing,'已应用');assert.equal(c.getSnapshot().pending,true);c.destroy();
 });

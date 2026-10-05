@@ -1,11 +1,11 @@
 # Opens only an explicit local candidate; writes synthetic fixture, screenshots and downloaded JSON evidence.
-param([Parameter(Mandatory=$true)][string]$BaseUrl,[switch]$Headed)
+param([Parameter(Mandatory=$true)][string]$BaseUrl,[string]$OutputDir,[switch]$Headed)
 $ErrorActionPreference='Stop'
 $candidateUri=[Uri]$BaseUrl
 if ($candidateUri.Scheme -ne 'http' -or $candidateUri.Host -notin @('127.0.0.1','localhost','::1') -or $candidateUri.Port -in @(80,3000,3001) -or $candidateUri.AbsolutePath -ne '/' -or $candidateUri.Query -or $candidateUri.UserInfo) { throw 'An explicit loopback candidate origin is required; ports 3000 and 3001 are forbidden.' }
 $appRoot=Split-Path -Parent $PSScriptRoot
 $repoRoot=Split-Path -Parent (Split-Path -Parent $appRoot)
-$evidenceRoot=Join-Path $repoRoot 'output/playwright/workbench-ui'
+$evidenceRoot=if ($OutputDir) { [System.IO.Path]::GetFullPath($OutputDir) } else { Join-Path $repoRoot 'output/playwright/workbench-ui' }
 New-Item -ItemType Directory -Path $evidenceRoot -Force | Out-Null
 $fixturePath=Join-Path $repoRoot 'artifacts/3001-frontend-redesign-20261005/workbench-graph-fixture.json'
 & node.exe (Join-Path $PSScriptRoot 'workbench-graph-fixture.js') $fixturePath
