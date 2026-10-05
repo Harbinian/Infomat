@@ -10,8 +10,11 @@ const router = express.Router();
 let repositoryPromise = null;
 let repositoryFactory = null;
 
-async function repository() {
-  if (repositoryFactory) return await repositoryFactory();
+async function repository(req) {
+  if (repositoryFactory) {
+    const repo = await repositoryFactory();
+    return req && req.identity && req.identity.identityKind === 'system_admin' ? repo.forSystemAdmin(req.identity) : repo;
+  }
   if (!repositoryPromise) {
     repositoryPromise = (async () => {
       const pool = mysql.createPool(mysqlConfigFromEnv());
@@ -19,7 +22,8 @@ async function repository() {
     })();
   }
   try {
-    return await repositoryPromise;
+    const repo = await repositoryPromise;
+    return req && req.identity && req.identity.identityKind === 'system_admin' ? repo.forSystemAdmin(req.identity) : repo;
   } catch (error) {
     repositoryPromise = null;
     throw error;
@@ -43,7 +47,7 @@ function handleError(res, error) {
     const code = message.includes('login') ? 'LOGIN_NAME_EXISTS' : 'ACCOUNT_EXISTS';
     return res.status(409).json({ error: '登录名、工号或账号已存在', code });
   }
-  console.error(error);
+  console.error('IDENTITY_ACCESS_SERVICE_UNAVAILABLE');
   return res.status(503).json({
     error: '账号与授权服务暂不可用',
     code: 'IDENTITY_ACCESS_SERVICE_UNAVAILABLE'
@@ -62,12 +66,12 @@ const canAssignRole = [requireAuth, requirePermission('identity:assign-role')];
 const canReadAudit = [requireAuth, requirePermission('identity:read-audit')];
 
 router.get('/', ...canReadIdentity, (req, res) => run(res, async () => {
-  const repo = await repository();
+  const repo = await repository(req);
   res.json(await repo.listAccounts());
 }));
 
 router.get('/audit-events', ...canReadAudit, (req, res) => run(res, async () => {
-  const repo = await repository();
+  const repo = await repository(req);
   res.json(await repo.listAccessEvents({
     personId: req.query.personId ? Number(req.query.personId) : null,
     eventType: req.query.eventType || null,
@@ -76,14 +80,14 @@ router.get('/audit-events', ...canReadAudit, (req, res) => run(res, async () => 
 }));
 
 router.get('/:personId', ...canReadIdentity, (req, res) => run(res, async () => {
-  const repo = await repository();
+  const repo = await repository(req);
   const account = await repo.getAccount(Number(req.params.personId));
   if (!account) return res.status(404).json({ error: '账号不存在', code: 'ACCOUNT_NOT_FOUND' });
   res.json(account);
 }));
 
 router.post('/', ...canManageAccount, requirePermission('identity:assign-role'), (req, res) => run(res, async () => {
-  const repo = await repository();
+  const repo = await repository(req);
   const body = req.body || {};
   const pendingCredential = crypto.randomBytes(48).toString('base64url');
   const account = await repo.createAccount({
@@ -100,7 +104,7 @@ router.post('/', ...canManageAccount, requirePermission('identity:assign-role'),
 }));
 
 router.patch('/:personId', ...canManageAccount, (req, res) => run(res, async () => {
-  const repo = await repository();
+  const repo = await repository(req);
   const body = req.body || {};
   const account = await repo.updateAccount(Number(req.params.personId), {
     name: body.name,
@@ -115,7 +119,7 @@ router.patch('/:personId', ...canManageAccount, (req, res) => run(res, async () 
 }));
 
 router.post('/:personId/role-assignments', ...canAssignRole, (req, res) => run(res, async () => {
-  const repo = await repository();
+  const repo = await repository(req);
   const body = req.body || {};
   const assignment = await repo.grantRole(Number(req.params.personId), {
     roleCode: body.roleCode,
@@ -132,7 +136,7 @@ router.post(
   '/:personId/role-assignments/:assignmentId/revoke',
   ...canAssignRole,
   (req, res) => run(res, async () => {
-    const repo = await repository();
+    const repo = await repository(req);
     const body = req.body || {};
     res.json(await repo.revokeRole(
       Number(req.params.personId),
@@ -148,7 +152,7 @@ router.post(
 
 router.post('/:personId/activate', ...canManageAccount, (req, res) => run(res, async () => {
   const initialPassword = generateInitialPassword();
-  const repo = await repository();
+  const repo = await repository(req);
   const body = req.body || {};
   const account = await repo.activateAccount(Number(req.params.personId), {
     passwordHash: hashPassword(initialPassword),
@@ -159,7 +163,7 @@ router.post('/:personId/activate', ...canManageAccount, (req, res) => run(res, a
 }));
 
 router.post('/:personId/enable', ...canManageAccount, (req, res) => run(res, async () => {
-  const repo = await repository();
+  const repo = await repository(req);
   const body = req.body || {};
   res.json(await repo.enableAccount(Number(req.params.personId), {
     reason: body.reason,
@@ -168,7 +172,7 @@ router.post('/:personId/enable', ...canManageAccount, (req, res) => run(res, asy
 }));
 
 router.post('/:personId/disable', ...canManageAccount, (req, res) => run(res, async () => {
-  const repo = await repository();
+  const repo = await repository(req);
   const body = req.body || {};
   res.json(await repo.disableAccount(Number(req.params.personId), {
     reason: body.reason,
@@ -178,7 +182,7 @@ router.post('/:personId/disable', ...canManageAccount, (req, res) => run(res, as
 
 router.post('/:personId/reset-password', ...canManageAccount, (req, res) => run(res, async () => {
   const initialPassword = generateInitialPassword();
-  const repo = await repository();
+  const repo = await repository(req);
   const body = req.body || {};
   const account = await repo.resetPassword(Number(req.params.personId), {
     passwordHash: hashPassword(initialPassword),

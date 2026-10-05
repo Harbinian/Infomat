@@ -200,7 +200,7 @@ async function withTransaction(pool, work) {
 }
 
 async function writeAccessEvent(executor, payload = {}) {
-  await executor.execute(`
+  const [result] = await executor.execute(`
     INSERT INTO identity_access_events (
       event_type, actor_person_id, target_person_id, account_id,
       person_role_id, reason, payload_json, migration_batch_id
@@ -216,6 +216,9 @@ async function writeAccessEvent(executor, payload = {}) {
     payload.details ? JSON.stringify(payload.details) : null,
     payload.migrationBatchId || null
   ]);
+  const systemAdmin = require('./systemAdminIdentity');
+  const actor = executor[systemAdmin.ACTOR];
+  if (actor) await systemAdmin.event(executor, actor.accountId, payload.eventType, result.insertId, payload.targetPersonId || null);
 }
 
 async function getActiveDepartment(executor, departmentId) {
@@ -381,6 +384,9 @@ async function grantRoleAssignment(executor, personId, assignment, actorPersonId
 
 function makeGovernanceAccessMysqlRepository(pool) {
   return {
+    forSystemAdmin(actor) {
+      return makeGovernanceAccessMysqlRepository(require('./systemAdminIdentity').maintenancePool(pool, actor));
+    },
     async listAccounts() {
       const accounts = await rows(pool, `
         SELECT p.person_id, p.employee_no, p.person_name, p.current_department_id,
@@ -408,6 +414,9 @@ function makeGovernanceAccessMysqlRepository(pool) {
 
     async createAccount(payload = {}) {
       const loginName = text(payload.loginName);
+      if (loginName.toLowerCase() === 'admin' && require('./systemAdminIdentity').enabled()) {
+        throw domainError(409, 'SYSTEM_ADMIN_LOGIN_RESERVED', 'admin是独立系统维护登录名，不可用作人员账号');
+      }
       const employeeNo = text(payload.employeeNo);
       const name = text(payload.name);
       const departmentId = Number(payload.departmentId || 0);
@@ -822,6 +831,7 @@ function makeGovernanceAccessMysqlRepository(pool) {
     },
 
     async listAccessEvents(filters = {}) {
+      const systemEnabled = require('./systemAdminIdentity').enabled();
       const params = [];
       const clauses = [];
       if (filters.personId) {
@@ -835,12 +845,15 @@ function makeGovernanceAccessMysqlRepository(pool) {
       const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
       const limit = Math.min(Math.max(Number(filters.limit || 100), 1), 500);
       return await rows(pool, `
-        SELECT e.event_id, e.event_type, e.actor_person_id, actor.person_name AS actor_name,
+        SELECT e.event_id, e.event_type, e.actor_person_id,
+               ${systemEnabled ? "COALESCE(actor.person_name,sa.login_name)" : 'actor.person_name'} AS actor_name,
+               ${systemEnabled ? 'se.actor_account_id' : 'NULL'} AS actor_system_account_id,
                e.target_person_id, target.person_name AS target_name,
                e.account_id, e.person_role_id, e.reason, e.payload_json,
                e.migration_batch_id, e.created_at
         FROM identity_access_events e
         LEFT JOIN person actor ON actor.person_id=e.actor_person_id
+        ${systemEnabled ? 'LEFT JOIN system_admin_events se ON se.identity_event_id=e.event_id LEFT JOIN system_admin_accounts sa ON sa.account_id=se.actor_account_id' : ''}
         LEFT JOIN person target ON target.person_id=e.target_person_id
         ${where}
         ORDER BY e.created_at DESC, e.event_id DESC

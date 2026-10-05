@@ -14,7 +14,7 @@
 - 不得随意更改已有接口路径、请求字段或响应结构。确需调整时，必须说明影响范围。
 - 不得把临时调试代码、临时账号、临时密码或本地数据提交为正式代码。
 - 涉及 RBAC 时，优先使用 `server/auth.js` 中已有的 `requireAuth`、`requirePermission`、`requireAnyPermission`、`applyFieldConstraints` 和 `server/access.js` 的范围校验能力，不得在路由中按角色名称放行，也不得为管理员增加业务写入旁路。
-- 正式身份链路固定为 `person -> user_accounts -> person_roles`。`users/user_roles`、`users.role`、`requireRole` 和 SQLite 人员接口只允许保留为隔离测试或明确的只读兼容，不得参与正式运行授权。
+- 人员走`person -> user_accounts -> person_roles`，一人一账号；独立admin无人员关联、治理只读且默认关，见README；旧账号保留。`users/user_roles`、`users.role`、`requireRole`及SQLite不得正式授权。
 - 固定治理模型版本`rbac-raci-v3-2026-07-31`、七个MDM工作角色、十九项权限、角色可见标签和RACI由 `server/roleDefinitions.js` 维护，并由测试固化。管理页面只能读取，不得新增自定义角色、角色继承、通配权限、权限矩阵或角色可见标签编辑。
 - `admin` 只负责账号、角色授权和访问审计，并对治理材料全局只读；任何业务路由都不得因用户拥有 `admin` 角色而绕过审核、责任证据、数据范围或对象状态。
 - 部门角色只能授权到人员所属部门。部门最终负责人只从 `departments.final_responsible_person_id` 读取，不得按姓名、岗位、职务或历史常量推测。

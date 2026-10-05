@@ -24,6 +24,11 @@ function normalizedQuery(sql) {
     .replace(/, UNIX_TIMESTAMP\([a-z_.]+\) AS [a-z_]+_epoch/g, '');
 }
 
+function legacyAuthoringTableAbsent(sql) {
+  // These pre-authoring fixtures explicitly model an unmigrated schema.
+  if (/FROM process_v7_authoring a\b/.test(sql)) throw Object.assign(new Error('synthetic legacy table absent'), { code: 'ER_NO_SUCH_TABLE' });
+}
+
 function sampleDocument() {
   const document = structuredOutputService.createEmptyProcessGovernanceV7Document();
   document.export_meta.package_ref = 'package_v7_preview_test';
@@ -324,6 +329,7 @@ async function main() {
     async rollback() {},
     release() {},
     async execute(sql, params = []) {
+      legacyAuthoringTableAbsent(sql);
       const normalized = normalizedQuery(sql);
       ownerWriteQueries.push(normalized);
       if (normalized === 'SELECT * FROM process_v7_preview_cases WHERE id=? FOR UPDATE') {
@@ -462,6 +468,7 @@ async function main() {
     async rollback() {},
     release() {},
     async execute(sql, params = []) {
+      legacyAuthoringTableAbsent(sql);
       const normalized = normalizedQuery(sql);
       scopeWriteQueries.push(normalized);
       if (normalized === 'SELECT * FROM process_v7_preview_cases WHERE id=? FOR UPDATE') {
@@ -591,6 +598,7 @@ async function main() {
     async rollback() {},
     release() {},
     async execute(sql) {
+      legacyAuthoringTableAbsent(sql);
       const normalized = normalizedQuery(sql);
       if (normalized === 'SELECT * FROM process_v7_preview_cases WHERE id=? FOR UPDATE') {
         return [[{
@@ -669,6 +677,7 @@ async function main() {
     async rollback() {},
     release() {},
     async execute(sql, params = []) {
+      legacyAuthoringTableAbsent(sql);
       const normalized = normalizedQuery(sql);
       lockedRevisionQueries.push(normalized);
       if (normalized === 'SELECT * FROM process_v7_preview_cases WHERE id=? FOR UPDATE') {
@@ -818,6 +827,7 @@ async function main() {
     async rollback() {},
     release() {},
     async execute(sql, params = []) {
+      legacyAuthoringTableAbsent(sql);
       const normalized = normalizedQuery(sql);
       decisionQueries.push(normalized);
       if (normalized === 'SELECT * FROM process_v7_preview_cases WHERE id=? FOR UPDATE') {

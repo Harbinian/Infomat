@@ -49,11 +49,11 @@
 - 同一数据对象与同一行为不要重复登记相同操作。记录 `use` 不代表创建、取得授权、改变状态或更新全部字段。
 - 外部来源使用 `source_relations`，确认来源部门、流程、行为、数据名称和可用时间；不能仅凭外部文件名推断来源。
 
-表单结构为 `forms[] → areas[] → items[]`。表单需 `form_ref/form_name/form_no/form_design_state/behavior_links/areas`。原有表单选 `current_state`，拟议新表单选 `proposed_design`，未知保持 `unspecified`。编号未知时按结构用 `null` 并登记待确认，不编造公司受控编号。
+表单结构为 `forms[] → areas[] → items[]`。表单需 `form_ref/form_name/form_no/form_design_state/behavior_links/areas`。原有表单选 `current_state`，拟议新表单选 `proposed_design`，未知保持 `unspecified`。编号由编制方按同系列规则给出拟编号，受控备案属线下归口事项，不进待确认清单，也不自称已受控。
 
 区域 `area_type` 使用“基本信息”或“明细清单”；多张明细分区保留，不混成一个表。对象字段先定义，表单字段用 `business_data_ref` 和 `data_field_ref` 引用。引用必须属于同一对象；`item_type` 与被引用的对象字段类型一致。表单显示名称可以不同，但不复制一套字段业务定义。
 
-表单字段同时要有 `item_ref/item_name/item_type/required/instructions/value_usage_mode/value_origin_mode/source_links`。其中 `required` 是布尔值，没有“未知”枚举：尚未确认必填性时先保留在外部待确认记录，不自行填 `false`。生成最终文件前须明确；阶段草稿注明尚未编码的字段。
+表单字段同时要有 `item_ref/item_name/item_type/required/instructions/value_usage_mode/value_origin_mode/source_links`。其中 `required` 是布尔值，没有“未知”枚举：必填性由编制方按办理逻辑判定并写实，不填 `false` 占位、也不为它制定待确认项；阶段草稿注明尚未编码的字段。
 
 取值使用方式为 `authoritative_input/reuse_existing/calculated/external_source/pending_confirmation`；取值方式为 `direct_current_process/depends_on_data/pending_confirmation`。这里的输入方式不是正式主数据权威认定。不按引用顺序默认第一个为权威输入，也不以同名字段自动推断沿用关系。
 

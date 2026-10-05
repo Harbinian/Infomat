@@ -1,5 +1,6 @@
 const { mdmMysqlSchemaSql, splitSqlStatements } = require('./mysqlSchema');
 const { ACCESS_MODEL_VERSION } = require('./roleDefinitions');
+const systemAdmin = require('./systemAdminIdentity');
 const {
   ensureRbacRaciV2Schema,
   seedFixedAccessModel
@@ -329,6 +330,10 @@ async function migrateLegacyIdentityToPersonIdentity(pool) {
 
 function makeIdentityMysqlRepository(pool) {
   async function getUserRoleCodes(userId, legacyRole) {
+    if (systemAdmin.accountId(userId)) {
+      const user = await systemAdmin.getSystemAdmin(pool, userId);
+      return user ? [{ code: 'admin', name: 'MDM系统管理员', scopeType: 'global' }] : [];
+    }
     return await rows(pool, `
       SELECT r.role_code AS code, r.role_name AS name,
              pr.person_role_id AS assignmentId,
@@ -382,6 +387,7 @@ function makeIdentityMysqlRepository(pool) {
   }
 
   async function getUserEffectivePermissions(userId) {
+    if (systemAdmin.accountId(userId)) return systemAdmin.permissions(pool, userId);
     const directRoleIds = await getDirectRoleIds(userId);
     if (directRoleIds.length === 0) {
       return { permSet: new Set(), fieldConstraints: {} };
@@ -551,6 +557,10 @@ function makeIdentityMysqlRepository(pool) {
     },
 
     async getUserByLoginName(loginName) {
+      if (loginName === 'admin' && systemAdmin.enabled()) {
+        const user = await systemAdmin.getSystemAdmin(pool, loginName, { login: true });
+        if (user) return user;
+      }
       return await getPersonAccountByLogin(loginName);
     },
 
@@ -559,10 +569,16 @@ function makeIdentityMysqlRepository(pool) {
     },
 
     async getUserById(userId) {
+      if (systemAdmin.accountId(userId)) return systemAdmin.getSystemAdmin(pool, userId);
       return await getPersonAccountByPersonId(userId);
     },
 
     async validateSession(session = {}) {
+      if (session.identityKind === 'system_admin') {
+        if (session.personId || !systemAdmin.enabled()) return { valid: false };
+        const user = await systemAdmin.getSystemAdmin(pool, systemAdmin.principal(session.accountId));
+        return { valid: Boolean(user && user.authVersion === Number(session.authVersion)), user };
+      }
       const personId = sessionPersonId(session);
       if (!personId) return { valid: false, reason: 'missing_person' };
       const user = await getPersonAccountByPersonId(personId);
@@ -579,6 +595,9 @@ function makeIdentityMysqlRepository(pool) {
     },
 
     async recordSuccessfulLogin(personId) {
+      if (systemAdmin.accountId(personId)) {
+        return pool.execute("UPDATE system_admin_accounts SET last_login_at=CURRENT_TIMESTAMP WHERE account_id=? AND account_status='active'", [systemAdmin.accountId(personId)]);
+      }
       await pool.execute(
         'UPDATE user_accounts SET last_login_at=CURRENT_TIMESTAMP WHERE person_id=? AND account_status=\'active\'',
         [personId]
@@ -986,6 +1005,7 @@ function makeIdentityMysqlRepository(pool) {
     },
 
     async getCurrentUserPayload(session = {}) {
+      if (session.identityKind === 'system_admin') return systemAdmin.currentPayload(pool, session);
       const personId = sessionPersonId(session);
       if (!personId) return null;
 
@@ -1025,12 +1045,20 @@ function makeIdentityMysqlRepository(pool) {
     },
 
     async getPasswordStatus(userId) {
+      if (systemAdmin.accountId(userId)) {
+        const user = await systemAdmin.getSystemAdmin(pool, userId);
+        return user ? { is_default_password: Boolean(user.must_change_password) } : null;
+      }
       const user = await first(pool, 'SELECT must_change_password FROM user_accounts WHERE person_id=?', [userId]);
       if (!user) return null;
       return { is_default_password: Boolean(user.must_change_password) };
     },
 
     async getPasswordCredential(userId) {
+      if (systemAdmin.accountId(userId)) {
+        const user = await systemAdmin.getSystemAdmin(pool, userId);
+        return user ? { employee_no: null, password_hash: user.password_hash } : null;
+      }
       return await first(pool, `
         SELECT p.employee_no, ua.password_hash
         FROM user_accounts ua
@@ -1040,6 +1068,15 @@ function makeIdentityMysqlRepository(pool) {
     },
 
     async updateOwnPassword(userId, passwordHash) {
+      if (systemAdmin.accountId(userId)) {
+        return withOptionalTransaction(async executor => {
+          const user = await systemAdmin.getSystemAdmin(executor, userId, { locked: true });
+          if (!user) return false;
+          await executor.execute('UPDATE system_admin_accounts SET password_hash=?,must_change_password=0,auth_version=auth_version+1 WHERE account_id=?', [passwordHash, user.accountId]);
+          await systemAdmin.event(executor, user.accountId, 'password_changed');
+          return true;
+        }).catch(() => { throw systemAdmin.fail('SYSTEM_ADMIN_PASSWORD_UNAVAILABLE', 503); });
+      }
       const result = await pool.execute(
         'UPDATE user_accounts SET password_hash=?, must_change_password=0, auth_version=auth_version+1 WHERE person_id=?',
         [passwordHash, userId]
