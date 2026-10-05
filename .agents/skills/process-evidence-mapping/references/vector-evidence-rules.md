@@ -8,7 +8,8 @@ evidence.
 Embeddings are retrieval aids only. They may surface candidates, but they never
 prove a business fact.
 
-Final conclusions must be verified against a directly readable source anchor:
+Final conclusions must be verified against an original source anchor. Visual
+transcripts remain candidates until a person checks the original text and layout:
 
 - clause number and excerpt
 - table name, row, column and cell excerpt
@@ -56,7 +57,7 @@ Use the current document structured-output vocabulary:
 
 | Status | Meaning | May support formal projection |
 |---|---|---|
-| `verified` | Human-confirmed against a directly readable source location | Yes |
+| `verified` | Human-confirmed against an original source location | Yes |
 | `pending_review` | Extracted or retrieved and awaiting review | No |
 | `source_missing` | Required source location is absent | No |
 | `review_only` | Context or retrieval hint only | No |

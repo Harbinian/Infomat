@@ -209,7 +209,7 @@ P02仓储事务复用的兼容回归仍为 `test:data-map-definitions-mysql`，P
 | `npm run test:stage04-mysql-isolated` | 真实应用HTTP、登录/首改密/停用/撤权、V7预览/修订/核对/退回再办、发布故障回滚/并发唯一/不可变版本读回、合成历史V3读回 | 仅自建MySQL 8.4容器、合成基础与业务数据、无DDL权限运行账号；结构准备和故障触发器仅在本轮容器内执行，结束核对归属并删除；不读取备份或真实历史数据 |
 | `npm run test:mainline` | MDM主线：组织结构、固定RBAC/RACI、角色工作台、人员身份、流程治理、数据地图、字段、术语、冲突、待办和导入导出 | MySQL路径使用fake pool/repository；遗留测试只使用隔离本地库并在结束后清理 |
 | `npm run test:process-governance` | 流程治理 MySQL 读模型、MySQL 导入/冒烟、Sankey API、MySQL 身份权限、输入基线问题复核、文档结构化输出、统一问题池、前端挂钩和字段引用 | 正式口径为 MySQL-only；当前入口使用 fake MySQL pool / fake repository，不连接真实库，不纳入遗留 SQLite 服务器/仓储测试 |
-| `npm run test:process-design` | 文档结构化输出 API、MySQL schema、制度主档、制度编号校验、A/B/AA 版次生成、下一版次完整重写草稿、制度 profile、术语、草稿级 L1/L2 既有映射枚举校验、流程明细、行为详情、跨部门承接回写、附表结构、字段新增/修改/删除/排序、自动编号、字段空格校验、证据状态核验、Markdown 草案导出、发布替代链路，以及术语/流程/业务行为编辑、删除、作废和只读状态 | 使用 fake process-design repository 和 fake MySQL 身份 repository，不连接真实库 |
+| `npm run test:process-design` | 验证旧编制、导入、承接入口退役，原生V7/V8预览核对及程序文件生成 | 使用fake仓储和本轮回环HTTP，不连接真实库，不写历史记录 |
 | `npm run test:process-v7-preview-review` | V7完整规则校验、固定跨部门核对项、修订沿用与重开、部门范围、管理员只读、预览边界和迁移保护 | 使用fake repository和fake pool，不连接真实库 |
 | `npm run test:process-data-governance` | 固定V7来源候选、任一已发布版本选择、MDM与业务责任隔离、管理员只读、API、迁移、全屏弹窗及未提交输入保护 | 使用确定性单元测试、fake repository、源码约束和编辑/异步加载行为检查；包含保存时保留其他输入、失败保留、完成前确认及旧请求不得覆盖新页面，不连接真实库 |
 | `npm run test:process-data-governance-mysql` | 两个合成正式版本独立建包、来源篡改拒绝和部门隔离；另一个流程从上传、核对、提升、审核到发布完整运行，验证旧试点配置不阻止办理 | 新建本轮标记的tmpfs MySQL容器及随机回环HTTP服务，保留真实3000/3001；结束核对归属后清理。追加`-- --serve`可保留合成页面供浏览器验证，创建打印出的stopFile结束 |
@@ -276,33 +276,35 @@ P02仓储事务复用的兼容回归仍为 `test:data-map-definitions-mysql`，P
 | `migrate-process-governance-unified.js --apply` | 备份并迁移完整流程JSON、承接冲突和只追加事件 | 写MySQL；执行前必须先dry-run |
 | `migrate-process-governance-unified.js --rollback` | 新版尚无业务写入时整批回滚 | 写MySQL；存在新业务写入时拒绝 |
 | `migrate-process-governance-unified.js --compensate` | 新版已有业务写入时执行受控补偿 | 写MySQL；保留业务历史和审计 |
-| `import-process-governance-mysql.js` | 将 `docs/company-sankey-data.json` 导入 MySQL 流程治理读模型，可用 `--a1-source` 显式补充 A1 Markdown | 写 MySQL 流程治理读模型、源文件、MDM 要求、证据和交互链表，不写流程输入基线 |
+| `import-process-governance-mysql.js` | 将显式`--snapshot <历史JSON>`导入MySQL展示读模型，可用`--a1-source`补充已授权历史Markdown；要求完整显式MySQL配置，不采用默认docs输入 | 写 MySQL 流程治理读模型、源文件、MDM 要求、证据和交互链表，不写流程输入基线 |
 | `smoke-process-governance-mysql.js` | 可选真实 MySQL 端到端 smoke：初始化、导入、读回 Sankey | 缺少 `MYSQL_HOST`、`MYSQL_USER`、`MYSQL_DATABASE` 时跳过；不读取 `MDM_DB_PATH` |
 | `smoke-data-map-mysql.js` | 可选真实 MySQL 端到端 smoke：初始化、写入 Data Map context、字段、黄金源并读回 | 缺少 `MYSQL_HOST`、`MYSQL_USER`、`MYSQL_DATABASE` 时跳过；不读取 `MDM_DB_PATH` |
 | `import-process-input-baseline-review-mysql.js` | 将 `artifacts/process-input-baseline-review/<run-id>` 导入 MDM 输入基线问题复核表 | 写 MySQL `process_input_baseline_review_*` 表 |
-| `init-legacy-sqlite-db.js` | 历史本地库初始化实现，只通过`npm run legacy-sqlite:init-db`服务遗留测试链 | 必须设置`MDM_ALLOW_LEGACY_TEST_MODE=1`并通过`MDM_DB_PATH`指定隔离库；拒绝写共享`data/platform.db` |
+| `init-legacy-sqlite-db.js` | 历史本地库初始化实现，由隔离基线测试直接调用；旧npm命令已取消 | 必须设置`MDM_ALLOW_LEGACY_TEST_MODE=1`并通过`MDM_DB_PATH`指定隔离库；拒绝写共享`data/platform.db` |
 | `init-db.js` | 旧MySQL管理员初始化兼容脚本 | 不作为SQLite入口；正式空身份库初始化使用`npm run bootstrap:admin` |
-| `setup-local-baseline.js` | 历史本地库测试基线入口，不是正式账号初始化入口 | 只允许隔离遗留测试；不得用于正式开户 |
+| `setup-local-baseline.js` | `legacy-sqlite:setup-local-baseline -- --source <历史夹具文件>` | 非production遗留模式及独立库；先验证显式历史输入，不用于正式开户 |
 | `seed-demo-data.js` | 历史演示数据入口；账号写入已拒绝 | 不得用于正式开户 |
 | `setup-mdm-project-users.js` | 已退休的项目角色批量开户入口 | 执行即拒绝，不写账号 |
 | `import-mdm-users.js`、`import-roster-users.js` | 已退休的Excel/花名册批量开户入口 | 执行即拒绝，不写账号 |
 | `check-escalations.js` | 检查 MySQL 冲突治理记录中已超期的协调中冲突，并通过 `conflictMysqlRepository` 升级 | 写 MySQL 冲突治理和待办表，不读取 `MDM_DB_PATH` |
 
-## 4. 流程治理承接脚本
+## 4. 流程治理与历史兼容脚本
+
+本节保留展示读模型和旧资料兼容实现。`docs/`、花名册副本、固定组织夹具及旧快照不提供当前业务事实或任命；外部写入须有目标授权，不因这份清单自动导入或同步。
 
 | 脚本 | 作用 | 副作用 |
 |---|---|---|
-| `sync-organization-structure.js` | 按脚本中的固定组织和领导办公室/人员安排同步，只检查组织Markdown包含相应名称与代码；不读取最新花名册或虚拟单位定义 | 写当前数据库；不是2026-09-11新版人员真源的导入入口，不因文档更新而执行 |
-| `sync-process-governance-org.js` | 遗留SQLite流程治理组织同步实现；公开命令为`npm run legacy-sqlite:sync-process-org` | 写`MDM_DB_PATH`指定的隔离SQLite库 |
-| `import-process-governance.js` | 遗留SQLite流程治理快照导入实现；公开命令为`npm run legacy-sqlite:import-process-governance` | 写`MDM_DB_PATH`指定的隔离SQLite库；不属于正式主线 |
-| `import-process-governance-mysql.js` | 导入 `docs/company-sankey-data.json` 到 MySQL 流程治理读模型 | 写 MySQL；不读取 `MDM_DB_PATH` |
-| `check-process-governance.js` | 遗留SQLite流程治理快照检查实现；公开命令为`npm run legacy-sqlite:check-process-governance` | 只读`MDM_DB_PATH`指定的隔离SQLite库 |
+| `sync-organization-structure.js` | `legacy-sqlite:sync-organization-structure -- --source <历史夹具文件>`同步固定历史组织及领导安排；只检查夹具包含名称与代码，不核验当前任命 | 仅写显式隔离SQLite；加载数据库前拒绝缺少遗留模式、独立库或输入。不是当前组织导入入口 |
+| `sync-process-governance-org.js` | 遗留SQLite流程治理组织兼容实现；原npm命令已取消 | 仅供已授权历史兼容和隔离测试；不得作为当前治理同步入口 |
+| `import-process-governance.js` | 遗留SQLite快照导入兼容实现；原npm命令已取消 | 写隔离SQLite；不属于当前治理主线，不恢复旧编制入口 |
+| `import-process-governance-mysql.js` | 导入显式历史快照到MySQL展示读模型；必须`--snapshot`和完整MySQL配置，不能作为当前治理依据 | 写 MySQL；不读取 `MDM_DB_PATH` |
+| `check-process-governance.js` | 遗留SQLite快照检查实现；原npm命令已取消 | 检查隔离SQLite；不作为当前流程治理入口 |
 | `lib/processGovernanceImport.js` | 流程治理导入共享实现 | 被导入脚本和测试调用 |
 | `test-process-governance-mysql-repository.js` | 验证流程治理 MySQL 读模型 repository 可替换活动快照并读回 Sankey、A1、源文件、MDM 要求、证据和交互链数据 | 使用 fake MySQL pool，只读仓库；不切换现有 Express 路由 |
 | `test-process-governance-mysql-import.js` | 验证 `docs/company-sankey-data.json` 形态可转成 MySQL 读模型 bundle，并包含源文件、MDM 要求、证据和显式 A1 Markdown 数据 | 使用 fake repository，只读仓库 |
 | `test-process-governance-mysql-smoke.js` | 验证真实 MySQL smoke 的跳过条件和可注入执行路径 | 使用 fake pool/repository，只读仓库 |
 | `test-process-governance-sankey-mysql-api.js` | 验证 `PROCESS_GOVERNANCE_READ_MODEL=mysql` 时流程治理只读接口读取 MySQL repository | 覆盖 `/snapshots`、`/current`、`/sankey`、`/a1`、`/source-files`、`/mdm-requirements`、`/evidence`、`/chains`；使用 fake repository，默认不开启该切换 |
-| `test-process-design-mysql-api.js` | 验证 `PROCESS_GOVERNANCE_READ_MODEL=mysql` 时 `/api/process-design/*` 使用 MySQL 路由，不加载 `server/db.js`，并覆盖制度编号 lookup、A 版创建、重复编号阻断、B/C 版完整重写草稿、发布替代、目的/范围、术语、草稿级 L1/L2 既有映射枚举、流程明细继承 L1/L2、业务行为详情、跨部门承接回写、附表结构、字段新增/修改/删除/排序、自动编号、字段空格校验、证据、Markdown 草案、提交、评审、发布路径；同时覆盖术语/流程更新删除、流程有关联行为时删除 409、业务行为改挂流程、作废、物理删除限制、跨部门降级限制和只读状态 | 使用 fake process-design repository 和 fake MySQL 身份 repository，不连接真实库 |
+| `test-process-design-mysql-api.js` | 保留的旧V1至V3合同测试文件，不再纳入当前`test:process-design`；当前使用`test-retired-capabilities.js`、V7/V8预览及程序文件检查 | 历史文件中的成功写入断言不能证明现行能力；不得为了旧断言恢复退役API |
 | `test-process-governance-issue-pool-mysql-permission-api.js` | 验证统一问题池详情、点位动作、关闭/重开和术语待办均通过 MySQL 身份、角色、部门和权限判断，越权请求不会进入写仓储；当前 `test:process-governance-issue-pool` 只纳入 MySQL/fake-repo 路径和前端入口检查 | 使用 fake issue-pool repository 和 fake MySQL 身份 repository，不连接真实库 |
 | `test-process-input-baseline-review-mysql.js` | 验证 MDM 输入基线问题复核 MySQL repository 的导入、查询和结构化决策保存 | 使用 fake MySQL pool，只读仓库 |
 | `test-process-input-baseline-review-api.js` | 验证 MDM 正式输入基线问题复核 API 保存结构化字段、以后端会话写 reviewer、内部抽取锚点不显示给业务用户，也不误显示为页码或原文段落号 | 使用 fake repository 和临时待确认目录 |
@@ -345,7 +347,7 @@ P02仓储事务复用的兼容回归仍为 `test:data-map-definitions-mysql`，P
 | 冲突和角色 | `test-conflicts-mysql-repository.js`、`test-conflicts-mysql-api.js`、`test-conflicts-mysql-identity-api.js`、`test-todos-mysql-repository.js`、`test-todos-mysql-api.js`、`test-project-role-access.js`、`test-role-workbench-api.js`、`test-role-workbench-mysql-api.js`、`test-role-workbench-process-governance-mysql-api.js`、`test-page-workflows-api.js` |
 | 流程治理 | `test-process-governance-*.js`、`test-process-mapping-workspace-import.js` |
 | 前端和视图 | `test-frontend-assets.js`、`test-views-routes.js`、`test-views-sankey-filters.js`、`test-activity-mysql-repository.js`、`test-activity-mysql-api.js`、`test-activity-heatmap-mysql-identity-api.js` |
-| 冒烟 | `smoke-test.js`、`smoke-master-data.js`、`smoke-rbac.js`、`smoke-integration.js` |
+| 历史冒烟与隔离夹具 | `smoke-test.js`（自建临时库）；`smoke-master-data.js`、`smoke-integration.js`为旧人工场景，仅供追溯；`smoke-rbac.js`使用隔离测试 |
 
 ## 6. 第05阶段独立验收
 
@@ -368,7 +370,7 @@ npm run test:stage05-browser
 
 两个真实入口复用第04阶段`freshMysql`：只创建唯一标记、tmpfs、随机回环端口的MySQL 8.4容器，要求Docker及本机已有`mysql:8.4`镜像，使用`--pull never`。沿用的容器前缀、标记和库名含stage04，这是测试助手的名称，不表示连接第04阶段留下的实例。结构初始化、合成身份授权、业务写入及临时表改名故障只在新容器内执行；应用运行账号只有SELECT/INSERT/UPDATE/DELETE。不会使用真实配置、已有数据库、已有卷或共同启动脚本。
 
-Edge入口使用已安装的`playwright`，找不到应用内运行库时使用已有Playwright CLI附带的运行库；不自动安装或下载浏览器。只启动自己的Microsoft Edge和随机端口应用，内容可视区1699×828、100%缩放，并补充390×844。测试包括两份完整合成案例，其中一份由测试准备关闭，供真实案例切换；业务办理始终通过公开HTTP及浏览器。故障注入用于网络/503和正式意见409保护，部门意见409来自另一真实合成会话上传新修订，401来自清除本轮Cookie。
+Edge入口使用已安装的`playwright`，找不到应用内运行库时使用已有Playwright CLI附带的运行库；不自动安装或下载浏览器。只启动自己的Microsoft Edge和随机端口应用，验证仅使用100%缩放、1699×828 CSS像素桌面内容可视区。测试包括两份完整合成案例，其中一份由测试准备关闭，供真实案例切换；业务办理始终通过公开HTTP及浏览器。故障注入用于网络/503和正式意见409保护，部门意见409来自另一真实合成会话上传新修订，401来自清除本轮Cookie。
 
 浏览器验证保存截图和操作断言，不覆盖人工中文输入法、真实人员或业务验收。主入口结果在`artifacts/mdm-3000-launch/stage05-<时间戳>/test-results.json`；定向HTTP入口默认写入`stage05-20260910/`，重复运行前应保留需要的旧结果。Edge结果及截图使用上述每次独立的新目录，不覆盖既有证据。正式业务文件不受影响。
 
@@ -600,3 +602,7 @@ test:historical-review使用freshMysql创建自有标签、tmpfs和随机回环�
 系统维护权限取既有固定admin角色当前有效权限，并限制在其原权限集合。账号维护操作在原事务中重查系统账号状态/auth_version，原人员审计保留且同事务追加系统账号操作者关联。首次改密、CSRF、旧会话撤销及治理写入拒绝仍强制执行；系统账号编号不能冒充person_id。首次登录改密仍使用原入口；新前端登录后从统一/app/进入账号与授权办理，身份页明确不关联员工/部门。
 
 新增验证test:system-admin -- --output <新的ignored证据目录>，只运行自有tmpfs MySQL、随机回环HTTP、合成身份及Edge100%/1699×828桌面；备份仅在内存，按归属清理容器/进程。正式启用、实际开户、凭据交付和业务验收须有当次放行；本地通过不代表已开启。回退时保留新表及审计、停止系统维护写入，并撤销系统会话；旧人员链仍兼容，不能删表或伪造员工来回退。
+
+2026-10-05追加原入口首次改密回归：在自有合成库重建首次改密标志，使用Edge验证登录及刷新先打开改密对话框，期间不请求权限模型或业务目录；错误当前密码和合成503保留输入，实际CSRF改密成功后清空密码并要求重新登录，再验证新前端系统身份与原人员身份切换。合成账号及密码只在隔离进程内存使用，不读取或改变实际admin凭据。
+
+会话提示回归同时检查：刷新后登录字段为空时，首次改密框及顶部仍明确显示已恢复的认证身份；本次登录、恢复会话及普通改密的说明互不混用。验证密码标签、焦点及1699×828桌面弹窗边界，保存首次登录与恢复会话截图；沿用原失败输入保护、CSRF和重新登录检查。

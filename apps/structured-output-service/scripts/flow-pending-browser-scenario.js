@@ -5,6 +5,18 @@ async page => {
     if (!condition) throw new Error(message);
   };
   const record = message => checks.push(message);
+  const openDataFacts = async () => {
+    await page.locator('[data-action="switch-governance-step"][data-step="data"]').click();
+    const catalogItem = page.locator('[data-action="review-open"][data-kind="data"][data-ref="data_expense"]');
+    if (await catalogItem.isVisible()) {
+      await catalogItem.click();
+      await page.locator('[data-action="review-manage"]').click();
+    }
+  };
+  const ensureFlowProperties = async () => {
+    const edit = page.locator('#reviewDetail [data-action="review-edit"]').first();
+    if (await edit.isVisible()) await edit.click();
+  };
   const pendingLifecycle = () => ({
     applicability: 'pending_confirmation',
     entry_state: {
@@ -100,10 +112,10 @@ async page => {
 
   try {
     await page.reload({ waitUntil: 'domcontentloaded' });
-    await page.setViewportSize({ width: 1536, height: 864 });
+    await page.setViewportSize({ width: 1699, height: 828 });
     await page.waitForSelector('#jsonInput', { state: 'attached' });
 
-    const templateResponse = await page.context().request.get(`${baseOrigin}/api/template?version=process-governance-v7`);
+    const templateResponse = await page.context().request.get(`${baseOrigin}/api/template`);
     assert(templateResponse.ok(), `无法取得v7模板：${templateResponse.status()}`);
     const fixture = (await templateResponse.json()).data;
     fixture.export_meta.initiating_department = '财务部';
@@ -148,10 +160,12 @@ async page => {
 
     await openSkeletonList();
     await skeletonItem('behavior', 'behavior_submit').click();
+    await ensureFlowProperties();
     await page.locator('[data-graph-property="behavior_name"]').fill('财务人员提交并登记费用事项');
     await skeletonItem('relation', 'relation_submit_review').click();
     await expectPending(true);
     await page.locator('#continuePendingEditingButton').click();
+    await ensureFlowProperties();
     assert(await page.locator('[data-graph-property="behavior_name"]').inputValue() === '财务人员提交并登记费用事项', '业务行为选择继续编辑后输入丢失');
     assert(await skeletonItem('behavior', 'behavior_submit').getAttribute('class').then(value => value.includes('primary')), '继续编辑后当前业务行为选择丢失');
     record('业务行为属性切换的继续编辑保留输入与选择');
@@ -159,44 +173,50 @@ async page => {
     await skeletonItem('relation', 'relation_submit_review').click();
     await expectPending(true);
     await page.locator('#applyPendingEditButton').click();
+    await ensureFlowProperties();
     await page.locator('[data-graph-property="relation_type"]').waitFor({ state: 'visible' });
     record('业务行为属性切换的应用并继续生效');
 
     await skeletonItem('behavior', 'behavior_submit').click();
+    await ensureFlowProperties();
     await page.locator('[data-graph-property="behavior_name"]').fill('本次名称应放弃');
     await skeletonItem('relation', 'relation_submit_review').click();
     await expectPending(true);
     await page.locator('#discardPendingEditButton').click();
     await skeletonItem('behavior', 'behavior_submit').click();
+    await ensureFlowProperties();
     assert(await page.locator('[data-graph-property="behavior_name"]').inputValue() === '财务人员提交并登记费用事项', '放弃业务行为属性后没有恢复已应用值');
     record('业务行为属性切换的放弃修改恢复已应用值');
 
     await skeletonItem('relation', 'relation_submit_review').click();
+    await ensureFlowProperties();
     await page.locator('[data-graph-property="relation_type"]').selectOption('sequence');
     await skeletonItem('behavior', 'behavior_submit').click();
     await expectPending(true);
     await page.locator('#applyPendingEditButton').click();
+    await ensureFlowProperties();
     await page.locator('[data-graph-property="behavior_name"]').waitFor({ state: 'visible' });
     record('流程关系属性通过字段补丁应用');
 
     await page.locator('[data-action="start-flow-relation"]').click();
     await page.locator('[data-graph-relation-type]').selectOption('sequence');
-    await page.locator('[data-action="switch-governance-step"][data-step="action"]').click();
+    await page.locator('#graphEditModal [data-action="close-flow-editor"]').first().click();
     await expectPending(false);
     await page.locator('#continuePendingEditingButton').click();
     assert(await page.locator('.graph-operation-card').getByText('第2步：选择起点', { exact: true }).isVisible(), '继续编辑后未完成关系向导没有保留当前阶段');
-    await page.locator('[data-action="switch-governance-step"][data-step="action"]').click();
+    await page.locator('#graphEditModal [data-action="close-flow-editor"]').first().click();
     await expectPending(false);
     await page.locator('#discardPendingEditButton').click();
-    assert(await page.locator('[data-action="switch-step-view"][data-view="behaviors"]').getAttribute('class').then(value => value.includes('active')), '放弃未完成关系向导后没有继续目标导航');
-    record('未完成流程关系向导禁用应用，继续保留，放弃后完成导航');
+    await page.locator('[data-action="switch-governance-step"][data-step="boundary"]').click();
+    assert(await page.locator('[data-bind="process.purpose"]').isVisible(), '放弃未完成关系向导后没有继续目标导航');
+    record('未完成流程关系向导关闭时禁用应用，继续保留，放弃后可导航');
 
-    await page.locator('[data-action="switch-governance-step"][data-step="data"]').click();
+    await openDataFacts();
     await page.locator('[data-action="choose-data-behavior"]').click();
     await page.locator('[data-graph-data-behavior]').selectOption('behavior_submit');
     await page.locator('[data-action="continue-data-relation"]').click();
     await page.locator('[data-graph-data-operation][value="use"]').check();
-    await page.locator('[data-action="switch-governance-step"][data-step="action"]').click();
+    await page.locator('[data-action="switch-governance-step"][data-step="boundary"]').click();
     await expectPending(true);
     await page.locator('#continuePendingEditingButton').click();
     assert(await page.locator('[data-graph-data-operation][value="use"]').isChecked(), '继续编辑后数据操作选择丢失');
@@ -205,7 +225,7 @@ async page => {
     await page.locator('[data-action="open-graph-update-fields"]').click();
     await page.locator('[data-update-field-ref][value="field_amount"]').uncheck();
     await page.locator('[data-update-field-ref][value="field_status"]').check();
-    await page.locator('[data-action="switch-governance-step"][data-step="action"]').evaluate(button => button.click());
+    await page.locator('[data-action="switch-governance-step"][data-step="boundary"]').evaluate(button => button.click());
     await expectPending(true);
     await page.locator('#continuePendingEditingButton').evaluate(button => button.click());
     assert(await page.locator('#updateFieldsModal').isVisible(), '继续编辑后更新字段选择框被关闭');
@@ -241,16 +261,16 @@ async page => {
     assert(updateLink && JSON.stringify(updateLink.updated_field_refs) === JSON.stringify(['field_status']), '下载文件中的更新字段不是用户确认的field_status');
     record('下载验证字段补丁保留非本面板字段、关系条件和数据操作');
 
-    await page.locator('[data-action="switch-governance-step"][data-step="action"]').click();
-    await page.locator('[data-bind="behaviors.0.behavior_description"]').fill('图操作之后的普通字段修改必须保留。');
+    await page.locator('[data-action="switch-governance-step"][data-step="boundary"]').click();
+    await page.locator('[data-bind="process.purpose"]').fill('图操作之后的普通字段修改必须保留。');
     await openSkeletonDiagram();
     await page.locator('[data-action="undo-graph"]').click();
     await page.locator('#statusBox').getByText('该操作之后当前JSON还有其他修改', { exact: false }).waitFor({ state: 'visible' });
     const undoBlockedDownload = await downloadCurrentStage();
-    assert(undoBlockedDownload.behaviors[0].behavior_description === '图操作之后的普通字段修改必须保留。', '被阻止的撤销仍覆盖了后续普通字段修改');
+    assert(undoBlockedDownload.process.purpose === '图操作之后的普通字段修改必须保留。', '被阻止的撤销仍覆盖了后续普通字段修改');
     record('撤销检测到后续直接写入修改时阻止整文档覆盖，且保留当前JSON');
 
-    await page.locator('[data-action="switch-governance-step"][data-step="data"]').click();
+    await openDataFacts();
     await page.locator('#workspace').evaluate(workspace => {
       const select = document.createElement('select');
       select.dataset.bind = 'data_objects.0.behavior_links.0.operation';
@@ -260,11 +280,11 @@ async page => {
       select.dispatchEvent(new Event('input', { bubbles: true }));
     });
     assert(await page.locator('#governanceHeader').getByText('有未应用修改', { exact: true }).isVisible(), '引导式数据操作变更被直接写入JSON');
-    await page.locator('[data-action="switch-governance-step"][data-step="action"]').click();
+    await page.locator('[data-action="switch-governance-step"][data-step="boundary"]').click();
     await expectPending(true);
     await page.locator('#continuePendingEditingButton').click();
     assert(await page.locator('[data-graph-data-operation][value="create"]').isChecked(), '引导式数据操作继续编辑后选择丢失');
-    await page.locator('[data-action="switch-governance-step"][data-step="action"]').click();
+    await page.locator('[data-action="switch-governance-step"][data-step="boundary"]').click();
     await expectPending(true);
     await page.locator('#discardPendingEditButton').click();
     const guidedDiscardDownload = await downloadCurrentStage();
@@ -275,6 +295,7 @@ async page => {
 
     await openSkeletonList();
     await skeletonItem('behavior', 'behavior_submit').click();
+    await ensureFlowProperties();
     await page.locator('[data-graph-property="behavior_name"]').fill('清空前应用的节点名称');
     await openFileMenuAndClear();
     await expectPending(true);
@@ -283,6 +304,7 @@ async page => {
     await unsavedModal.waitFor({ state: 'visible', timeout: 5000 });
     assert(!(await pendingModal.isVisible()), '处理未应用修改后仍停留在第一层确认');
     await page.locator('#cancelProtectedButton').click();
+    await ensureFlowProperties();
     assert(await page.locator('[data-graph-property="behavior_name"]').inputValue() === '清空前应用的节点名称', '取消第二层清空确认后，第一层已应用修改丢失');
     record('清空先处理未应用修改，再显示未下载修改确认');
 

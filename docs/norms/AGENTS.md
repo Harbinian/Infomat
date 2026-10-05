@@ -4,11 +4,11 @@
 
 2026-09-11用户已明确所有`docs/`文件不再是真源：本目录旧制度、程序、映射和派生文件不得作为当前治理依据，不从中推导待治理流程、职责或审批链。先由业务说明及用户指定外部材料在3001编制，经人工下载/上传交给3000治理和形成正式版本，再生成程序文件。下方合同和脚本仅保留旧消费链兼容说明，不因本次治理访谈自动执行，也不据其检查结果宣布业务确认。
 
-根目录 `AGENTS.md`、`CODEX.md` 和三份边界文件仍然有效。本文件只补充 `docs/norms/` 的流程输入基线维护规则。
+根目录 `AGENTS.md`、`CODEX.md` 和三份边界文件仍然有效。本文件只补充历史资料及旧消费链的维护规则。
 
 ## DCM / BBM 质检脚本
 
-在本目录新增或修改以下内容后，必须运行 DCM/BBM 双合同质检脚本：
+仅在获准维护以下旧消费资产时，按受影响的数据形状选择DCM/BBM兼容检查：
 
 - `{部门}部门-能力-流程-系统映射关系.md`
 - `{部门}能力层与MDM建设要求.md`
@@ -17,21 +17,13 @@
 - 已确认工作角色绑定及其独立证据表
 - `pmo/procedure-management/dashboard.html` 内嵌 sankey-data
 
-从仓库根目录运行：
+从仓库根显式指定历史输入及输出；完整参数和副作用见本目录README及 `scripts/README.md`：
 
 ```powershell
-node scripts/parse-sankey-data.mjs
-node scripts/check-dcm-bbm.mjs --no-fail
-node scripts/verify-norms-source-mapping.mjs
+node scripts/parse-sankey-data.mjs --legacy-display --domain-map <historical-domain-map.json> --out <snapshot.json>
 ```
 
-如果当前目录是 `docs/norms`，运行：
-
-```powershell
-node ../../scripts/parse-sankey-data.mjs
-node ../../scripts/check-dcm-bbm.mjs --no-fail
-node ../../scripts/verify-norms-source-mapping.mjs
-```
+只有指定 `--dashboard` 才更新页面；质检和证据核验按范围选择，报告会写文件。这些操作不替代业务确认，也不触发当前数据库同步。
 
 ## 质检口径
 

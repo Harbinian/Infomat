@@ -8,7 +8,7 @@ Infomat 是航空复材制造领域的信息化资料与工具仓库，包含：
 
 ## 仓库边界
 
-开始跨目录任务前先读：
+按任务从以下入口定位职责与实现；跨资产任务依根 `AGENTS.md` 选择相关章节：
 
 - [AGENTS.md](AGENTS.md)：Codex 根入口规则。
 - [CODEX.md](CODEX.md)：Codex 执行纪律、文档同步和验证口径。
@@ -38,18 +38,18 @@ Infomat 是航空复材制造领域的信息化资料与工具仓库，包含：
   - `pmo/deliverables/`：PMO 受控交付物，修改前读取目录 `AGENTS.md`
   - `pmo/organization-dynamics/`：组织数字化参与度模型，修改前读取目录 `AGENTS.md`
 - `scripts/`：仓库级脚本（修改前读取 `scripts/AGENTS.md`）
-  - `scripts/parse-sankey-data.mjs`：从流程输入基线生成桑基图 JSON
+  - `scripts/parse-sankey-data.mjs`：显式维护历史资料消费链时生成桑基图 JSON，不提供当前治理依据
 - `.planning/`：架构/结构/集成规划与扫描记录
 - `.agents/`：Codex 可用的项目技能与提示材料（不应包含生成物）
 - `.codex/config.toml`：仓库内 Codex 展示与推理偏好，不保存凭据、主机配置或业务事实
 
 ## 代码与文档同步
 
-每次代码、脚本、接口、数据库结构、前端行为、启动命令或测试命令变化,必须同步检查并更新对应文档。优先更新所在目录 `README.md` / `AGENTS.md`,必要时同步根目录规则、`docs/glossary.md`、使用手册或运行说明。
+行为、接口、数据合同、命令或维护边界变化时，同步承载该信息的 README、规格或使用说明；内部实现调整且说明仍准确时无需改写。目录职责和硬规则变化时才同步入口，新增术语或改变含义时同步 `docs/glossary.md`。
 
 目录级 `AGENTS.md` 只放在有独立真源、生成副作用、运行命令、验证口径或禁止事项的关键目录；纯报告、归档、样例和说明性架构目录默认使用 README。
 
-如果确认无需文档更新,提交或交付说明中必须写明原因。
+最终说明实际变化、验证和实质限制；不要求逐份声明没有修改的文档。
 
 ## Codex 上下文入口
 
@@ -70,7 +70,7 @@ npm run test:codex-context
 
 ## MDM 平台
 
-MDM 平台使用仓库根目录的固定启动入口。
+仅操作3000时使用应用README的 `service:start|stop|restart|check` 并按前置条件核对目标。以下仓库根入口用于MDM、PMO及MySQL的共同开发环境，会操作三者；只有任务授权该组合范围时才使用。
 
 第一次启动前，在本机私有文件 `scripts/infomat-services.local.env` 写入两项密码；该文件已被 `.gitignore` 忽略，只保留在本机：
 
@@ -79,7 +79,7 @@ MYSQL_PASSWORD=你的项目 MySQL 密码
 MDM_ADMIN_PASSWORD=你的管理员密码
 ```
 
-之后统一使用：
+完成联合环境授权及前置核对后使用：
 
 ```powershell
 npm run start:infomat-services
@@ -93,22 +93,21 @@ npm run smoke:infomat-services
 | MDM | `http://127.0.0.1:3000` |
 | PMO | 本机 `http://127.0.0.1:5173`；同事访问 `http://<本机局域网IP>:5173` |
 | MySQL | `localhost:3307` |
-| MySQL 用户 / 库 | `mdm_user` / `infomat_mdm` |
+| MySQL 用户 / 库 | `sa` / `infomat_mdm` |
 | MySQL 连接池 | `MYSQL_CONNECTION_LIMIT=16` |
 | 读模型 | `MDM_IDENTITY_READ_MODEL=mysql`、`PROCESS_GOVERNANCE_READ_MODEL=mysql` |
 | 管理员工号 | `ADMIN001` |
 
 启动脚本会使用固定 Docker 容器 `infomat-input-baseline-review-mysql`，并按固定环境启动 MDM 与 PMO。更多说明见 [apps/mdm-platform/README.md](apps/mdm-platform/README.md) 和 [scripts/README.md](scripts/README.md)。
 
-文档结构化输出的数据模型以 [docs/contracts/document-structured-output.schema.json](docs/contracts/document-structured-output.schema.json) 为准；说明和投影规则见 [docs/contracts/document-structured-output-schema.md](docs/contracts/document-structured-output-schema.md)。修改相关字段、表结构、前端页面或结构块 parser 后，运行：
+文档结构化证据草稿的兼容数据模型以 [docs/contracts/document-structured-output.schema.json](docs/contracts/document-structured-output.schema.json) 为准；说明和投影规则见 [docs/contracts/document-structured-output-schema.md](docs/contracts/document-structured-output-schema.md)。修改v2证据草稿schema、技能消费或旧结构块parser兼容行为后，按影响运行：
 
 ```powershell
 npm run test:document-structured-output-schema
-npm run build:work-role-data
 npm run test:work-role-contract
 ```
 
-单流程治理编制工具在 [apps/structured-output-service](apps/structured-output-service/README.md)，默认监听`0.0.0.0:3001`，公司局域网用户通过`http://<服务器局域网IP>:3001`直接使用。该工具只在当前页面内存中编制一条流程，支持空白新建、历史JSON迁移、花名册岗位选择、主表和明细表填写、只读流程图预览及单流程JSON导入导出。页面不提供编制参考材料入口，不保存用户内容，不写回流程输入基线、花名册或工作角色真源，也不依赖DeepSeek、MDM-AI助手或认证网关。
+单流程治理编制工具在 [apps/structured-output-service](apps/structured-output-service/README.md)，默认监听`0.0.0.0:3001`，公司局域网用户通过`http://<服务器局域网IP>:3001`直接使用。本工作区默认V8候选，V7保留历史兼容；正式实例版本和状态须核对健康响应及部署记录。该工具只在当前页面内存中编制一条流程，支持空白新建、历史JSON迁移、花名册岗位选择、主表和明细表填写、只读流程图预览及单流程JSON导入导出。页面不提供编制参考材料入口，不保存用户内容，不写回流程输入基线、花名册或工作角色真源，也不依赖DeepSeek、MDM-AI助手或认证网关。
 
 
 
@@ -126,9 +125,9 @@ npm run test:work-role-contract
 
 **历史展示链更新**：仅在明确授权维护旧消费链时，核对历史 Markdown 输入后运行：
 ```bash
-node scripts/parse-sankey-data.mjs
+node scripts/parse-sankey-data.mjs --legacy-display --domain-map <historical-domain-map.json> --out <snapshot.json>
 ```
-脚本会直接注入 `pmo/procedure-management/dashboard.html` 的 `#sankey-data` 标签,刷新/重新双击即可看到最新数据。
+该命令只写指定快照；追加 `--dashboard pmo/procedure-management/dashboard.html` 才更新页面内嵌数据。若使用默认驾驶舱一致性检查，输出须明确选择 `docs/company-sankey-data.json`，按获准的历史资产维护处理。
 
-**治理依据**：所有 `docs/` 文件的真源身份已于2026-09-11撤销。当前部门、职责、人员及流程事实来自用户指定的外部原始材料和明确业务确认；旧 parser 对 `docs/organization/组织架构和部门职责.md` 的读取仅说明历史消费关系。
+**治理依据**：所有 `docs/` 文件的真源身份已于2026-09-11撤销。当前部门、职责、人员及流程事实来自用户指定的外部原始材料和明确业务确认；旧parser改为显式选定的部门域JSON；历史norms和工作角色消费不提供当前治理权威。
 

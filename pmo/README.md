@@ -108,7 +108,7 @@ npm run test:pmo-task-data
 | 执行标准字段 | `executionStandardId`、`inputMaterialList`、`checklistId`、`completionCriteria`、`evidenceRequirements`、`standardGapFlag`、`standardDeferredReason` |
 | 执行标准缺口治理字段 | `requiresExecutionStandard`、`standardsGapBucket`、`standardsGapReasons`、`standardsGapPriorityScore`、`suggestedStandardId`、`suggestedAction` |
 
-任务真源可使用 `受控交付物编号` 指定 `deliverableId`。该字段用于把计划任务绑定到既定 `DLV-XXX-*.md` 正本，避免自动生成编号与已有受控交付物冲突；未填写时仍按任务顺序自动生成交付物编号。
+任务真源可使用 `受控交付物编号` 指定 `deliverableId`。该字段用于把计划任务绑定到既定 `DLV-XXX-*.md` 正本，避免自动生成编号与已有受控交付物冲突；未填写时仅生成以 `projectionKey` 标识的计划投影，不分配 `DLV-*` 编号；转为受控交付物时才按现有提升流程分配编号。
 
 ## Console 与已知问题
 

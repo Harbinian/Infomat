@@ -23,9 +23,9 @@
 只有明确授权修改旧岗位/角色消费链的兼容行为时，才按影响选择以下入口；本次撤销真源身份不自动运行这些基于旧资料的生成命令：
 
 ```powershell
-npm run build:work-role-data
+# 旧快照生成须按 scripts/README.md 显式指定兼容参数及输出
 npm run test:work-role-contract
 npm run test:dept-domain-mapping
 ```
 
-生成失败时保留已有快照，先修复真源或明确待确认项，不以默认值或人工改 JSON 绕过检查。
+生成失败时保留已有快照，先核对指定输入的来源问题或明确待确认项，不以默认值或人工改 JSON 绕过检查。

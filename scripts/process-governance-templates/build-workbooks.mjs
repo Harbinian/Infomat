@@ -214,7 +214,7 @@ function populateInstructions(sheet, dept, pkg) {
   };
   sheet.getRange('A1:H1').format.rowHeight = 38;
   sheet.mergeCells('A2:H2');
-  sheet.getRange('A2').values = [[`桑基图快照：${pkg.snapshotDate}｜Excel为唯一填报真源｜现有内容均为待部门确认的预填值`]];
+  sheet.getRange('A2').values = [[`历史快照：${pkg.snapshotDate}｜Excel为本批次填报载体｜预填值需按当前外部材料及业务确认复核`]];
   sheet.getRange('A2:H2').format = { fill: COLORS.beige, font: { color: COLORS.muted }, verticalAlignment: 'center' };
   sheet.getRange('A2:H2').format.rowHeight = 26;
 
@@ -290,7 +290,7 @@ function populateProcessSheet(sheet, dept, dictionaryEndRow) {
   const headers = [
     '模板内部流程号', '部门', '能力域（L1）', '业务能力（L2）', '业务流程（L3）',
     '原文制度编号', '原文制度名称', '其他关联制度名称', '原文位置', '原始文件名', '制度引用展示',
-    '当前桑基图承接方向', '系统承接状态', '是否期望信息化接管', '期望接管范围',
+    '历史快照承接方向', '系统承接状态', '是否期望信息化接管', '期望接管范围',
     '①解决什么事（流程目的和结束边界）', '②谁负总责', '③何时触发', '④开始前有什么（前置条件和输入）',
     '⑧最终交付什么（输出和完成标志）', '本周是否纳入数据字典', '数据字典完成状态',
     '是否调整', '调整说明', '部门确认意见', '原始证据状态', '流程填报状态', '原始制度引用', '来源映射文件',
@@ -430,7 +430,7 @@ function populateEvidenceSheet(sheet, dept) {
     '证据行号', '部门', '对象类型', '对象编号', '对象名称', '来源类型', '原文制度编号', '原文制度名称',
     '制度编号-名称匹配状态', '原始文件名', '原文位置', '原始引用', '引用方式', '证据状态', '原文核验状态', '源文件匹配状态', '源文件路径',
   ];
-  styleTitle(sheet, `${dept.name}｜04 证据索引`, '一条来源证据一行。制度名称来自当前映射或唯一源文件匹配；“未逐条核验”不得视为已经完成原文复核。', headers.length);
+  styleTitle(sheet, `${dept.name}｜04 证据索引`, '一条来源证据一行。制度名称来自历史副本或唯一文件匹配；“未逐条核验”不得视为已经完成原文复核。', headers.length);
   const startRow = 4;
   const rows = dept.evidence.map((item, index) => [
     `${dept.code}-EV-${String(index + 1).padStart(5, '0')}`, item.dept, item.objectType, item.objectId,
@@ -497,7 +497,7 @@ function populateCompletenessSheet(sheet, dept, ranges) {
         systemIssue ? '系统落位待确认' : titleIssue ? '制度编号-名称待核验' : '原文证据缺失',
         'L3流程', item.processId, item.l3,
         systemIssue
-          ? '当前桑基图未给出系统承接方向'
+          ? '历史快照未给出系统承接方向'
           : titleIssue ? `当前状态：${item.titleMatchStatus}` : '制度名称或原文位置缺失',
         systemIssue
           ? '部门先确认是否期望信息化接管及接管范围'
@@ -634,7 +634,7 @@ async function buildWorkbook(pkg, dept, outputDir, qaDir) {
     maxChars: 5000,
   });
 
-  const packageDate = String(pkg.generatedAt || pkg.snapshotDate).slice(0, 10);
+  const packageDate = String(pkg.packageDate || pkg.generatedAt || pkg.snapshotDate).slice(0, 10);
   const fileName = `${dept.name}_流程与数据梳理模板_${packageDate}.xlsx`;
   const filePath = join(outputDir, fileName);
   const output = await SpreadsheetFile.exportXlsx(workbook);

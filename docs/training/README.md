@@ -14,9 +14,9 @@
 | `数据标准管理培训_逐页整理.md` | 数据标准管理培训整理稿 |
 | `数据管理理论培训.pptx` | 数据管理理论培训课件 |
 | `沈飞湖仓建构培训V0.1.pptx` | 湖仓架构培训课件 |
-| `2026-08-17-MDM-AI助手流程与数据治理使用教程.md` | 五账号试点的DSH治理工作区、Key绑定、对话填报、独立结构预审、3001核对和七案例验收教程 |
-| `2026-08-17-3001-process-authoring-quick-guide.md` | 3001 v7七步导航、四轮阶段下载、部门核对、SHA-256交接和当前3000版本边界操作路线 |
-| `2026-08-17-3001-process-authoring-checklists-and-templates.md` | v7 JSON交接、业务核对、独立结构预审、往返核对和版本交接模板 |
+| `2026-08-17-MDM-AI助手流程与数据治理使用教程.md` | 历史五账号/DSH教程；AI助手及DSH已退役，不执行旧启动、Key绑定或交接步骤 |
+| `2026-08-17-3001-process-authoring-quick-guide.md` | 历史V7教程；当前版本、入口和人工交接按应用README核对 |
+| `2026-08-17-3001-process-authoring-checklists-and-templates.md` | 历史V7模板；使用前核对当前版本与治理边界 |
 
 ## 修改自检
 

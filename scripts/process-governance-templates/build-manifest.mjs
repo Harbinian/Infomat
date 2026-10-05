@@ -13,7 +13,8 @@ function parseArgs(argv) {
 
 const args = parseArgs(process.argv.slice(2));
 const pkg = JSON.parse(await fs.readFile(args.data, 'utf8'));
-const packageDate = String(pkg.generatedAt || pkg.snapshotDate).slice(0, 10);
+const packageDate = String(pkg.packageDate || pkg.generatedAt || pkg.snapshotDate).slice(0, 10);
+if (!/^\d{4}-\d{2}-\d{2}$/.test(packageDate) || new Date(`${packageDate}T00:00:00Z`).toISOString().slice(0, 10) !== packageDate) throw new Error(`Invalid package date: ${packageDate}`);
 const rows = [];
 for (const department of pkg.departments) {
   const fileName = `${department.name}_流程与数据梳理模板_${packageDate}.xlsx`;
@@ -29,7 +30,8 @@ const manifest = `# 九部门流程与数据梳理模板交付清单
 - 数据范围：${pkg.totals.processes} 条 L3、${pkg.totals.behaviors} 条 A1、${pkg.totals.unmappedProcesses} 条系统承接方向待确认流程
 - 制度名称解析：L3 缺失 ${pkg.totals.missingProcessTitles} 条，A1 缺失 ${pkg.totals.missingBehaviorTitles} 条
 - 证据阻断：L3 ${pkg.totals.blockingProcessEvidence} 条，A1 ${pkg.totals.blockingBehaviorEvidence} 条；其中编号—名称不唯一分别为 ${pkg.totals.ambiguousProcessTitles} / ${pkg.totals.ambiguousBehaviorTitles} 条
-- Excel 为部门唯一填报真源；Word 仅解释填写与评审口径
+- 本包由历史副本预填，所有内容需按当前外部材料和业务确认复核；不形成现行治理结论
+- 本包 Excel 为对应批次的填报载体；Word 仅解释该批次填写与评审口径
 
 | 部门 | L3流程 | A1行为 | 系统承接待确认 | L3证据阻断 | A1证据阻断 | 文件 | 字节数 |
 | --- | ---: | ---: | ---: | ---: | ---: | --- | ---: |

@@ -80,7 +80,7 @@ node pmo/scripts/export-organization-dynamics-png.mjs `
 1. 先修改 `组织数字化参与度十六维分型模型.md`。
 2. 在SVG中修改对应的 `<text>` 或 `<tspan>` 内容。
 3. 如调整布局，保持画布 `width="1600"`、`height="2400"` 和 `viewBox="0 0 1600 2400"` 不变。
-4. 重新打开 `index.html`，检查桌面端、窄屏和打印预览。
+4. 重新打开 `index.html`，检查Edge 100%、1699×828 CSS像素桌面呈现和打印预览；不执行窄屏适配或测试。
 5. 运行PNG导出脚本并核对渲染结果。
 
 SVG的七个一级分组为：

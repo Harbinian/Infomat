@@ -6,11 +6,13 @@
 
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
-const outDir = join(root, 'artifacts', 'ocr', 'test-ocr-source');
+const testParent = join(root, 'artifacts', 'ocr');
+mkdirSync(testParent, { recursive: true });
+const outDir = mkdtempSync(join(testParent, 'test-ocr-source-'));
 const samplePdf = join(
   root,
   'docs',
@@ -20,8 +22,6 @@ const samplePdf = join(
   'GLB140304-01-包装物制造及产品包装管理标准',
   '包装物制造及产品包装管理标准.pdf',
 );
-
-rmSync(outDir, { recursive: true, force: true });
 
 const result = spawnSync(
   process.execPath,

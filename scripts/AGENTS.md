@@ -12,14 +12,14 @@
 ## 脚本分类
 
 - 只读校验脚本应保持只读；临时夹具和测试输出写入系统临时目录或被忽略的 `artifacts/`。
-- 生成和注入脚本必须声明真源、生成文件和消费者页面，例如 `parse-sankey-data.mjs` 会回写公司级快照和 PMO 驾驶舱。
+- 生成和注入脚本须声明输入资格、输出和消费者；旧 `docs/` 输入仅为历史展示或兼容，不决定当前治理。`parse-sankey-data.mjs` 要求 `--legacy-display --domain-map --out`，只有显式 `--dashboard` 才注入该 HTML，不默认回写保留快照或 PMO 页面。
 - 固定启动脚本可以操作本机运行态或 Docker 容器，但不得顺手修改业务真源。
 - 同步和导入脚本如果会写数据库，必须通过显式环境变量、参数或固定配置声明目标库。
 
 ## 新增或修改脚本要求
 
 - 在脚本头部或 `scripts/README.md` 写清命令、输入、输出/副作用、是否写文件、是否写数据库和验证命令。
-- 修改解析器或生成器前，先确认真源文件、派生文件和下游消费页面。
+- 修改解析器或生成器前，先确认当前依据、所选输入的资格、派生文件和下游消费者；不能把技术合同或历史副本升为业务真源。
 - 本机密码只放 `scripts/infomat-services.local.env`；固定非敏感配置放 `scripts/infomat-services.config.json`。
 - 命令、输出文件或运行前置条件变化时，同步承载该信息的 `scripts/README.md` 或目录说明；目录职责、硬规则改变时才同步入口。
 
@@ -33,10 +33,11 @@ Codex 项目指令、按需路由或局部入口变化：
 npm run test:codex-context
 ```
 
-流程地图解析或注入变化：
+历史展示解析或注入变化，使用纯解析合同和隔离输出验证，不为测试生成正式快照：
 
 ```powershell
-node scripts/parse-sankey-data.mjs
+npm run test:parse-sankey-structure-block
+npm run test:root-script-safety
 node scripts/check-dashboard-data.mjs
 npm run test:process-governance-mainline
 ```
@@ -55,3 +56,5 @@ MDM 导入、流程治理或数据库写入链路变化时，在 `apps/mdm-platf
 ```powershell
 npm run test:process-governance
 ```
+
+聚合主线回归会创建独立夹具、隔离数据库和临时 HTTP，不能描述为全程只读。`--legacy-source-comparison` 是旧副本正文/指纹的显式比较分支，副本变化时允许暴露差异，不得通过重生成保留快照掩盖；技术检查不证明业务验收或当前运行。

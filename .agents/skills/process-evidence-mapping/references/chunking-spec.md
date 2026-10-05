@@ -14,15 +14,45 @@ Accepted sources must expose text or structured cells directly:
 - text-based PDF pages
 - Visio text, nodes and edges when a supported converter can read them
 
-Image files, scan-only PDF pages and any source without directly readable text
-are blocked. The skill must not convert images into text, guess their contents
-or silently omit them. The source manifest records `blocked_unreadable`, and the
-workflow stops until the material owner supplies a machine-readable original or
-a manually confirmed text version.
+Image files and scan-only pages may be read visually or transcribed with an
+already available OCR tool. Preserve `blocked_unreadable` or `failed` when the
+automatic text extractor cannot read them. Located transcripts may provide
+review-only chunks; they do not close the original-source gap. Other readable
+content may continue, but dependent conclusions and claims of complete coverage
+remain blocked. A batch with no usable chunks exits unsuccessfully.
 
 If an otherwise readable file contains an embedded diagram that cannot be
 extracted, record the visual gap in `chunking_warnings.md`; do not infer facts
 from that diagram.
+
+### Explicit visual transcript import
+
+`--visual-transcripts <json>` reuses the `{source, blocks}` envelope emitted by
+`scripts/ocr-source.mjs`. The importer runs no recognition engine. For multiple
+sources use `{ "schema_version": "process-visual-transcripts-v1", "sources": [...] }`,
+where each entry is the same envelope. An unversioned single envelope stays
+compatible with existing OCR output.
+
+- `source`: `source_file`, original-byte SHA-256 `source_hash`, optional `ocr_tool`.
+- Each block: original `text`, one-based `page_no`, `block_id` beginning with the
+  matching page marker (for example `p001-b0001`), optional `bbox=[x1,y1,x2,y2]`.
+- Paths resolve from the repository root and must match a non-deferred source
+  selected by `--input`. Source/block hashes, page markers, original page count,
+  duplicate locations and bounding-box bounds are checked; mismatches reject
+  the import. Do not invent hashes or locations.
+- The original file must remain available. Image bounds use pixels; PDF bounds
+  use the original PDF page coordinate units. Text accuracy and layout semantics
+  still need original-file review.
+- Confirmed or verified claims are rejected at this import boundary. Confidence
+  scores never confirm anything. Imported chunks always have
+  `pending_review/unverified/review_only`, `review_required=true` and
+  `extraction_quality=partial`, with the transcript path and hash retained.
+
+`source_coverage.json` uses `process-source-coverage-v1`: `readable` means text
+extraction is available, `partial` retains gaps or unreviewed visual text, and
+`unavailable` means no usable content. None of these states proves business
+confirmation or complete results. The v2 draft includes the gaps as pending
+issues; old invocations without visual records remain supported.
 
 ## Default Ollama Embedding Config
 
@@ -118,8 +148,8 @@ Every chunk should contain:
 |---|---|
 | `clean` | Directly extracted text is usable for review |
 | `partial` | Text has broken spaces, template blanks or suspected extraction damage |
-| `failed` | Converter failed; the workflow blocks |
-| `blocked_unreadable` | No directly readable text; the workflow blocks |
+| `failed` | Converter failed; dependent conclusions remain blocked |
+| `blocked_unreadable` | Automatic extractor found no text; visual transcription may supply review-only candidates |
 
 Preserve `raw_text` exactly. Repair hints belong only in
 `normalized_review_text` and may only help locate a clean source excerpt.

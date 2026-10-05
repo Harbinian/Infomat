@@ -8,6 +8,7 @@ import csv
 import hashlib
 import html
 import json
+import math
 import os
 import re
 import shutil
@@ -379,6 +380,9 @@ def extract_pdf(file_path: Path, repo: Path) -> tuple[dict, list[dict], list[str
     try:
         import pdfplumber
         with pdfplumber.open(str(file_path)) as pdf:
+            source["page_count"] = len(pdf.pages)
+            source["page_sizes"] = [[float(page.width), float(page.height)] for page in pdf.pages]
+            source["unreadable_pages"] = []
             total_text = 0
             total_images = 0
             for page_index, page in enumerate(pdf.pages, start=1):
@@ -394,6 +398,8 @@ def extract_pdf(file_path: Path, repo: Path) -> tuple[dict, list[dict], list[str
                         paragraph_id=f"page-{page_index}",
                         extraction_method="pdfplumber",
                     ))
+                elif page.images:
+                    source["unreadable_pages"].append(page_index)
             if total_text == 0:
                 source["extraction_status"] = "blocked_unreadable"
                 source["included_status"] = "blocked"
@@ -402,6 +408,9 @@ def extract_pdf(file_path: Path, repo: Path) -> tuple[dict, list[dict], list[str
                     f"blocked_unreadable: {source['source_file']} "
                     f"pages={len(pdf.pages)} image_pages={total_images}"
                 )
+            elif source["unreadable_pages"]:
+                source["included_reason"] = "Some PDF pages need visual transcription and original-file review."
+                warnings.append(f"partial pdf: {source['source_file']} unreadable_pages={source['unreadable_pages']}")
     except Exception as error:
         source["extraction_status"] = "failed"
         warnings.append(f"failed pdf: {source['source_file']} - {error}")
@@ -494,7 +503,7 @@ def extract_file(file_path: Path, repo: Path, temp_dir: Path) -> tuple[dict, lis
     if ext in IMAGE_EXTENSIONS:
         source = base_source(file_path, repo, "blocked_unreadable")
         source["included_status"] = "blocked"
-        source["included_reason"] = "Image sources are not directly readable by this skill."
+        source["included_reason"] = "No text extractor for image; a located visual transcript may be imported for review."
         return source, [], [f"blocked_unreadable: {source['source_file']} image source"]
     try:
         if ext in TEXT_EXTENSIONS:
@@ -535,6 +544,99 @@ def extract_file(file_path: Path, repo: Path, temp_dir: Path) -> tuple[dict, lis
     return source, [], [f"unsupported: {source['source_file']}"]
 
 
+def import_visual_transcripts(transcript_path: Path, sources: list[dict], repo: Path) -> list[dict]:
+    """Reuse ocr-source's source/blocks envelope without running an OCR engine."""
+    payload = json.loads(transcript_path.read_text(encoding="utf-8-sig"))
+    if not isinstance(payload, dict):
+        raise ValueError("visual transcript must contain source/blocks records")
+    if payload.get("schema_version") not in {None, "process-visual-transcripts-v1"}:
+        raise ValueError("unsupported visual transcript schema_version")
+    entries = payload.get("sources", [payload])
+    if not isinstance(entries, list) or not entries:
+        raise ValueError("visual transcript sources must be a nonempty array")
+    indexed = {(repo / source["source_file"]).resolve(): source for source in sources}
+    imported: list[dict] = []
+    seen: set[tuple[str, str]] = set()
+    for entry in entries:
+        original = entry.get("source") if isinstance(entry, dict) else None
+        blocks = entry.get("blocks") if isinstance(entry, dict) else None
+        if not isinstance(original, dict) or not isinstance(blocks, list) or not blocks:
+            raise ValueError("visual transcript needs a source object and nonempty blocks")
+        source_path = original.get("source_file")
+        if not isinstance(source_path, str) or not source_path.strip():
+            raise ValueError("visual transcript missing source_file")
+        file_path = (repo / source_path).resolve()
+        source = indexed.get(file_path)
+        if source is None or source.get("extraction_status") == "deferred":
+            raise ValueError("visual transcript source_file is outside the selected source scope or deferred")
+        if file_path.suffix.lower() not in IMAGE_EXTENSIONS | {".pdf"}:
+            raise ValueError("visual transcript source must be an image or PDF")
+        actual_hash = hashlib.sha256(file_path.read_bytes()).hexdigest()
+        if original.get("source_hash") != actual_hash:
+            raise ValueError("visual transcript source_hash does not match original file")
+        source["source_hash"] = actual_hash
+        for record in [original, *blocks]:
+            if not isinstance(record, dict):
+                raise ValueError("visual transcript block must be an object")
+            if record.get("evidence_status") in {"verified", "confirmed"} or record.get("verification_status") == "confirmed":
+                raise ValueError("visual transcript cannot import a confirmed or verified claim")
+        image_size = None
+        if file_path.suffix.lower() in IMAGE_EXTENSIONS:
+            from PIL import Image
+            with Image.open(file_path) as image:
+                image_size = image.size
+        for block in blocks:
+            if "source_file" in block and (repo / block["source_file"]).resolve() != file_path:
+                raise ValueError("visual transcript block source_file does not match its source")
+            if "source_hash" in block and block["source_hash"] != actual_hash:
+                raise ValueError("visual transcript block source_hash does not match original file")
+            page = block.get("page_no")
+            block_id = block.get("block_id")
+            raw = block.get("text")
+            if type(page) is not int or page < 1 or not isinstance(block_id, str) or not block_id.strip():
+                raise ValueError("visual transcript needs a positive page_no and nonempty block_id")
+            page_marker = re.match(r"^p(\d+)-", block_id)
+            if not page_marker or int(page_marker.group(1)) != page:
+                raise ValueError("visual transcript block_id and page_no location do not match")
+            max_page = 1 if image_size else source.get("page_count")
+            if not max_page or page > max_page:
+                raise ValueError("visual transcript page_no is outside the original source")
+            if not isinstance(raw, str) or not raw.strip():
+                raise ValueError("visual transcript block text must be nonempty")
+            bbox = block.get("bbox")
+            if bbox is not None:
+                if (not isinstance(bbox, list) or len(bbox) != 4
+                        or any(type(value) not in {int, float} or not math.isfinite(value) or value < 0 for value in bbox)
+                        or bbox[0] >= bbox[2] or bbox[1] >= bbox[3]):
+                    raise ValueError("visual transcript bbox is not a valid source location")
+                bounds = image_size or source.get("page_sizes", [])[page - 1]
+                if bbox[2] > bounds[0] or bbox[3] > bounds[1]:
+                    raise ValueError("visual transcript bbox is outside the original source")
+            key = (source["source_file"], block_id)
+            if key in seen:
+                raise ValueError("duplicate visual transcript block location")
+            seen.add(key)
+            anchor = f"page-{page}/block-{block_id}" + (f"/bbox-{','.join(map(str, bbox))}" if bbox else "")
+            chunk = chunk_record(source, raw, "body", f"V{block_id}",
+                                 paragraph_id=anchor, extraction_method=f"visual-transcript:{original.get('ocr_tool') or 'visual'}")
+            chunk.update({
+                "raw_text": raw,
+                "normalized_text": normalize_text(raw),
+                "chunk_hash": sha1(raw),
+                "source_hash": actual_hash,
+                "visual_transcript_file": repo_path(transcript_path, repo),
+                "visual_transcript_hash": hashlib.sha256(transcript_path.read_bytes()).hexdigest(),
+                "page_no": page,
+                "block_id": block_id,
+                "bbox": bbox,
+                "extraction_quality": "partial",
+                "review_reason": "Visual transcription is unverified; check text and layout against the original source.",
+            })
+            imported.append(chunk)
+            source["visual_transcript_blocks"] = source.get("visual_transcript_blocks", 0) + 1
+    return imported
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", required=True)
@@ -546,6 +648,7 @@ def main() -> int:
     parser.add_argument("--exclude-ext", default="")
     parser.add_argument("--defer-ext", default="")
     parser.add_argument("--defer-reason", default="Deferred by --defer-ext for a separate extraction batch.")
+    parser.add_argument("--visual-transcripts")
     args = parser.parse_args()
 
     repo = Path.cwd()
@@ -579,6 +682,19 @@ def main() -> int:
         sources.append(source)
         all_chunks.extend(chunks)
         warnings.extend(file_warnings)
+
+    if args.visual_transcripts:
+        imported = import_visual_transcripts(Path(args.visual_transcripts).resolve(), sources, repo)
+        all_chunks.extend(imported)
+        for source in sources:
+            if not source.get("visual_transcript_blocks"):
+                continue
+            matching = [chunk for chunk in all_chunks if chunk["source_file"] == source["source_file"]]
+            source["chunks"] = len(matching)
+            source["content_hash"] = sha1("\n".join(chunk["raw_text"] for chunk in matching))
+            for chunk in matching:
+                chunk["content_hash"] = source["content_hash"]
+            warnings.append(f"visual transcript pending review: {source['source_file']} blocks={source['visual_transcript_blocks']}")
 
     out.parent.mkdir(parents=True, exist_ok=True)
     source_index.parent.mkdir(parents=True, exist_ok=True)

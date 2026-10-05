@@ -53,6 +53,11 @@ async page => {
     }, JSON.stringify(documentValue));
     await waitForImport();
     await page.locator('[data-action="switch-governance-step"][data-step="data"]').click();
+    const catalogItem = page.locator('[data-action="review-open"][data-kind="data"][data-ref="data_delete_primary"]');
+    if (await catalogItem.isVisible()) {
+      await catalogItem.click();
+      await page.locator('[data-action="review-manage"]').click();
+    }
     await page.locator('[data-action="undo-graph"]').waitFor({ state: 'visible' });
   };
 
@@ -87,21 +92,27 @@ async page => {
   };
 
   const triggerWithDialog = async (dataset, disposition) => {
-    let dialogType = '';
-    let dialogMessage = '';
-    const dialogPromise = new Promise(resolve => {
-      page.once('dialog', async dialog => {
-        dialogType = dialog.type();
-        dialogMessage = dialog.message();
-        if (disposition === 'dismiss') await dialog.dismiss();
-        else await dialog.accept();
-        resolve();
+    // CLI yields on native dialogs; observe the same synchronous confirmation
+    // contract in this isolated page so the full deletion sequence must finish.
+    await page.evaluate(accept => {
+      window.__deletionDialogs = [];
+      window.__deletionNativeConfirm = window.confirm;
+      window.__deletionNativeAlert = window.alert;
+      window.confirm = message => { window.__deletionDialogs.push({ type: 'confirm', message: String(message) }); return accept; };
+      window.alert = message => { window.__deletionDialogs.push({ type: 'alert', message: String(message) }); };
+    }, disposition !== 'dismiss');
+    try {
+      await triggerSyntheticAction(dataset);
+      const dialogs = await page.evaluate(() => window.__deletionDialogs);
+      assert(dialogs.length === 1, `删除操作应产生一个确认或阻断，实际${dialogs.length}`);
+      return dialogs[0];
+    } finally {
+      await page.evaluate(() => {
+        window.confirm = window.__deletionNativeConfirm;
+        window.alert = window.__deletionNativeAlert;
+        delete window.__deletionNativeConfirm; delete window.__deletionNativeAlert; delete window.__deletionDialogs;
       });
-    });
-    await triggerSyntheticAction(dataset);
-    await dialogPromise;
-    await page.waitForTimeout(50);
-    return { type: dialogType, message: dialogMessage };
+    }
   };
 
   const restoreWithSingleUndo = async expected => {
@@ -130,8 +141,9 @@ async page => {
   };
 
   await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.setViewportSize({ width: 1699, height: 828 });
   await page.waitForSelector('#jsonInput', { state: 'attached' });
-  const templateResponse = await page.context().request.get(`${baseOrigin}/api/template?version=process-governance-v7`);
+  const templateResponse = await page.context().request.get(`${baseOrigin}/api/template`);
   assert(templateResponse.ok(), `无法读取v7空白模板：${templateResponse.status()}`);
   const fixture = (await templateResponse.json()).data;
   fixture.export_meta.initiating_department = '工程技术部';
@@ -220,7 +232,9 @@ async page => {
   await page.locator('[data-action="switch-data-editing-mode"][data-mode="grid"]').click();
   await page.locator('[data-action="switch-grid-workspace"][data-workspace="forms"]').click();
   await page.locator('[data-grid-panel="forms"] [data-grid-row-selector]').nth(1).click();
+  await page.locator('[data-action="switch-grid-table"][data-table-id="form_areas"]').click();
   await page.locator('[data-grid-panel="form_areas"] [data-grid-row-selector]').first().click();
+  await page.locator('[data-action="switch-grid-table"][data-table-id="form_items"]').click();
   const gridFieldReference = page.locator('[data-grid-panel="form_items"] [data-grid-column="data_field_ref"][data-grid-cell]');
   await gridFieldReference.selectOption('data_field_referenced');
   await page.locator('[data-action="apply-web-grid"]').click();

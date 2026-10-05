@@ -12,6 +12,7 @@ import {
   readJsonl,
   requireArg,
   sha1Text,
+  sourceCoverage,
   writeJson,
 } from './review-item-utils.mjs';
 
@@ -183,6 +184,12 @@ function main() {
   const objectChains = readJson(args.objects);
   const legacyIssues = readJson(args.issues);
   const chunks = readJsonl(args.chunks);
+  const sources = args.sourceManifest ? readJsonl(args.sourceManifest) : [];
+  const visualChunks = chunks.filter(chunk => text(chunk.extraction_method).startsWith('visual-transcript:'));
+  if (visualChunks.length && (!args.sourceManifest || visualChunks.some(chunk => !sources.some(source => source.source_file === chunk.source_file)))) {
+    throw new Error('Visual transcript compilation requires --source-manifest covering every visual source; source coverage and review issues cannot be omitted.');
+  }
+  const coverage = args.sourceManifest ? sourceCoverage(sources, chunks) : null;
   const department = text(documentCandidates.department || roleBook.department || args.department);
   const sourceFile = text(documentCandidates.source_file || chunks[0]?.source_file);
   const documentTitle = fileTitle(sourceFile);
@@ -215,7 +222,8 @@ function main() {
       source_file: file,
       source_excerpt: excerpt,
       locator: anchor || file,
-      locate_method: '直接读取源文件',
+      locate_method: text(item?.extraction_method).startsWith('visual-transcript:')
+        ? '视觉转录，原文件页码和块位置待复核' : '直接读取源文件',
       confirmer: null,
       record_time: null,
       missing_reason: null,
@@ -522,6 +530,26 @@ function main() {
     }));
   }
 
+  for (const gap of coverage?.gaps || []) {
+    addIssue(issueMap, issueRecord({
+      department,
+      documentName: documentTitle,
+      objectType: 'draft',
+      objectKey: draftRef,
+      targetBlock: 'meta',
+      targetField: 'basis_description',
+      issueType: gap.visual_transcript_blocks ? 'OCR/抽取待复核' : '来源证据不足',
+      question: gap.visual_transcript_blocks
+        ? '请对照原文件复核视觉转录和布局；转录仅为待复核候选，不能据此确认职责、审批或材料完整。'
+        : '该来源尚未完整读取，请补充可用内容并确认影响范围；依赖此来源的结论尚未形成。',
+      sourceFile: gap.source_file,
+      anchor: gap.unreadable_pages.length ? `pages=${gap.unreadable_pages.join(',')}` : null,
+      currentValue: gap.extraction_status,
+      handler: '资料责任人',
+      nextStep: '补充或核对原文件后重新生成并检查依赖部分；其余可读草稿可继续核对，不表示完整成果通过。',
+    }));
+  }
+
   const output = {
     schema_version: 'document-structured-output-v2',
     generated_at: new Date().toISOString(),
@@ -533,7 +561,9 @@ function main() {
       current_edition: sourceEdition || null,
       process_name: processes[0]?.l3_name || documentTitle,
       basis_type: '制度 / 规程',
-      basis_description: '只依据可直接读取的源文件生成候选结构。',
+      basis_description: coverage?.gaps.length
+        ? `仅依据本批可用内容生成待复核候选；尚有 ${coverage.gaps.length} 项来源缺口或视觉转录待复核，成果不完整，不表示完整通过。`
+        : '依据可读取的源文件生成待复核候选结构，不表示业务确认或审核通过。',
       involves_other_departments: false,
       related_departments: [],
       department: {

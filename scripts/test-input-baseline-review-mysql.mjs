@@ -3,8 +3,8 @@
  * Contract checks for the MySQL-backed input baseline review service.
  */
 import assert from 'node:assert/strict';
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { basename, join, resolve } from 'node:path';
 import {
   buildReviewAppHtml,
   inputBaselineReviewSchemaSql,
@@ -21,10 +21,9 @@ import {
 } from './input-baseline-review-core.mjs';
 
 const root = resolve(import.meta.dirname, '..');
-const runDir = join(root, 'artifacts', 'process-input-baseline-review', 'test-input-baseline-review-mysql');
-
-rmSync(runDir, { recursive: true, force: true });
-mkdirSync(runDir, { recursive: true });
+const testParent = join(root, 'artifacts', 'process-input-baseline-review');
+mkdirSync(testParent, { recursive: true });
+const runDir = mkdtempSync(join(testParent, 'test-input-baseline-review-mysql-'));
 
 writeFileSync(
   join(runDir, 'mapping_diff_items.json'),
@@ -93,7 +92,7 @@ assert.equal(schema.includes('sqlite_master'), false, 'schema must not use SQLit
 assert.equal(schema.includes('correction_note'), false, 'input baseline review schema must not keep concatenated correction note fields');
 
 const bundle = loadReviewRunBundle(runDir);
-assert.equal(bundle.run.run_id, 'test-input-baseline-review-mysql');
+assert.equal(bundle.run.run_id, basename(runDir), 'review run id must preserve the unique fixture directory identity');
 assert.equal(bundle.items.length, 1);
 assert.equal(bundle.items[0].document_name, 'GLTX-CW-01-A财务成本核算管理程序.docx');
 assert.equal(bundle.items[0].source_excerpts.length, 1);

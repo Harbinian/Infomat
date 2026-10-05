@@ -12,9 +12,9 @@
 |---|---|
 | `skills/business-behavior-mapping/` | BBM/A1 业务行为映射兼容技能 |
 | `skills/department-capability-mapping/` | DCM 部门能力流程系统映射兼容技能 |
-| `skills/process-evidence-mapping/` | 只读取机器可读源文件，生成并校验 `document-structured-output-v2` 流程证据草稿；不可读来源阻断，不自动发布 |
+| `skills/process-evidence-mapping/` | 从可提取文字及带来源定位的待复核视觉转录生成并校验 `document-structured-output-v2` 证据草稿；不可读来源保留缺口，只暂停依赖成果，不自动确认或发布 |
 | `skills/database-to-process-json/` | 仅在用户显式调用时，从指定的 `CXSYSYS.dbo` 表单结构快照生成一个使用业务文件名的未审核 V7 JSON 和证据包；审批等实际办理保留为业务行为，办理后的条件分叉另设判断节点；默认不连接数据库，实时核验只允许专用只读账号和固定摘要查询 |
-| `skills/single-process-authoring/` | 一次编制一个流程：从已有业务材料、纯访谈、已有 JSON 续编或 3001 校验结果出发，按七阶段每轮只问一个问题，产出制度正文、`process-governance-v8` JSON、工作平衡报告和待确认事项四项待核对草案；交付前用自带离线校验器调用 3001 与 3000 共用的结构与语义规则；不自动写入或发布，不替代数据库转 JSON 和流程证据映射 |
+| `skills/single-process-authoring/` | 一次编制一个流程，材料充分、续编或技术修正直接推进；缺信息时按七阶段引导访谈。默认产出 Markdown 制度正文、`process-governance-v8` JSON、工作平衡报告和待确认事项四项草案；用户要求时由同源正文生成 Word。交付前离线验证结构与语义，不自动写入或发布，不替代数据库转 JSON 和流程证据映射 |
 | `skills/technical-chinese-writer/` | 中文技术、业务和管理文档的受控起草、改写、审校与压缩技能 |
 | `skills/humanizer-zh/` | 仅在用户明确点名时使用的中文文风清理技能，不得替代受控写作 |
 
@@ -28,3 +28,4 @@
 6. 正式或可执行中文内容按 `technical-chinese-writer` 保留事实与责任；普通回复和简单文字修正直接处理。`humanizer-zh` 只在用户点名时清理文风。
 7. BBM/DCM 兼容入口只转向主技能，其 `references/prompts.md` 属于历史材料，不授权执行旧写回或页面发布步骤。
 8. 数据库转流程技能的快照、旧草稿保护和只读核验规则以该技能为准。技能开发测试按修改面选择，普通生成任务验证本批输出，不重复运行无关开发套件。
+9. 当前任务与已有授权优先于技能的默认方法；不因泛化关键词自动加载技能。工程方法按根 `CODEX.md` 的任务与风险选择，Superpowers 不再承担本库工作流。

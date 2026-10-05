@@ -6,8 +6,7 @@
 
 本目录保存流程地图驾驶舱静态页面。驾驶舱是展示副本。
 
-流程输入基线仍在 `docs/norms/`。
-组织真源仍在 `docs/organization/`。
+页面内嵌数据来自保留的历史消费链。当前流程、组织和职责依据用户指定外部材料及明确业务确认；`docs/norms/`和`docs/organization/`仅保留旧消费资产。
 修改页面前先读 `AGENTS.md`。
 
 ## 当前文件
@@ -22,7 +21,7 @@
 仅在明确授权维护旧展示消费链时，核对输入及生成影响后从仓库根目录运行；这些命令不代表业务确认：
 
 ```powershell
-node scripts/parse-sankey-data.mjs
+node scripts/parse-sankey-data.mjs --legacy-display --domain-map <historical-domain-map.json> --out docs/company-sankey-data.json --dashboard pmo/procedure-management/dashboard.html
 node scripts/check-dashboard-data.mjs
 ```
 

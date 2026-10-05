@@ -1,86 +1,36 @@
 /**
- * 校验部门到域映射与组织真源一致。
- *
- * 用法: node scripts/check-dept-domain-mapping.mjs
+ * Validate a historical display map, optionally comparing a preserved snapshot.
+ * No Markdown organization copy is interpreted as current business authority.
+ * Usage: node scripts/check-dept-domain-mapping.mjs [--domain-map <json>] [--snapshot <json>]
+ * With no arguments, compare the preserved technical contract and legacy snapshot.
+ * Read-only: no files, database connections or services are created.
  */
-
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { readLegacyDepartmentDomains } from './legacy-department-domains.mjs';
 
 const root = resolve(import.meta.dirname, '..');
-const organizationPath = resolve(root, 'docs', 'organization', '组织架构和部门职责.md');
-const contractPath = resolve(root, 'docs', 'contracts', 'dcm-bbm-contract.json');
-const parserPath = resolve(root, 'scripts', 'parse-sankey-data.mjs');
-
-function readText(path) {
-  assert.ok(existsSync(path), `missing ${path}`);
-  return readFileSync(path, 'utf8');
+const argv = process.argv.slice(2);
+const options = {};
+for (let index = 0; index < argv.length; index += 1) {
+  if (!['--domain-map', '--snapshot'].includes(argv[index])) throw new Error(`Unknown argument: ${argv[index]}`);
+  const value = argv[++index];
+  if (!value || value.startsWith('--')) throw new Error(`Missing value for ${argv[index - 1]}`);
+  options[argv[index - 1]] = resolve(value);
 }
-
-function readJson(path) {
-  return JSON.parse(readText(path));
-}
-
-function parseOrganizationDomainMap(text) {
-  const blockMatch = text.match(/```([\s\S]*?)```/);
-  assert.ok(blockMatch, 'organization source must include an organization chart code block');
-
-  const result = {};
-  let currentDomain = '总经理直辖域';
-  for (const rawLine of blockMatch[1].split(/\r?\n/)) {
-    const line = rawLine.trim();
-    if (!line) continue;
-
-    const nodeMatch = line.match(/[├└]──\s*(.+)$/);
-    if (!nodeMatch) continue;
-
-    const name = nodeMatch[1].replace(/（.*?）/g, '').trim();
-    if (name === '经营副总') {
-      currentDomain = '经营域';
-      continue;
-    }
-    if (name === '生产副总') {
-      currentDomain = '生产域';
-      continue;
-    }
-
-    result[name] = currentDomain;
+const domainMapPath = options['--domain-map'] || resolve(root, 'docs/contracts/dcm-bbm-contract.json');
+const departments = readLegacyDepartmentDomains(domainMapPath);
+const snapshotPath = options['--snapshot'] || (!argv.length && resolve(root, 'docs/company-sankey-data.json'));
+if (snapshotPath) {
+  const snapshot = JSON.parse(readFileSync(snapshotPath, 'utf8'));
+  assert.ok(Array.isArray(snapshot.links), 'historical display snapshot must contain links');
+  for (const [department, domain] of Object.entries(departments)) {
+    assert.ok(snapshot.links.some(link => link.source === domain && link.target === department),
+      `historical display snapshot has no explicit ${domain} -> ${department} link`);
   }
-
-  return result;
+  const domains = new Set(Object.values(departments));
+  const actualDepartments = snapshot.links.filter(link => domains.has(link.source)).map(link => link.target).sort();
+  assert.deepEqual(actualDepartments, Object.keys(departments).sort(), 'historical snapshot and domain input department lists differ');
 }
-
-function assertParserUsesOrganizationSource(text) {
-  assert.ok(
-    !/const\s+DEPT_DOMAIN\s*=\s*\{/.test(text),
-    'parse-sankey-data.mjs must derive DEPT_DOMAIN from organization source instead of hard-coding a map'
-  );
-  assert.ok(
-    text.includes('组织架构和部门职责.md') && /parseOrganizationDomainMap|buildDeptDomainMap/.test(text),
-    'parse-sankey-data.mjs must read and parse the organization source for department domains'
-  );
-}
-
-function assertSameDomainMap(actual, expected, label) {
-  assert.deepEqual(
-    Object.keys(actual).sort((a, b) => a.localeCompare(b, 'zh-CN')),
-    Object.keys(expected).sort((a, b) => a.localeCompare(b, 'zh-CN')),
-    `${label} department list must match organization source`
-  );
-
-  for (const [department, domain] of Object.entries(expected)) {
-    assert.equal(actual[department], domain, `${label} ${department} domain must be ${domain}`);
-  }
-}
-
-const organizationMap = parseOrganizationDomainMap(readText(organizationPath));
-const contract = readJson(contractPath);
-const parserText = readText(parserPath);
-
-assert.equal(Object.keys(organizationMap).length, 9, 'organization source should define 9 departments');
-assert.ok(!Object.values(organizationMap).some(domain => domain.includes('直属')), 'organization domains must use 直辖, not 直属');
-assertSameDomainMap(contract.departments || {}, organizationMap, 'dcm-bbm contract');
-assertParserUsesOrganizationSource(parserText);
-
-console.log(`Department domain mapping check passed: ${Object.keys(organizationMap).length} departments`);
+console.log(`Historical department/domain compatibility check passed: ${Object.keys(departments).length} departments; current organization unverified`);

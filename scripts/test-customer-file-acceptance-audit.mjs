@@ -1,14 +1,15 @@
 #!/usr/bin/env node
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync, rmSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
-const outPath = resolve(root, 'artifacts', 'customer-file-acceptance', 'test-impact-list.json');
-const reportPath = resolve(root, 'artifacts', 'customer-file-acceptance', 'test-impact-report.md');
-
-rmSync(dirname(outPath), { recursive: true, force: true });
+const testParent = resolve(root, 'artifacts', 'customer-file-acceptance');
+mkdirSync(testParent, { recursive: true });
+const testDir = mkdtempSync(join(testParent, 'test-'));
+const outPath = join(testDir, 'impact-list.json');
+const reportPath = join(testDir, 'impact-report.md');
 
 execFileSync(process.execPath, [
   resolve(root, 'scripts', 'audit-customer-file-acceptance.mjs'),
@@ -51,4 +52,4 @@ assert.ok(
 assert.match(report, /# 客户文件承接影响清单/);
 assert.match(report, /本清单不改写已确认流程映射/);
 
-console.log('Customer file acceptance audit checks passed');
+console.log(`Customer file acceptance audit checks passed: ${testDir}`);

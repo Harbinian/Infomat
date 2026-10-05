@@ -23,6 +23,7 @@
 | `smoke-weekly-issue-ledger.mjs` | PMO 周会事项台账 smoke 检查，锁定五类模板、关闭标准和建议生成 |
 | `smoke-weekly-issue-ledger-fs.mjs` | 周会事项文件正本 smoke 检查，锁定规则 6.4/8.1/8.2 校验、发布文本和登记·更新·乐观锁端到端；用环境变量指向隔离台账目录，运行后清理 |
 | `smoke-writeback.mjs` | PMO 写回流程 smoke 检查 |
+| `../build-standalone.js` | 历史HTML单文件导出；原默认模板已退役，必须显式指定`--input <HTML> --tasks <JSON> --out <HTML>`，读取全部并验证模板后只写指定输出，不覆盖输入 |
 | `regroup-wbs-semantic.mjs` | 按语义工作包补齐 PMO WBS 二级摘要层，并同步计划/WBS Markdown 真源 |
 
 ## 修改自检

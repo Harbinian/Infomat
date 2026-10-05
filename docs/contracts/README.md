@@ -20,8 +20,8 @@ V8 候选合同 `process-governance-v8.schema.json` 保持 V7 字段形状，新
 |---|---|---|---|---|---|
 | `dcm-bbm-contract.json` | `scripts/check-dcm-bbm.mjs` | `docs/norms/`、`docs/organization/组织架构和部门职责.md`、`pmo/procedure-management/dashboard.html` | 默认报告 `docs/reports/dcm-bbm-quality-report.md` | `node scripts/check-dcm-bbm.mjs --no-fail` | 定义 DCM/BBM 质检的路径、术语、允许系统、交付物命名、表头、证据类型和 HTML 检查规则 |
 | `dcm-bbm-contract.json` | `scripts/check-norms-source-manifest.mjs` | `docs/reports/2026-06-11-norms-source-manifest.md`、`docs/norms/` | 只读校验输出 | `npm run test:norms-source-manifest` | 校验规则文件中的部门、域口径和标准三件套覆盖状态一致 |
-| `dcm-bbm-contract.json` | `scripts/check-dept-domain-mapping.mjs` | `docs/organization/组织架构和部门职责.md`、`scripts/parse-sankey-data.mjs` | 只读校验输出 | `npm run test:dept-domain-mapping` | 校验历史组织映射与旧规则文件的一致性，不代表业务确认 |
-| `document-structured-output.schema.json` | `scripts/test-document-structured-output-schema.mjs`、文档结构化输出导出/校验脚本 | `apps/structured-output-service/`、`apps/mdm-platform/`、`scripts/parse-sankey-data.mjs` | 只读校验输出 | `npm run test:document-structured-output-schema`、`npm run test:work-role-contract` | 统一制度、流程、行为、工作角色绑定、表单字段、证据、待确认问题和结构块投影的数据模型；工作角色事实须有业务确认，不以旧组织资料认定 |
+| `dcm-bbm-contract.json` | `scripts/check-dept-domain-mapping.mjs` | `dcm-bbm-contract.json`的历史部门对象、`docs/company-sankey-data.json`；可显式指定JSON | 只读校验输出 | `npm run test:dept-domain-mapping` | 校验历史组织映射与旧规则文件的一致性，不代表业务确认 |
+| `document-structured-output.schema.json` | `scripts/test-document-structured-output-schema.mjs`、文档结构化输出导出/校验脚本 | 证据映射技能编译/校验器及旧parser | 只读校验输出 | `npm run test:document-structured-output-schema`、`npm run test:work-role-contract` | 保留v2证据草稿及旧结构块的兼容模型；3000旧文档编制/导入已退役；工作角色事实须有业务确认，不以旧组织资料认定 |
 | `process-governance-v1.schema.json` | `apps/structured-output-service/` | 历史3001单流程文件 | 规范化到当前V8的兼容输入 | `npm --prefix apps/structured-output-service test` | 只作为3001兼容导入规则；3000旧版编制及导入入口已退役，源文件不修改 |
 | `process-governance-v2.schema.json` | `apps/structured-output-service/` | 历史v2单流程文件 | 迁移到当前V8的兼容输入 | `npm --prefix apps/structured-output-service test` | 保留v2承接结构，只作为兼容读取规则；源文件不修改 |
 | `process-governance-v3.schema.json` | `apps/structured-output-service/` | 历史v3单流程文件 | 迁移到当前V8的兼容输入 | `npm --prefix apps/structured-output-service test` | 保留表单状态和执行主体确定方式，只作为兼容读取规则；源文件不修改 |
@@ -44,7 +44,7 @@ npm run test:norms-source-manifest
 npm run test:dept-domain-mapping
 ```
 
-4. 修改文档结构化输出 schema、MDM 文档结构化页面字段、`process_design_*` 表结构或结构块 parser 字段后，运行：
+4. 修改v2证据草稿schema、证据映射技能编译/校验器或旧结构块parser字段后，运行：
 
 ```powershell
 npm run test:document-structured-output-schema

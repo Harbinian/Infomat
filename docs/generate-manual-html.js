@@ -1,6 +1,21 @@
 const fs = require('fs');
+const path = require('path');
 
-const imgs = JSON.parse(fs.readFileSync('screenshots/screenshots-base64.json', 'utf-8'));
+// This generator retains the historical tutorial. It is not a current manual.
+const args = process.argv.slice(2);
+if (args.length !== 5 || args[0] !== '--legacy-display' || args[1] !== '--screenshots' || args[3] !== '--out') {
+  throw new Error('Historical tutorial generation requires --legacy-display --screenshots <JSON> --out <HTML>; no default write.');
+}
+const screenshotPath = path.resolve(args[2]);
+const outputPath = path.resolve(args[4]);
+function sameFile(left, right) {
+  if (left.toLowerCase() === right.toLowerCase()) return true;
+  if (!fs.existsSync(left) || !fs.existsSync(right)) return false;
+  const a = fs.statSync(left), b = fs.statSync(right);
+  return fs.realpathSync(left).toLowerCase() === fs.realpathSync(right).toLowerCase() || (a.dev === b.dev && a.ino === b.ino);
+}
+if (sameFile(screenshotPath, outputPath)) throw new Error('Output must not replace input.');
+const imgs = JSON.parse(fs.readFileSync(screenshotPath, 'utf-8'));
 
 const html = `<!DOCTYPE html>
 <html lang="zh-CN">
@@ -123,6 +138,7 @@ code{background:#f1f5f9;padding:1px 5px;border-radius:3px;font-size:12px;font-fa
 <button class="menu-toggle" id="menuToggle" aria-label="菜单">&#9776;</button>
 
 <main class="content" id="content">
+  <aside role="note" style="padding:16px 20px;margin-bottom:24px;background:#fff7ed;border:1px solid #d97706;border-radius:8px"><strong>历史教程适用说明（2026-10-05）</strong><p>本页为旧SQLite版教程，旧预设账号、文档编制、导入和承接步骤不用于当前运行。现行运行使用MySQL；操作和权限边界以 apps/mdm-platform/README.md 为准，正式服务状态须实时核对。</p></aside>
 
 <!-- ══════════ 00 封面 ══════════ -->
 <section id="cover" class="sec cover-sec">
@@ -480,6 +496,7 @@ npm run legacy-sqlite:init-db</code></pre>
 </body>
 </html>`;
 
-fs.writeFileSync('MDM平台使用说明.html', html, 'utf-8');
+fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+fs.writeFileSync(outputPath, html, 'utf-8');
 console.log('HTML written:', html.length, 'chars');
 console.log('Done!');

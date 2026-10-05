@@ -2315,19 +2315,20 @@
 
   <!-- Password change dialog -->
   <div id="passwordDialog" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:10000;justify-content:center;align-items:center;">
-    <div style="background:white;padding:24px;border-radius:8px;width:400px;max-width:90vw;">
+    <div role="dialog" aria-modal="true" aria-labelledby="passwordDialogTitle" aria-describedby="passwordDialogContext" style="background:white;padding:24px;border-radius:8px;width:400px;max-width:90vw;">
       <h3 id="passwordDialogTitle">修改密码</h3>
+      <p id="passwordDialogContext" style="color:#374151;line-height:1.6;margin:12px 0;"></p>
       <p id="passwordDialogMsg" style="color:#e53935;margin-bottom:12px;display:none;"></p>
       <div style="margin-bottom:12px;">
-        <label style="display:block;margin-bottom:4px;">当前密码</label>
+        <label for="currentPassword" style="display:block;margin-bottom:4px;">当前密码</label>
         <input type="password" id="currentPassword" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;">
       </div>
       <div style="margin-bottom:12px;">
-        <label style="display:block;margin-bottom:4px;">新密码</label>
+        <label for="newPassword" style="display:block;margin-bottom:4px;">新密码</label>
         <input type="password" id="newPassword" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;" placeholder="至少10位，包含字母和数字">
       </div>
       <div style="margin-bottom:16px;">
-        <label style="display:block;margin-bottom:4px;">确认新密码</label>
+        <label for="confirmPassword" style="display:block;margin-bottom:4px;">确认新密码</label>
         <input type="password" id="confirmPassword" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;">
       </div>
       <div style="text-align:right;">
@@ -5807,6 +5808,15 @@ async function downloadNativeDiagram() {
       } catch (error) {
         console.warn('当前用户资料补全失败，继续使用登录返回资料', error);
       }
+      // Password bootstrap endpoints remain available before protected catalogs.
+      // Check resumed sessions too, so refreshing cannot strand a first-login user.
+      if (await checkPasswordStatus(options)) {
+        stopPolling();
+        $('sessionUserName').textContent = describePasswordAccount() + ' · 首次改密待完成';
+        $('password').value = '';
+        $('loginMsg').textContent = '首次登录必须先修改密码，完成后请重新登录。';
+        return;
+      }
       $('sessionUserName').textContent = state.user.name + ' · ' + ((state.user.roleNames || state.user.roleCodes || []).join(' / ') || '未分配有效角色');
       // Finish initial identity/catalog reads before routing starts other page requests.
       identityModel = await api('/api/rbac/model');
@@ -5824,7 +5834,6 @@ async function downloadNativeDiagram() {
       renderRouteFromHash();
       applyPermissionControlledActions();
       startPolling();
-      if (options.checkPassword) checkPasswordStatus();
       addPasswordChangeButton();
       await resumeAnalysisOfficeTask();
     }
@@ -5834,7 +5843,7 @@ async function downloadNativeDiagram() {
       try {
         var user = await api('/api/org/login', { method:'POST', body:JSON.stringify({ loginName:$('employeeNo').value, password:$('password').value }) });
         csrfToken = '';
-        await activateAuthenticatedApp(user, { checkPassword: true });
+        await activateAuthenticatedApp(user, { sessionRestored: false });
       } catch (error) {
         $('loginMsg').textContent = error.message || '登录失败';
       }
@@ -5844,7 +5853,7 @@ async function downloadNativeDiagram() {
       try {
         var session = await api('/api/org/session', { silentUnauthorized: true });
         if (session && session.authenticated && session.user) {
-          await activateAuthenticatedApp(session.user);
+          await activateAuthenticatedApp(session.user, { sessionRestored: true });
           return;
         }
         showLogin();
@@ -11699,14 +11708,23 @@ async function downloadNativeDiagram() {
     }
 
     // --- Password Management ---
-    function checkPasswordStatus() {
-      fetch('/api/org/me/password-status').then(function(r) { return r.json(); }).then(function(data) {
-        if (data.is_default_password) {
-          document.getElementById('passwordDialogTitle').textContent = '首次登录，请修改密码';
-          document.getElementById('passwordCancelBtn').style.display = 'none';
-          document.getElementById('passwordDialog').style.display = 'flex';
-        }
-      });
+    function describePasswordAccount() {
+      var user = state.user || {};
+      return (user.name || user.personName || '当前账号') + (user.employeeNo ? '（' + user.employeeNo + '）' : '');
+    }
+
+    async function checkPasswordStatus(options) {
+      var data = await api('/api/org/me/password-status');
+      if (data.is_default_password) {
+        document.getElementById('passwordDialogTitle').textContent = '首次登录，请修改密码';
+        document.getElementById('passwordDialogContext').textContent =
+          (options && options.sessionRestored ? '已恢复本浏览器中“' + describePasswordAccount() + '”的登录会话。' : '已登录为“' + describePasswordAccount() + '”。') +
+          '该账号需要先完成首次改密。请填写该账号的现有密码，再设置新密码；完成后请重新登录。';
+        document.getElementById('passwordCancelBtn').style.display = 'none';
+        document.getElementById('passwordDialog').style.display = 'flex';
+        document.getElementById('currentPassword').focus();
+      }
+      return Boolean(data.is_default_password);
     }
 
     function addPasswordChangeButton() {
@@ -11719,6 +11737,7 @@ async function downloadNativeDiagram() {
       btn.style.cssText = 'cursor:pointer;color:#4a9eff;margin-left:8px;font-size:13px;';
       btn.onclick = function() {
         document.getElementById('passwordDialogTitle').textContent = '修改密码';
+        document.getElementById('passwordDialogContext').textContent = '当前账号：“' + describePasswordAccount() + '”。请填写现有密码和新密码，修改成功后请重新登录。';
         document.getElementById('passwordCancelBtn').style.display = '';
         document.getElementById('passwordDialog').style.display = 'flex';
         document.getElementById('currentPassword').value = '';
@@ -11731,23 +11750,35 @@ async function downloadNativeDiagram() {
 
     var passwordSubmitBtn = document.getElementById('passwordSubmitBtn');
     if (passwordSubmitBtn) {
-    passwordSubmitBtn.addEventListener('click', function() {
+    passwordSubmitBtn.addEventListener('click', async function() {
+      if (passwordSubmitBtn.disabled) return;
       var current = document.getElementById('currentPassword').value;
       var newPw = document.getElementById('newPassword').value;
       var confirm = document.getElementById('confirmPassword').value;
 
+      if (!current) { showPasswordError('请填写当前密码'); return; }
       if (newPw.length < 10) { showPasswordError('新密码至少10位'); return; }
       if (newPw !== confirm) { showPasswordError('两次新密码不一致'); return; }
-
-      fetch('/api/org/me/password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ current_password: current, new_password: newPw })
-      }).then(function(r) { return r.json(); }).then(function(data) {
-        if (data.error) { showPasswordError(data.error); return; }
+      passwordSubmitBtn.disabled = true;
+      document.getElementById('passwordDialogMsg').style.display = 'none';
+      try {
+        await api('/api/org/me/password', {
+          method: 'POST',
+          body: JSON.stringify({ current_password: current, new_password: newPw })
+        });
+        ['currentPassword', 'newPassword', 'confirmPassword', 'password'].forEach(function(id) {
+          document.getElementById(id).value = '';
+        });
         document.getElementById('passwordDialog').style.display = 'none';
-        alert('密码修改成功');
-      });
+        identityModel = null;
+        showLogin();
+        $('loginMsg').textContent = '密码修改成功，请重新登录。';
+        $('password').focus();
+      } catch (error) {
+        showPasswordError(error.message || '密码修改未完成，请检查当前会话后重试');
+      } finally {
+        passwordSubmitBtn.disabled = false;
+      }
     });
     }
 

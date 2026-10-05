@@ -8,9 +8,6 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont
-
-
 WIDTH, HEIGHT = 7680, 4320
 YEAR = 2026
 MONTHS = list(range(5, 13))
@@ -18,9 +15,9 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Render the digital project Gantt chart as an 8K PNG.")
-    parser.add_argument("--source", type=Path, default=ROOT / "output" / "digital_project_gantt_8k.md")
-    parser.add_argument("--output", type=Path, default=ROOT / "output" / "digital_project_gantt_8k.png")
+    parser = argparse.ArgumentParser(description="Render an explicitly supplied historical digital project Gantt Markdown as an 8K PNG.")
+    parser.add_argument("--source", type=Path, required=True)
+    parser.add_argument("--output", type=Path, default=ROOT / "artifacts" / "pmo" / "gantt8k" / "digital_project_gantt_8k.png")
     parser.add_argument(
         "--font",
         action="append",
@@ -33,6 +30,10 @@ def parse_args() -> argparse.Namespace:
 ARGS = parse_args()
 SOURCE = ARGS.source.resolve()
 TARGET = ARGS.output.resolve()
+if not SOURCE.is_file():
+    raise SystemExit(f"Historical Gantt source file not found: {SOURCE}; supply an existing --source file")
+
+from PIL import Image, ImageDraw, ImageFont
 
 BG = "#061426"
 PANEL = "#0A1D35"
@@ -474,7 +475,7 @@ def draw_chart() -> None:
         draw.rounded_rectangle((lx, legend_y, lx + 54, legend_y + 34), radius=8, fill=fill, outline="#FFFFFF", width=1)
         draw.text((lx + 70, legend_y - 1), label, font=F_TASK_SMALL, fill=TEXT_MUTED)
         lx += 430
-    draw.text((margin_x, HEIGHT - 88), "数据源：output/digital_project_gantt_8k.md 的融合甘特任务表；MES 明细按 T+1=2026.05 至 T+6=2026.10 映射。", font=F_SUBTITLE, fill="#8FBAD8")
+    draw.text((margin_x, HEIGHT - 88), f"历史图表数据源：{SOURCE.name}；MES 明细按 T+1=2026.05 至 T+6=2026.10 映射。", font=F_SUBTITLE, fill="#8FBAD8")
 
     TARGET.parent.mkdir(parents=True, exist_ok=True)
     img.save(TARGET, "PNG", optimize=True)

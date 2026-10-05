@@ -19,7 +19,7 @@ npm run preview
 
 容器保留 Vite 服务及交付物插件，因此读取、上传、状态写回和行动项发布仍可使用。它是原有内部开发服务的容器化运行方式，不是带登录鉴权的生产发布服务。只在受信任的内网使用，不对公网开放。
 
-`src/` 与 `plugins/` 是**构建进镜像**的（见 `Dockerfile` 的 `COPY`），不随宿主机改动自动更新。修改前端或插件后必须重新执行 `build` 并重建容器，否则容器仍运行旧版本 —— 表现为页面上缺少新功能入口。只有 `pmo/deliverables/`、`artifacts/pmo/deliverables/`、`public/`、名册、流程地图和 ECharts 是挂载的。
+`src/` 与 `plugins/` 是**构建进镜像**的（见 `Dockerfile` 的 `COPY`），不随宿主机改动自动更新。修改前端或插件后必须重新执行 `build` 并重建容器，否则容器仍运行旧版本 —— 表现为页面上缺少新功能入口。只有 `pmo/deliverables/`、`pmo/weekly-issues/`、`artifacts/pmo/deliverables/`、`public/`、名册、流程地图和 ECharts 是挂载的。
 
 在仓库根目录执行以下 PowerShell 命令：
 
@@ -31,11 +31,11 @@ node pmo/gantt-react/scripts/smoke-docker.mjs http://127.0.0.1:5173
 
 默认基镜像为 `node:24-bookworm-slim`。本机无法拉取 Docker Hub 镜像时，可复用已存在且验证过的本地 Node 24 镜像：先设置 `$env:PMO_NODE_IMAGE='infomat-node:24.21.0'`，再运行构建命令。镜像必须事先存在；该名称不是公共镜像。
 
-容器名为 `infomat-pmo-5173`，监听 `0.0.0.0:5173`，使用非 root 用户、只读根文件系统和临时 Vite 缓存。Compose 只将 `pmo/deliverables/` 及 `artifacts/pmo/deliverables/` 挂载为可写目录，分别保存交付物正本和上传、历史产物；重建容器不会删除这些宿主机文件。`public/`、`信息化项目_部门主备对接人名单.md`、流程地图和 ECharts 从原路径只读挂载，重新生成任务数据或调整主备对接人后刷新页面即可。
+容器名为 `infomat-pmo-5173`，监听 `0.0.0.0:5173`，使用非 root 用户、只读根文件系统和临时 Vite 缓存。Compose 将 `pmo/deliverables/`、`pmo/weekly-issues/` 及 `artifacts/pmo/deliverables/` 挂载为三个可写目录，分别保存交付物正本、周会事项文件正本和上传/历史产物；重建容器不会删除这些宿主机文件。`public/`、`信息化项目_部门主备对接人名单.md`、流程地图和 ECharts 从原路径只读挂载，重新生成任务数据或调整主备对接人后刷新页面即可。
 
 名册是发布行动项的责任部门来源。它缺失时责任部门下拉会为空（插件启动日志会显式告警），因此修改该文件后无需重建镜像，重启容器或让挂载生效即可。
 
-构建上下文采用白名单，不包含 `.env`、其他应用或交付物正本。更新前应备份上述两个可写目录；回退软件不会自动回退期间发生的数据修改。周会事项仍存储在浏览器 `localStorage`，继续使用原访问地址和端口可保持原浏览器存储空间。
+构建上下文采用白名单，不包含 `.env`、其他应用或交付物正本。更新前应备份上述三个可写目录；回退软件不会自动回退期间发生的数据修改。dev/容器中的周会事项写入 `pmo/weekly-issues/ledger.json`；静态构建或插件不可用时降级为浏览器 `localStorage`，页面标明模式。浏览器数据按访问来源隔离，不能替代文件正本备份。
 
 `scripts/smoke-docker.mjs` 只读检查首页、前端模块、任务及清单文件摘要、流程地图、ECharts、交付物列表和详情，不写入业务数据。候选容器的写回测试必须使用隔离交付物目录。
 
@@ -45,7 +45,7 @@ node pmo/gantt-react/scripts/smoke-docker.mjs http://127.0.0.1:5173
 
 ## 数据来源
 
-`public/tasks.json` 由 `pmo/信息化项目_计划管控真源.md` 通过 `pmo/build_pmo_task_data.py` 生成。页面实际读取 `public/tasks.json`，同时保留 `pmo/tasks.json` 作为 PMO 根目录备份。
+`public/tasks.json` 由 `pmo/build_pmo_task_data.py` 读取七份PMO来源生成，以计划管控Markdown为任务主体，其余六份共同提供WBS、执行标准和协同信息，并登记在source manifest中。页面实际读取 `public/tasks.json`，同时保留 `pmo/tasks.json` 作为 PMO 根目录备份。
 
 当前任务数为 516，每条任务固定输出43个顶层字段。字段数由`pmo/build_pmo_task_data.py`中的唯一输出字段清单计算，并由生成器逐行检查，不从真源摘要手工复制。生成脚本会保留基础甘特字段，并附带阶段门、关键路径控制、H5 重点展示、合同/付款控制口径、执行标准缺口分桶和优先级队列等执行管控字段。
 
@@ -190,7 +190,7 @@ node ../scripts/smoke-deliverable-workflow.mjs
 
 “周会事项”页签是《信息化项目协同工作规则》6.1 所说的 **PMO 行动台账**，页面固定五类去向：行动项台账、风险台账、问题台账、变更台账和责任池，每类都显示关闭标准。
 
-登记数据写入 `pmo/weekly-issues/ledger.json`（文件正本），随仓库版本管理；页面标题旁的徽标显示当前存储模式（「文件正本」/「仅本地」）。静态构建下插件不可用，会降级为浏览器 `localStorage` 并显示「仅本地」——那种模式的数据不持久。
+登记数据写入 `pmo/weekly-issues/ledger.json`（文件正本），随仓库版本管理；页面标题旁的徽标显示当前存储模式（「文件正本」/「仅本地」）。静态构建下插件不可用，会降级为浏览器 `localStorage` 并显示「仅本地」——该模式在浏览器本地持久化并按访问来源隔离，清除浏览器数据会丢失；它不等于文件正本或服务端备份。
 
 规则校验在服务端执行：
 

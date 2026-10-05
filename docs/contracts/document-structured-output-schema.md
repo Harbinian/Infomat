@@ -1,25 +1,19 @@
 # 文档结构化输出标准 Schema
 
-> 状态：统一结构规则
+> 状态：v2证据草稿及历史投影兼容说明
 > 生效日期：2026-07-07  
 > 规则文件：`docs/contracts/document-structured-output.schema.json`
 > 回归命令：`npm run test:document-structured-output-schema`
 
 ## 1. 定位
 
-`document-structured-output.schema.json` 是文档结构化输出的统一数据模型。它把现有三处口径收敛到一份机器可读的结构规则：
+`document-structured-output.schema.json` 保留为 `document-structured-output-v2` 证据草稿与旧结构块的兼容模型，当前由流程证据映射技能的编译/校验器及旧parser消费。它不提供当前业务或治理权威。
 
-| 来源 | 作用 |
-|---|---|
-| `apps/mdm-platform/public/index.html` | 页面采集制度草稿、制度档案、术语、流程、业务行为、跨部门承接、表单字段和证据 |
-| `apps/mdm-platform/server/mysqlSchema.js` | MySQL 承接表结构 |
-| `scripts/parse-sankey-data.mjs` | 流程治理结构块 v1 的 parser 约束 |
-
-该结构规则不替代 `docs/norms/` 流程输入基线，也不替代 `docs/organization/组织架构和部门职责.md`。
+3000的旧制度文档编制、v1至v3导入和旧跨部门承接入口已经退役；本文件的 `process_design_*` 对照仅保留历史实现关联，不表示存在可用的当前导入、发布或编辑接口。当前单流程编制及人工交接按3001、3000 README核对，本工作区3001默认V8候选，V7继续受支持；正式运行状态须实时核对。
 
 ## 2. 顶层对象
 
-| 顶层字段 | 含义 | 当前承接 |
+| 顶层字段 | 含义 | 草稿用途或历史关联 |
 |---|---|---|
 | `schema_version` | 固定为 `document-structured-output-v2` | 结构规则 |
 | `draft` | 制度结构草稿 | `process_design_drafts` |
@@ -40,7 +34,7 @@
 | `pending_issues` | 围绕结构化对象和字段生成的待确认问题 | 可由 MDM 问题池承接 |
 | `structure_block_projection` | 输出给流程地图 parser 的结构块 v1 视图 | `meta` / `l3_catalog` / `a1_catalog` / `work_role_bindings` / `evidence_catalog` / `mdm_requirement_catalog` |
 
-制度主对象由 `process_design_documents` 承接，正式版次由 `process_design_versions` 承接。制度编号全公司唯一；版次由系统按 `A -> B -> ... -> Z -> AA -> AB` 生成，用户不能手填或跳号。
+历史实现中，制度主对象关联 `process_design_documents`，正式版次关联 `process_design_versions`。制度编号全公司唯一；版次由系统按 `A -> B -> ... -> Z -> AA -> AB` 生成，用户不能手填或跳号。
 
 ## 3. 统一枚举
 
@@ -71,7 +65,7 @@
 - 同一文档内 `binding_ref` 必须唯一；同一 `process_ref` 最多只能有一个 `confirmed` 的 L3 `owner`。这是跨数组约束，由 `npm run test:work-role-contract` 和消费端共同校验。
 - `source_position_name` 必须按所选部门精确匹配花名册岗位，只表示流程草拟期“当前由哪个岗位参与”，不得进入正式结构块投影，也不得自动改写 `source_role_text`。
 - 流程固化后，由行政人事部将岗位候选按稳定责任归并为正式工作角色；岗位与流程角色是多对多关系，不做一对一自动改名。
-- `work_role_code` 非空时必须来自 `docs/organization/工作角色目录与岗位映射.md` 生成的正式目录，并使用行政人事部顺序分配的 `WR-0001` 编码；`confirmed` 必须有该编码。文档抽取不得自行编造编码，原文角色称谓继续保留在 `source_role_text`。
+- `work_role_code` 非空时必须来自有权确认的正式目录；旧消费链仍核对显式选定的历史目录，但其检查不决定当前角色，并使用行政人事部顺序分配的 `WR-0001` 编码；`confirmed` 必须有该编码。文档抽取不得自行编造编码，原文角色称谓继续保留在 `source_role_text`。
 - `申请人`、`当前处理人`、`全体员工` 等场景身份，客户、供应商、银行等外部参与方，以及未澄清的集体称谓不得形成 `confirmed`；OCR 证据只能保留为待复核项。
 
 ## 4. 投影规则
@@ -86,26 +80,25 @@
 | `mdm_requirement_catalog[]` | `mdm_requirement_catalog[]` | 只能来自字段台账或已核验证据，不从字段名直接推断 |
 | `pending_issues[]` | 不直接进入结构块 | 用来驱动人工确认和回源整改 |
 
-## 5. 当前实现差异
+## 5. 历史MySQL承接差异
 
 | 差异 | 标准处理 |
 |---|---|
 | MySQL `process_design_processes` 当前没有独立 `owner`、`system`、`evidence_refs` 列 | schema 先作为标准字段保留；未落库时可从证据或导出投影阶段补齐 |
 | MySQL `process_design_steps` 当前没有独立 `entry`、`system`、`evidence_refs` 列 | schema 先作为 A1 投影字段保留；缺失时生成 `pending_issues` |
-| `step_transitions.to_step_ref` 可为空 | 3000 导入时保留为空流向并返回 warning，详情页展示为“未补流向” |
+| `step_transitions.to_step_ref` 可为空 | 旧导入保留为空流向并返回warning的历史约定；当前入口已退役 |
 | MySQL `process_design_evidence.object_type` 当前只覆盖部分对象 | schema 以文档结构对象为准，平台承接时可继续映射到现有对象类型 |
 | `mdm_requirement_catalog` 当前没有独立 MySQL 表 | schema 保留标准结构，避免主数据需求散落在自由文本里 |
 | 外部制度引用关系当前为自由文本 | 页面要求写明制度编号、版次和制度名称；本轮不新增引用明细接口 |
-| 工作角色关系当前没有 MDM 承接表 | v2 先以可选 `work_role_bindings` 随结构化 JSON 往返；3000 对非空数组在任何写入前返回 `422 WORK_ROLE_BINDINGS_UNSUPPORTED`，旧 v2 文件和空数组保持兼容 |
+| 工作角色关系当前没有 MDM 承接表 | v2 先以可选 `work_role_bindings` 随结构化 JSON 往返；旧3000导入对非空数组在任何写入前返回 `422 WORK_ROLE_BINDINGS_UNSUPPORTED`，旧 v2 文件和空数组保持兼容 |
 | 角色原文摘录过去只存在页面辅助数据 | `evidence.source_excerpt` 作为可选字段随 JSON 往返，`locate_method` 继续记录抽取或定位方式 |
 
 ## 6. 使用方式
 
-1. 模型或脚本输出文档结构化结果时，先满足 `document-structured-output.schema.json`，`schema_version` 必须是 `document-structured-output-v2`。
-2. 页面和 MySQL 只作为承接实现，字段缺口应回写为 `pending_issues`，不要让模型自行补结论；新字母版次必须完整重写，不复制旧版内容。
-3. 要交给流程地图 parser 时，生成 `structure_block_projection`，并确保 `parser_schema_version=1`、证据引用不悬空。
-4. 发布下一版次后，只把当前有效版次投影到默认流程图谱和 A1 视图，旧版保留为历史追溯。
-5. 修改 schema、前端结构化字段、MySQL process_design 表或 parser 结构块字段后，运行：
+1. 流程证据映射技能生成v2草稿时满足机器schema；保留原文证据、责任和待确认事项，不能以模型或兼容测试补造事实。
+2. 该v2草稿不进入3000已退役的旧文档编制或导入接口；当前单流程JSON按3001应用入口编制、下载，由用户人工上传3000。
+3. 获准维护旧展示链时才生成 `structure_block_projection`，并显式指定parser的历史输入和输出；投影不能成为当前正式流程版本。
+4. 修改v2schema、技能消费或旧parser兼容行为后，按影响运行：
 
 ```powershell
 npm run test:document-structured-output-schema

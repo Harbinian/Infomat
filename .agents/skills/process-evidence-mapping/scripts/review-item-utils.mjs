@@ -20,7 +20,37 @@ export const TODO_TYPES = [
   '表单字段待确认',
   '主数据需求待确认',
   '抽取结果待复核',
+  'OCR/抽取待复核',
 ];
+
+export function sourceCoverage(sources, chunks) {
+  const visualCount = source => chunks.filter(chunk => (
+    chunk.source_file === source.source_file && String(chunk.extraction_method || '').startsWith('visual-transcript:')
+  )).length;
+  const gaps = sources.filter(source => (
+    ['blocked_unreadable', 'failed', 'deferred', 'unsupported'].includes(source.extraction_status)
+    || (source.unreadable_pages || []).length > 0
+    || Number(source.visual_transcript_blocks || 0) > 0
+    || visualCount(source) > 0
+  )).map(source => ({
+    source_file: source.source_file,
+    extraction_status: source.extraction_status,
+    included_reason: source.included_reason || null,
+    unreadable_pages: source.unreadable_pages || [],
+    visual_transcript_blocks: Math.max(Number(source.visual_transcript_blocks || 0), visualCount(source)),
+  }));
+  return {
+    schema_version: 'process-source-coverage-v1',
+    status: chunks.length === 0 ? 'unavailable' : gaps.length ? 'partial' : 'readable',
+    source_count: sources.length,
+    usable_chunk_count: chunks.length,
+    gaps,
+    can_claim_complete: false,
+    note: gaps.length
+      ? '仅生成可用来源的待复核草稿；缺失来源及视觉转录尚未闭合，不能声明材料齐全或完整通过。'
+      : '来源可读取仅表示提取完成，不表示事实确认、业务完整或正式审核通过。',
+  };
+}
 
 export function parseArgs(argv, defaults = {}) {
   const args = { ...defaults };
@@ -124,6 +154,8 @@ export function evidenceFromChunk(chunk) {
     source_anchor: sourceAnchor(chunk),
     source_excerpt: chunk?.raw_text || '',
     chunk_id: chunk?.chunk_id || '',
+    extraction_method: chunk?.extraction_method || '',
+    extraction_quality: chunk?.extraction_quality || '',
     evidence_status: 'pending_review',
     verification_status: 'unverified',
     review_required: true,

@@ -1,6 +1,10 @@
 # 跨部门承接数据库结构说明
 
+> 历史数据库合同：下文V3字段、投影和事件保留用于历史数据及迁移兼容；旧编制、导入与承接办理入口已退役。当前流程使用V7/V8预览、核对和正式流转，见[应用README](../README.md#流程治理统一入口与3001格式适配)。不据本文件恢复旧版写入、转换或删除历史记录。
+
 ## 1. 真源与投影
+
+本节记录退役前技术存储关系，不提供当前业务依据；当前事实以用户指定材料和业务确认、3000治理记录为准。
 
 `process_design_drafts.process_content_json`是单流程编制内容真源。`process_design_cross_dept_handoffs`是完整JSON产生的承接治理投影；承接待办直接从承接状态和参与关系生成，不再向`process_governance_issues`和`process_governance_issue_points`创建第二份业务事实。
 

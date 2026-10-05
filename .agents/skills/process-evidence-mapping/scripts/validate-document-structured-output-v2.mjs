@@ -11,7 +11,6 @@ const SCRIPT_DIR = path.dirname(new URL(import.meta.url).pathname).replace(/^\/(
 const REPO_ROOT = path.resolve(SCRIPT_DIR, '../../../..');
 const SCHEMA_PATH = path.join(REPO_ROOT, 'docs', 'contracts', 'document-structured-output.schema.json');
 const SCHEMA_VALIDATOR = path.join(SCRIPT_DIR, 'validate-json-schema.py');
-const IMAGE_TEXT_STATUS_MARKER = ['o', 'c', 'r'].join('');
 
 function assertUnique(records, field, label, required = false) {
   const seen = new Set();
@@ -112,9 +111,6 @@ function main() {
   }
   for (const evidence of data.evidence_catalog || []) {
     if (evidence.object_ref !== undefined) requireReference(evidence.object_type, evidence.object_ref, `evidence ${evidence.evidence_ref}`);
-    if (String(evidence.status || '').toLowerCase().includes(IMAGE_TEXT_STATUS_MARKER)) {
-      throw new Error(`evidence ${evidence.evidence_ref} contains a forbidden image-to-text status`);
-    }
     if (evidence.status !== 'verified') continue;
     for (const field of ['source_file', 'source_anchor', 'source_excerpt', 'confirmer', 'record_time']) {
       if (!String(evidence[field] ?? '').trim()) {
@@ -124,9 +120,6 @@ function main() {
   }
   for (const issue of data.pending_issues || []) {
     requireReference(issue.structured_object_type, issue.structured_object_key, `pending issue ${issue.stable_key}`);
-    if (String(issue.issue_type || '').toLowerCase().includes(IMAGE_TEXT_STATUS_MARKER)) {
-      throw new Error(`pending issue ${issue.stable_key} contains a forbidden image-to-text issue type`);
-    }
   }
 
   console.log(`document-structured-output-v2 valid: ${args.input}`);

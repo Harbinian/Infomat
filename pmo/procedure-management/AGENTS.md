@@ -24,7 +24,7 @@ python -m http.server 8080
 
 ## 数据源
 
-驾驶舱读取两个内嵌 JSON 数据源：
+驾驶舱读取两个历史消费链的内嵌 JSON 数据源；显示结果不证明当前业务事实：
 
 1. `#sankey-data`：流程到系统桑基图数据，由 `scripts/parse-sankey-data.mjs` 注入。
 2. `#cross-dept-data`：跨部门衔接风险数据，由 `scripts/parse-sankey-data.mjs` 从 `docs/norms/流程治理/跨部门完整性检查报告.md` 解析并注入。
@@ -43,7 +43,7 @@ python -m http.server 8080
 仅在明确授权维护旧展示消费链时，从仓库根目录运行；以下命令不代表业务确认：
 
 ```powershell
-node scripts/parse-sankey-data.mjs
+node scripts/parse-sankey-data.mjs --legacy-display --domain-map <historical-domain-map.json> --out docs/company-sankey-data.json --dashboard pmo/procedure-management/dashboard.html
 node scripts/check-dashboard-data.mjs
 ```
 

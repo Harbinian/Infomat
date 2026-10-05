@@ -48,7 +48,7 @@ scripts/AGENTS.md
 |---|---|---|---|---|
 | `apps/` | 可运行应用集合 | 子目录 README | 新应用必须有独立 README、运行命令和数据边界 | 不放业务资料原件 |
 | `apps/mdm-platform/` | MDM 平台源码 | `package.json`、`server/`、`public/`、`scripts/` | 平台功能、平台测试、平台维护脚本在此修改 | 不放 PMO 甘特图、流程制度原文、历史方案 |
-| `apps/structured-output-service/` | 局域网单流程治理编制工具 | `package.json`、`server.js`、`public/`、`scripts/` | 默认监听`0.0.0.0:3001`供公司局域网用户直接访问；本工作区按V8候选技术规则导出单流程未审核JSON，兼容导入v1至v8及已支持历史文件；服务部署和业务验收另行核对；页面内编辑会话区分未应用修改与未下载修改，并在切换、下载和替换前保护用户输入；可只读读取流程映射、花名册和 `docs/work-role-data.json` 做候选提示 | 不保存用户内容和图坐标，不写回 `docs/norms/`、花名册或工作角色真源，不调用3000，不依赖DeepSeek、MDM-AI助手或认证网关，不替代受控发布流程 |
+| `apps/structured-output-service/` | 局域网单流程治理编制工具 | `package.json`、`server.js`、`public/`、`scripts/` | 默认监听`0.0.0.0:3001`供公司局域网用户直接访问；本工作区按V8候选技术规则导出单流程未审核JSON，兼容导入v1至v8及已支持历史文件；服务部署和业务验收另行核对；页面内编辑会话区分未应用修改与未下载修改，并在切换、下载和替换前保护用户输入；可只读读取流程映射、花名册和 `docs/work-role-data.json` 做候选提示 | 不保存用户内容和图坐标，不写回 `docs/norms/`、花名册或工作角色副本，不调用3000，不依赖DeepSeek、MDM-AI助手或认证网关，不替代受控发布流程 |
 | `apps/information-collection-service/` | 内部信息表收集服务 | `package.json`、`server/`、`public/`、`scripts/`、`docs/` | 4000 管理端设计并发布收集任务，4001 填报端保存本人草稿和答卷；只读复用 `person`、`user_accounts`、`departments`，业务数据写入 `collection_*` 表，附件写入仓库外受控目录 | 不修改 MDM 身份、角色或治理业务表；不自动继承 3000 权限；不向浏览器持久化答案或附件 |
 | `apps/mdm-platform/server/` | MDM 后端实现 | Express 路由、当前MySQL运行schema与历史/测试SQLite兼容实现 | 修改时同步平台测试 | 不直接依赖 PMO 页面内嵌数据 |
 | `apps/mdm-platform/public/` | MDM 旧前端及共享本地资产 | 既有页面和本地图形资源 | 保留未迁移模块及资源路径兼容 | 不放 PMO 驾驶舱截图 |
@@ -63,7 +63,7 @@ scripts/AGENTS.md
 | 路径 | 责任 | 入口/接口 | 可修改规则 | 禁止事项 |
 |---|---|---|---|---|
 | `docs/` | 资料、说明、方案沉淀 | 子目录分工 | 文档按资产类型进入子目录 | 不放本地生成物 |
-| `docs/norms/` | 流程输入基线、制度/表单源文件材料、部门桑基图资产 | 部门映射 Markdown、制度/表单源文件 | 新增或修改流程输入基线后运行流程地图 parser；工作角色只写 confirmed 绑定并同步维护受控证据表 | 不放候选工作角色绑定、临时报告、截图、运行日志 |
+| `docs/norms/` | 历史制度、表单、映射及部门桑基图资产 | 本目录AGENTS及README用于定位旧消费关系 | 仅维护获准的副本或历史兼容；生成命令须显式声明旧输入，不自动同步当前治理 | 不以旧资料决定业务事实、职责或审批，不放临时报告、截图、日志 |
 | `docs/organization/` | 组织、人员、角色历史资料和转换副本；不再是真源 | `AGENTS.md`、README及原文件位置保留用于追溯 | 只维护明确授权的记录或副本，人员事实回到用户指定的行政人事发布Excel，任命由有权主体确认 | 不以本目录旧职责、岗位或映射决定当前流程和授权，不自动据此生成或同步3000业务数据 |
 | `docs/contracts/` | 自动化结构和校验规则 | `AGENTS.md`、规则说明、JSON规则文件 | 修改前读取本目录 `AGENTS.md`；发布版本变化必须同时处理旧数据兼容和回归 | 不写业务流程正文，不替代流程输入基线或组织真源，不保存 Secret |
 | `docs/integration/` | 集成和主数据治理方案 | 方案文档 | 可沉淀接口、主数据、系统协同方案 | 不作为当前流程输入基线 |
@@ -90,7 +90,7 @@ scripts/AGENTS.md
 | 路径 | 责任 | 输入 | 输出 | 修改规则 |
 |---|---|---|---|---|
 | `scripts/` | 跨 app / 跨资料的仓库级自动化 | 由脚本和 `scripts/README.md` 声明 | 由脚本和 `scripts/README.md` 声明 | 修改前读取 `scripts/AGENTS.md`; 脚本必须说明输入、输出、是否写文件、是否改数据库 |
-| `scripts/parse-sankey-data.mjs` | 流程地图解析与注入 | `docs/norms/`、`docs/organization/`、`docs/work-role-data.json` | `docs/company-sankey-data.json`、PMO 驾驶舱内嵌数据 | 修改后必须验证 PMO 驾驶舱数据；只发布 confirmed 工作角色绑定 |
+| `scripts/parse-sankey-data.mjs` | 历史流程地图解析与可选注入 | 旧norms/工作角色副本及显式部门域JSON | 必须指定输出；仅指定dashboard才注入 | 使用`--legacy-display`；兼容检查不认定业务事实，不自动同步数据库 |
 | `scripts/check-dashboard-data.mjs` | 驾驶舱数据检查 | PMO 驾驶舱 / JSON | 检查输出 | 只做校验，不改流程输入基线或组织真源 |
 | `scripts/glossary.mjs` | 术语表查询 | `docs/glossary.md` | 查询输出 | 新术语仍应写入术语表 |
 
@@ -106,12 +106,12 @@ scripts/AGENTS.md
 | `output/` | 历史渲染输出 | 后续迁移到 `artifacts/` 或保留为样例前先审计 |
 | `_tmp/` | PPTX 解包和临时脚本 | 不应作为仓库真源 |
 | `.tmp/` | 历史调查、解包和预览中间文件 | 新生成物写入 `artifacts/`；已外置的 U8 帮助文档解包资料从 [归档索引](docs/archives/README.md) 查找，其余已跟踪资产仍需逐项确认后处理 |
-| `snapshots/` | norms 快照 | 需确认是否作为历史快照保留；若保留，应补 README |
-| `ai_materials/` | AI 处理输入材料 | 需确认是否为长期资料源；若是，应说明与 `docs/norms/` 的关系 |
+| `snapshots/` | 历史norms快照 | 已有README；保留历史内容，不作为当前治理或自动生成入口 |
+| `ai_materials/` | 有来源的AI处理输入材料及历史索引 | 按README及本次用户指定范围使用；不自动赋予资料当前治理权威 |
 | `.agents/` | Codex 可用的项目技能和提示材料 | 可保留，但不放生成物 |
 | `.claude/skills/` | Claude Code 项目级技能入口 | 只放指向 `.agents/skills/` 的薄入口，技能正文、参考和脚本仍在 `.agents/skills/`；不放生成物、运行状态或业务事实 |
 | `.codex/config.toml` | 仓库内 Codex 偏好 | 可提交非敏感偏好，不放 Secret、主机信息、运行状态或业务事实 |
-| `.superpowers/` | Superpowers 工作输出 | 当前含截图等生成物，后续应迁移或忽略 |
+| `.superpowers/` | Superpowers历史工作输出 | 插件已退出当前工作流；保留历史资产，未经迁移授权不移动或删除 |
 | `node_modules/` | 本地依赖 | 不提交 |
 | `test-results/` | 测试输出 | 不提交 |
 

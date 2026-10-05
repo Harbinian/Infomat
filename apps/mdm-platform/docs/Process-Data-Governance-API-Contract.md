@@ -2,9 +2,9 @@
 
 ## 1. 公共约定
 
-接口前缀为`/api/process-data-governance`，使用3000现有登录会话。除`GET /status`外，功能默认关闭；未同时配置启用开关和唯一试点版本时返回503。
+接口前缀为`/api/process-data-governance`，使用3000现有登录会话。除`GET /status`外，功能默认关闭；未开启`PROCESS_DATA_GOVERNANCE_ENABLED`时返回503；旧试点版本配置不再生效。
 
-所有写接口继续执行服务端权限、精确`process_version_id`范围、对象状态、来源摘要和乐观并发检查。请求中的角色、部门或允许操作列表均不作为授权凭证。
+所有写接口继续执行服务端权限、工作包固定`process_version_id`来源、对象状态、来源摘要和乐观并发检查。请求中的角色、部门或允许操作列表均不作为授权凭证。
 
 ## 2. 状态和责任
 
@@ -15,8 +15,9 @@
 响应包含：
 
 - `enabled`：功能是否有效。
-- `configured_process_version_id`：唯一试点版本；未配置时为`null`。
-- `scope_mode`：启用时为`exact_process_version_id`。
+- `read_only`：成果查阅模式；为`true`时只展示已完成包，所有工作包写入拒绝。
+- `configured_process_version_id`：兼容字段，始终为`null`，不再选择或限制来源版本。
+- `scope_mode`：`published_v7_versions`，可选择任一已发布原生V7版本。
 - `responsibilities`：业务部门、MDM工作组和系统自动处理边界。
 
 ## 3. 工作台
@@ -27,9 +28,10 @@
 
 - 业务部门只得到本部门事实问题，不得到工作包全量明细。
 - `admin`可以读取全局摘要，但不产生可执行事项。
-- `mdm_lead`得到试点工作包事项。
+- `mdm_lead`得到其权限允许的工作包事项。
+- 有全局治理读取权限的人员可读取`published_versions`用于明确选择已发布原生V7来源。
 
-## 4. 创建与补偿
+## 4. 显式建立工作包
 
 ### `POST /creation-tasks/reconcile`
 
@@ -43,7 +45,7 @@
 }
 ```
 
-版本标识必须与服务端配置的唯一试点标识完全相等，且指向不可变的V7正式版本。重复调用返回同一创建任务和工作包，并标明`idempotent=true`。
+用户主动选择的版本必须为状态`published`或`superseded`的不可变原生V7正式版本；未发布、撤销及非V7版本拒绝。重复调用返回同一创建任务和工作包，并标明`idempotent=true`。发布和迁移均不自动建包。
 
 ## 5. 工作包读取
 
@@ -174,4 +176,5 @@
 | 409 | `PROCESS_DATA_GOVERNANCE_SOURCE_CHANGED` | 固定版本摘要与工作包绑定值不一致 |
 | 409 | `PROCESS_DATA_GOVERNANCE_REVIEW_BLOCKED` | 仍有待定明细或未关闭问题 |
 | 422 | `PROCESS_DATA_GOVERNANCE_FACT_REQUEST_REQUIRED` | 试图不填写具体问题就进入等待业务事实状态 |
-| 503 | `PROCESS_DATA_GOVERNANCE_DISABLED` | 功能未启用或缺少有效试点配置 |
+| 503 | `PROCESS_DATA_GOVERNANCE_DISABLED` | 功能未启用 |
+| 409 | `PROCESS_DATA_GOVERNANCE_READ_ONLY` | 已启用成果查阅模式，拒绝工作包写入 |

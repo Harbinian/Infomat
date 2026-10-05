@@ -54,7 +54,8 @@ if (!singleMode && requestedFiles.length === 0) {
     throw new Error('No source CHM files found. Put source CHM packages in docs/U8SoftHelp before regenerating Markdown.');
   }
 
-  fs.rmSync(outputDir, { recursive: true, force: true });
+  // Preserve historical outputs. A full conversion replaces generated files
+  // by name and updates the index; it never prunes the shared output directory.
   fs.mkdirSync(outputDir, { recursive: true });
   runFullConversion();
   process.exit(0);

@@ -1,5 +1,7 @@
 /**
- * 聚合流程治理主线只读校验。
+ * 聚合现行技术入口、隔离回归及保留消费结构检查。
+ * 会创建独立测试夹具、隔离数据库和临时 HTTP；不连接正式数据库。
+ * --legacy-source-comparison 另行比对旧副本指纹/内容，不恢复其治理权威。
  *
  * 用法: node scripts/test-process-governance-mainline.mjs
  */
@@ -30,20 +32,22 @@ function assertSourceContract() {
   const generateWbsPy = readRepoFile('scripts/gen_wbs_report.py');
 
   assert.match(mainlineSync, /requiredMysqlEnvNames/, '主线同步脚本必须显式检查 MySQL 环境变量');
-  assert.doesNotMatch(mainlineSync, /MDM_DB_PATH/, '正式主线同步脚本不得依赖 SQLite 数据库路径');
-  assert.match(mainlineSync, /import:process-governance-mysql/, '正式主线同步必须使用现有 MySQL 导入器');
-  assert.doesNotMatch(mainlineSync, /sync:process-org/, '正式主线同步不得调用 SQLite 组织同步');
-  assert.doesNotMatch(mainlineSync, /['"]import:process-governance['"]/, '正式主线同步不得调用 SQLite 流程导入');
-  assert.doesNotMatch(mainlineSync, /check:process-governance/, '正式主线同步不得调用 SQLite 流程检查');
+  assert.doesNotMatch(mainlineSync, /MDM_DB_PATH/, '历史兼容同步脚本不得依赖 SQLite 数据库路径');
+  assert.match(mainlineSync, /import:process-governance-mysql/, '历史兼容同步必须使用现有 MySQL 导入器');
+  assert.doesNotMatch(mainlineSync, /sync:process-org/, '历史兼容同步不得调用 SQLite 组织同步');
+  assert.doesNotMatch(mainlineSync, /['"]import:process-governance['"]/, '历史兼容同步不得调用 SQLite 流程导入');
+  assert.doesNotMatch(mainlineSync, /check:process-governance/, '历史兼容同步不得调用 SQLite 流程检查');
   assert.match(mainlineSync, /--snapshot/, '主线同步导入 MDM 快照时必须显式传入 snapshot');
 
   assert.equal(appPackage.scripts['import:process-governance-mysql'], 'node scripts/import-process-governance-mysql.js');
-  assert.equal(appPackage.scripts['legacy-sqlite:init-db'], 'node scripts/init-legacy-sqlite-db.js');
-  assert.equal(appPackage.scripts['legacy-sqlite:sync-process-org'], 'node scripts/sync-process-governance-org.js');
-  assert.equal(appPackage.scripts['legacy-sqlite:import-process-governance'], 'node scripts/import-process-governance.js');
-  assert.equal(appPackage.scripts['legacy-sqlite:check-process-governance'], 'node scripts/check-process-governance.js');
-  for (const ambiguousCommand of ['init-db', 'sync:process-org', 'import:process-governance', 'check:process-governance']) {
+  for (const retiredCommand of ['legacy-sqlite:init-db', 'legacy-sqlite:sync-process-org', 'legacy-sqlite:import-process-governance', 'legacy-sqlite:check-process-governance']) {
+    assert.equal(appPackage.scripts[retiredCommand], undefined, `退役命令不得为满足旧测试而恢复: ${retiredCommand}`);
+  }
+  for (const ambiguousCommand of ['init-db', 'sync:process-org', 'import:process-governance', 'check:process-governance', 'smoke', 'sync:organization-structure', 'setup:local-baseline']) {
     assert.equal(appPackage.scripts[ambiguousCommand], undefined, `SQLite 遗留命令不得继续使用含糊名称: ${ambiguousCommand}`);
+  }
+  for (const command of ['legacy-sqlite:smoke', 'legacy-sqlite:sync-organization-structure', 'test:legacy-sqlite-entrypoints']) {
+    assert.ok(appPackage.scripts[command], `缺少受控隔离入口: ${command}`);
   }
 
   assert.match(orgSync, /--archive-non-canonical/, '组织同步归档非标准部门必须使用显式开关');
@@ -90,15 +94,15 @@ function assertMainlineSyncRequiresExplicitMysqlConfig() {
   for (const name of ['MYSQL_HOST', 'MYSQL_PORT', 'MYSQL_USER', 'MYSQL_PASSWORD', 'MYSQL_DATABASE']) {
     delete envWithoutMysql[name];
   }
-  const missing = spawnSync(process.execPath, [resolve(root, 'scripts/sync-process-governance-mainline.mjs')], {
+  const missing = spawnSync(process.execPath, [resolve(root, 'scripts/sync-process-governance-mainline.mjs'), '--check-env'], {
     cwd: root,
     env: envWithoutMysql,
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   assert.notStrictEqual(missing.status, 0, '缺少 MySQL 环境变量时主线同步必须失败');
-  assert.match(`${missing.stdout}\n${missing.stderr}`, /MYSQL_HOST.*MYSQL_PORT.*MYSQL_USER.*MYSQL_PASSWORD.*MYSQL_DATABASE/s, '缺少 MySQL 配置的失败信息必须列出变量名');
-  assert.doesNotMatch(`${missing.stdout}\n${missing.stderr}`, /MDM_DB_PATH/, '正式入口不得提示 SQLite 数据库路径');
+  assert.match(`${missing.stdout}\n${missing.stderr}`, /MYSQL_HOST.*MYSQL_PORT.*MYSQL_USER.*MYSQL_PASSWORD.*MYSQL_DATABASE/s, 'MySQL配置自检必须列出脱敏变量状态');
+  assert.doesNotMatch(`${missing.stdout}\n${missing.stderr}`, /MDM_DB_PATH/, '历史兼容入口不得提示 SQLite 数据库路径');
 
   const passwordSentinel = 'must-not-appear-in-output';
   const configured = spawnSync(process.execPath, [resolve(root, 'scripts/sync-process-governance-mainline.mjs'), '--check-env'], {
@@ -115,7 +119,7 @@ function assertMainlineSyncRequiresExplicitMysqlConfig() {
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   assert.strictEqual(configured.status, 0, configured.stderr || configured.stdout);
-  assert.match(configured.stdout, /"target":"mysql"/, '环境自检必须明确正式目标是 MySQL');
+  assert.match(configured.stdout, /"target":"mysql"/, '环境自检必须明确兼容写入目标是 MySQL');
   assert.doesNotMatch(configured.stdout, new RegExp(passwordSentinel), '环境自检不得输出密码');
 }
 
@@ -124,19 +128,31 @@ const checks = [
   ['禁用术语', 'apps/mdm-platform/scripts/test-no-banned-terminology.js'],
   ['脚本边界合约', assertSourceContract],
   ['流程治理结构块解析', 'scripts/test-parse-sankey-structure-block.mjs'],
+  ['根脚本安全边界', 'scripts/test-root-script-safety.mjs'],
+  ['v2证据兼容合同', 'scripts/test-document-structured-output-schema.mjs'],
+  ['工作角色历史兼容合同', 'scripts/test-work-role-contract.mjs'],
+  ['v2证据工作流隔离回归', ['npm', 'run', 'test:process-input-baseline-review']],
+  ['3000现行办理与退役保护', ['npm', '--prefix', 'apps/mdm-platform', 'run', 'test:process-design']],
+  ['SQLite隔离入口', ['npm', '--prefix', 'apps/mdm-platform', 'run', 'test:legacy-sqlite-entrypoints']],
   ['主线同步 MySQL 配置保护', assertMainlineSyncRequiresExplicitMysqlConfig],
   ['主线合约', 'scripts/test-process-governance-mainline-contract.mjs'],
   ['项目治理升级', ['npm', 'run', 'test:project-governance-upgrade']],
   ['PMO 驾驶舱数据', 'scripts/check-dashboard-data.mjs'],
   ['部门域映射', 'scripts/check-dept-domain-mapping.mjs'],
-  ['工程技术部源文件清单', 'scripts/check-engineering-source-manifest.mjs'],
-  ['源文件指纹', 'scripts/check-source-manifest-hashes.mjs'],
-  ['流程输入基线清单', 'scripts/check-norms-source-manifest.mjs'],
   ['PMO 执行标准库', 'scripts/check-pmo-execution-standards.mjs'],
   ['PMO 标准缺口治理', 'scripts/check-pmo-standard-gap-operations.mjs'],
   ['PMO 任务数据', 'scripts/check-pmo-task-data.mjs'],
 ];
 
+if (process.argv.includes('--legacy-source-comparison')) {
+  checks.push(
+    ['工程技术部旧源文件清单', 'scripts/check-engineering-source-manifest.mjs'],
+    ['旧源文件指纹', 'scripts/check-source-manifest-hashes.mjs'],
+    ['旧流程输入清单', 'scripts/check-norms-source-manifest.mjs'],
+    ['旧驾驶舱来源比对', [process.execPath, 'scripts/check-dashboard-data.mjs', '--legacy-source-comparison']],
+    ['旧角色来源比对', [process.execPath, 'scripts/test-work-role-contract.mjs', '--legacy-source-comparison']],
+  );
+}
 for (const [label, script] of checks) {
   console.log(`\n[process-governance-mainline] ${label}`);
   if (typeof script === 'function') {

@@ -5,7 +5,8 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 const {
   ORGANIZATION_STRUCTURE_UNITS,
-  LEADERSHIP_OFFICE_ASSIGNMENTS
+  LEADERSHIP_OFFICE_ASSIGNMENTS,
+  DEFAULT_SOURCE_PATH
 } = require('./sync-organization-structure');
 
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mdm-local-baseline-'));
@@ -29,7 +30,7 @@ try {
   assert.match(rejected.stderr, /LEGACY_ACCOUNT_SCRIPT_RETIRED/);
   assert.ok(!fs.existsSync(dbPath), 'rejected legacy initialization must not create a database');
 
-  const result = spawnSync(process.execPath, ['scripts/setup-local-baseline.js'], {
+  const result = spawnSync(process.execPath, ['scripts/setup-local-baseline.js', '--source', DEFAULT_SOURCE_PATH], {
     cwd: path.join(__dirname, '..'),
     env: {
       ...process.env,
@@ -45,7 +46,7 @@ try {
 
   assert.strictEqual(result.status, 0, `setup-local-baseline failed:\nSTDOUT:\n${result.stdout}\nSTDERR:\n${result.stderr}`);
 
-  const secondRun = spawnSync(process.execPath, ['scripts/setup-local-baseline.js'], {
+  const secondRun = spawnSync(process.execPath, ['scripts/setup-local-baseline.js', '--source', DEFAULT_SOURCE_PATH], {
     cwd: path.join(__dirname, '..'),
     env: {
       ...process.env,

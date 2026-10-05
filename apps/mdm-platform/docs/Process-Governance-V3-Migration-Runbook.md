@@ -1,5 +1,7 @@
 # 单流程治理v3表单状态迁移手册
 
+> 历史迁移手册，保留映射、恢复及旧数据约束用于追溯。2026-09-15已取消V1至V3编制、导入兼容和旧承接办理入口；以下发布及迁移步骤不作为当前操作链，`apps/structure-assistant`已退役。现行流程见[应用README](../README.md#流程治理统一入口与3001格式适配)。不得为了旧合同自动迁移、清空历史数据或恢复旧功能。
+
 ## 1. 迁移范围
 
 本迁移处理MySQL中的`process_design_drafts.process_content_json`和`process_design_versions.process_content_json`。目标是把仍在使用v1或v2的完整单流程JSON规范化为`process-governance-v3`，为每张历史表单补充`form_design_state=unspecified`，并同步更新`schema_version`和`content_hash`。
@@ -7,6 +9,8 @@
 迁移不修改3001源文件，不根据表单名称、编号、字段类型或明细数量推断现状表单和拟设计表单，不拆建物理数据库表，也不改写字段、主明细分组、顺序或技术标识。
 
 ## 2. 发布前检查
+
+以下为当时发布步骤，不可直接执行。若另获特定历史恢复授权，先核对实际保留命令、目标库、旧数据影响及恢复方式；不得运行已退役AI助手或用这组检查证明当前V7/V8能力。
 
 3001、MDM和MDM-AI助手必须从同一个已提交版本启动。先运行：
 
