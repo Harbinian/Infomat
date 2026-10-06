@@ -491,6 +491,17 @@ async function testApi() {
     assert.equal(health.body.release_status, 'candidate');
     assert.equal(Object.prototype.hasOwnProperty.call(health.body, 'deepseek'), false);
 
+    const entry = await fetch(`${baseUrl}/`, { redirect: 'manual' });
+    assert.equal(entry.status, 302);
+    assert.equal(entry.headers.get('location'), '/workbench/');
+    assert.equal(entry.headers.get('cache-control'), 'no-store');
+    const workbench = await fetch(`${baseUrl}/`);
+    assert.equal(workbench.url, `${baseUrl}/workbench/`);
+    assert.equal(await workbench.text(), fs.readFileSync(path.join(appRoot, 'public/workbench/index.html'), 'utf8'));
+    const legacyPage = await fetch(`${baseUrl}/index.html`);
+    assert.equal(legacyPage.status, 200);
+    assert.equal(await legacyPage.text(), fs.readFileSync(frontendPath, 'utf8'));
+
     const retiredTabulatorScript = await fetch(`${baseUrl}/vendor/tabulator.min.js`);
     const retiredTabulatorStyle = await fetch(`${baseUrl}/vendor/tabulator.min.css`);
     const retiredGridEditor = await fetch(`${baseUrl}/web-grid-editors.js`);

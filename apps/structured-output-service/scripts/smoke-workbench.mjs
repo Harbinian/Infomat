@@ -1,4 +1,5 @@
 // Read-only HTTP and local asset checks for an explicitly selected loopback candidate.
+// Arguments: candidate origin, optional evidence JSON path, optional service port (Docker maps the host port).
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -32,7 +33,9 @@ const health = await (await response('/api/health')).json();
 assert.equal(health.status, 'ok');
 assert.equal(health.release_status, 'candidate');
 assert.equal(health.schema_version, 'process-governance-v8');
-assert.equal(health.port, Number(origin.port));
+const servicePort = Number(process.argv[4] || origin.port);
+assert.ok(Number.isInteger(servicePort) && servicePort > 0 && servicePort <= 65535);
+assert.equal(health.port, servicePort);
 const schemaResponse = await response('/api/schema');
 const schemaFile = path.join(repoRoot, 'docs/contracts/process-governance-v8.schema.json');
 const schemaBytes = await fs.readFile(schemaFile);
@@ -49,7 +52,11 @@ for (const url of resources) {
 }
 for (const { file } of DOMAIN_MODULE_FILES) await matchAsset('/' + file, path.join(appRoot, 'public', file));
 await matchAsset('/vendor/cytoscape.min.js', path.join(appRoot, 'node_modules/cytoscape/dist/cytoscape.min.js'));
-await matchAsset('/', path.join(appRoot, 'public/index.html'));
+const entryResponse = await fetch(new URL('/', origin), { redirect: 'manual', signal: AbortSignal.timeout(10000) });
+assert.equal(entryResponse.status, 302);
+assert.equal(entryResponse.headers.get('location'), '/workbench/');
+assert.equal(entryResponse.headers.get('cache-control'), 'no-store');
+await matchAsset('/index.html', path.join(appRoot, 'public/index.html'));
 const sourceFiles = (await fs.readdir(path.join(appRoot, 'frontend'))).filter(name => /\.(?:jsx|mjs|css|html)$/.test(name));
 const sourceManifest = [];
 for (const file of [...sourceFiles.map(name => 'frontend/' + name), 'package.json', 'package-lock.json']) {
