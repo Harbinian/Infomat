@@ -4,6 +4,10 @@
 
 首页 `/` 以不缓存的302重定向进入 `/workbench/`，默认显示流程图，选中对象后展开420像素详情。原首页完整保留在 `/index.html`。用户于2026-10-06授权替换正式3001；实际镜像、运行状态与回退信息以本次部署证据为准。本次不修改3000；下载未审核JSON后仍由用户手工上传3000。设计与实施记录见独立工作树的 `artifacts/3001-frontend-redesign-20261005/workbench-implementation-plan.md`。
 
+2026-10-06本机Docker正式3001已替换为镜像 `infomat-structured-output:react-workbench-20261006-a5d78fa3`，源码提交 `a5d78fa370fdc46d951cc2d94332008d176670c3`，镜像ID `sha256:32dfa817b3951b049a686e8596bcf1115e3bdb9d5710c515981a0b292787708c`。正式容器 `infomat-structured-output-3001` 为healthy，端口仍为3001；健康接口仍返回V8／candidate，表示编制文件及结构候选状态，不表示业务审核完成。隔离Docker候选通过真实Edge工作台14组、图形9组验证；正式端口另通过真实Edge工作台14组及6份实际下载的字节、内容和重导入核对。运行依赖审计为0漏洞，其他6个既有容器的身份、镜像、端口及运行状态均保持不变。
+
+本次保留旧镜像标签 `infomat-structured-output:rollback-20261006-ab1d5cc0` 和停止状态的回退容器 `infomat-3001-rollback-20261006`。Windows PowerShell把Docker进度输出误判为失败时，自动回退实际恢复了旧服务；修正脚本按原生退出码处理后再次切换成功。部署、HTTP资源、回退和容器核对记录位于 `artifacts/3001-react-workbench-release-20261006/release-report.md`，浏览器证据位于 `output/playwright/3001-docker-release-20261006/`。该软件替换及技术验证不构成真实流程业务验收。
+
 `frontend/` 使用 React/react-dom 19.2.6、Ant Design 6.6.5、@vitejs/plugin-react 6.0.2及Vite 8.0.16，构建产物位于 `public/workbench/`，资源基路径固定为 `/workbench/`。Vite从确认的8.0.14调整到8.0.16，以修复8.0.14包含的Windows开发服务器路径访问漏洞；没有增加收费服务、远程CDN、字体或分析组件。构建工具要求Node 20.19+或22.12+，本次运行与验证使用Node 25.2.1。
 
 从本应用目录构建并启动一个已确认空闲的隔离候选端口，例如本次使用的3027：
