@@ -38,6 +38,8 @@ node scripts/test-element-references-browser.js --BaseUrl http://127.0.0.1:3027 
 
 两项工作台浏览器命令均支持 `-OutputDir <本地证据目录>`，可分开保留各次验证报告、截图及实际下载；省略该参数沿用原默认目录。工作台脚本等待初始化及导入保护弹窗实际显示后再继续，避免把界面显示时序误判为导入失败。
 
+Docker部署复核补齐了锁文件中Linux/npm10解析所需的两项开发工具可选依赖 `@emnapi/core` 和 `@emnapi/runtime`（MIT）；主依赖、前端工具及已锁定包的版本保持不变。镜像以Node24.21.0运行，使用 `npm ci --omit=dev --ignore-scripts` 安装运行依赖，浏览器静态产物随镜像发布。
+
 V8与3000的只读兼容专项会引用3000校验模块。在未安装3000依赖的新工作树中，可仅在当前终端为它提供3001已安装的Ajv，不修改3000：`$env:NODE_PATH = Join-Path (Get-Location) 'node_modules'`，再执行 `npm.cmd run test:v8-decision-data`。该专项使用合成数据，不开启3000服务或数据库。
 
 ## V8 候选：判断节点的数据依据（2026-09-22）
