@@ -1,8 +1,8 @@
 # 3001 单流程治理编制工具
 
-## React 候选工作台（2026-10-05）
+## React 工作台（2026-10-05实现，2026-10-06授权部署）
 
-候选入口为 `/workbench/`，默认进入流程图，选中对象后展开420像素详情。原首页 `/` 保留。本次候选没有替换正式3001，也没有修改3000；下载未审核JSON后仍由用户手工上传3000。设计与实施记录见独立工作树的 `artifacts/3001-frontend-redesign-20261005/workbench-implementation-plan.md`。
+首页 `/` 以不缓存的302重定向进入 `/workbench/`，默认显示流程图，选中对象后展开420像素详情。原首页完整保留在 `/index.html`。用户于2026-10-06授权替换正式3001；实际镜像、运行状态与回退信息以本次部署证据为准。本次不修改3000；下载未审核JSON后仍由用户手工上传3000。设计与实施记录见独立工作树的 `artifacts/3001-frontend-redesign-20261005/workbench-implementation-plan.md`。
 
 `frontend/` 使用 React/react-dom 19.2.6、Ant Design 6.6.5、@vitejs/plugin-react 6.0.2及Vite 8.0.16，构建产物位于 `public/workbench/`，资源基路径固定为 `/workbench/`。Vite从确认的8.0.14调整到8.0.16，以修复8.0.14包含的Windows开发服务器路径访问漏洞；没有增加收费服务、远程CDN、字体或分析组件。构建工具要求Node 20.19+或22.12+，本次运行与验证使用Node 25.2.1。
 
@@ -389,7 +389,11 @@ docker run -d --name infomat-3001-candidate --init --read-only --cap-drop ALL --
 
 正式容器名为 `infomat-structured-output-3001`，映射 `0.0.0.0:3001`。容器以非 root 用户、只读文件系统运行；日志最多保留 3 个 10MB 文件。`unless-stopped` 在容器进程退出后自动重启，但健康检查失败本身不会触发重启。Windows 登录后仍需 Docker Desktop 引擎运行；可在 Docker Desktop 设置中启用登录时启动。用户主动停止的容器需再次执行 `up -d --no-build`。
 
-回退时先执行 `docker compose -f apps/structured-output-service/compose.yaml stop`，再在 `apps/structured-output-service` 目录运行原有 `npm.cmd start` 并复查接口。切换前请下载页面中尚未保存的内容，服务不提供草稿恢复。
+替换已有Docker服务时，先记录当前镜像ID、健康摘要和非敏感运行参数，为旧镜像增加唯一回退标签，并用相同端口与安全设置预创建一个不带Compose标签的停止状态回退容器。新镜像从已核对的干净提交构建，在空闲回环端口验证后，仅对本项目的 `structured-output` 服务执行 `up -d --no-build --no-deps structured-output`。显式传入空的 `--env-file`，避免自动读取工作区私有配置。不要运行其他项目的Compose命令或 `down`。
+
+回退时先停止新的正式3001容器，再启动已经记录名称的旧镜像回退容器，并复查健康、结构摘要和首页；不改写或降级用户JSON。不要从当前脏工作区临时启动未知版本代替已记录的回退镜像。重启不会刷新已经打开的浏览器页面；切换界面前由用户主动下载草稿，服务不提供草稿恢复。
+
+Docker候选映射外部端口时，`/api/health` 的端口仍是容器内部3001。只读工作台资源核对命令支持末尾指定内部端口：`node apps/structured-output-service/scripts/smoke-workbench.mjs http://127.0.0.1:3037 artifacts/3001-react-workbench-release-20261006/candidate-assets.json 3001`。该脚本继续拒绝正式3000和3001端口；正式服务使用部署后的定向HTTP核对和真实Edge操作。部署证据存放在独立工作树 `artifacts/3001-react-workbench-release-20261006/`，运行日志、截图及合成下载不进入Git。
 
 ## 关联文档
 
