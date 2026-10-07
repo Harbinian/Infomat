@@ -1,5 +1,71 @@
 # 3001 单流程治理编制工具
 
+## React 工作台（2026-10-05实现，2026-10-07业务名称版部署）
+
+工作台日常操作使用业务名称和所属范围，不显示内部对象标识、引用键、JSON路径、修订号或下载SHA摘要。对象清单、详情、表格、引用选择、流程图和关系图使用统一名称规则；同名内容按实际父级和业务说明区分，缺失或歧义关联显示中文提示且保留原值。文件菜单中的“来源与历史留存”显示来源与留存数量；下载摘要显示实际文件名、时间和字节数。制度编号、表单编号及业务正文继续显示。内部稳定引用、下载基线和导出JSON契约不变，保留首页 `/index.html` 沿用原实现。专项显示检查运行 `npm.cmd run test:workbench-presentation`；真实Edge验证另行检查可见文字、输入、辅助标签和画布，并核对下载字节。
+
+首页 `/` 以不缓存的302重定向进入 `/workbench/`，默认显示流程图，选中对象后展开420像素详情。原首页完整保留在 `/index.html`。用户于2026-10-06授权替换正式3001；实际镜像、运行状态与回退信息以本次部署证据为准。本次不修改3000；下载未审核JSON后仍由用户手工上传3000。设计与实施记录见独立工作树的 `artifacts/3001-frontend-redesign-20261005/workbench-implementation-plan.md`。
+
+2026-10-07本机Docker正式3001随后更新为业务名称版：镜像 `infomat-structured-output:business-labels-20261007-9f050dd8`，源码提交 `9f050dd84a3568010aac486854cf8793efe9fb66`，镜像ID `sha256:d9708bd0dd18144eace3b0afc29ced4d5ded3ea6112b39bf0ea3290964364694`。正式容器 `infomat-structured-output-3001` 为healthy；首页、22项本地资源实际字节、V8／candidate状态、Schema摘要及兼容接口均通过核对。部署后真实Microsoft Edge100%、1699×828 CSS像素通过工作台14组、流程图14组和用户指定31环节／44流转文件6组，12份实际下载的摘要、大小和业务内容均通过核对。界面可见文字、输入、辅助标签和图画布未发现内部引用、技术字段或路径泄露；缺失和歧义仍明确提示。错误条高度变化也保持原阅读视口。
+
+本轮保留前版ELK镜像标签 `infomat-structured-output:rollback-business-labels-20261007-6e19a291` 及未启动回退容器 `infomat-3001-labels-rollback-20261007`。其他10个既有容器身份、镜像、端口和运行状态保持不变；本次3049与3037候选已停止，主工作区110项已有改动、旧引用候选和源文件保留，用户已有页面未刷新。完整21个Node回归脚本通过，Controller44组、图形33组、布局25组、业务名称8组；构建使用已缓存Node24.21.0基础镜像，运行依赖审计0漏洞。源码和说明同步至 `codex/3001-business-labels`；GitHTTPS失败后采用GitHub接口，远端提交元数据不同，逐个Blob及完整文件树与本地提交一致，未改写其他分支历史。发布证据见 `artifacts/3001-business-labels-20261007/release-report.md` 和 `output/playwright/3001-business-labels-20261007/`。这些结果属于技术验证，不表示流程业务审核或人工Windows输入法验收。
+
+以下同日ELK布局版记录及2026-10-06记录保留为发布历史。
+
+2026-10-07前一次Docker3001更新为ELK流程图工作台：镜像 `infomat-structured-output:elk-workbench-20261007-7b897eeb`，源码提交 `7b897eeb53af17b825eecab8719d6db69294992a`，镜像ID `sha256:6e19a291fe9dedb2adabc4e2ad0be5df6ec843ae742404af6326374ced444f7b`。正式容器仍为 `infomat-structured-output-3001`，3001端口健康；首页、22项本地资源实际字节、V8／candidate状态和原Schema摘要均已复核。部署后真实Microsoft Edge100%、1699×828 CSS像素验证通过工作台14组、流程图13组及用户指定31环节／44流转业务文件5组；6份工作台下载和业务文件阅读前后2份下载的字节摘要及内容均通过核对。业务文件除导出时间外完整内容保持不变，源文件没有修改。全图仍为结构总览，文字阅读使用默认100%视图、对象定位或主动阅读。
+
+本轮保留前一React镜像标签 `infomat-structured-output:rollback-elk-20261007-32dfa817` 和未启动回退容器 `infomat-3001-elk-rollback-20261007`；其他8个既有容器的身份、镜像、端口和运行状态保持不变。3049与3037临时候选已定向停止，原引用增强候选及已有页面未动。完整应用20个Node测试脚本通过，Controller44组、图形交互30组、ELK布局24组；运行依赖审计0漏洞。工作台复验曾因同名重导入尚未完成而提前下载超时，测试现等待真实导入状态后继续，复验通过；该等待条件及发布说明属于后续测试／文档提交，运行镜像源码仍为上述提交。发布、回退和真实验证记录见 `artifacts/3001-elk-release-20261007/release-report.md`，证据位于 `output/playwright/3001-elk-release-20261007/`。这些技术验证不表示Windows中文输入法候选窗人工验收或流程业务审核完成。
+
+以下2026-10-06记录保留为前一版发布历史。
+
+2026-10-06本机Docker正式3001已替换为镜像 `infomat-structured-output:react-workbench-20261006-a5d78fa3`，源码提交 `a5d78fa370fdc46d951cc2d94332008d176670c3`，镜像ID `sha256:32dfa817b3951b049a686e8596bcf1115e3bdb9d5710c515981a0b292787708c`。正式容器 `infomat-structured-output-3001` 为healthy，端口仍为3001；健康接口仍返回V8／candidate，表示编制文件及结构候选状态，不表示业务审核完成。隔离Docker候选通过真实Edge工作台14组、图形9组验证；正式端口另通过真实Edge工作台14组及6份实际下载的字节、内容和重导入核对。运行依赖审计为0漏洞，其他6个既有容器的身份、镜像、端口及运行状态均保持不变。
+
+本次保留旧镜像标签 `infomat-structured-output:rollback-20261006-ab1d5cc0` 和停止状态的回退容器 `infomat-3001-rollback-20261006`。Windows PowerShell把Docker进度输出误判为失败时，自动回退实际恢复了旧服务；修正脚本按原生退出码处理后再次切换成功。部署、HTTP资源、回退和容器核对记录位于 `artifacts/3001-react-workbench-release-20261006/release-report.md`，浏览器证据位于 `output/playwright/3001-docker-release-20261006/`。该软件替换及技术验证不构成真实流程业务验收。
+
+`frontend/` 使用 React/react-dom 19.2.6、Ant Design 6.6.5、@vitejs/plugin-react 6.0.2及Vite 8.0.16，构建产物位于 `public/workbench/`，资源基路径固定为 `/workbench/`。Vite从确认的8.0.14调整到8.0.16，以修复8.0.14包含的Windows开发服务器路径访问漏洞；没有增加收费服务、远程CDN、字体或分析组件。构建工具要求Node 20.19+或22.12+，本次运行与验证使用Node 25.2.1。
+
+新版工作台的流程图使用锁定的 `elkjs 0.12.0` 分层算法，沿流向横向排列、采用直角路线，并完整消费路线折点、端点和条件标签位置。默认按14像素节点文字从流程起点阅读，13像素关系文字有独立的可点击标签；“全图”用于观察整体结构，长流程仍需定位或逐步阅读查看文字。执行部门、岗位或动态部门来源保留在节点摘要与详情中；新版不固定部门泳道，保留首页 `/index.html` 的原泳道实现。
+
+布局在本地Worker中计算；文档已应用的修改、候选替换或进入不同图内容才重新布局，普通输入保持当前图实例。新请求、取消、超时与卸载会终止旧Worker，返回结果再次核对候选、修订和文档身份。坐标、标签投影、缩放和阅读状态只在页面内存，不写入JSON、撤销记录或下载基线。缺失和歧义引用保留原值并显示异常，不能按同名改连。自动折行尚未满足端点验证，本版不启用。
+
+ELK依赖选择其免费开源 `EPL-2.0` 许可；未修改上游库，本地许可和第三方说明位于 `public/licenses/`。构建会生成同源Worker资产，不依赖CDN或远程布局服务。布局专项回归入口为 `npm.cmd run test:flow-layout`，包括真实ELK几何、稳定引用、循环／并行、96节点合成图及隔离调度取消；真实Edge图形检查另行读取渲染后的折点、箭头端点、标签和节点边界。部署记录与验证范围见 `artifacts/3001-elk-release-20261007/implementation.md`。
+
+从本应用目录构建并启动一个已确认空闲的隔离候选端口，例如本次使用的3027：
+
+```powershell
+npm.cmd ci
+npm.cmd run build:workbench
+$env:STRUCTURED_OUTPUT_HOST = '127.0.0.1'
+$env:STRUCTURED_OUTPUT_PORT = '3027'
+npm.cmd start
+```
+
+这是独立进程启动示例；先核对端口与进程，不启停其他服务。检查候选 `/workbench/`、`/api/health` 的 `candidate`／V8状态及 `/api/schema` 的摘要，浏览器另行核对实际导入、编辑与下载。需要开发服务器时执行 `npm.cmd run dev:workbench -- --port 5187 --strictPort`；本地API与领域静态脚本代理指向3027，按需调整配置中的候选目标。
+
+Controller的 `getSnapshot / subscribe / dispatch / destroy` 是业务状态唯一入口，统一拥有文档、修订、选择、编辑会话、检查和下载基线。`bridge.mjs` 每页只加载一次既有领域模块；新版不加载旧首页脚本、事件委派或旧页面render。React Form、图实例与网格不独立提交JSON。单项应用只提交所拥有字段的补丁；九类表格及旁边详情共用完整文档副本，通过稳定行标识读写，一次整体校验与提交。取消、超时、来源变化及旧异步响应不提交。
+
+状态明确区分未应用输入、已应用但未下载、实际当前内容已下载。离开会话先显式选择应用、放弃或继续编辑；结构检查不阻止草稿下载。引用按稳定标识及父级解析，缺失、歧义和错父级值保持原样。字段引用选择器属于同一受控会话，新增引用的必填性由用户明确选择。阅读演示仅为页面内存中的阅读位置，不写JSON、图坐标、撤销历史或下载基线。
+
+相关验证入口如下；浏览器脚本拒绝正式3000／3001端口，只在显式本地候选使用虚构合成数据，不连接数据库：
+
+```powershell
+npm.cmd test
+node scripts/smoke-workbench.mjs http://127.0.0.1:3027 ../../artifacts/3001-frontend-redesign-20261005/live-candidate-evidence.json
+npm.cmd run test:workbench-browser -- -BaseUrl http://127.0.0.1:3027 -Headed
+npm.cmd run test:workbench-graph-browser -- -BaseUrl http://127.0.0.1:3027 -Headed
+node scripts/test-element-references-browser.js --BaseUrl http://127.0.0.1:3027 --PlaywrightModule <local-playwright-module-path>
+```
+
+仅验证Microsoft Edge100%、1699×828 CSS像素桌面工作区。中文Composition事件及焦点自动化不等于Windows输入法候选窗人工体验或业务验收。技术契约和 `docs/` 说明用于实现兼容，不是业务治理真源。
+
+2026-10-06补充拟人操作验证：真实Edge的鼠标、键盘、文件选择和原生离页提示操作链完成23项检查，5份实际下载通过字节摘要及完整内容核对。修复了导入失败提示被画布视口回报立即清除的问题；视口反馈保留错误提示，输入和文档继续受原有会话保护。修复后Controller通过38组检查，`npm test`的19个脚本通过，真实Edge工作台14组及图形9组复验通过。原始记录在独立工作树的 `output/playwright/workbench-humanlike-20261006/`，不作为人工Windows输入法或业务验收记录。
+
+两项工作台浏览器命令均支持 `-OutputDir <本地证据目录>`，可分开保留各次验证报告、截图及实际下载；省略该参数沿用原默认目录。工作台脚本等待初始化及导入保护弹窗实际显示后再继续，避免把界面显示时序误判为导入失败。
+
+Docker部署复核补齐了锁文件中Linux/npm10解析所需的两项开发工具可选依赖 `@emnapi/core` 和 `@emnapi/runtime`（MIT），主依赖及前端工具版本保持不变。当前依赖审计发现Express间接依赖 `proxy-addr` 的新公布漏洞；仅将其锁定版本由2.0.7升级到2.0.8，依据维护者的 [GHSA-jqcg-44mw-7w3h修复说明](https://github.com/jshttp/proxy-addr/security/advisories/GHSA-jqcg-44mw-7w3h)。镜像以Node24.21.0运行，使用 `npm ci --omit=dev --ignore-scripts` 安装运行依赖，浏览器静态产物随镜像发布。
+
+V8与3000的只读兼容专项会引用3000校验模块。在未安装3000依赖的新工作树中，可仅在当前终端为它提供3001已安装的Ajv，不修改3000：`$env:NODE_PATH = Join-Path (Get-Location) 'node_modules'`，再执行 `npm.cmd run test:v8-decision-data`。该专项使用合成数据，不开启3000服务或数据库。
+
 ## V8 候选：判断节点的数据依据（2026-09-22）
 
 本工作区默认新建、校验、下载和健康检查已切换到 `process-governance-v8`，状态为 `candidate`。下方V7发布记录及版本细节只用于历史兼容，不覆盖本工作区V8默认版本；交互要求仍适用时沿用。候选源码不表示服务已部署。正式容器仍需按批准的部署范围处理。
@@ -349,7 +415,11 @@ docker run -d --name infomat-3001-candidate --init --read-only --cap-drop ALL --
 
 正式容器名为 `infomat-structured-output-3001`，映射 `0.0.0.0:3001`。容器以非 root 用户、只读文件系统运行；日志最多保留 3 个 10MB 文件。`unless-stopped` 在容器进程退出后自动重启，但健康检查失败本身不会触发重启。Windows 登录后仍需 Docker Desktop 引擎运行；可在 Docker Desktop 设置中启用登录时启动。用户主动停止的容器需再次执行 `up -d --no-build`。
 
-回退时先执行 `docker compose -f apps/structured-output-service/compose.yaml stop`，再在 `apps/structured-output-service` 目录运行原有 `npm.cmd start` 并复查接口。切换前请下载页面中尚未保存的内容，服务不提供草稿恢复。
+替换已有Docker服务时，先记录当前镜像ID、健康摘要和非敏感运行参数，为旧镜像增加唯一回退标签，并用相同端口与安全设置预创建一个不带Compose标签的停止状态回退容器。新镜像从已核对的干净提交构建，在空闲回环端口验证后，仅对本项目的 `structured-output` 服务执行 `up -d --no-build --no-deps structured-output`。显式传入空的 `--env-file`，避免自动读取工作区私有配置。不要运行其他项目的Compose命令或 `down`。
+
+回退时先停止新的正式3001容器，再启动已经记录名称的旧镜像回退容器，并复查健康、结构摘要和首页；不改写或降级用户JSON。不要从当前脏工作区临时启动未知版本代替已记录的回退镜像。重启不会刷新已经打开的浏览器页面；切换界面前由用户主动下载草稿，服务不提供草稿恢复。
+
+Docker候选映射外部端口时，`/api/health` 的端口仍是容器内部3001。只读工作台资源核对命令支持末尾指定内部端口：`node apps/structured-output-service/scripts/smoke-workbench.mjs http://127.0.0.1:3037 artifacts/3001-react-workbench-release-20261006/candidate-assets.json 3001`。该脚本继续拒绝正式3000和3001端口；正式服务使用部署后的定向HTTP核对和真实Edge操作。部署证据存放在独立工作树 `artifacts/3001-react-workbench-release-20261006/`，运行日志、截图及合成下载不进入Git。
 
 ## 关联文档
 

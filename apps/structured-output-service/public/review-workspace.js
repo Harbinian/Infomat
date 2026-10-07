@@ -49,23 +49,37 @@
 
   function resolve(data, target) {
     if (!data || !target) return null;
-    const byRef = (items, key, ref) => (items || []).find(item => item[key] === ref);
+    if (globalThis.ElementReferences && globalThis.ElementReferences.lookup(globalThis.ElementReferences.buildCatalog(data), target).status !== 'valid') return null;
+    const byRef = (items, key, ref) => {
+      const matches = (items || []).filter(item => item[key] === ref);
+      return matches.length === 1 ? matches[0] : null;
+    };
+    if (target.kind === 'process') return data.process?.process_ref === target.ref ? data.process : null;
+    if (target.kind === 'term') return byRef(data.terms, 'term_ref', target.ref) || null;
     if (target.kind === 'behavior') return byRef(data.behaviors, 'behavior_ref', target.ref) || null;
     if (target.kind === 'relation') return byRef(data.flow_relations, 'relation_ref', target.ref) || null;
     if (target.kind === 'data') return byRef(data.data_objects, 'data_ref', target.ref) || null;
     if (target.kind === 'form') return byRef(data.forms, 'form_ref', target.ref) || null;
+    if (target.kind === 'form-area') {
+      const owner = byRef(data.forms, 'form_ref', target.parentRef);
+      return byRef(owner?.areas, 'area_ref', target.ref) || null;
+    }
     if (target.kind === 'data-field') {
       const owner = byRef(data.data_objects, 'data_ref', target.parentRef);
       return byRef(owner?.fields, 'field_ref', target.ref) || null;
     }
     if (target.kind === 'form-item') {
       const owner = byRef(data.forms, 'form_ref', target.parentRef);
-      return (owner?.areas || []).flatMap(area => area.items || []).find(item => item.item_ref === target.ref) || null;
+      return byRef((owner?.areas || []).flatMap(area => area.items || []), 'item_ref', target.ref) || null;
     }
     return null;
   }
 
   function label(data, target) {
+    if (globalThis.ElementReferences) {
+      const resolution = globalThis.ElementReferences.lookup(globalThis.ElementReferences.buildCatalog(data), target);
+      return resolution.status === 'valid' ? resolution.node.label : resolution.status === 'ambiguous' ? '标识重复，无法唯一定位' : resolution.status === 'wrong-owner' ? '对象归属已变化' : '对象已不存在';
+    }
     const item = resolve(data, target);
     if (!item) return '对象已不存在';
     if (target.kind === 'relation') {
@@ -73,7 +87,7 @@
       const to = resolve(data, { kind: 'behavior', ref: item.to_behavior_ref });
       return `${from?.behavior_name || '未命名环节'} → ${to?.behavior_name || '未命名环节'}`;
     }
-    return item.behavior_name || item.data_name || item.form_name || item.field_name || item.item_name || '未命名对象';
+    return item.process_name || item.term_name || item.behavior_name || item.data_name || item.form_name || item.area_title || item.field_name || item.item_name || '未命名对象';
   }
 
   function linkedObjects(data, behaviorRef) {
