@@ -81,15 +81,19 @@ export function locationViewport(cy, elements, { padding = 32, maxZoom = 0.65, r
 }
 
 /** Recorded routes only: no condition evaluation and no execution-time interpretation. */
-export function createReadingSession(document, startRef, saved = {}) {
+export function createReadingSession(document, startRef, saved = {}, identity = {}) {
   const index = new Map();
   for (const behavior of list(document.behaviors)) {
     const ref = behavior.behavior_ref;
     if (!index.has(ref)) index.set(ref, []);
     index.get(ref).push(behavior);
   }
-  if (!startRef || index.get(startRef)?.length !== 1) throw new Error('请选择具有唯一稳定标识的起点环节。');
+  const uniqueBehavior = ref => Boolean(ref && index.get(ref)?.length === 1
+    && (typeof identity?.isUniqueBehavior !== 'function' || identity.isUniqueBehavior(ref)));
+  if (!uniqueBehavior(startRef)) throw new Error('请选择具有唯一稳定标识的起点环节。');
   const routes = list(document.flow_relations);
+  const uniqueRelation = ref => Boolean(ref && routes.filter(route => route.relation_ref === ref).length === 1
+    && (typeof identity?.isUniqueRelation !== 'function' || identity.isUniqueRelation(ref)));
   const history = [{ refs: [startRef], routeRefs: [], stopReason: '' }];
   let position = 0;
   let stopped = '';
@@ -104,6 +108,7 @@ export function createReadingSession(document, startRef, saved = {}) {
     if (position < history.length - 1) { position += 1; stopped = current().stopReason || ''; choices = []; return snapshot(); }
     if (['loop', 'broken', 'end'].includes(stopped)) return snapshot();
     const group = current().refs;
+    if (group.some(ref => !uniqueBehavior(ref))) { stopAtCurrent('broken'); choices = []; return snapshot(); }
     const candidates = group.flatMap(available);
     if (!candidates.length) { stopAtCurrent('end'); choices = []; return snapshot(); }
     // A split presents all its recorded destinations as one reading group.
@@ -122,7 +127,7 @@ export function createReadingSession(document, startRef, saved = {}) {
       return snapshot();
     }
     const selected = candidates.filter(route => !decisionRefs.includes(route.from_behavior_ref) || selectedBySource.get(route.from_behavior_ref) === route.relation_ref);
-    if (selected.some(route => !route.relation_ref || routes.filter(item => item.relation_ref === route.relation_ref).length !== 1 || !route.to_behavior_ref || index.get(route.to_behavior_ref)?.length !== 1)) { stopAtCurrent('broken'); choices = []; return snapshot(); }
+    if (selected.some(route => !uniqueRelation(route.relation_ref) || !uniqueBehavior(route.from_behavior_ref) || !uniqueBehavior(route.to_behavior_ref))) { stopAtCurrent('broken'); choices = []; return snapshot(); }
     const refs = [...new Set(selected.map(route => route.to_behavior_ref))];
     const loop = refs.some(ref => visited.has(ref));
     history.push({ refs, routeRefs: selected.map(route => route.relation_ref), stopReason: loop ? 'loop' : '' });

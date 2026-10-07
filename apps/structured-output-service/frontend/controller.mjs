@@ -29,7 +29,7 @@ export function createWorkbenchController(options = {}) {
   const listeners=new Set(), timeoutMs=options.timeoutMs ?? 12000;
   let destroyed=false, version=0, request=null, grid=null, generation=0, candidateSeq=0, sessionRevision=0, refSeq=0, returnFlow=null;
   const fingerprint=modules.GraphEditorState.fingerprint;
-  let state={document:null,candidateKey:'',revision:0,selection:null,view:'flow',detailOpen:false,detailExpanded:false,editing:false,session:null,reusePicker:null,pending:false,dirty:false,checks:{issues:[],stale:true,valid:null},download:null,guard:null,busy:false,error:null,enums:{},schema:null,history:{canUndo:false,canRedo:false},viewport:{flow:null,relations:null},relationTarget:null,reducedMotion:Boolean(options.reducedMotion),appliedTarget:null,importInfo:null,importCandidates:null,gridDraftDocument:null};
+  let state={document:null,candidateKey:'',revision:0,selection:null,view:'flow',detailOpen:false,detailExpanded:false,editing:false,session:null,reusePicker:null,pending:false,dirty:false,checks:{issues:[],stale:true,valid:null},download:null,guard:null,busy:false,error:null,enums:{},schema:null,history:{canUndo:false,canRedo:false},viewport:{flow:null,relations:null},relationTarget:null,reducedMotion:Boolean(options.reducedMotion),appliedTarget:null,appliedRevision:null,importInfo:null,importCandidates:null,gridDraftDocument:null};
   let cachedDocument=null,cachedDocumentSource=null,cachedGrid=null,cachedGridRevision=-1,cachedGridSource=null;
   let snapshot=frozen(clone(state));
   const sourceKey=()=>`${state.candidateKey}:${state.revision}`;
@@ -81,12 +81,14 @@ export function createWorkbenchController(options = {}) {
   function commit(document,details={}) {
     const result=history.execute(state.candidateKey,state.document,()=>({ok:true,document:clone(document),details}));
     if(!result.ok)throw new Error(result.message || '未能应用修改');
-    state.document=result.document;state.revision+=1;state.checks={...state.checks,stale:true};state.appliedTarget=clone(details.target || state.selection);state.error=null;
+    const appliedTarget=clone(details.target || state.selection);
+    if(appliedTarget)delete appliedTarget.locateSequence;
+    state.document=result.document;state.revision+=1;state.checks={...state.checks,stale:true};state.appliedTarget=appliedTarget;state.appliedRevision=state.revision;state.error=null;
   }
   function replaceDocument(document,{dirty=false,importInfo=null}={}) {
     abort();history.clear();discardSession();state.document=clone(document);state.candidateKey=`candidate_${++candidateSeq}`;state.revision=0;history.register(state.candidateKey,state.document);
     if(dirty)history.markBaseline(state.candidateKey,{});
-    state.selection=null;state.view='flow';state.detailOpen=false;state.editing=false;state.guard=null;state.reusePicker=null;state.download=null;state.importInfo=importInfo;state.importCandidates=null;state.appliedTarget=null;state.viewport={flow:null,relations:null};state.relationTarget=null;returnFlow=null;state.checks={issues:[],stale:true,valid:null};
+    state.selection=null;state.view='flow';state.detailOpen=false;state.editing=false;state.guard=null;state.reusePicker=null;state.download=null;state.importInfo=importInfo;state.importCandidates=null;state.appliedTarget=null;state.appliedRevision=null;state.viewport={flow:null,relations:null};state.relationTarget=null;returnFlow=null;state.checks={issues:[],stale:true,valid:null};
   }
   function guard(action,reason='pending',message='可见输入尚未应用，请先处理修改。') { state.guard={action:clone(action),reason,message};emit();return {ok:false,guard:true}; }
   function guarded(action) {
@@ -221,7 +223,7 @@ export function createWorkbenchController(options = {}) {
   function select(target) {
     const document=grid ? projectGridDocument() : state.document, selected=resolve(document,target);
     if(selected.status!=='valid')throw new Error(`对象${selected.status==='ambiguous'?'标识存在歧义':selected.status==='wrong-parent'?'父级归属不符':'不存在'}，原值保留`);
-    state.selection={kind:selected.kind,ref:selected.ref,parentRef:selected.parentRef,formRef:selected.formRef,areaRef:selected.areaRef,...(target.locateReason?{locateReason:target.locateReason,locateSequence:version+1}:{})};state.detailOpen=true;
+    state.selection={kind:selected.kind,ref:selected.ref,parentRef:selected.parentRef,formRef:selected.formRef,areaRef:selected.areaRef,locateSequence:version+1,...(target.locateReason?{locateReason:target.locateReason}:{})};state.detailOpen=true;
     if(grid) {
       const tableId=tableForTarget(state.selection);
       if(tableId)state.session={...state.session,tableId,rowId:selected.ref,parentRef:grid.definition(tableId).parentKey ? grid.rows(tableId).find(row=>row._row_id===selected.ref)?.[grid.definition(tableId).parentKey] || '' : ''};
@@ -414,7 +416,7 @@ export function createWorkbenchController(options = {}) {
         case 'reuse-picker-apply':return await applyReusePicker();
         case 'undo':case 'redo': {
           abort();const result=history[action.type](state.candidateKey,state.document);if(!result.ok)throw new Error(result.message);
-          state.document=result.document;state.revision+=1;state.checks.stale=true;discardSession();if(state.selection&&resolve(state.document,state.selection).status!=='valid'){state.selection=null;state.detailOpen=false;}else if(state.editing&&state.selection)objectSession();emit();break;
+          state.document=result.document;state.revision+=1;state.appliedTarget=null;state.appliedRevision=null;state.checks.stale=true;discardSession();if(state.selection&&resolve(state.document,state.selection).status!=='valid'){state.selection=null;state.detailOpen=false;}else if(state.editing&&state.selection)objectSession();emit();break;
         }
         case 'check':
           return operation(async(signal,mark)=>{const validation=await validate(state.document,signal);if(!current(mark))return {ok:false,stale:true};state.checks={issues:[...(validation.errors||[]).map(item=>decorateIssue(state.document,item,'error')),...(validation.warnings||[]).map(item=>decorateIssue(state.document,item,'warning'))],stale:false,valid:validation.valid,revision:state.revision};emit();return {ok:true};},{session:false});

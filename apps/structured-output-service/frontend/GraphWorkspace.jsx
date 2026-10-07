@@ -1,10 +1,45 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Alert, Button, Empty, Select, Space, Tag, Tooltip } from 'antd';
 import cytoscape from 'cytoscape';
+import { buildFlowLayoutInput, materializeFlowLayout, cytoscapeFlowElements, applyFlowRouteGeometry, FLOW_LAYOUT_VERSION } from './flow-layout.mjs';
+import { createFlowLayoutScheduler } from './flow-layout-client.mjs';
 import { MOTION_MS, buildDirectRelationGraph, createMotionCoordinator, createReadingSession, kindLabel, locationViewport, targetKey } from './graph-motion.mjs';
 
 const array = value => Array.isArray(value) ? value : [];
 const READING_MESSAGES = { choice: '判断或多路线处已暂停：请选择文件中已记录的路线。', loop: '再次到达已读环节，已暂停，避免无限循环。', broken: '下一路线的稳定标识缺失或存在歧义，阅读已暂停。', end: '已到达当前记录路线的末端。' };
+const flowLayoutCache = new WeakMap();
+const appliedCueLedger = new WeakMap();
+const flowStyles = [
+  { selector: 'node', style: { width: 'data(nodeWidth)', height: 'data(nodeHeight)', shape: 'data(shape)', 'background-color': '#f8efdc', 'border-color': '#92977d', 'border-width': 2, label: 'data(label)', color: '#443d32', 'font-family': 'Microsoft YaHei', 'font-size': 14, 'text-wrap': 'wrap', 'text-max-width': 'data(textMaxWidth)', 'text-valign': 'center', 'text-halign': 'center', 'line-height': 1.4286, 'overlay-opacity': 0, 'transition-property': 'background-color, border-color', 'transition-duration': 150, 'z-index': 20 } },
+  { selector: '.node-decision', style: { 'background-color': '#f4e1d7', 'border-color': '#9b483d' } },
+  { selector: '.node-parallel_split, .node-parallel_join', style: { 'background-color': '#edf0e1', 'border-color': '#6f7c63' } },
+  { selector: '.dynamic-actor-node, .flow-anomaly', style: { 'border-style': 'dashed' } },
+  { selector: '.flow-anomaly', style: { 'border-color': '#a35244', color: '#8c3f33' } },
+  { selector: 'edge', style: { width: 2, 'line-color': '#6f7c63', 'target-arrow-color': '#6f7c63', 'target-arrow-shape': 'triangle', 'arrow-scale': 1, label: '', 'overlay-opacity': 0, 'z-index': 10 } },
+  { selector: 'edge.relation-loop, edge.flow-anomaly', style: { 'line-color': '#8c3f33', 'target-arrow-color': '#8c3f33' } },
+  { selector: 'edge.call-auxiliary', style: { 'line-style': 'dashed', 'line-color': '#978768', 'target-arrow-color': '#978768' } },
+  { selector: '.internal-call-node', style: { 'border-style': 'dashed', 'border-color': '#978768' } },
+  { selector: '.flow-label', style: { shape: 'rectangle', 'background-color': '#f4ecdc', 'background-opacity': 1, 'border-width': 0, 'font-size': 13, 'line-height': 1.4616, 'transition-duration': 0, 'z-index': 30 } },
+  { selector: '.flow-label.relation-loop', style: { color: '#8c3f33' } },
+  { selector: '.flow-route-anchor', style: { width: 1, height: 1, shape: 'rectangle', opacity: 0, label: '', 'border-width': 0, events: 'no', 'z-index': 0 } },
+  { selector: '.workbench-selected, .workbench-reading', style: { 'border-color': '#9b483d', 'border-width': 4, 'background-color': '#ead9b8' } },
+  { selector: 'edge.workbench-selected, edge.workbench-direction', style: { width: 4, 'line-color': '#9b483d', 'target-arrow-color': '#9b483d' } },
+  { selector: '.workbench-neighbour', style: { 'border-color': '#6e8061' } },
+  { selector: 'node.workbench-applied', style: { 'border-width': 4, 'border-color': '#567247' } },
+  { selector: 'edge.workbench-applied', style: { width: 4, 'line-color': '#567247', 'target-arrow-color': '#567247' } }
+];
+
+let flowMeasureContext;
+function measureFlowText(value, size) {
+  const context = flowMeasureContext ||= window.document.createElement('canvas').getContext('2d');
+  context.font = `${size}px "Microsoft YaHei"`;
+  return context.measureText(value).width;
+}
+
+function logicalConnectedEdges(cy, elements) {
+  const ids = new Set(elements.nodes().filter(node => node.hasClass('behavior-node') || node.hasClass('internal-call-node')).map(node => node.id()));
+  return cy.edges().filter(edge => ids.has(edge.data('semanticSource')) || ids.has(edge.data('semanticTarget'))).union(elements.edges());
+}
 const relationStyles = [
   { selector: 'node', style: { width: 264, height: 104, shape: 'round-rectangle', 'background-color': '#f8f1e2', 'border-color': '#92977d', 'border-width': 2, label: 'data(label)', color: '#443d32', 'font-family': 'Microsoft YaHei', 'font-size': 14, 'text-wrap': 'wrap', 'text-max-width': 232, 'text-valign': 'center', 'text-halign': 'center' } },
   { selector: 'node[?current]', style: { 'background-color': '#ebdfc8', 'border-color': '#9b483d', 'border-width': 3, 'font-weight': 600 } },
@@ -51,11 +86,12 @@ function withLogicalTrunks(cy, elements) {
   return elements.union(cy.edges('.relation-bundle-trunk').filter(item => bundleIds.has(item.data('bundleId'))));
 }
 
-export default function GraphWorkspace({ document, candidateKey = '', selection, onSelect, relationTarget = null, onReturn, onDrill, reducedMotion = false, onViewportChange, viewport, revision, onReadingChange, appliedTarget = null }) {
+export default function GraphWorkspace({ document, candidateKey = '', selection, onSelect, relationTarget = null, onReturn, onDrill, reducedMotion = false, onViewportChange, viewport, revision, onReadingChange, appliedTarget = null, appliedRevision = null }) {
   const containerRef = useRef(null);
   const graphRef = useRef(null);
   const callbacks = useRef({});
-  callbacks.current = { onSelect, onReturn, onDrill, onViewportChange, onReadingChange, reducedMotion, selection, document };
+  callbacks.current = { onSelect, onReturn, onDrill, onViewportChange, onReadingChange, reducedMotion, selection, document, candidateKey, revision, relationKey: targetKey(relationTarget) };
+  const generationRef = useRef(0);
   const viewportRef = useRef(viewport);
   const candidateRef = useRef(candidateKey);
   const flowReturnViewport = useRef(null);
@@ -69,6 +105,9 @@ export default function GraphWorkspace({ document, candidateKey = '', selection,
   const [direction, setDirection] = useState(false);
   const [reducedPreference, setReducedPreference] = useState(false);
   const [zoomPercent, setZoomPercent] = useState(100);
+  const [layoutStatus, setLayoutStatus] = useState('loading');
+  const [readyGeneration, setReadyGeneration] = useState(0);
+  const [flowInfo, setFlowInfo] = useState(null);
   const reduce = reducedMotion || reducedPreference;
   const reducedRef = useRef(reduce);
   reducedRef.current = reduce;
@@ -94,135 +133,165 @@ export default function GraphWorkspace({ document, candidateKey = '', selection,
     if (reading || !pendingReadingRestore.current || !graphRef.current) return;
     const saved = pendingReadingRestore.current;
     pendingReadingRestore.current = null;
+    if (!graphRef.current.isCurrent() || graphRef.current.layoutKey !== saved.layoutKey) return;
     // Restore after the reading toolbar has left the DOM, using the original canvas size.
+    graphRef.current.readingRestoreSize = { width: containerRef.current.clientWidth, height: containerRef.current.clientHeight };
     graphRef.current.cy.resize();
     graphRef.current.motion.move(saved.viewport, 0);
     graphRef.current.highlight(saved.selection, false);
   }, [reading]);
 
-  // Document identity changes only after a controller commit. Typing never rebuilds the graph.
+  // Only committed document identity/candidate changes request layout. Relations reuse the flow cache.
   useEffect(() => {
     if (!containerRef.current || !document) return;
+    const generation = ++generationRef.current;
+    const container = containerRef.current;
+    let disposed = false, cy, motion, resizeObserver, gestureTimer;
+    let scheduler, disposeGraph;
+    const isCurrent = () => !disposed && generation === generationRef.current
+      && callbacks.current.candidateKey === candidateKey && callbacks.current.document === document
+      && callbacks.current.revision === revision && callbacks.current.relationKey === relationKey;
     stopReading({ restore: false });
-    setError('');
-    setDirection(false);
-    let diagram;
-    let cy;
-    let motion;
-    let resizeObserver;
-    let nativeGesture = false;
-    let gestureMoved = false;
-    let gestureTimer;
-    let relationModel = null;
-    try {
-      if (candidateRef.current !== candidateKey) {
-        candidateRef.current = candidateKey;
-        viewportRef.current = viewport || null;
-        flowReturnViewport.current = null;
-        relationActive.current = false;
-      }
-      const ProcessDiagram = globalThis.ProcessDiagram;
+    setError(''); setDirection(false); setLayoutStatus('loading'); setFlowInfo(null);
+    if (candidateRef.current !== candidateKey) {
+      candidateRef.current = candidateKey;
+      viewportRef.current = viewport || null;
+      flowReturnViewport.current = null;
+      relationActive.current = false;
+    }
+    async function mount() {
       const references = globalThis.ElementReferences;
-      if (!ProcessDiagram || !references) throw new Error('图形领域模块尚未加载，请重新打开工作台。');
+      if (!references) throw new Error('图形领域模块尚未加载，请重新打开工作台。');
+      let relationModel = null, flowModel = null, restore;
       if (relationTarget) {
-        if (!relationActive.current) flowReturnViewport.current = graphRef.current?.motion.snapshot('located') || viewportRef.current || viewport;
+        if (!relationActive.current) flowReturnViewport.current = viewportRef.current || viewport;
         relationActive.current = true;
-        const catalog = references.buildCatalog(document);
-        relationModel = buildDirectRelationGraph(document, catalog, references, relationTarget);
-        setRelationInfo(relationModel);
-        cy = cytoscape({ container: containerRef.current, elements: relationModel.elements, style: relationStyles, layout: { name: 'preset', fit: true, padding: 48 }, minZoom: 0.15, maxZoom: 1.6, autoungrabify: true, autounselectify: true, boxSelectionEnabled: false });
+        relationModel = buildDirectRelationGraph(document, references.buildCatalog(document), references, relationTarget);
       } else {
-        const restore = relationActive.current ? flowReturnViewport.current : viewportRef.current || viewport;
+        restore = relationActive.current ? flowReturnViewport.current : viewportRef.current || viewport;
         relationActive.current = false;
-        setRelationInfo(null);
-        diagram = ProcessDiagram.mount({ container: containerRef.current, cytoscape, documentData: document, selectedFocus: selection, viewport: restore, showAggregateBadges: true, editable: false });
-        cy = diagram.cy;
-        // The mount's layout and shared trunks are retained. Viewport ownership moves to the coordinator.
-        cy.off('pan zoom');
-        cy.off('tap');
-        cy.style().selector('.lane-body-node').style({ 'background-color': '#f8f1e2' })
-          .selector('edge').style({ 'text-background-color': '#f4ecdc' })
-          .selector('.flow-edge').style({ 'line-color': '#6f7c63', 'target-arrow-color': '#6f7c63', color: '#514d3f' })
-          .selector('.relation-loop, .internal-return-edge, .relation-bundle-trunk.bundle-loop').style({ 'line-color': '#8c3f33', 'target-arrow-color': '#8c3f33', color: '#7b2f27' })
-          .selector('.aggregate-badge, .form-aggregate-badge').style({ 'background-color': '#edf0e1', 'border-color': '#92977d', color: '#443d32' })
-          .selector('.behavior-node, .internal-call-node, .external-node').style({ 'background-color': '#f8efdc', 'transition-property': 'background-color, border-color', 'transition-duration': reduce ? 0 : MOTION_MS.select })
-          .selector('.workbench-selected').style({ 'border-color': '#9b483d', 'border-width': 9, 'background-color': '#ead9b8' })
-          .selector('edge.workbench-selected, edge.workbench-direction').style({ 'line-color': '#9b483d', 'target-arrow-color': '#9b483d', width: 12 })
-          .selector('.workbench-neighbour').style({ 'border-color': '#6e8061' })
-          .selector('.workbench-applied').style({ 'border-color': '#567247', 'border-width': 12 })
-          .selector('.workbench-reading').style({ 'border-color': '#9b483d', 'border-width': 12, 'background-color': '#ead9b8' }).update();
+        const cached = flowLayoutCache.get(document);
+        if (cached?.candidateKey === candidateKey) flowModel = cached.model;
+        else {
+          const input = buildFlowLayoutInput(document, { measureText: measureFlowText });
+          scheduler = createFlowLayoutScheduler();
+          const result = await scheduler.layout(input, { candidateKey, revision, documentKey: input.documentFingerprint });
+          if (!isCurrent()) return;
+          flowModel = materializeFlowLayout(input, result.graph);
+          flowLayoutCache.set(document, { candidateKey, model: flowModel });
+        }
       }
+      if (!isCurrent()) return;
+      setRelationInfo(relationModel); setFlowInfo(flowModel);
+      cy = cytoscape({ container, elements: relationModel?.elements || cytoscapeFlowElements(flowModel),
+        style: relationModel ? relationStyles : flowStyles,
+        layout: { name: 'preset', fit: !!relationModel, padding: 48 },
+        minZoom: 0.08, maxZoom: 1.6, autoungrabify: true, autounselectify: true, boxSelectionEnabled: false });
+      if (flowModel) applyFlowRouteGeometry(cy, flowModel);
+      cy.style().selector('.behavior-node, .internal-call-node, .unresolved-flow-node').style({ 'transition-duration': reducedRef.current ? 0 : MOTION_MS.select }).update();
+      const layoutKey = flowModel?.fingerprint || 'relations:' + relationKey;
+      let restoredExact = false;
+      if (!relationModel) {
+        const validRestore = restore && Number.isFinite(restore.zoom) && restore.pan;
+        if (validRestore && restore.layoutKey === layoutKey) {
+          if (restore.zoom > 0 && restore.zoom < cy.minZoom()) cy.minZoom(restore.zoom);
+          cy.zoom(restore.zoom);
+          cy.pan({ x: restore.pan.x + (cy.width() - (restore.width || cy.width())) / 2, y: restore.pan.y + (cy.height() - (restore.height || cy.height())) / 2 });
+          restoredExact = true;
+        } else {
+          const anchor = validRestore && restore.layoutKey ? cy.nodes('.behavior-node').filter(node => node.data('focusRef') === restore.anchorRef && node.data('status') === 'valid').first() : cy.collection();
+          const selected = flowTargetElements(cy, callbacks.current.selection, document).nodes('.behavior-node').first();
+          const first = anchor.length ? anchor : selected.length ? selected : cy.nodes('.behavior-node').first();
+          const zoom = validRestore && restore.layoutKey ? Math.max(0.8, Math.min(1.2, restore.zoom)) : 1;
+          cy.zoom(zoom);
+          if (first.length) {
+            const offset = anchor.length ? restore.anchorOffset || { x: 0, y: 0 } : { x: 0, y: 0 };
+            cy.pan({ x: cy.width() / 2 + offset.x - first.position('x') * zoom, y: cy.height() / 2 + offset.y - first.position('y') * zoom });
+          }
+        }
+      }
+      let nativeGesture = false, gestureMoved = false;
+      const stampViewport = value => {
+        if (relationModel) return value;
+        const center = { x: cy.width() / 2, y: cy.height() / 2 };
+        const anchor = cy.nodes('.behavior-node').filter(node => node.data('status') === 'valid').sort((a, b) => {
+          const pa = a.renderedPosition(), pb = b.renderedPosition();
+          return Math.hypot(pa.x - center.x, pa.y - center.y) - Math.hypot(pb.x - center.x, pb.y - center.y);
+        }).first();
+        const position = anchor.length ? anchor.renderedPosition() : null;
+        return { ...value, layoutKey, anchorRef: anchor.data('focusRef') || '', anchorOffset: position ? { x: position.x - center.x, y: position.y - center.y } : null };
+      };
       motion = createMotionCoordinator({ cy, reduced: () => reducedRef.current, report: value => {
-        // restore updates the legacy resize mode, never the business JSON or undo history.
-        diagram?.restore(value);
+        if (!isCurrent()) return;
         setZoomPercent(Math.round(value.zoom * 100));
-        if (!relationTarget && !readingSession.current) {
-          viewportRef.current = value;
-          callbacks.current.onViewportChange?.(value);
+        if (!relationModel && !readingSession.current) {
+          viewportRef.current = stampViewport(value);
+          callbacks.current.onViewportChange?.(viewportRef.current);
         }
       } });
-      const clearTransient = () => { cy.elements().removeClass('workbench-direction workbench-applied'); if (graphRef.current?.cy === cy) graphRef.current.appliedUntil = 0; setDirection(false); };
+      const clearTransient = () => { if (!isCurrent()) return; cy.elements().removeClass('workbench-direction workbench-applied'); if (graphRef.current?.cy === cy) graphRef.current.appliedUntil = 0; setDirection(false); };
       const highlight = (target, locate = true, duration = MOTION_MS.select) => {
-        motion.cancel();
-        clearTransient();
+        if (!isCurrent()) return;
+        motion.cancel(); clearTransient();
         cy.elements().removeClass('workbench-selected workbench-neighbour workbench-reading');
-        let elements = relationTarget ? cy.nodes().filter(item => targetKey(item.data('target')) === targetKey(target)) : flowTargetElements(cy, target, document);
-        elements = withLogicalTrunks(cy, elements);
+        const elements = relationModel ? cy.nodes().filter(item => targetKey(item.data('target')) === targetKey(target)) : flowTargetElements(cy, target, document);
         elements.addClass('workbench-selected');
-        // At most the immediate recorded neighbours receive secondary emphasis.
-        if (elements.nodes().length === 1) elements.nodes().connectedEdges().connectedNodes().difference(elements).slice(0, 6).addClass('workbench-neighbour');
+        if (elements.nodes('.behavior-node').length === 1) {
+          const relations = logicalConnectedEdges(cy, elements);
+          const neighbours = new Set(relations.flatMap(edge => [edge.data('semanticSource'), edge.data('semanticTarget')]));
+          cy.nodes('.behavior-node').filter(node => neighbours.has(node.id())).difference(elements).slice(0, 6).addClass('workbench-neighbour');
+        }
         if (locate) {
-          const located = locationViewport(cy, elements, { maxZoom: relationTarget ? 1 : 0.65, readableZoom: relationTarget ? 0.9 : 0.4 });
+          const labels = elements.nodes('.flow-label');
+          const located = locationViewport(cy, labels.length ? labels : elements, { maxZoom: 1.2, readableZoom: 1 });
           if (located) motion.move(located, duration);
         }
       };
-      graphRef.current = { cy, diagram, motion, highlight, clearTransient, relationModel, appliedUntil: 0 };
+      graphRef.current = { cy, motion, highlight, clearTransient, relationModel, flowModel, layoutKey, generation, locateOnReady: !restoredExact, appliedUntil: 0, isCurrent, stampViewport };
       cy.on('tap', 'node, edge', event => {
-        if (readingSession.current) return;
+        if (!isCurrent() || readingSession.current) return;
         const element = event.target;
-        if (relationTarget) {
+        if (relationModel) {
           const target = element.isNode() ? element.data('target') : element.data('detailTarget');
           if (target) callbacks.current.onSelect?.(target);
         } else {
-          const kind = element.data('focusKind');
-          const ref = element.data('focusRef');
+          const kind = element.data('focusKind'), ref = element.data('focusRef');
           if (['behavior', 'relation'].includes(kind) && ref) callbacks.current.onSelect?.({ kind, ref, parentRef: '' });
-          else if (['data-badge', 'form-badge'].includes(kind) && ref) callbacks.current.onSelect?.({ kind: 'behavior', ref, parentRef: '', relatedKind: kind === 'data-badge' ? 'data' : 'form' });
+          else if (element.data('navigationTarget')) callbacks.current.onSelect?.(element.data('navigationTarget'));
         }
       });
-      cy.on('pan zoom', () => { if (nativeGesture && !motion.isProgrammatic()) { gestureMoved = true; motion.reportManual(); } });
-      cy.on('dragpan', () => { motion.cancel({ user: true }); clearTransient(); });
+      cy.on('pan zoom', () => { if (isCurrent() && nativeGesture && !motion.isProgrammatic()) { gestureMoved = true; motion.reportManual(); } });
+      cy.on('dragpan', () => { if (isCurrent()) { setPlaying(false); motion.cancel({ user: true }); clearTransient(); } });
       const gestureStart = event => {
-        nativeGesture = true;
-        gestureMoved = event.type === 'wheel';
-        motion.cancel({ user: event.type === 'wheel' });
-        clearTransient();
+        if (!isCurrent()) return;
+        nativeGesture = true; gestureMoved = event.type === 'wheel';
+        motion.cancel({ user: event.type === 'wheel' }); clearTransient();
         if (event.type === 'wheel') {
+          setPlaying(false);
           clearTimeout(gestureTimer);
-          gestureTimer = setTimeout(() => { nativeGesture = false; motion.reportManual(); }, 160);
+          gestureTimer = setTimeout(() => { if (!isCurrent()) return; nativeGesture = false; motion.reportManual(); }, 160);
         }
       };
-      const gestureEnd = () => { if (nativeGesture && gestureMoved) motion.reportManual(); nativeGesture = false; gestureMoved = false; };
-      containerRef.current.addEventListener('pointerdown', gestureStart, true);
-      containerRef.current.addEventListener('wheel', gestureStart, { capture: true, passive: true });
-      window.addEventListener('pointerup', gestureEnd);
-      window.addEventListener('pointercancel', gestureEnd);
-      const container = containerRef.current;
+      const gestureEnd = () => { if (!isCurrent()) return; if (nativeGesture && gestureMoved) motion.reportManual(); nativeGesture = false; gestureMoved = false; };
+      container.addEventListener('pointerdown', gestureStart, true);
+      container.addEventListener('wheel', gestureStart, { capture: true, passive: true });
+      window.addEventListener('pointerup', gestureEnd); window.addEventListener('pointercancel', gestureEnd);
       if (typeof ResizeObserver === 'function') {
         let dimensions = { width: container.clientWidth, height: container.clientHeight };
         resizeObserver = new ResizeObserver(() => {
-          if (graphRef.current?.cy !== cy || cy.destroyed()) return;
+          if (!isCurrent() || cy.destroyed()) return;
           const next = { width: container.clientWidth, height: container.clientHeight };
           if (next.width === dimensions.width && next.height === dimensions.height) return;
           dimensions = next;
+          const restoredSize = graphRef.current?.cy === cy && graphRef.current.readingRestoreSize;
+          const restoringReading = restoredSize && restoredSize.width === next.width && restoredSize.height === next.height;
+          if (graphRef.current?.cy === cy) graphRef.current.readingRestoreSize = null;
           const applied = cy.elements('.workbench-applied');
           const appliedUntil = graphRef.current?.cy === cy ? graphRef.current.appliedUntil : 0;
-          // The flow mount centres its preserved viewport before this observer reports it.
-          if (diagram) { motion.cancel(); cy.resize(); motion.move(motion.snapshot('located'), 0); }
-          else motion.preserveResize();
-          if (!readingSession.current) highlight(callbacks.current.selection, true);
-          // Closing the validation strip resizes the canvas after a commit. Preserve only
-          // the remainder of that commit's cue, without restarting its 600ms lifetime.
+          motion.preserveResize();
+          if (!readingSession.current) {
+            highlight(callbacks.current.selection, !restoringReading);
+          }
           if (applied.length && appliedUntil > Date.now()) {
             applied.addClass('workbench-applied');
             if (graphRef.current?.cy === cy) graphRef.current.appliedUntil = appliedUntil;
@@ -231,37 +300,44 @@ export default function GraphWorkspace({ document, candidateKey = '', selection,
         });
         resizeObserver.observe(container);
       }
-      highlight(relationTarget || selection, false);
+      highlight(relationTarget || callbacks.current.selection, false);
       setZoomPercent(Math.round(cy.zoom() * 100));
-      if (!relationTarget) { viewportRef.current = motion.snapshot('located'); callbacks.current.onViewportChange?.(viewportRef.current); }
-      return () => {
-        clearTimeout(gestureTimer);
-        resizeObserver?.disconnect();
-        container.removeEventListener('pointerdown', gestureStart, true);
-        container.removeEventListener('wheel', gestureStart, true);
-        window.removeEventListener('pointerup', gestureEnd);
-        window.removeEventListener('pointercancel', gestureEnd);
-        if (!relationTarget && !readingSession.current) viewportRef.current = motion.snapshot('located');
-        motion.destroy();
-        if (diagram) diagram.destroy(); else cy.destroy();
-        if (graphRef.current?.cy === cy) graphRef.current = null;
+      if (!relationModel) { viewportRef.current = stampViewport(motion.snapshot('located')); callbacks.current.onViewportChange?.(viewportRef.current); }
+      setLayoutStatus('ready'); setReadyGeneration(generation);
+      disposeGraph = () => {
+        clearTimeout(gestureTimer); resizeObserver?.disconnect();
+        container.removeEventListener('pointerdown', gestureStart, true); container.removeEventListener('wheel', gestureStart, true);
+        window.removeEventListener('pointerup', gestureEnd); window.removeEventListener('pointercancel', gestureEnd);
+        motion.destroy(); cy.destroy(); if (graphRef.current?.cy === cy) graphRef.current = null;
       };
-    } catch (failure) {
-      motion?.destroy();
-      if (diagram) diagram.destroy(); else cy?.destroy();
-      setError(failure.message);
     }
-    // Selection, editing and preference changes have their own effects and do not rerun layout.
+    mount().catch(failure => {
+      if (!isCurrent() || failure.name === 'AbortError') return;
+      motion?.destroy(); cy?.destroy();
+      if (graphRef.current?.cy === cy) graphRef.current = null;
+      setError(failure.message || '流程图布局失败，请检查文件后重新打开。'); setLayoutStatus('error');
+    });
+    return () => {
+      // Invalidate before motion.destroy(), which flushes viewport reports.
+      if (cy && motion && !relationTarget && !readingSession.current && callbacks.current.candidateKey === candidateKey && graphRef.current?.cy === cy) viewportRef.current = graphRef.current.stampViewport(motion.snapshot('located'));
+      disposed = true;
+      scheduler?.destroy(); disposeGraph?.();
+    };
+    // Selection, editing, viewport and preference changes never rerun layout.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [document, candidateKey, relationKey]);
 
   useEffect(() => {
     if (readingSession.current) return;
-    graphRef.current?.highlight(selection, true, selection?.locateReason === 'issue' ? MOTION_MS.locate : MOTION_MS.select);
-  }, [targetKey(selection), selection?.locateReason, selection?.locateSequence]);
+    const graph = graphRef.current;
+    if (!graph?.isCurrent()) return;
+    const locate = graph.selectionReady ? true : graph.locateOnReady;
+    graph.selectionReady = true;
+    graph.highlight(selection, locate, selection?.locateReason === 'issue' ? MOTION_MS.locate : MOTION_MS.select);
+  }, [targetKey(selection), selection?.locateReason, selection?.locateSequence, readyGeneration]);
 
   useEffect(() => {
-    graphRef.current?.cy.style().selector('.behavior-node, .internal-call-node, .external-node').style({ 'transition-duration': reduce ? 0 : MOTION_MS.select }).update();
+    graphRef.current?.cy.style().selector('.behavior-node, .internal-call-node, .unresolved-flow-node').style({ 'transition-duration': reduce ? 0 : MOTION_MS.select }).update();
     if (!reduce) return;
     setPlaying(false);
     const graph = graphRef.current;
@@ -269,35 +345,44 @@ export default function GraphWorkspace({ document, candidateKey = '', selection,
   }, [reduce]);
 
   useEffect(() => {
-    if (!appliedTarget || !graphRef.current || readingSession.current) return;
+    if (!appliedTarget || appliedRevision !== revision || !graphRef.current?.isCurrent() || readingSession.current) return;
     const graph = graphRef.current;
+    const cueKey = `${candidateKey}:${revision}:${targetKey(appliedTarget)}`;
+    const consumed = appliedCueLedger.get(document) || new Set();
+    if (consumed.has(cueKey)) return;
+    consumed.add(cueKey); appliedCueLedger.set(document, consumed);
     const elements = relationTarget
       ? graph.cy.nodes().filter(item => targetKey(item.data('target')) === targetKey(appliedTarget))
       : flowTargetElements(graph.cy, appliedTarget, document);
-    graph.motion.cancel(); graph.clearTransient();
+    // This cue belongs to the new graph. Keep its ready-time locate animation running.
+    graph.clearTransient();
     graph.appliedUntil = reduce ? Infinity : Date.now() + MOTION_MS.applied;
     elements.addClass('workbench-applied');
     if (!reduce) graph.motion.later(() => elements.removeClass('workbench-applied'), MOTION_MS.applied);
-  }, [targetKey(appliedTarget), revision]);
+  }, [targetKey(appliedTarget), appliedRevision, revision, readyGeneration]);
 
   function updateReading(next) {
     setReading(next);
     const graph = graphRef.current;
-    if (!graph) return;
+    if (!graph?.isCurrent()) return;
     graph.motion.cancel(); graph.clearTransient();
     graph.cy.elements().removeClass('workbench-selected workbench-neighbour workbench-reading');
     const elements = graph.cy.nodes('.behavior-node').filter(item => next.refs.includes(item.data('focusRef')));
     elements.addClass('workbench-reading');
     withLogicalTrunks(graph.cy, graph.cy.edges().filter(item => next.routeRefs.includes(item.data('focusRef')))).addClass('workbench-direction');
-    const location = locationViewport(graph.cy, elements, { keepVisible: false, maxZoom: 0.65 });
+    const location = locationViewport(graph.cy, elements, { keepVisible: false, maxZoom: 1.2, readableZoom: 1 });
     if (location) graph.motion.move(location, MOTION_MS.locate);
     if (next.stopped) setPlaying(false);
   }
   function startReading() {
     try {
       const graph = graphRef.current;
-      if (!graph || selection?.kind !== 'behavior') return;
-      readingSession.current = createReadingSession(document, selection.ref, { selection, viewport: graph.motion.snapshot('located') });
+      if (!graph?.isCurrent() || layoutStatus !== 'ready' || selection?.kind !== 'behavior') return;
+      if (graph.cy.nodes('.behavior-node').filter(node => node.data('focusRef') === selection.ref && node.data('status') === 'valid').length !== 1) throw new Error('请选择具有唯一稳定标识的起点环节。');
+      readingSession.current = createReadingSession(document, selection.ref, { selection, viewport: graph.motion.snapshot('located'), layoutKey: graph.layoutKey }, {
+        isUniqueBehavior: ref => graph.flowModel.nodes.filter(node => node.focusKind === 'behavior' && node.ref === ref && node.status === 'valid').length === 1,
+        isUniqueRelation: ref => graph.flowModel.edges.filter(edge => edge.focusKind === 'relation' && edge.ref === ref && edge.status === 'valid').length === 1
+      });
       callbacks.current.onReadingChange?.(true);
       updateReading(readingSession.current.snapshot());
     } catch (failure) { setError(failure.message); }
@@ -314,19 +399,20 @@ export default function GraphWorkspace({ document, candidateKey = '', selection,
 
   function showDirection() {
     const graph = graphRef.current;
-    if (!graph) return;
+    if (!graph?.isCurrent() || layoutStatus !== 'ready') return;
     graph.motion.cancel(); graph.clearTransient();
-    const elements = relationTarget ? graph.cy.edges() : withLogicalTrunks(graph.cy, flowTargetElements(graph.cy, selection, document).connectedEdges().union(flowTargetElements(graph.cy, selection, document).edges()));
+    const elements = relationTarget ? graph.cy.edges() : logicalConnectedEdges(graph.cy, flowTargetElements(graph.cy, selection, document));
     elements.addClass('workbench-direction');
     setDirection(true);
     if (!reduce) graph.motion.later(() => { elements.removeClass('workbench-direction'); setDirection(false); }, MOTION_MS.direction);
   }
   function fitGraph() {
     const graph = graphRef.current;
-    if (!graph) return;
+    if (!graph?.isCurrent() || layoutStatus !== 'ready') return;
     graph.motion.cancel(); graph.clearTransient();
     const bounds = graph.cy.elements().boundingBox({ includeLabels: true });
-    const zoom = Math.max(graph.cy.minZoom(), Math.min(graph.cy.maxZoom(), (graph.cy.width() - 64) / Math.max(1, bounds.w), (graph.cy.height() - 64) / Math.max(1, bounds.h)));
+    const zoom = Math.max(Number.EPSILON, Math.min(graph.cy.maxZoom(), (graph.cy.width() - 64) / Math.max(1, bounds.w), (graph.cy.height() - 64) / Math.max(1, bounds.h)));
+    if (zoom < graph.cy.minZoom()) graph.cy.minZoom(zoom);
     graph.motion.move({ zoom, pan: { x: graph.cy.width() / 2 - (bounds.x1 + bounds.x2) / 2 * zoom, y: graph.cy.height() / 2 - (bounds.y1 + bounds.y2) / 2 * zoom } }, MOTION_MS.locate);
   }
 
@@ -339,13 +425,14 @@ export default function GraphWorkspace({ document, candidateKey = '', selection,
         {reading && <Tag color="volcano">阅读演示</Tag>}
       </Space>
       <Space size={8}>
-        {!reading && !relationTarget && <Tooltip title={selection?.kind === 'behavior' ? '以当前选中环节作为阅读起点' : '先选择一个起点环节'}><Button onClick={startReading} disabled={selection?.kind !== 'behavior' || empty}>从当前环节阅读</Button></Tooltip>}
-        {!reading && <Button onClick={showDirection} disabled={!relationTarget && !selection}>查看关系方向</Button>}
+        {!reading && !relationTarget && <Tooltip title={selection?.kind === 'behavior' ? '以当前选中环节作为阅读起点' : '先选择一个起点环节'}><Button onClick={startReading} disabled={layoutStatus !== 'ready' || selection?.kind !== 'behavior' || empty}>从当前环节阅读</Button></Tooltip>}
+        {!reading && <Button onClick={showDirection} disabled={layoutStatus !== 'ready' || (!relationTarget && !selection)}>查看关系方向</Button>}
         {selectedRelationshipObject && <Button onClick={() => callbacks.current.onDrill?.(selection)}>查看此对象的直接关系</Button>}
-        <Button onClick={fitGraph} disabled={empty}>全图</Button>
+        <Button onClick={fitGraph} disabled={layoutStatus !== 'ready' || empty}>全图</Button>
       </Space>
     </div>
-    {error && <Alert type="error" showIcon title={error} closable onClose={() => setError('')} />}
+    {error && <Alert type="error" showIcon title={error} closable={layoutStatus !== 'error'} onClose={() => setError('')} />}
+    {flowInfo?.issues.length > 0 && <Alert type="warning" showIcon title={`图中保留 ${flowInfo.issues.length} 项标识或引用异常，未自动改连。`} description={flowInfo.issues.slice(0, 3).map(issue => issue.message).join('；')} />}
     {relationInfo?.noTermUsage && <Alert type="info" showIcon title="术语已有定义和标识，当前文件没有结构化的术语使用关系。" />}
     {reading && <div className="graph-reading-controls" style={{ padding: '8px 16px', background: '#efe3cc', borderBottom: '1px solid #dfd1b9' }}>
       <Space size={8} wrap>
@@ -360,7 +447,8 @@ export default function GraphWorkspace({ document, candidateKey = '', selection,
       {reading.stopped && <div role="status" style={{ marginTop: 8, color: '#8f4337' }}>{READING_MESSAGES[reading.stopped]}</div>}
       {reading.choices.length > 0 && <Select aria-label="选择已记录路线" placeholder="选择已记录路线" style={{ width: 520, marginTop: 8 }} value={null} options={reading.choices.map(item => ({ value: item.ref, label: `${item.label} → ${array(document.behaviors).find(behavior => behavior.behavior_ref === item.toRef)?.behavior_name || item.toRef || '终点未填写'}` }))} onChange={ref => updateReading(readingSession.current.step(ref))} />}
     </div>}
-    <div ref={containerRef} className="graph-canvas" role="img" aria-label={relationTarget ? `${kindLabel(relationTarget.kind)}直接关系画布` : '流程图画布，可拖动和缩放'} style={{ flex: 1, minHeight: 0, position: 'relative', background: '#f4ecdc' }} />
+    <div ref={containerRef} className="graph-canvas" role="img" aria-label={relationTarget ? `${kindLabel(relationTarget.kind)}直接关系画布` : '流程图画布，可拖动和缩放'} data-layout-status={layoutStatus} data-layout-engine={relationTarget ? 'direct-relations' : 'elk-layered'} data-layout-version={FLOW_LAYOUT_VERSION} data-layout-generation={readyGeneration} data-layout-revision={revision} style={{ flex: 1, minHeight: 0, position: 'relative', background: '#f4ecdc' }} />
+    {layoutStatus === 'loading' && !empty && <div role="status" style={{ position: 'absolute', top: 72, left: 24, padding: '8px 16px', background: '#f1e7d4', border: '1px solid #dfd1b9', borderRadius: 8 }}>正在排列流程图…</div>}
     {empty && <div style={{ position: 'absolute', inset: '100px 24px 24px', display: 'grid', placeItems: 'center', pointerEvents: 'none' }}><Empty description="尚未编制环节。使用“新增环节”开始。" /></div>}
     <div role="status" className="graph-status" style={{ minHeight: 32, padding: '8px 16px', display: 'flex', justifyContent: 'space-between', gap: 16, background: '#f1e7d4', color: '#6c6455', fontSize: 13 }}>
       <span>{relationTarget ? '实线为引用或流转，虚线为父子归属；异常原值保留。选择关联对象后可逐层查看。' : '拖动移动画布，滚轮缩放；选择环节或路线查看详情。'}{direction ? ' 方向提示已显示，箭头与关系文字持续保留。' : ''}</span>

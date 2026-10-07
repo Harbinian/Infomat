@@ -72,6 +72,48 @@ check('duplicate route IDs stop reading even when their names or endpoints diffe
   assert.equal(createReadingSession(document, 'a').step().stopped, 'broken');
 });
 
+check('reading uses ready-model identity checks for globally ambiguous source and destination IDs', () => {
+  const document = base(); document.terms = [{ term_ref: 'b', term_name: '重复稳定标识', definition: '仅供隔离测试' }];
+  const before = JSON.stringify(document);
+  const identity = { isUniqueBehavior: ref => ref !== 'b', isUniqueRelation: () => true };
+  const session = createReadingSession(document, 'a', {}, identity);
+  const next = session.step();
+  assert.equal(next.stopped, 'broken'); assert.deepEqual(next.refs, ['a']); assert.equal(next.position, 0);
+  assert.throws(() => createReadingSession(document, 'b', {}, identity), /唯一稳定标识/);
+  assert.equal(JSON.stringify(document), before);
+});
+
+check('a globally conflicting route ID never advances a reading session', () => {
+  const document = base(); document.export_meta = { package_ref: 'ab' };
+  const before = JSON.stringify(document);
+  const session = createReadingSession(document, 'a', {}, { isUniqueBehavior: () => true, isUniqueRelation: ref => ref !== 'ab' });
+  assert.equal(session.step().stopped, 'broken'); assert.deepEqual(session.snapshot().refs, ['a']);
+  assert.equal(session.snapshot().canNext, false); assert.equal(JSON.stringify(document), before);
+});
+
+check('an invalid member of a ready-model parallel group cannot partially advance other members', () => {
+  const document = base(); document.behaviors = [behavior('split', 'parallel_split'), behavior('b'), behavior('c')];
+  document.flow_relations = [route('sb', 'split', 'b', 'parallel'), route('sc', 'split', 'c', 'parallel')];
+  const session = createReadingSession(document, 'split', {}, { isUniqueBehavior: ref => ref !== 'c', isUniqueRelation: () => true });
+  assert.equal(session.step().stopped, 'broken'); assert.deepEqual(session.snapshot().refs, ['split']); assert.equal(session.snapshot().position, 0);
+});
+
+check('a ready-model decision validates the chosen recorded branch and retains the source on failure', () => {
+  const document = base(); document.behaviors[0].node_type = 'decision';
+  document.flow_relations = [route('ab', 'a', 'b', 'condition', '已记录有效路线'), route('ac', 'a', 'c', 'condition', '已记录但身份冲突的路线')];
+  const session = createReadingSession(document, 'a', {}, { isUniqueBehavior: () => true, isUniqueRelation: ref => ref !== 'ac' });
+  assert.equal(session.step().stopped, 'choice'); assert.equal(session.snapshot().choices.length, 2);
+  assert.equal(session.step('ac').stopped, 'broken'); assert.deepEqual(session.snapshot().refs, ['a']);
+  const valid = createReadingSession(document, 'a', {}, { isUniqueBehavior: () => true, isUniqueRelation: ref => ref !== 'ac' });
+  valid.step(); assert.deepEqual(valid.step('ab').refs, ['b']);
+});
+
+check('legacy three-argument reading retains saved context without an identity adapter', () => {
+  const saved = { selection: target('behavior', 'a'), viewport: { zoom: 1, pan: { x: 20, y: 40 } }, layoutKey: 'synthetic' };
+  const session = createReadingSession(base(), 'a', saved);
+  assert.strictEqual(session.snapshot().saved, saved); assert.deepEqual(session.step().refs, ['b']);
+});
+
 check('relation graph uses recorded direction and stable identity, not identical labels', () => {
   const document = base(); document.behaviors[0].behavior_name = document.behaviors[1].behavior_name = '同名环节';
   const model = graph(document, target('behavior', 'a'));
@@ -186,11 +228,70 @@ check('reduced motion directly locates and resize preserves the centre', () => {
   assert.equal(MOTION_MS.select, 150); assert.equal(MOTION_MS.locate, 250); assert.equal(MOTION_MS.reading, 1500);
 });
 
+check('canvas resize cancels an in-flight animation without later reporting an obsolete viewport', () => {
+  const h = motionHarness();
+  h.coordinator.move({ zoom: 1, pan: { x: 120, y: 90 } }, MOTION_MS.locate);
+  h.resize(); h.coordinator.preserveResize();
+  assert.equal(h.coordinator.isProgrammatic(), false);
+  assert.deepEqual(h.reports.at(-1), { mode: 'located', zoom: 1, pan: { x: -90, y: 90 }, width: 580, height: 600 });
+  const count = h.reports.length;
+  h.callbacks[0]();
+  assert.equal(h.reports.length, count);
+});
+
+check('direction and apply cue callbacks remain silent after their graph owner is destroyed', () => {
+  const h = motionHarness(); let directions = 0; let applied = 0;
+  h.coordinator.later(() => { directions += 1; }, MOTION_MS.direction);
+  h.coordinator.later(() => { applied += 1; }, MOTION_MS.applied);
+  const captured = [...h.timers.values()];
+  h.coordinator.destroy();
+  assert.equal(h.timers.size, 0);
+  captured.forEach(callback => callback());
+  assert.equal(directions, 0); assert.equal(applied, 0);
+  assert.equal(h.reports.length, 0);
+  assert.equal(MOTION_MS.direction, 1200); assert.equal(MOTION_MS.applied, 600);
+});
+
 check('a fully visible target highlights without unnecessary camera movement', () => {
   const fake = { width: () => 1000, height: () => 600, zoom: () => 1 };
   const visible = { length: 1, renderedBoundingBox: () => ({ x1: 100, y1: 100, x2: 200, y2: 200 }) };
   assert.equal(locationViewport(fake, visible), null);
   assert.notEqual(targetKey(target('data-field', 'same', 'parent_1')), targetKey(target('data-field', 'same', 'parent_2')));
+});
+
+check('CSS-sized flow labels locate at readable zoom even when the node is already visible', () => {
+  const fake = { width: () => 1000, height: () => 600, zoom: () => 0.4, minZoom: () => 0.05 };
+  const visible = { length: 1, renderedBoundingBox: () => ({ x1: 100, y1: 100, x2: 200, y2: 160 }), boundingBox: () => ({ x1: 200, y1: 100, x2: 440, y2: 220, w: 240, h: 120 }) };
+  const next = locationViewport(fake, visible, { readableZoom: 1, maxZoom: 1.2 });
+  assert.equal(next.zoom, 1);
+  assert.deepEqual(next.pan, { x: 180, y: 140 });
+  assert.equal(next.zoom * 14, 14);
+  assert.equal(next.zoom * 13, 13);
+});
+
+check('CSS-sized visible nodes retain a readable manual zoom without camera movement', () => {
+  const fake = { width: () => 1000, height: () => 600, zoom: () => 1.1 };
+  const visible = { length: 1, renderedBoundingBox: () => ({ x1: 80, y1: 80, x2: 480, y2: 320 }) };
+  assert.equal(locationViewport(fake, visible, { readableZoom: 1, maxZoom: 1.2 }), null);
+});
+
+check('an offscreen unit-scale target recentres a high-zoom camera and honours the flow zoom cap', () => {
+  const fake = { width: () => 1000, height: () => 600, zoom: () => 2, minZoom: () => 0.05 };
+  const offscreen = { length: 1, renderedBoundingBox: () => ({ x1: 1500, y1: 800, x2: 1980, y2: 1040 }), boundingBox: () => ({ x1: 750, y1: 400, x2: 990, y2: 520, w: 240, h: 120 }) };
+  const next = locationViewport(fake, offscreen, { readableZoom: 1, maxZoom: 1.2 });
+  assert.equal(next.zoom, 1.2);
+  assert.deepEqual(next.pan, { x: -544, y: -252 });
+  assert.equal(locationViewport(fake, { length: 0 }, { readableZoom: 1, maxZoom: 1.2 }), null);
+});
+
+check('a unit-scale parallel reading group fits all recorded nodes within canvas padding', () => {
+  const fake = { width: () => 1000, height: () => 600, zoom: () => 1, minZoom: () => 0.05 };
+  const group = { length: 3, renderedBoundingBox: () => ({ x1: -100, y1: 10, x2: 1700, y2: 460 }), boundingBox: () => ({ x1: 0, y1: 0, x2: 1800, y2: 450, w: 1800, h: 450 }) };
+  const next = locationViewport(fake, group, { keepVisible: false, readableZoom: 1, maxZoom: 1.2, padding: 32 });
+  assert.equal(next.zoom, 936 / 1800);
+  assert.equal(next.pan.x, 32);
+  assert(next.pan.y >= 32);
+  assert(next.pan.y + 450 * next.zoom <= 568);
 });
 
 console.log(`Workbench graph: ${checks} isolated checks passed.`);

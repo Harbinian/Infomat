@@ -26,6 +26,16 @@ async page => {
     if (/\/api\/(session|data|export|process-design|v7-mappings|data-map-definitions)(\/|$)/.test(url.pathname)) result.forbiddenRequests.push({ method: request.method(), path: url.pathname });
   });
   await page.context().addInitScript(() => {
+    // Run the actual same-origin ELK Worker; delay only delivery of a completed reply.
+    // This proves that a queued real reply cannot mount its disposed graph owner.
+    const BrowserWorker = window.Worker;
+    window.__elkWorkerDelay = 0;
+    window.__elkWorkerAudit = [];
+    window.Worker = class extends BrowserWorker {
+      constructor(url, options) { super(url, options); this.audit = { url: String(url), created: performance.now(), queued: false, terminated: false, late: false }; window.__elkWorkerAudit.push(this.audit); }
+      set onmessage(listener) { this.addEventListener('message', event => { const delay = window.__elkWorkerDelay; this.audit.queued = true; const deliver = () => { this.audit.late ||= this.audit.terminated; listener(event); }; if (delay) setTimeout(deliver, delay); else deliver(); }); }
+      terminate() { this.audit.terminated = true; return super.terminate(); }
+    };
     window.__workbenchGraphStorageWrites = [];
     for (const key of ['setItem', 'removeItem', 'clear']) {
       const previous = Storage.prototype[key];
@@ -42,10 +52,12 @@ async page => {
   assert(/Edg\//.test(runtime.userAgent) && runtime.zoom === 1 && runtime.width === 1699 && runtime.height === 828, 'The browser must be Microsoft Edge at 100%, 1699×828 CSS pixels.');
   result.runtime = runtime;
   await page.getByLabel('导入文件', { exact: true }).setInputFiles(config.fixturePath);
+  await page.waitForFunction(() => document.querySelector('.process-title')?.textContent.includes('虚构测试：判断分支与并行阅读') || [...document.querySelectorAll('.ant-modal-title')].some(title => title.textContent === '先保留尚未下载的内容'));
   const discard = page.getByRole('button', { name: '放弃未下载内容并继续', exact: true });
   if (await discard.isVisible().catch(() => false)) await discard.click();
   await page.waitForFunction(() => document.querySelector('.process-title')?.textContent.includes('虚构测试：判断分支与并行阅读'));
-  await page.waitForFunction(() => document.querySelector('.graph-canvas')?._cyreg?.cy?.nodes('.behavior-node').length === 7);
+  const ready = () => page.waitForFunction(() => document.querySelector('.graph-canvas')?.dataset.layoutStatus === 'ready' && document.querySelector('.graph-canvas')?._cyreg?.cy?.nodes('.behavior-node').length === 7);
+  await ready();
   const shot = async name => { const filename = `${config.outputDir}/${name}.png`; await page.screenshot({ path: filename, scale: 'css' }); result.screenshots.push(filename); };
   const cyState = () => page.evaluate(() => {
     const cy = document.querySelector('.graph-canvas')?._cyreg?.cy;
@@ -58,6 +70,7 @@ async page => {
     result.applyDiagnostics.states.push({ stage, at: Date.now(), ...value });
   };
   const stable = async () => { await page.waitForTimeout(360); await page.waitForFunction(() => !document.querySelector('.graph-canvas')?._cyreg?.cy?.animated()); };
+  const readable = () => page.evaluate(() => { const cy = document.querySelector('.graph-canvas')._cyreg.cy; return cy.nodes('.behavior-node').first().numericStyle('font-size') * cy.zoom(); });
   const full = async () => { await page.getByRole('button', { name: '全 图', exact: true }).click(); await stable(); };
   const clickNode = async ref => {
     const point = await page.evaluate(ref => { const canvas = document.querySelector('.graph-canvas'), cy = canvas._cyreg.cy; const node = cy.nodes('.behavior-node').filter(node => node.data('focusRef') === ref).first(), bounds = canvas.getBoundingClientRect(), point = node.renderedPosition(); return { x: bounds.x + point.x, y: bounds.y + point.y, width: bounds.width, height: bounds.height, localX: point.x, localY: point.y }; }, ref);
@@ -87,43 +100,72 @@ async page => {
     return { json, digest, byteLength: bytes.length, fileName: file.suggestedFilename() };
   };
   const before = await download('before-reading');
-  assert((await cyState()).zoom <= 0.65, 'Import must discard the previous blank candidate viewport.');
+  assert(await readable() >= 13.5, 'Import must discard the previous blank candidate viewport and use readable 14px text.');
   await shot('initial-readable-start');
   check('import discards the previous candidate viewport and shows a readable start');
+  const workerCount = await page.evaluate(() => { window.__elkWorkerDelay = 900; return window.__elkWorkerAudit.length; });
+  await page.getByLabel('导入文件', { exact: true }).setInputFiles(config.fixturePath);
+  await page.waitForFunction(count => window.__elkWorkerAudit.slice(count).some(worker => worker.queued && !worker.terminated), workerCount);
+  assert(await page.getByRole('button', { name: '从当前环节阅读', exact: true }).isDisabled(), 'Reading must be disabled until the current layout is ready.');
+  await page.getByRole('radio', { name: '对象清单', exact: true }).locator('..').click();
+  await page.getByPlaceholder('按名称或标识查找').fill('behavior_fixture_submit');
+  await page.locator('.object-name').first().click();
+  await page.getByRole('radio', { name: '流程图', exact: true }).locator('..').click();
+  await ready(); await stable();
+  result.workers = await page.evaluate(() => { window.__elkWorkerDelay = 0; return window.__elkWorkerAudit; });
+  assert(result.workers.slice(workerCount).some(worker => worker.late && worker.terminated) && result.workers.every(worker => new URL(worker.url).origin === origin), 'A terminated real local Worker reply must be ignored after a view replacement.');
+  assert((await cyState()).selected.includes('behavior_fixture_submit'), 'The newly ready graph must use the latest controlled selection.');
+  check('actual local ELK Worker termination and queued late-reply rejection on view replacement');
   await full();
   result.geometry = await page.evaluate(() => {
     const cy = document.querySelector('.graph-canvas')._cyreg.cy;
     const nodes = cy.nodes('.behavior-node');
     const overlap = (a, b) => a.x1 < b.x2 - 1 && a.x2 > b.x1 + 1 && a.y1 < b.y2 - 1 && a.y2 > b.y1 + 1;
-    const nodeCollisions = [], labelCollisions = [], invalidPaths = [];
+    const nodeCollisions = [], labelCollisions = [], labelPairCollisions = [], invalidPaths = [], endpointMismatches = [], routeNodeCrossings = [], routeLabelCrossings = [], bendMismatches = [];
     const bounds = node => node.boundingBox({ includeLabels: false, includeOverlays: false });
     for (let i = 0; i < nodes.length; i += 1) for (let j = i + 1; j < nodes.length; j += 1) if (overlap(bounds(nodes[i]), bounds(nodes[j]))) nodeCollisions.push([nodes[i].data('focusRef'), nodes[j].data('focusRef')]);
     const logical = cy.edges().filter(edge => edge.data('focusKind') === 'relation');
+    const labels = cy.nodes('.flow-label');
+    labels.forEach(label => nodes.forEach(node => { if (overlap(label.boundingBox({ includeLabels: true, includeOverlays: false }), bounds(node))) labelCollisions.push([label.data('focusRef'), node.data('focusRef')]); }));
+    for (let i = 0; i < labels.length; i += 1) for (let j = i + 1; j < labels.length; j += 1) if (overlap(labels[i].boundingBox({ includeLabels: true, includeOverlays: false }), labels[j].boundingBox({ includeLabels: true, includeOverlays: false }))) labelPairCollisions.push([labels[i].data('focusRef'), labels[j].data('focusRef')]);
+    const segmentCrosses = (a, b, rect) => {
+      const margin = 1;
+      if (Math.abs(a.x - b.x) < 0.1) return a.x > rect.x1 + margin && a.x < rect.x2 - margin && Math.max(a.y, b.y) > rect.y1 + margin && Math.min(a.y, b.y) < rect.y2 - margin;
+      if (Math.abs(a.y - b.y) < 0.1) return a.y > rect.y1 + margin && a.y < rect.y2 - margin && Math.max(a.x, b.x) > rect.x1 + margin && Math.min(a.x, b.x) < rect.x2 - margin;
+      return false;
+    };
     logical.forEach(edge => {
-      const style = edge._private.rstyle, scratch = edge._private.rscratch;
+      const scratch = edge._private.rscratch;
       if (!scratch.allpts?.length || scratch.allpts.some(value => !Number.isFinite(value)) || scratch.badLine) invalidPaths.push(edge.data('focusRef'));
-      if (edge.data('label') && Number.isFinite(style.labelX)) {
-        const rect = { x1: style.labelX - style.labelWidth / 2, x2: style.labelX + style.labelWidth / 2, y1: style.labelY - style.labelHeight / 2, y2: style.labelY + style.labelHeight / 2 };
-        nodes.forEach(node => { if (![edge.data('semanticSource'), edge.data('semanticTarget')].includes(node.id()) && overlap(rect, bounds(node))) labelCollisions.push([edge.data('focusRef'), node.data('focusRef')]); });
+      const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+      const start = edge.data('startPoint'), end = edge.data('endPoint');
+      const startDistance = distance(start, { x: scratch.startX, y: scratch.startY });
+      const endDistance = distance(end, { x: scratch.arrowEndX, y: scratch.arrowEndY });
+      if (!Number.isFinite(startDistance) || !Number.isFinite(endDistance) || startDistance > 3 || endDistance > 3) endpointMismatches.push({ ref: edge.data('focusRef'), startDistance, endDistance });
+      const actual = [];
+      for (let index = 0; index < (scratch.allpts?.length || 0); index += 2) actual.push({ x: scratch.allpts[index], y: scratch.allpts[index + 1] });
+      const plannedBends = edge.data('sections')?.[edge.data('sectionIndex')]?.bendPoints || [];
+      plannedBends.forEach(bend => { if (!actual.some(point => distance(point, bend) < 0.2)) bendMismatches.push({ ref: edge.data('focusRef'), bend }); });
+      for (let index = 1; index < actual.length; index += 1) {
+        nodes.forEach(node => { if (![edge.data('semanticSource'), edge.data('semanticTarget')].includes(node.id()) && segmentCrosses(actual[index - 1], actual[index], bounds(node))) routeNodeCrossings.push([edge.data('focusRef'), node.data('focusRef')]); });
+        labels.forEach(label => { if (label.data('edgeId') !== edge.id() && segmentCrosses(actual[index - 1], actual[index], label.boundingBox({ includeLabels: true, includeOverlays: false }))) routeLabelCrossings.push([edge.data('focusRef'), label.data('focusRef')]); });
       }
     });
-    const trunks = cy.edges('.relation-bundle-trunk').map(trunk => ({ id: trunk.id(), semanticTarget: trunk.data('semanticTarget'), target: trunk.target().id(), relations: trunk.data('relationRefs'), arrow: trunk.style('target-arrow-shape'), arrowAt: [trunk._private.rscratch.arrowEndX, trunk._private.rscratch.arrowEndY], path: trunk._private.rscratch.allpts, members: logical.filter(edge => edge.data('bundleId') === trunk.data('bundleId')).map(edge => ({ ref: edge.data('focusRef'), semanticSource: edge.data('semanticSource'), semanticTarget: edge.data('semanticTarget'), source: edge.source().id(), target: edge.target().id(), arrow: edge.style('target-arrow-shape'), path: edge._private.rscratch.allpts, label: edge.data('label') })) }));
-    return { nodeCount: nodes.length, logicalCount: logical.length, nodeCollisions, labelCollisions, invalidPaths, trunks, badges: cy.nodes('.aggregate-badge').map(node => ({ background: node.style('background-color'), border: node.style('border-color') })), arrows: logical.map(edge => ({ ref: edge.data('focusRef'), shape: edge.style('target-arrow-shape'), label: edge.data('label'), lineColor: edge.style('line-color'), arrowColor: edge.style('target-arrow-color'), labelBackground: edge.style('text-background-color'), loop: edge.hasClass('relation-loop') })) };
+    return { nodeCount: nodes.length, logicalCount: logical.length, labelCount: labels.length, nodeCollisions, labelCollisions, labelPairCollisions, invalidPaths, endpointMismatches, bendMismatches, routeNodeCrossings, routeLabelCrossings, engine: document.querySelector('.graph-canvas').dataset.layoutEngine, labels: labels.map(label => ({ ref: label.data('focusRef'), text: label.data('rawLabel'), background: label.style('background-color'), fontSize: label.numericStyle('font-size') })), aggregates: nodes.filter(node => node.data('aggregates')?.form).map(node => ({ ref: node.data('focusRef'), label: node.data('rawLabel') })), arrows: logical.map(edge => ({ ref: edge.data('focusRef'), shape: edge.style('target-arrow-shape'), lineColor: edge.style('line-color'), arrowColor: edge.style('target-arrow-color'), loop: edge.hasClass('relation-loop') })) };
   });
   assert(result.geometry.logicalCount === 8 && result.geometry.nodeCount === 7, 'All recorded routes and nodes must render.');
-  assert(!result.geometry.nodeCollisions.length && !result.geometry.labelCollisions.length && !result.geometry.invalidPaths.length, 'Rendered node, label and route geometry must be clear.');
-  assert(result.geometry.arrows.every(edge => edge.labelBackground === 'rgb(244,236,220)' && edge.lineColor === (edge.loop ? 'rgb(140,63,51)' : 'rgb(111,124,99)') && edge.arrowColor === edge.lineColor), 'Rendered labels and arrows must follow the warm theme, retaining brick-red recorded returns.');
-  assert(result.geometry.badges.length > 0 && result.geometry.badges.every(badge => badge.background === 'rgb(237,240,225)' && badge.border === 'rgb(146,151,125)'), 'Data and form aggregate badges must use the same warm sage theme.');
-  const trunk = result.geometry.trunks[0];
-  assert(result.geometry.trunks.length === 1 && trunk.arrow === 'triangle' && trunk.target === trunk.semanticTarget && trunk.members.length === 2 && trunk.members.every(member => member.arrow === 'none' && member.semanticTarget === trunk.semanticTarget), 'The shared trunk must carry one arrow for its two specific logical members.');
+  assert(result.geometry.engine === 'elk-layered' && !result.geometry.nodeCollisions.length && !result.geometry.labelCollisions.length && !result.geometry.labelPairCollisions.length && !result.geometry.invalidPaths.length && !result.geometry.endpointMismatches.length && !result.geometry.bendMismatches.length && !result.geometry.routeNodeCrossings.length && !result.geometry.routeLabelCrossings.length, `Actual ELK routes, endpoints, bends, nodes and labels must match and remain clear: ${JSON.stringify(result.geometry)}`);
+  assert(result.geometry.arrows.every(edge => edge.shape === 'triangle' && edge.lineColor === (edge.loop ? 'rgb(140,63,51)' : 'rgb(111,124,99)') && edge.arrowColor === edge.lineColor), 'Each recorded route must retain its own warm arrow, including brick-red returns.');
+  assert(result.geometry.labels.length > 0 && result.geometry.labels.every(label => label.fontSize === 13 && label.background === 'rgb(244,236,220)'), 'Measured route labels must render in 13px on warm paper.');
+  assert(result.geometry.aggregates.length > 0 && result.geometry.aggregates.every(node => node.label.includes('表单')), 'Recorded data and form counts must remain visible in the node summary.');
   await shot('full-flow-geometry');
-  check('actual Cytoscape geometry, labels and specific logical shared-trunk direction');
+  check('actual ELK node/label geometry, complete bend positions, endpoint arrows and individual logical route direction');
   await clickNode('behavior_fixture_submit');
-  assert((await cyState()).zoom >= 0.39, 'Selection from the overview must restore readable text.');
+  assert(await readable() >= 13.5, 'Selection from the overview must restore readable 14px text.');
   await page.getByRole('button', { name: '编辑本对象', exact: true }).click();
-  await page.evaluate(() => { window.__workbenchGraphInstanceBeforeInput = document.querySelector('.graph-canvas')._cyreg.cy; });
+  await page.evaluate(() => { window.__workbenchGraphInstanceBeforeInput = document.querySelector('.graph-canvas')._cyreg.cy; window.__workerCountBeforeInput = window.__elkWorkerAudit.length; });
   await page.getByRole('textbox', { name: '环节名称', exact: true }).fill('测试起点：提交资料（提示测试）');
-  assert(await page.evaluate(() => document.querySelector('.graph-canvas')._cyreg.cy === window.__workbenchGraphInstanceBeforeInput), 'Ordinary visible input must not recreate or relayout the graph.');
+  assert(await page.evaluate(() => document.querySelector('.graph-canvas')._cyreg.cy === window.__workbenchGraphInstanceBeforeInput && window.__elkWorkerAudit.length === window.__workerCountBeforeInput), 'Ordinary visible input must not recreate the graph or request another Worker layout.');
   await page.evaluate(() => {
     const probe = { first: null, last: null };
     window.__workbenchAppliedCueProbe = probe;
@@ -132,11 +174,12 @@ async page => {
     }, 10);
   });
   await page.getByRole('button', { name: '应用本对象修改', exact: true }).click();
-  await page.waitForFunction(() => document.querySelector('.graph-canvas')._cyreg.cy.nodes('.workbench-applied').some(node => node.data('focusRef') === 'behavior_fixture_submit'));
+  await page.waitForFunction(() => document.querySelector('.graph-canvas')?.dataset.layoutStatus === 'ready' && document.querySelector('.graph-canvas')?._cyreg?.cy?.nodes('.workbench-applied').some(node => node.data('focusRef') === 'behavior_fixture_submit'));
   await page.locator('.busy-strip').waitFor({ state: 'hidden' });
   await shot('applied-object-cue');
   await page.waitForTimeout(680);
   assert(await page.evaluate(() => document.querySelector('.graph-canvas')._cyreg.cy.elements('.workbench-applied').length === 0), 'The 600ms applied-object cue must clear and return to static presentation.');
+  assert(await page.evaluate(() => { const cy = document.querySelector('.graph-canvas')._cyreg.cy, point = cy.nodes('.behavior-node').filter(node => node.data('focusRef') === 'behavior_fixture_submit').first().renderedPosition(); return cy.zoom() >= 0.97 && point.x > 0 && point.y > 0 && point.x < cy.width() && point.y < cy.height(); }), 'After applying a wrapped name and relayout, the selected object must remain visibly located at readable size.');
   result.appliedCue = await page.evaluate(() => { clearInterval(window.__workbenchAppliedCueTimer); const probe = window.__workbenchAppliedCueProbe; return { ...probe, observedMs: probe.last - probe.first }; });
   assert(result.appliedCue.first !== null && result.appliedCue.observedMs >= 450 && result.appliedCue.observedMs <= 650, 'Canvas resizing after validation must retain only the original 600ms cue, without erasing or extending it.');
   await inputDiagnostic('before-restoring-input');
@@ -173,6 +216,16 @@ async page => {
   assert(Math.abs(saved.zoom - restored.zoom) < 0.001 && Math.abs(saved.pan.x - restored.pan.x) < 1 && Math.abs(saved.pan.y - restored.pan.y) < 1, 'Exiting must restore the exact effective viewport.');
   assert(await page.locator('.detail-panel .object-form').count() === 1 && await page.getByText('测试起点：提交资料', { exact: true }).count() > 0, 'The selected object and existing editing mode must survive reading.');
   check('decision choice, grouped parallel reading, and original object/editing/viewport restoration');
+  const manualCanvas = await page.locator('.graph-canvas').boundingBox();
+  await page.mouse.move(manualCanvas.x + manualCanvas.width - 60, manualCanvas.y + manualCanvas.height - 45); await page.mouse.down();
+  await page.mouse.move(manualCanvas.x + 80, manualCanvas.y + manualCanvas.height - 45, { steps: 12 }); await page.mouse.up(); await stable();
+  assert(await page.evaluate(() => { const cy = document.querySelector('.graph-canvas')._cyreg.cy, point = cy.nodes('.behavior-node').filter(node => node.data('focusRef') === 'behavior_fixture_submit').first().renderedPosition(); return point.x < 0; }), 'The physical drag must move the selected node offscreen for the restoration check.');
+  const offscreenSaved = await cyState();
+  await page.getByRole('button', { name: '从当前环节阅读', exact: true }).click(); await stable();
+  await page.getByRole('button', { name: '退出阅读', exact: true }).click(); await stable();
+  const offscreenRestored = await cyState();
+  assert(Math.abs(offscreenSaved.zoom - offscreenRestored.zoom) < 0.001 && Math.abs(offscreenSaved.pan.x - offscreenRestored.pan.x) < 1 && Math.abs(offscreenSaved.pan.y - offscreenRestored.pan.y) < 1, 'Reading exit and toolbar resize must preserve the exact manually panned offscreen viewport.');
+  check('reading exit preserves a real manually panned viewport even with the selected object offscreen');
   await page.getByRole('button', { name: '从当前环节阅读', exact: true }).click();
   await page.getByRole('button', { name: '下一步', exact: true }).click(); await page.getByRole('button', { name: '下一步', exact: true }).click();
   await page.getByRole('combobox', { name: '选择已记录路线', exact: true }).click();
@@ -198,7 +251,7 @@ async page => {
   await selectObject('graph_finance_join');
   await page.getByRole('button', { name: '查看关系方向', exact: true }).click();
   const emphasis = await cyState();
-  assert(emphasis.highlightedRoutes.includes('graph_finance_join') && !emphasis.highlightedRoutes.includes('graph_quality_join') && emphasis.highlightedRoutes.some(ref => ref.endsWith(':trunk')), 'A highlighted shared trunk must belong to the selected logical member only.');
+  assert(emphasis.highlightedRoutes.includes('graph_finance_join') && !emphasis.highlightedRoutes.includes('graph_quality_join'), 'Direction emphasis must follow the selected recorded route rather than an unrelated route to the same target.');
   await page.waitForTimeout(1300); assert(!(await cyState()).highlightedRoutes.length, 'The 1.2-second cue must finish and remain static.');
   const canvas = await page.locator('.graph-canvas').boundingBox();
   await page.getByRole('button', { name: '全 图', exact: true }).click();
@@ -208,7 +261,7 @@ async page => {
   await page.getByRole('button', { name: '全 图', exact: true }).click(); await page.getByRole('button', { name: '查看关系方向', exact: true }).click();
   await page.getByRole('button', { name: '全 图', exact: true }).click(); await stable();
   await page.waitForTimeout(1300); assert(!(await cyState()).animated && !(await cyState()).highlightedRoutes.length, 'Newer positioning must clear old motion and cue callbacks.');
-  check('specific shared-trunk cue, consecutive cancellation and real pointer drag control');
+  check('specific logical route cue, consecutive cancellation and real pointer drag control');
   await selectObject('graph_area');
   await page.getByRole('button', { name: '查看关系图', exact: true }).click(); await stable();
   const relation = await page.evaluate(() => { const cy = document.querySelector('.graph-canvas')._cyreg.cy; return { edges: cy.edges().map(edge => ({ label: edge.data('label'), category: edge.data('category'), source: edge.source().data('target'), target: edge.target().data('target') })), nodes: cy.nodes().map(node => node.data('target')) }; });
@@ -237,6 +290,23 @@ async page => {
   const after = await download('after-reading');
   assert(JSON.stringify(before.json) === JSON.stringify(after.json), 'All graph, relationship, viewport and reading actions must preserve every business JSON field.');
   result.downloads = { before: { digest: before.digest, byteLength: before.byteLength }, after: { digest: after.digest, byteLength: after.byteLength }, businessJsonUnchanged: true, excludedOnly: 'export_meta.exported_at (generated separately for each actual export)' };
+  await page.getByLabel('导入文件', { exact: true }).setInputFiles(config.largeFixturePath);
+  await page.waitForFunction(() => document.querySelector('.process-title')?.textContent.includes('虚构测试：长图全图边界') && document.querySelector('.graph-canvas')?.dataset.layoutStatus === 'ready' && document.querySelector('.graph-canvas')?._cyreg?.cy?.nodes('.behavior-node').length === 97);
+  await stable(); await clickNode('behavior_fixture_submit');
+  await page.locator('.detail-heading h2').filter({ hasText: '测试起点：提交资料' }).waitFor(); await full();
+  result.largeOverview = await page.evaluate(() => {
+    const cy = document.querySelector('.graph-canvas')._cyreg.cy, bounds = cy.elements().renderedBoundingBox({ includeLabels: true, includeOverlays: false });
+    return { nodes: cy.nodes('.behavior-node').length, zoom: cy.zoom(), minZoom: cy.minZoom(), bounds, width: cy.width(), height: cy.height() };
+  });
+  assert(result.largeOverview.zoom < 0.08 && result.largeOverview.bounds.x1 >= 0 && result.largeOverview.bounds.y1 >= 0 && result.largeOverview.bounds.x2 <= result.largeOverview.width && result.largeOverview.bounds.y2 <= result.largeOverview.height, 'A large full overview must include all rendered content even when the actual fit is below 8%.');
+  await shot('large-full-overview'); check('97-node full overview lowers its zoom boundary and retains the entire rendered graph');
+  const largeSaved = await cyState();
+  await page.getByRole('button', { name: '查看关系图', exact: true }).click(); await stable();
+  await page.getByRole('button', { name: '← 返回流程图', exact: true }).click();
+  await page.waitForFunction(() => document.querySelector('.graph-canvas')?.dataset.layoutStatus === 'ready' && document.querySelector('.graph-canvas')?._cyreg?.cy?.nodes('.behavior-node').length === 97); await stable();
+  const largeReturned = await cyState();
+  assert(Math.abs(largeReturned.zoom - largeSaved.zoom) < 0.001 && Math.abs(largeReturned.pan.x - largeSaved.pan.x) < 1 && Math.abs(largeReturned.pan.y - largeSaved.pan.y) < 1, 'Returning from direct relationships must restore even a full-view zoom below the default 8% limit.');
+  check('large full-view relation return preserves its exact low-zoom viewport');
   const storage = await page.evaluate(() => ({ writes: window.__workbenchGraphStorageWrites, cookies: document.cookie, local: localStorage.length, session: sessionStorage.length, overflow: document.documentElement.scrollWidth > innerWidth }));
   assert(!storage.writes.length && !storage.cookies && !storage.local && !storage.session, 'The workbench must not persist business data or reading state.');
   assert(!storage.overflow && !result.forbiddenRequests.length && !result.pageErrors.length && !result.consoleProblems.length, 'There must be no overflow, remote service traffic or browser errors.');
