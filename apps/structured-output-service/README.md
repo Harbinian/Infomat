@@ -1,12 +1,18 @@
 # 3001 单流程治理编制工具
 
-## React 工作台（2026-10-05实现，2026-10-07 ELK部署）
+## React 工作台（2026-10-05实现，2026-10-07业务名称版部署）
 
 工作台日常操作使用业务名称和所属范围，不显示内部对象标识、引用键、JSON路径、修订号或下载SHA摘要。对象清单、详情、表格、引用选择、流程图和关系图使用统一名称规则；同名内容按实际父级和业务说明区分，缺失或歧义关联显示中文提示且保留原值。文件菜单中的“来源与历史留存”显示来源与留存数量；下载摘要显示实际文件名、时间和字节数。制度编号、表单编号及业务正文继续显示。内部稳定引用、下载基线和导出JSON契约不变，保留首页 `/index.html` 沿用原实现。专项显示检查运行 `npm.cmd run test:workbench-presentation`；真实Edge验证另行检查可见文字、输入、辅助标签和画布，并核对下载字节。
 
 首页 `/` 以不缓存的302重定向进入 `/workbench/`，默认显示流程图，选中对象后展开420像素详情。原首页完整保留在 `/index.html`。用户于2026-10-06授权替换正式3001；实际镜像、运行状态与回退信息以本次部署证据为准。本次不修改3000；下载未审核JSON后仍由用户手工上传3000。设计与实施记录见独立工作树的 `artifacts/3001-frontend-redesign-20261005/workbench-implementation-plan.md`。
 
-2026-10-07本机Docker正式3001已更新为ELK流程图工作台：镜像 `infomat-structured-output:elk-workbench-20261007-7b897eeb`，源码提交 `7b897eeb53af17b825eecab8719d6db69294992a`，镜像ID `sha256:6e19a291fe9dedb2adabc4e2ad0be5df6ec843ae742404af6326374ced444f7b`。正式容器仍为 `infomat-structured-output-3001`，3001端口健康；首页、22项本地资源实际字节、V8／candidate状态和原Schema摘要均已复核。部署后真实Microsoft Edge100%、1699×828 CSS像素验证通过工作台14组、流程图13组及用户指定31环节／44流转业务文件5组；6份工作台下载和业务文件阅读前后2份下载的字节摘要及内容均通过核对。业务文件除导出时间外完整内容保持不变，源文件没有修改。全图仍为结构总览，文字阅读使用默认100%视图、对象定位或主动阅读。
+2026-10-07本机Docker正式3001随后更新为业务名称版：镜像 `infomat-structured-output:business-labels-20261007-9f050dd8`，源码提交 `9f050dd84a3568010aac486854cf8793efe9fb66`，镜像ID `sha256:d9708bd0dd18144eace3b0afc29ced4d5ded3ea6112b39bf0ea3290964364694`。正式容器 `infomat-structured-output-3001` 为healthy；首页、22项本地资源实际字节、V8／candidate状态、Schema摘要及兼容接口均通过核对。部署后真实Microsoft Edge100%、1699×828 CSS像素通过工作台14组、流程图14组和用户指定31环节／44流转文件6组，12份实际下载的摘要、大小和业务内容均通过核对。界面可见文字、输入、辅助标签和图画布未发现内部引用、技术字段或路径泄露；缺失和歧义仍明确提示。错误条高度变化也保持原阅读视口。
+
+本轮保留前版ELK镜像标签 `infomat-structured-output:rollback-business-labels-20261007-6e19a291` 及未启动回退容器 `infomat-3001-labels-rollback-20261007`。其他10个既有容器身份、镜像、端口和运行状态保持不变；本次3049与3037候选已停止，主工作区110项已有改动、旧引用候选和源文件保留，用户已有页面未刷新。完整21个Node回归脚本通过，Controller44组、图形33组、布局25组、业务名称8组；构建使用已缓存Node24.21.0基础镜像，运行依赖审计0漏洞。源码和说明同步至 `codex/3001-business-labels`；GitHTTPS失败后采用GitHub接口，远端提交元数据不同，逐个Blob及完整文件树与本地提交一致，未改写其他分支历史。发布证据见 `artifacts/3001-business-labels-20261007/release-report.md` 和 `output/playwright/3001-business-labels-20261007/`。这些结果属于技术验证，不表示流程业务审核或人工Windows输入法验收。
+
+以下同日ELK布局版记录及2026-10-06记录保留为发布历史。
+
+2026-10-07前一次Docker3001更新为ELK流程图工作台：镜像 `infomat-structured-output:elk-workbench-20261007-7b897eeb`，源码提交 `7b897eeb53af17b825eecab8719d6db69294992a`，镜像ID `sha256:6e19a291fe9dedb2adabc4e2ad0be5df6ec843ae742404af6326374ced444f7b`。正式容器仍为 `infomat-structured-output-3001`，3001端口健康；首页、22项本地资源实际字节、V8／candidate状态和原Schema摘要均已复核。部署后真实Microsoft Edge100%、1699×828 CSS像素验证通过工作台14组、流程图13组及用户指定31环节／44流转业务文件5组；6份工作台下载和业务文件阅读前后2份下载的字节摘要及内容均通过核对。业务文件除导出时间外完整内容保持不变，源文件没有修改。全图仍为结构总览，文字阅读使用默认100%视图、对象定位或主动阅读。
 
 本轮保留前一React镜像标签 `infomat-structured-output:rollback-elk-20261007-32dfa817` 和未启动回退容器 `infomat-3001-elk-rollback-20261007`；其他8个既有容器的身份、镜像、端口和运行状态保持不变。3049与3037临时候选已定向停止，原引用增强候选及已有页面未动。完整应用20个Node测试脚本通过，Controller44组、图形交互30组、ELK布局24组；运行依赖审计0漏洞。工作台复验曾因同名重导入尚未完成而提前下载超时，测试现等待真实导入状态后继续，复验通过；该等待条件及发布说明属于后续测试／文档提交，运行镜像源码仍为上述提交。发布、回退和真实验证记录见 `artifacts/3001-elk-release-20261007/release-report.md`，证据位于 `output/playwright/3001-elk-release-20261007/`。这些技术验证不表示Windows中文输入法候选窗人工验收或流程业务审核完成。
 
