@@ -8,8 +8,15 @@ async page => {
   if (!['127.0.0.1', 'localhost', '[::1]'].includes(candidate.hostname) || ['3000', '3001'].includes(candidate.port) || !candidate.port) throw new Error('Only an explicit loopback candidate is permitted.');
   const result = { passed: false, browser: 'msedge', viewport: { width: 1699, height: 828 }, origin, checks: [], screenshots: [], consoleProblems: [], pageErrors: [], forbiddenRequests: [], geometry: null };
   result.applyDiagnostics = { validations: [], states: [] };
-  const assert = (value, text) => { if (!value) throw new Error(text); };
-  const check = name => result.checks.push(name);
+  result.businessDisplay = [];
+  const assert = (value, text) => { if (!value) throw new Error(`[Graph phase: ${phase}] ${text}`); };
+  let phase = 'candidate initialization';
+  const check = name => { result.checks.push(name); phase = `after ${name}`; };
+  const nativeWaitForFunction = page.waitForFunction.bind(page);
+  page.waitForFunction = async (...args) => {
+    try { return await nativeWaitForFunction(...args); }
+    catch (failure) { failure.message = `[Graph phase: ${phase}] ${failure.message}`; throw failure; }
+  };
   page.on('pageerror', error => result.pageErrors.push(error.message));
   page.on('dialog', async dialog => {
     if (dialog.type() === 'beforeunload') await dialog.accept();
@@ -37,6 +44,13 @@ async page => {
       terminate() { this.audit.terminated = true; return super.terminate(); }
     };
     window.__workbenchGraphStorageWrites = [];
+    window.__workbenchGraphDownloadHashes = [];
+    const nativeDigest = crypto.subtle.digest.bind(crypto.subtle);
+    crypto.subtle.digest = async (algorithm, bytes) => {
+      const hash = await nativeDigest(algorithm, bytes);
+      window.__workbenchGraphDownloadHashes.push({ algorithm: typeof algorithm === 'string' ? algorithm : algorithm.name, byteLength: bytes.byteLength, digest: [...new Uint8Array(hash)].map(value => value.toString(16).padStart(2, '0')).join('') });
+      return hash;
+    };
     for (const key of ['setItem', 'removeItem', 'clear']) {
       const previous = Storage.prototype[key];
       Storage.prototype[key] = function (...args) { window.__workbenchGraphStorageWrites.push(`Storage.${key}`); return previous.apply(this, args); };
@@ -78,14 +92,27 @@ async page => {
     await page.mouse.click(point.x, point.y); await stable();
   };
   const selectObject = async ref => {
+    const names = new Map();
+    const collectNames = value => {
+      if (!value || typeof value !== 'object') return;
+      for (const [refKey, nameKey] of [['behavior_ref','behavior_name'], ['data_ref','data_name'], ['field_ref','field_name'], ['form_ref','form_name'], ['area_ref','area_title'], ['item_ref','item_name'], ['term_ref','term_name']]) {
+        if (value[refKey] && value[nameKey]) names.set(value[refKey], value[nameKey]);
+      }
+      for (const child of Object.values(value)) if (child && typeof child === 'object') collectNames(child);
+    };
+    collectNames(before.json);
+    const route = before.json.flow_relations.find(item => item.relation_ref === ref);
+    const name = route ? `${names.get(route.from_behavior_ref)} → ${names.get(route.to_behavior_ref)}${route.condition ? ` · ${route.condition}` : ''}` : names.get(ref);
+    assert(name, 'The synthetic selection requires a business name, never a machine-reference search.');
     await page.getByRole('radio', { name: '对象清单', exact: true }).locator('..').click();
     await page.getByRole('radio', { name: '全部', exact: true }).locator('..').click();
-    await page.getByPlaceholder('按名称或标识查找').fill(ref);
+    await page.getByPlaceholder('按名称或所属范围查找').fill(name);
     await page.locator('.object-name').first().click();
     await page.getByRole('radio', { name: '流程图', exact: true }).locator('..').click();
     await stable();
   };
   const download = async name => {
+    const hashCursor = await page.evaluate(() => window.__workbenchGraphDownloadHashes.length);
     const pending = page.waitForEvent('download');
     await page.getByRole('button', { name: '↓ 下载草稿', exact: true }).click();
     const file = await pending; assert(await file.failure() === null, 'The synthetic draft download must succeed.');
@@ -93,13 +120,39 @@ async page => {
     const stream = await file.createReadStream(), chunks = [];
     for await (const chunk of stream) chunks.push(chunk);
     const bytes = Buffer.concat(chunks), json = JSON.parse(bytes.toString('utf8'));
-    const digest = await page.evaluate(async bytes => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new Uint8Array(bytes)))).map(value => value.toString(16).padStart(2, '0')).join(''), [...bytes]);
-    await page.locator('.ant-drawer-body').filter({ hasText: digest }).waitFor();
+    const captured = await page.evaluate(({ cursor, byteLength }) => window.__workbenchGraphDownloadHashes.slice(cursor).filter(item => item.algorithm.toUpperCase() === 'SHA-256' && item.byteLength === byteLength).at(-1), { cursor: hashCursor, byteLength: bytes.length });
+    assert(captured && /^[a-f0-9]{64}$/.test(captured.digest), 'Capture the actual export hash in the test page, never through production UI.');
+    const digest = captured.digest;
+    const actualDigest = await page.evaluate(async bytes => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new Uint8Array(bytes)))].map(value => value.toString(16).padStart(2, '0')).join(''), [...bytes]);
+    assert(actualDigest === digest, 'The captured export digest must match the actual downloaded bytes.');
+    await page.locator('.ant-drawer-body').getByText(`${bytes.length} 字节`, { exact: true }).waitFor();
+    assert(!(await page.locator('.ant-drawer-body').innerText()).includes(digest), 'The business download summary must not display machine digests.');
     await page.locator('.ant-drawer-close').click();
     delete json.export_meta.exported_at;
     return { json, digest, byteLength: bytes.length, fileName: file.suggestedFilename() };
   };
   const before = await download('before-reading');
+  const assertBusinessDisplay = async (stage, source = before.json) => {
+    const refs = new Set();
+    const collect = value => {
+      if (!value || typeof value !== 'object') return;
+      for (const [key, item] of Object.entries(value)) {
+        if (/_refs?$/.test(key)) for (const ref of Array.isArray(item) ? item : [item]) if (typeof ref === 'string' && ref) refs.add(ref);
+        if (item && typeof item === 'object') collect(item);
+      }
+    };
+    collect(source);
+    const display = await page.evaluate(refs => {
+      const visibleValues = [...document.querySelectorAll('input, textarea')].filter(element => { const box = element.getBoundingClientRect(), style = getComputedStyle(element); return box.width > 0 && box.height > 0 && style.visibility !== 'hidden' && style.display !== 'none' && !element.closest('[aria-hidden="true"]'); }).map(element => element.value);
+      const cy = document.querySelector('.graph-canvas')?._cyreg?.cy;
+      const canvasLabels = cy ? cy.elements().map(element => element.data('label') || '').join('\n') : '';
+      const visible = `${document.body.innerText}\n${visibleValues.join('\n')}\n${canvasLabels}`;
+      return { leakedRefs: refs.filter(ref => visible.includes(ref)), technicalFields: visible.match(/\b(?:behavior_ref|relation_ref|data_ref|field_ref|form_ref|area_ref|item_ref|term_ref|source_ref|process_ref|package_ref|actor_department_data_ref|data_field_ref|business_data_ref|schema_version|export_meta)\b/g) || [], paths: visible.match(/\/(?:behaviors|flow_relations|data_objects|forms|migration|terms)\/[0-9]+(?:\/[a-z_0-9]+)*/g) || [] };
+    }, [...refs]);
+    assert(!display.leakedRefs.length && !display.technicalFields.length && !display.paths.length, `Business text and rendered canvas labels must hide internal references and paths: ${JSON.stringify(display)}`);
+    result.businessDisplay.push({ stage, ...display });
+  };
+  await assertBusinessDisplay('flow');
   assert(await readable() >= 13.5, 'Import must discard the previous blank candidate viewport and use readable 14px text.');
   await shot('initial-readable-start');
   check('import discards the previous candidate viewport and shows a readable start');
@@ -108,7 +161,7 @@ async page => {
   await page.waitForFunction(count => window.__elkWorkerAudit.slice(count).some(worker => worker.queued && !worker.terminated), workerCount);
   assert(await page.getByRole('button', { name: '从当前环节阅读', exact: true }).isDisabled(), 'Reading must be disabled until the current layout is ready.');
   await page.getByRole('radio', { name: '对象清单', exact: true }).locator('..').click();
-  await page.getByPlaceholder('按名称或标识查找').fill('behavior_fixture_submit');
+  await page.getByPlaceholder('按名称或所属范围查找').fill('测试起点：提交资料');
   await page.locator('.object-name').first().click();
   await page.getByRole('radio', { name: '流程图', exact: true }).locator('..').click();
   await ready(); await stable();
@@ -204,7 +257,7 @@ async page => {
   await page.getByText('判断或多路线处已暂停：请选择文件中已记录的路线。', { exact: true }).waitFor();
   assert((await cyState()).reading.join(',') === 'graph_decision', 'Decision conditions must never be evaluated automatically.');
   await page.getByRole('combobox', { name: '选择已记录路线', exact: true }).click();
-  await page.getByText('测试路线：资料完整 → 测试并行开始', { exact: true }).click();
+  await page.getByText(/测试路线：资料完整 → 测试并行开始$/).click();
   await page.getByRole('button', { name: '下一步', exact: true }).click(); await stable();
   const group = await cyState();
   assert(group.reading.length === 2 && group.reading.includes('graph_finance') && group.reading.includes('graph_quality'), 'Parallel branches must be shown as one group.');
@@ -229,7 +282,7 @@ async page => {
   await page.getByRole('button', { name: '从当前环节阅读', exact: true }).click();
   await page.getByRole('button', { name: '下一步', exact: true }).click(); await page.getByRole('button', { name: '下一步', exact: true }).click();
   await page.getByRole('combobox', { name: '选择已记录路线', exact: true }).click();
-  await page.getByText('测试路线：资料待补充 → 测试起点：提交资料', { exact: true }).click();
+  await page.getByText(/测试路线：资料待补充 → 测试起点：提交资料$/).click();
   await page.getByText('再次到达已读环节，已暂停，避免无限循环。', { exact: true }).waitFor();
   assert(await page.getByRole('button', { name: '下一步', exact: true }).isDisabled(), 'Reading must stop at the first repeated node.');
   await shot('loop-paused'); await page.getByRole('button', { name: '退出阅读', exact: true }).click(); await stable();
@@ -243,7 +296,7 @@ async page => {
   await page.waitForTimeout(1600); assert((await cyState()).reading.join(',') === 'graph_decision', 'Reduced motion must not continue automatic reading.');
   await page.getByRole('button', { name: '下一步', exact: true }).click();
   await page.getByRole('combobox', { name: '选择已记录路线', exact: true }).click();
-  await page.getByText('测试路线：资料完整 → 测试并行开始', { exact: true }).click();
+  await page.getByText(/测试路线：资料完整 → 测试并行开始$/).click();
   assert((await cyState()).reading.join(',') === 'graph_split', 'Reduced motion must retain manual route reading.');
   await shot('reduced-motion-manual'); await page.getByRole('button', { name: '退出阅读', exact: true }).click(); await stable();
   await page.emulateMedia({ reducedMotion: 'no-preference' });
@@ -265,7 +318,8 @@ async page => {
   await selectObject('graph_area');
   await page.getByRole('button', { name: '查看关系图', exact: true }).click(); await stable();
   const relation = await page.evaluate(() => { const cy = document.querySelector('.graph-canvas')._cyreg.cy; return { edges: cy.edges().map(edge => ({ label: edge.data('label'), category: edge.data('category'), source: edge.source().data('target'), target: edge.target().data('target') })), nodes: cy.nodes().map(node => node.data('target')) }; });
-  assert(relation.edges.some(edge => edge.category === 'ownership') && relation.edges.some(edge => edge.label.includes('来自子项 graph_item_amount')), 'Area relationships must distinguish containment and aggregated item references.');
+  assert(relation.edges.some(edge => edge.category === 'ownership') && relation.edges.some(edge => edge.label.includes('来自子项：表单字段') && !edge.label.includes('graph_item_amount')), 'Area relationships must distinguish containment and named aggregated item references without displaying machine identifiers.');
+  await assertBusinessDisplay('direct-relations');
   await shot('area-direct-relationships');
   const relationPoint = await page.evaluate(() => { const canvas = document.querySelector('.graph-canvas'), cy = canvas._cyreg.cy, node = cy.nodes().filter(node => node.data('target')?.ref === 'graph_item_amount').first(), bounds = canvas.getBoundingClientRect(), point = node.renderedPosition(); return { x: bounds.x + point.x, y: bounds.y + point.y }; });
   await page.getByRole('textbox', { name: '区域名称', exact: true }).fill('测试基本区（暂存）');
@@ -283,7 +337,7 @@ async page => {
   assert(await page.evaluate(() => document.querySelector('.graph-canvas')._cyreg.cy.nodes().some(node => node.data('current') && node.data('target')?.ref === 'graph_item_amount')), 'The selected related object must support a further direct-relation layer.');
   await page.getByRole('button', { name: '← 返回流程图', exact: true }).click(); await stable();
   await selectObject('graph_term'); await page.getByRole('button', { name: '查看关系图', exact: true }).click();
-  await page.getByText('术语已有定义和标识，当前文件没有结构化的术语使用关系。', { exact: true }).waitFor();
+  await page.getByText('术语已有定义，当前文件没有结构化的术语使用关系。', { exact: true }).waitFor();
   await shot('term-honest-empty-usage');
   await page.getByRole('button', { name: '← 返回流程图', exact: true }).click(); await stable();
   check('direct parent/item reference labels and honest term usage limitation');
@@ -307,6 +361,38 @@ async page => {
   const largeReturned = await cyState();
   assert(Math.abs(largeReturned.zoom - largeSaved.zoom) < 0.001 && Math.abs(largeReturned.pan.x - largeSaved.pan.x) < 1 && Math.abs(largeReturned.pan.y - largeSaved.pan.y) < 1, 'Returning from direct relationships must restore even a full-view zoom below the default 8% limit.');
   check('large full-view relation return preserves its exact low-zoom viewport');
+  const anomaly = JSON.parse(JSON.stringify(before.json));
+  anomaly.export_meta.exported_at = new Date().toISOString();
+  anomaly.process.process_name = '虚构测试：中文引用异常提示';
+  anomaly.behaviors[0].actor_assignment_mode = 'dynamic_from_data';
+  anomaly.behaviors[0].actor_department_data_ref = 'graph_unknown_department_source';
+  anomaly.behaviors.push({ ...anomaly.behaviors[0], behavior_name: '测试重复对象' });
+  anomaly.flow_relations.push({ relation_ref: 'graph_missing_business_route', from_behavior_ref: 'graph_unknown_business_source', to_behavior_ref: anomaly.behaviors[0].behavior_ref, relation_type: 'condition', condition: '测试异常路线' });
+  const beforeRejectedDownload = await download('before-rejected-import');
+  const beforeRejected = await cyState();
+  const beforeRejectedWorkerCount = await page.evaluate(() => { window.__graphCandidateBeforeRejectedImport = document.querySelector('.graph-canvas')._cyreg.cy; return window.__elkWorkerAudit.length; });
+  phase = 'invalid import is rejected and current graph remains unchanged';
+  await page.getByLabel('导入文件', { exact: true }).setInputFiles({ name: 'fictional-business-anomalies.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(anomaly), 'utf8') });
+  await page.waitForFunction(() => document.querySelector('.error-strip')?.textContent.includes('源文件检查失败') || [...document.querySelectorAll('.ant-modal-title')].some(title => title.textContent === '先保留尚未下载的内容'));
+  if (await discard.isVisible().catch(() => false)) await discard.click();
+  await page.locator('.error-strip').filter({ hasText: '源文件检查失败' }).waitFor();
+  const rejectedMessage = await page.locator('.error-strip').innerText();
+  assert(/重复|无法唯一确定/.test(rejectedMessage) && /不存在|缺失|不在当前文件|未找到/.test(rejectedMessage), `Rejected duplicate objects and missing references must retain clear business-language explanations. Actual: ${rejectedMessage}`);
+  await stable();
+  await assertBusinessDisplay('missing-and-ambiguous', anomaly);
+  const afterRejected = await cyState();
+  const center = value => ({ x: (value.width / 2 - value.pan.x) / value.zoom, y: (value.height / 2 - value.pan.y) / value.zoom });
+  const centerBefore = center(beforeRejected), centerAfter = center(afterRejected);
+  assert(Math.abs(beforeRejected.zoom - afterRejected.zoom) < 0.001 && Math.abs(centerBefore.x - centerAfter.x) < 1 && Math.abs(centerBefore.y - centerAfter.y) < 1, 'An import-error strip may resize the canvas but must preserve reading scale and centre without locating the selected object.');
+  assert(await page.evaluate(workerCount => document.querySelector('.process-title')?.textContent.includes('虚构测试：长图全图边界') && document.querySelector('.graph-canvas')._cyreg.cy === window.__graphCandidateBeforeRejectedImport && window.__elkWorkerAudit.length === workerCount && document.querySelector('.graph-canvas')._cyreg.cy.nodes('.behavior-node').length === 97, beforeRejectedWorkerCount), 'A rejected source must preserve candidate identity and the graph instance without requesting a replacement layout.');
+  await shot('business-anomalies-without-machine-identifiers');
+  await page.locator('.error-strip .ant-alert-close-icon').click(); await stable();
+  const errorDismissed = await cyState();
+  assert(Math.abs(beforeRejected.zoom - errorDismissed.zoom) < 0.001 && Math.abs(beforeRejected.pan.x - errorDismissed.pan.x) < 1 && Math.abs(beforeRejected.pan.y - errorDismissed.pan.y) < 1, 'Dismissing the import error must restore the original effective viewport exactly.');
+  const afterRejectedDownload = await download('after-rejected-import');
+  assert(JSON.stringify(beforeRejectedDownload.json) === JSON.stringify(afterRejectedDownload.json), 'A rejected file must preserve every current business JSON field.');
+  result.rejectedImport = { message: rejectedMessage, before: beforeRejected, after: afterRejected, restored: errorDismissed, businessJsonUnchanged: true, beforeDownload: { digest: beforeRejectedDownload.digest, byteLength: beforeRejectedDownload.byteLength }, afterDownload: { digest: afterRejectedDownload.digest, byteLength: afterRejectedDownload.byteLength } };
+  check('business rejection text hides identifiers and preserves missing/ambiguous explanations, candidate, JSON and viewport');
   const storage = await page.evaluate(() => ({ writes: window.__workbenchGraphStorageWrites, cookies: document.cookie, local: localStorage.length, session: sessionStorage.length, overflow: document.documentElement.scrollWidth > innerWidth }));
   assert(!storage.writes.length && !storage.cookies && !storage.local && !storage.session, 'The workbench must not persist business data or reading state.');
   assert(!storage.overflow && !result.forbiddenRequests.length && !result.pageErrors.length && !result.consoleProblems.length, 'There must be no overflow, remote service traffic or browser errors.');

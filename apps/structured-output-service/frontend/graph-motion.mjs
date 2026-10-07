@@ -1,11 +1,12 @@
 // In-memory presentation helpers. They never modify the business document or persist state.
+import { catalog as businessCatalog, businessLabel, referenceName } from './model.mjs';
 export const MOTION_MS = Object.freeze({ select: 150, locate: 250, direction: 1200, applied: 600, reading: 1500 });
 
 export const targetKey = target => target ? JSON.stringify([target.kind, target.parentRef || '', target.ref]) : '';
 const list = value => Array.isArray(value) ? value : [];
 const sameTarget = (a, b) => targetKey(a) === targetKey(b);
 export const kindLabel = kind => ({ process: '流程', behavior: '环节', relation: '环节流转', data: '数据对象', 'data-field': '数据字段', form: '表单／记录', 'form-area': '表单区域', 'form-item': '表单字段', term: '术语', 'data-link': '数据与环节关系', 'data-source': '数据来源', 'form-link': '表单与环节关系', 'field-source': '字段取值来源', 'lifecycle-route': '生命周期路径', 'lifecycle-event': '生命周期事件' }[kind] || '辅助信息');
-export const statusLabel = status => ({ missing: '引用缺失', ambiguous: '标识歧义', 'wrong-owner': '父级不符', external: '外部标识，当前文件不解析' }[status] || '');
+export const statusLabel = status => ({ missing: '引用对象缺失', ambiguous: '关联对象无法唯一确定', 'wrong-owner': '父级不符', external: '外部引用，当前文件不解析' }[status] || '');
 
 /** One cancellable owner for animation, pulse timers and final viewport reporting. */
 export function createMotionCoordinator({ cy, reduced = () => false, report = () => {}, setTimer = setTimeout, clearTimer = clearTimeout }) {
@@ -90,7 +91,8 @@ export function createReadingSession(document, startRef, saved = {}, identity = 
   }
   const uniqueBehavior = ref => Boolean(ref && index.get(ref)?.length === 1
     && (typeof identity?.isUniqueBehavior !== 'function' || identity.isUniqueBehavior(ref)));
-  if (!uniqueBehavior(startRef)) throw new Error('请选择具有唯一稳定标识的起点环节。');
+  if (!uniqueBehavior(startRef)) throw new Error('请选择能够唯一确定的起点环节。');
+  const displayEntries = businessCatalog(document);
   const routes = list(document.flow_relations);
   const uniqueRelation = ref => Boolean(ref && routes.filter(route => route.relation_ref === ref).length === 1
     && (typeof identity?.isUniqueRelation !== 'function' || identity.isUniqueRelation(ref)));
@@ -123,7 +125,7 @@ export function createReadingSession(document, startRef, saved = {}, identity = 
     const unresolvedDecisions = decisionRefs.filter(ref => !selectedBySource.has(ref));
     if (unresolvedDecisions.length) {
       stopped = 'choice';
-      choices = candidates.filter(route => unresolvedDecisions.includes(route.from_behavior_ref)).map(route => ({ ref: route.relation_ref, fromRef: route.from_behavior_ref, toRef: route.to_behavior_ref, label: route.condition || `路线 ${route.relation_ref || '标识待补充'}` }));
+      choices = candidates.filter(route => unresolvedDecisions.includes(route.from_behavior_ref)).map(route => ({ ref: route.relation_ref, fromRef: route.from_behavior_ref, toRef: route.to_behavior_ref, label: route.condition || '条件未填写', fromLabel: referenceName(displayEntries, route.from_behavior_ref, 'behavior'), toLabel: referenceName(displayEntries, route.to_behavior_ref, 'behavior') }));
       return snapshot();
     }
     const selected = candidates.filter(route => !decisionRefs.includes(route.from_behavior_ref) || selectedBySource.get(route.from_behavior_ref) === route.relation_ref);
@@ -145,6 +147,7 @@ export function createReadingSession(document, startRef, saved = {}, identity = 
 /** A read-only direct-neighbour projection. Bad references remain explicit separate nodes. */
 export function buildDirectRelationGraph(document, catalog, references, target) {
   const resolved = references.lookup(catalog, target);
+  const displayEntries = businessCatalog(document);
   const nodes = new Map();
   const edges = [];
   const centerKey = targetKey(target);
@@ -154,12 +157,12 @@ export function buildDirectRelationGraph(document, catalog, references, target) 
     const result = candidate ? uniqueNode(candidate) : null;
     const valid = status === 'valid' && result?.status === 'valid';
     const key = explicitKey || (valid ? targetKey(candidate) : `unresolved:${status}:${fallback}:${targetKey(candidate)}`);
-    if (!nodes.has(key)) nodes.set(key, { data: { id: nodeId(key), target: valid ? candidate : null, label: `${candidate ? kindLabel(candidate.kind) + ' · ' : ''}${valid ? result.node.label : fallback || candidate?.ref || '未确定对象'}${valid ? '' : '\n' + (statusLabel(status === 'valid' ? result?.status : status) || '引用异常')}`, current: key === centerKey, anomaly: !valid }, position: { x: 0, y: 0 } });
+    if (!nodes.has(key)) nodes.set(key, { data: { id: nodeId(key), target: valid ? candidate : null, label: `${candidate ? kindLabel(candidate.kind) + ' · ' : ''}${valid ? businessLabel(displayEntries, candidate) : fallback || '未确定对象'}${valid ? '' : '\n' + (statusLabel(status === 'valid' ? result?.status : status) || '引用异常')}`, current: key === centerKey, anomaly: !valid }, position: { x: 0, y: 0 } });
     return nodeId(key);
   }
-  const centerId = addNode(target, resolved.node?.label || target?.ref || '当前对象', resolved.status, centerKey);
+  const centerId = addNode(target, target ? businessLabel(displayEntries, target) : '当前对象', resolved.status, centerKey);
   const edge = (id, source, destination, label, category = 'reference', anomaly = false, detailTarget = null) => edges.push({ data: { id: `link:${id}`, source, target: destination, label, category, anomaly, detailTarget } });
-  const addOther = candidate => addNode(candidate, candidate?.ref || '迁移留存', 'valid');
+  const addOther = candidate => addNode(candidate, '未确定的关联对象', 'valid');
   const node = resolved.node;
   if (node && !node.parentRef && target.kind !== 'process') {
     const processNodes = catalog.nodes.filter(item => item.kind === 'process');
@@ -189,12 +192,12 @@ export function buildDirectRelationGraph(document, catalog, references, target) 
     const otherTarget = outgoing ? entry.elementTarget || entry.target : entry.sourceTarget;
     const anomaly = entry.status !== 'valid';
     const canIdentifySource = !outgoing && otherTarget && uniqueNode(otherTarget).status === 'valid';
-    const otherId = otherTarget && (!anomaly || canIdentifySource) ? addOther(otherTarget) : addNode(null, entry.targetLabel || entry.ref || `迁移留存 ${entry.path}`, entry.status || 'missing', `unresolved:${entry.path}`);
+    const otherId = otherTarget && (!anomaly || canIdentifySource) ? addOther(otherTarget) : addNode(null, entry.status === 'external' ? '外部或迁移留存的关联对象' : '未确定的关联对象', entry.status || 'missing', `unresolved:${entry.path}`);
     const sourceRecord = catalog.nodes.filter(item => entry.path.startsWith(`${item.path}/`)).sort((a, b) => b.path.length - a.path.length)[0];
     const sourceIdentity = sourceRecord?.target || entry.sourceTarget;
     const aggregate = outgoing ? !sameTarget(sourceIdentity, target) : !sameTarget(sourceIdentity, entry.sourceTarget);
-    const sourceLabel = aggregate ? `（来自子项 ${sourceRecord?.ref || entry.sourceTarget?.ref}${sourceRecord?.label ? ' · ' + sourceRecord.label : ''}）` : '';
-    const description = `引用 · ${entry.relationLabel}${sourceLabel}${anomaly ? ` · ${statusLabel(entry.status)} · 原值 ${entry.ref}` : ''}`;
+    const sourceLabel = aggregate ? `（来自子项：${kindLabel(sourceIdentity?.kind)} · ${sourceIdentity ? businessLabel(displayEntries, sourceIdentity) : '迁移留存的辅助信息'}）` : '';
+    const description = `引用 · ${entry.relationLabel}${sourceLabel}${anomaly ? ` · ${statusLabel(entry.status) || '引用异常'} · 原引用已保留` : ''}`;
     edge(entry.path, outgoing ? centerId : otherId, outgoing ? otherId : centerId, description, 'reference', anomaly, otherTarget);
   }
   if (target.kind === 'behavior' || target.kind === 'relation') {
@@ -204,8 +207,8 @@ export function buildDirectRelationGraph(document, catalog, references, target) 
       const destination = { kind: 'behavior', ref: route.to_behavior_ref, parentRef: '' };
       const sourceStatus = uniqueNode(source).status;
       const destinationStatus = uniqueNode(destination).status;
-      const from = sameTarget(source, target) ? centerId : addNode(source, source.ref || '起点未填写', sourceStatus);
-      const to = sameTarget(destination, target) ? centerId : addNode(destination, destination.ref || '终点未填写', destinationStatus);
+      const from = sameTarget(source, target) ? centerId : addNode(source, '起点环节未确定', sourceStatus);
+      const to = sameTarget(destination, target) ? centerId : addNode(destination, '终点环节未确定', destinationStatus);
       const routeTarget = { kind: 'relation', ref: route.relation_ref, parentRef: '' };
       const description = `${{ sequence: '顺序流转', condition: '条件流转', loop: '退回路线', parallel: '并行流转' }[route.relation_type] || '类型待填写'}${route.condition ? ' · ' + route.condition : ''}`;
       if (target.kind === 'relation') {
@@ -221,5 +224,5 @@ export function buildDirectRelationGraph(document, catalog, references, target) 
     (edges.some(itemEdge => itemEdge.data.source === item.data.id && itemEdge.data.target === centerId) ? incoming : outgoing).push(item);
   }
   for (const [side, collection] of [[-1, incoming], [1, outgoing]]) collection.forEach((item, index) => { item.position = { x: side * 520, y: (index - (collection.length - 1) / 2) * 152 }; });
-  return { elements: [...nodes.values(), ...edges], centerId, relationshipCount: edges.length, anomalyCount: edges.filter(item => item.data.anomaly).length, noTermUsage: target.kind === 'term', title: node?.label || target.ref };
+  return { elements: [...nodes.values(), ...edges], centerId, relationshipCount: edges.length, anomalyCount: edges.filter(item => item.data.anomaly).length, noTermUsage: target.kind === 'term', title: businessLabel(displayEntries, target) };
 }
