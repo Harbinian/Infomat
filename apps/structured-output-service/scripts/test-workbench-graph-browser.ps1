@@ -14,6 +14,7 @@ if (-not $OutputDir) { $OutputDir = Join-Path $repoRoot 'output/playwright/workb
 $graphOutput = [System.IO.Path]::GetFullPath($OutputDir)
 New-Item -ItemType Directory -Force -Path $graphOutput | Out-Null
 $fixturePath = Join-Path $graphOutput 'fictional-graph-fixture.json'
+$largeFixturePath = Join-Path $graphOutput 'fictional-large-graph-fixture.json'
 $npx = Get-Command npx.cmd -ErrorAction Stop
 $health = Invoke-RestMethod -Uri "$($BaseUrl.TrimEnd('/'))/api/health" -TimeoutSec 10
 if ($health.status -ne 'ok' -or $health.schema_version -ne 'process-governance-v8' -or $health.release_status -ne 'candidate') { throw 'The target must report a V8 candidate health contract.' }
@@ -22,12 +23,14 @@ Push-Location $appRoot
 try {
   & node (Join-Path $PSScriptRoot 'workbench-graph-fixture.js') $fixturePath
   if ($LASTEXITCODE -ne 0) { throw 'Fictional graph fixture generation failed.' }
+  & node (Join-Path $PSScriptRoot 'workbench-large-graph-fixture.js') $fixturePath $largeFixturePath
+  if ($LASTEXITCODE -ne 0) { throw 'Large fictional graph fixture generation failed.' }
   $openArgs = @('--yes','--package','@playwright/cli','playwright-cli',"-s=$sessionName",'open','about:blank','--browser','msedge')
   if ($Headed) { $openArgs += '--headed' }
   & $npx.Source @openArgs | Out-Null
   if ($LASTEXITCODE -ne 0) { throw 'Microsoft Edge could not open the candidate.' }
   & $npx.Source --yes --package '@playwright/cli' playwright-cli "-s=$sessionName" snapshot | Out-Null
-  $configuration = @{ fixturePath = $fixturePath; outputDir = $graphOutput; BaseUrl = $BaseUrl.TrimEnd('/') } | ConvertTo-Json -Compress
+  $configuration = @{ fixturePath = $fixturePath; largeFixturePath = $largeFixturePath; outputDir = $graphOutput; BaseUrl = $BaseUrl.TrimEnd('/') } | ConvertTo-Json -Compress
   $configCode = "async page => { await page.evaluate(value => { globalThis.__workbenchGraphTestConfig = value; }, $configuration); return {configured:true}; }"
   $configPath = Join-Path $graphOutput 'configure-cli.js'
   $configCode | Set-Content -LiteralPath $configPath -Encoding utf8

@@ -31,6 +31,47 @@ await test('stable immutable snapshot, unsubscribe and destroyed controller',asy
 await test('snapshot document identity is stable across input, viewport and view changes',async()=>{
   const {controller:c}=await make();const document=c.getSnapshot().document;await c.dispatch({type:'select',target:objectTarget});await c.dispatch('edit');await c.dispatch({type:'update',field:'timing',value:'当天'});await c.dispatch({type:'viewport',view:'flow',viewport:{zoom:1,pan:{x:3,y:4}}});assert.strictEqual(c.getSnapshot().document,document);await c.dispatch('apply');assert.notStrictEqual(c.getSnapshot().document,document);assert.equal(c.getSnapshot().checks.stale,true);c.destroy();
 });
+await test('successful reselection requests fresh location without changing business identity or viewport',async()=>{
+  const {controller:c}=await make();await c.dispatch({type:'select',target:objectTarget});await c.dispatch({type:'viewport',view:'flow',viewport:{zoom:0.04,pan:{x:12,y:24}}});
+  const before=c.getSnapshot(),bytes=JSON.stringify(before.document);assert.equal(typeof before.selection.locateSequence,'number');
+  assert.equal((await c.dispatch({type:'select',target:objectTarget})).ok,true);const after=c.getSnapshot();
+  assert(after.selection.locateSequence>before.selection.locateSequence);assert.equal(after.selection.kind,before.selection.kind);assert.equal(after.selection.ref,before.selection.ref);assert.equal(after.selection.parentRef,before.selection.parentRef);assert.equal(after.selection.locateReason,undefined);
+  assert.strictEqual(after.document,before.document);assert.equal(JSON.stringify(after.document),bytes);assert.equal(after.revision,before.revision);assert.deepEqual(after.history,before.history);assert.deepEqual(after.viewport,before.viewport);assert.equal(after.pending,false);c.destroy();
+});
+await test('blocked, canceled and failed selections preserve the previous location request',async()=>{
+  const {controller:c}=await make({validate:document=>Promise.resolve(document.behaviors[0].behavior_name==='禁止值'?{valid:false,errors:[{path:'/behaviors/0/behavior_name',code:'TEST_INVALID',message:'禁止值'}]}:{valid:true,errors:[]})});
+  await c.dispatch({type:'select',target:objectTarget});await c.dispatch('edit');await c.dispatch({type:'update',field:'behavior_name',value:'禁止值'});const before=c.getSnapshot();
+  assert.equal((await c.dispatch({type:'select',target:objectTarget})).guard,true);assert.deepEqual(c.getSnapshot().selection,before.selection);
+  assert.equal((await c.dispatch({type:'resolve-guard',choice:'apply'})).ok,false);assert.deepEqual(c.getSnapshot().selection,before.selection);assert.equal(c.getSnapshot().session.values.behavior_name,'禁止值');assert.strictEqual(c.getSnapshot().document,before.document);
+  assert.equal((await c.dispatch({type:'resolve-guard',choice:'continue'})).canceled,true);assert.deepEqual(c.getSnapshot().selection,before.selection);assert.equal(c.getSnapshot().pending,true);
+  await c.dispatch('cancel');const canceled=c.getSnapshot();assert.equal((await c.dispatch({type:'select',target:{kind:'behavior',ref:'missing'}})).ok,false);assert.deepEqual(c.getSnapshot().selection,canceled.selection);assert.deepEqual(c.getSnapshot().viewport,canceled.viewport);assert.strictEqual(c.getSnapshot().document,canceled.document);c.destroy();
+});
+await test('repeated issue location keeps its issue reason and normal reselection clears that reason',async()=>{
+  const {controller:c}=await make({validate:()=>Promise.resolve({valid:false,errors:[{path:'/behaviors/0/timing',code:'FOCUS_TEST',message:'补充时限'}]})});await c.dispatch('check');const issue=c.getSnapshot().checks.issues[0],document=c.getSnapshot().document;
+  assert.equal((await c.dispatch({type:'focus-issue',issue})).ok,true);const first=c.getSnapshot();assert.equal(first.selection.locateReason,'issue');assert.equal(first.focus.field,'timing');
+  assert.equal((await c.dispatch({type:'focus-issue',issue})).ok,true);const repeated=c.getSnapshot();assert.equal(repeated.selection.locateReason,'issue');assert(repeated.selection.locateSequence>first.selection.locateSequence);assert(repeated.focus.sequence>first.focus.sequence);
+  assert.equal((await c.dispatch({type:'select',target:objectTarget})).ok,true);assert.equal(c.getSnapshot().selection.locateReason,undefined);assert(c.getSnapshot().selection.locateSequence>repeated.selection.locateSequence);assert.strictEqual(c.getSnapshot().document,document);assert.equal(c.getSnapshot().revision,0);c.destroy();
+});
+await test('apply cue belongs to its committed revision; input and validation failure do not advance it',async()=>{
+  const {controller:c}=await make({validate:document=>Promise.resolve(document.behaviors[0].behavior_name==='禁止值'?{valid:false,errors:[{path:'/behaviors/0/behavior_name',code:'TEST_INVALID',message:'禁止值'}]}:{valid:true,errors:[]})});
+  assert.equal(c.getSnapshot().appliedTarget,null);assert.equal(c.getSnapshot().appliedRevision,null);
+  await c.dispatch({type:'select',target:objectTarget});await c.dispatch('edit');await c.dispatch({type:'update',field:'behavior_name',value:'已应用名称'});
+  assert.equal(c.getSnapshot().appliedRevision,null);assert.equal((await c.dispatch('apply')).ok,true);
+  const applied=c.getSnapshot();assert.deepEqual(applied.appliedTarget,objectTarget);assert.equal(applied.appliedRevision,applied.revision);
+  await c.dispatch({type:'update',field:'behavior_name',value:'禁止值'});assert.equal((await c.dispatch('apply')).ok,false);
+  assert.equal(c.getSnapshot().revision,applied.revision);assert.equal(c.getSnapshot().appliedRevision,applied.revision);assert.deepEqual(c.getSnapshot().appliedTarget,objectTarget);assert.equal(c.getSnapshot().pending,true);c.destroy();
+});
+await test('undo and redo clear the previous object apply cue while creating their own revisions',async()=>{
+  const {controller:c}=await make();await c.dispatch({type:'select',target:objectTarget});await c.dispatch('edit');await c.dispatch({type:'update',field:'timing',value:'当天'});await c.dispatch('apply');
+  const revision=c.getSnapshot().revision;assert.equal(c.getSnapshot().appliedRevision,revision);
+  assert.equal((await c.dispatch('undo')).ok,true);assert.equal(c.getSnapshot().revision,revision+1);assert.equal(c.getSnapshot().appliedTarget,null);assert.equal(c.getSnapshot().appliedRevision,null);assert.equal(c.getSnapshot().document.behaviors[0].timing,null);
+  assert.equal((await c.dispatch('redo')).ok,true);assert.equal(c.getSnapshot().revision,revision+2);assert.equal(c.getSnapshot().appliedTarget,null);assert.equal(c.getSnapshot().appliedRevision,null);assert.equal(c.getSnapshot().document.behaviors[0].timing,'当天');c.destroy();
+});
+await test('new candidate clears the former candidate apply cue after the dirty guard resolves',async()=>{
+  const {controller:c}=await make();await c.dispatch({type:'select',target:objectTarget});await c.dispatch('edit');await c.dispatch({type:'update',field:'timing',value:'当天'});await c.dispatch('apply');const previous=c.getSnapshot();
+  await c.dispatch('new');assert.equal(c.getSnapshot().guard.reason,'dirty');assert.equal(c.getSnapshot().candidateKey,previous.candidateKey);assert.equal(c.getSnapshot().appliedRevision,previous.revision);
+  await c.dispatch({type:'resolve-guard',choice:'discard'});assert.notEqual(c.getSnapshot().candidateKey,previous.candidateKey);assert.equal(c.getSnapshot().revision,0);assert.equal(c.getSnapshot().appliedTarget,null);assert.equal(c.getSnapshot().appliedRevision,null);c.destroy();
+});
 await test('object field patch and explicit editing persists across applied selections',async()=>{
   const {controller:c}=await make();await c.dispatch({type:'select',target:objectTarget});await c.dispatch('edit');await c.dispatch({type:'update',field:'behavior_name',value:'录入并提交申请'});
   assert.equal(c.getSnapshot().document.behaviors[0].behavior_name,'提交申请');assert.equal(c.getSnapshot().pending,true);assert.equal((await c.dispatch('apply')).ok,true);
