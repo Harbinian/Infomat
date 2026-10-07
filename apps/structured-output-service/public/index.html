@@ -2492,6 +2492,7 @@
 
   </style>
   <link rel="stylesheet" href="review-workspace.css">
+  <link rel="stylesheet" href="element-references.css">
 </head>
 <body>
   <div class="page">
@@ -2616,6 +2617,7 @@
   <script src="graph-editor-state.js"></script>
   <script src="edit-session-manager.js"></script>
   <script src="review-workspace.js"></script>
+  <script src="element-references.js"></script>
   <script src="form-field-reuse.js"></script>
   <script src="authoring-selection-context.js"></script>
   <script src="governance-review-queue.js"></script>
@@ -2783,10 +2785,10 @@
     const ACTOR_ASSIGNMENT_MODE_VALUES = new Set(ACTOR_ASSIGNMENT_MODES.map(item => item.value));
     const GOVERNANCE_STEPS = globalThis.GovernanceWorkflow?.STEPS || [];
     const COMPACT_TASK_WORKFLOW = Object.freeze([
-      Object.freeze({ id: 'flow-details', label: '流程图', steps: Object.freeze(['skeleton', 'action']), entryStep: 'skeleton' }),
-      Object.freeze({ id: 'file-boundary', label: '流程信息', steps: Object.freeze(['start', 'boundary']), entryStep: 'boundary' }),
-      Object.freeze({ id: 'data-forms', label: '全流程数据与表单', steps: Object.freeze(['data']), entryStep: 'data' }),
-      Object.freeze({ id: 'check-save', label: '检查与下载', steps: Object.freeze(['cross-department', 'handoff']), entryStep: 'handoff' })
+      Object.freeze({ id: 'flow-details', label: '编制环节与流转', description: '谁做什么、按什么条件流转', steps: Object.freeze(['skeleton', 'action']), entryStep: 'skeleton' }),
+      Object.freeze({ id: 'file-boundary', label: '填写流程说明', description: '名称、目的、范围和材料来源', steps: Object.freeze(['start', 'boundary']), entryStep: 'boundary' }),
+      Object.freeze({ id: 'data-forms', label: '整理数据与表单', description: '对象字段、表单及取值来源', steps: Object.freeze(['data']), entryStep: 'data' }),
+      Object.freeze({ id: 'check-save', label: '检查问题并下载', description: '定位问题、下载未审核草稿', steps: Object.freeze(['cross-department', 'handoff']), entryStep: 'handoff' })
     ]);
     let uiConfig = { compact_task_ui_enabled: false, compact_task_ui_status: 'candidate' };
     const TOOL_HELP_STEPS = [
@@ -2828,22 +2830,22 @@
     ];
     const COMPACT_TASK_HELP = Object.freeze([
       Object.freeze({
-        title: '流程信息',
+        title: '填写流程说明',
         action: '新建或导入一条流程，核对文件来源，并说明流程为什么开始、适用范围、归口部门和结束结果。没有依据的归类保持待确认。',
         completion: '当前只保留一条流程，来源可追溯，业务人员能够判断哪些事项属于本流程。'
       }),
       Object.freeze({
-        title: '流程图',
+        title: '编制环节与流转',
         action: '导入已有流程后，从流程图选择环节，在并排详情中核对人员与动作、条件与异常、数据与表单。修改时展开对应输入；建立关系时直接填写条件。查看表单、字段和数据定义时保留当前位置，返回后继续原来的核对。',
         completion: '每项实际工作都有执行部门或岗位；正常路线、判断路线、退回路线和并行路线都能在流程骨架中直接核对，不需要切换到其他任务。'
       }),
       Object.freeze({
-        title: '全流程数据与表单',
+        title: '整理数据与表单',
         action: '照实说明使用的表单、台账、记录、字段，以及每项工作查看、新建、修改或传递了什么信息。只提供当前编号、来源和用途事实，不认定主数据、关键字段或正式权威来源。',
         completion: '表单、字段和数据使用事实可定位；企业级数据治理结论仍保持待MDM处理。'
       }),
       Object.freeze({
-        title: '检查与下载',
+        title: '检查问题并下载',
         action: '先核对跨部门交接事实，再处理页面能定位的当前问题并下载文件。业务部门分别确认本方事实，MDM工作组后续负责结构复核和专业数据治理。',
         completion: '结构错误已处理，待定事实已明确记录，当前文件已下载；页面检查不被表述为审核或发布。'
       })
@@ -3844,17 +3846,32 @@
         </div>`;
     }
 
-    function dynamicDepartmentDataSelect(index, behavior, flowDetails) {
-      const selectedRef = text(behavior.actor_department_data_ref).trim();
+    function dynamicDepartmentDataOptions(behavior, flowDetails = currentDataFlowDetails()) {
+      const selectedRef = text(behavior.actor_department_data_ref);
       const values = [{ value: '', label: '请选择前序数据' }];
+      const catalog = globalThis.ElementReferences.buildCatalog(currentDocument());
       (currentDocument()?.data_objects || []).forEach((item, dataIndex) => {
-        const allowed = flowDetails.isAvailableBeforeBehavior?.(item.data_ref, behavior.behavior_ref) === true;
+        const unique = globalThis.ElementReferences.lookup(catalog, { kind: 'data', ref: item.data_ref }).status === 'valid';
+        const allowed = unique && flowDetails.isAvailableBeforeBehavior?.(item.data_ref, behavior.behavior_ref) === true;
         if (!allowed && item.data_ref !== selectedRef) return;
+        if (values.some(option => option.value === item.data_ref)) return;
         values.push({
           value: item.data_ref,
-          label: `${dataIndex + 1}. ${item.data_name || '未命名数据'}${allowed ? '' : '（当前不是可用的前序数据）'}`
+          label: `${dataIndex + 1}. ${item.data_name || '未命名数据'} · ${item.data_ref}${allowed ? '' : unique ? '（当前不是可用的前序数据）' : '（标识重复，须先修正）'}`,
+          disabled: !allowed
         });
       });
+      if (selectedRef && !values.some(option => option.value === selectedRef)) values.push({ value: selectedRef, label: `${selectedRef}（引用目标已不存在，原值保留）`, disabled: true });
+      return values;
+    }
+
+    function dynamicDepartmentOptionHtml(behavior, flowDetails) {
+      const selectedRef = text(behavior.actor_department_data_ref);
+      return dynamicDepartmentDataOptions(behavior, flowDetails).map(option => `<option value="${escapeAttribute(option.value)}"${option.value === selectedRef ? ' selected' : ''}${option.disabled ? ' disabled' : ''}>${escapeHtml(option.label)}</option>`).join('');
+    }
+
+    function dynamicDepartmentDataSelect(index, behavior, flowDetails) {
+      const values = dynamicDepartmentDataOptions(behavior, flowDetails);
       const emptyHint = values.length === 1
         ? '<div class="inline-warning">当前没有可用于确定执行部门的前序数据。请先在“输出物与数据”中登记责任部门数据，并建立它的产生行为和流程关系。</div>'
         : '';
@@ -3862,7 +3879,7 @@
         <div class="field wide">
           <label>执行部门来源数据</label>
           <select data-bind="behaviors.${index}.actor_department_data_ref" data-kind="nullable" data-focus-key="behaviors.${index}.actor_department_data_ref">
-            ${optionHtml(values, selectedRef)}
+            ${dynamicDepartmentOptionHtml(behavior, flowDetails)}
           </select>
           <span class="hint">只能选择本行为开始前已经产生、并可沿流程关系到达本行为的数据。数据值可以包含一个或多个责任部门。</span>
           ${emptyHint}
@@ -5107,7 +5124,35 @@
     }
 
     function reviewLink(kind, ref, label, parentRef = '') {
+      const catalog = globalThis.ElementReferences?.buildCatalog(currentDocument());
+      const lookup = catalog && globalThis.ElementReferences.lookup(catalog, { kind, ref, parentRef });
+      if (lookup && lookup.status !== 'valid') return `<span class="inline-warning">${escapeHtml(label)}（${lookup.status === 'ambiguous' ? '标识重复，不能定位' : '引用目标已不存在'}）</span>`;
+      if (lookup && catalog.nodes.filter(node => node.kind === kind && node.label === lookup.node.label).length > 1) label += ` · ${ref}`;
       return `<button class="button small" data-action="review-open" data-kind="${escapeAttribute(kind)}" data-ref="${escapeAttribute(ref)}" data-parent-ref="${escapeAttribute(parentRef)}">${escapeHtml(label)}</button>`;
+    }
+
+    function renderFeaturePreview(id, label, explanation) {
+      return `<span class="feature-preview"><button class="button small" type="button" disabled data-feature-preview="${escapeAttribute(id)}" title="${escapeAttribute(explanation)}">${escapeHtml(label)}（预览）</button><span class="technical-note">${escapeHtml(explanation)}</span></span>`;
+    }
+
+    function renderElementReferences(target) {
+      const api = globalThis.ElementReferences;
+      const catalog = api.buildCatalog(currentDocument());
+      const references = api.forTarget(catalog, target, { includeDescendants: ['data', 'form'].includes(target.kind) });
+      const statusLabels = { valid: '本流程引用', missing: '目标缺失', ambiguous: '标识重复', 'wrong-owner': '字段归属不一致', external: '外部线索，未解析' };
+      const targetLabel = item => {
+        if (!item) return '迁移留存';
+        const result = api.lookup(catalog, item);
+        return result.status === 'valid' ? result.node.label : item.ref;
+      };
+      const renderDirection = (direction, title) => `<div data-element-reference-direction="${direction}"><h4>${title}（${references[direction].length}）</h4><ul class="element-reference-list">${references[direction].map(reference => {
+        const destination = direction === 'outgoing' ? reference.target : reference.sourceTarget;
+        const label = direction === 'outgoing' ? reference.targetLabel || reference.ref : targetLabel(destination);
+        const link = reference.status === 'valid' && destination ? reviewLink(destination.kind, destination.ref, label, destination.parentRef || '').replace('data-action="review-open"', `data-action="review-open" data-reference-path="${escapeAttribute(reference.path)}" data-reference-direction="${direction}"`) : `<strong>${escapeHtml(label)}</strong>`;
+        const sourceLabel = direction === 'outgoing' && reference.sourceTarget && api.targetKey(reference.sourceTarget) !== api.targetKey(target) ? `<p class="technical-note">引用位置：${escapeHtml(targetLabel(reference.sourceTarget))}</p>` : '';
+        return `<li data-element-reference-status="${escapeAttribute(reference.status)}" data-reference-path="${escapeAttribute(reference.path)}"><div class="element-reference-title"><span>${escapeHtml(reference.relationLabel)}</span><span class="reference-status">${statusLabels[reference.status] || '待核对'}</span></div>${sourceLabel}<span class="technical-note">${direction === 'incoming' ? '引用方：' : '引用目标：'}</span>${link}${reference.status === 'wrong-owner' ? `<p class="inline-warning">声明的对象：${escapeHtml(reference.expectedOwnerRef || '未填写')}；实际字段归属：${escapeHtml(reference.target?.parentRef || '无法定位')}。请在表单引用入口明确修正。</p>` : ''}<details><summary>查看稳定标识与引用位置</summary><code>${escapeHtml(reference.ref)}</code><p>${escapeHtml(reference.path)}</p></details></li>`;
+      }).join('') || '<li>当前没有记录此方向的引用。</li>'}</ul></div>`;
+      return `<section class="item-card element-references" data-element-references aria-label="元素关系引用"><h3>元素关系引用</h3><p class="technical-note">按当前文件中的稳定标识定位。存在性与字段归属检查不表示业务事实已确认；查看引用不会修改草稿。</p>${renderDirection('outgoing', '本项引用了什么')}${renderDirection('incoming', '哪些元素引用本项')}${renderFeaturePreview('cross-process', '解析跨流程引用', '跨流程来源仍是待核对线索；正式版本引用须在3000核对。')}${renderFeaturePreview('enterprise-mapping', '企业对象与字段映射', '尚未读取或绑定3000企业对象、字段及映射版本。')}</section>`;
     }
 
     function reviewFacts(entries) {
@@ -5137,16 +5182,18 @@
       }
       if (target.kind === 'relation') return reviewSection('关系与条件', reviewFacts([['关系', globalThis.ReviewWorkspace.label(data, target)], ['关系类型', RELATION_TYPES.find(option => option.value === item.relation_type)?.label], [relationConditionEditorCopy(item).label, item.condition || '无附加条件']]), 'relation');
       if (target.kind === 'form') return reviewSection('表单信息', reviewFacts([['名称', item.form_name], ['编号', item.form_no], ['状态', { unspecified: '待确认', current_state: '现状表单', proposed_design: '新建或优化表单' }[item.form_design_state]]]), 'form')
-        + reviewSection('关联环节', `<div class="review-links">${behaviorLinks(item.behavior_links) || '<p>暂未关联到环节，可在全流程数据与表单中补充。</p>'}</div>`)
+        + reviewSection('关联环节', `<div class="review-links">${behaviorLinks(item.behavior_links) || '<p>暂未关联到环节，可在“整理数据与表单”中补充。</p>'}</div>`)
         + reviewSection('表单字段', (item.areas || []).map(area => `<h4>${escapeHtml(area.area_title || area.area_type || '字段归属待确认')}</h4><div class="review-links">${(area.items || []).map(field => reviewLink('form-item', field.item_ref, field.item_name || '未命名字段', item.form_ref)).join('') || '<p>尚无字段。</p>'}</div>`).join(''));
       if (target.kind === 'form-item') {
-        const owner = (data.data_objects || []).find(object => (object.fields || []).some(field => field.field_ref === item.data_field_ref));
-        const field = owner?.fields.find(field => field.field_ref === item.data_field_ref);
+        const definition = globalThis.ElementReferences.lookup(globalThis.ElementReferences.buildCatalog(data), { kind: 'data-field', parentRef: item.business_data_ref, ref: item.data_field_ref });
         return reviewSection('表单字段', reviewFacts([['显示名称', item.item_name], ['数据类型', item.item_type], ['是否必填', item.required === true ? '是' : item.required === false ? '否' : '待确认'], ['填写说明', item.instructions]]), 'form-item')
-          + reviewSection('对象字段定义', owner && field ? `<p>引用已有定义；修改会影响引用该字段的表单。</p>${reviewLink('data-field', field.field_ref, `${owner.data_name} / ${field.field_name}`, owner.data_ref)}` : '<p>尚未引用对象字段。请在集中编辑中明确选择。</p>');
+          + reviewSection('对象字段定义', definition.status === 'valid' ? `<p>引用已有定义；修改会影响引用该字段的表单。</p>${reviewLink('data-field', item.data_field_ref, definition.node.label, item.business_data_ref)}` : `<p class="inline-warning">${item.data_field_ref ? '对象字段引用缺失、重复或归属不一致。' : '尚未引用对象字段。'}请在集中编辑中明确选择。</p>`)
+          + reviewSection('取值来源', (item.source_links || []).map(source => source.source_type === 'external_system' ? reviewFacts([['外部系统', source.source_system_name], ['来源数据', source.source_data_name], ['来源作用', FIELD_SOURCE_ROLES.find(option => option.value === source.source_role)?.label]]) + '<p class="technical-note">外部来源线索尚未绑定企业系统或数据版本。</p>' : reviewFacts([['来源类型', '本流程数据'], ['来源作用', FIELD_SOURCE_ROLES.find(option => option.value === source.source_role)?.label]])).join('') || '<p>尚未登记取值来源。</p>')
+          + renderFeaturePreview('form-execution', '字段自动带值与控制', '本页只编制字段取值和使用关系，实际自动带值、计算与权限控制尚未接通。');
       }
       if (target.kind === 'data') return reviewSection('数据对象', reviewFacts([['名称', item.data_name], ['说明', item.description], ['信息类型', INFORMATION_TYPE_OPTIONS.find(option => option.value === item.information_type)?.label]]), 'data')
         + reviewSection('对象字段', `<div class="review-links">${(item.fields || []).map(field => reviewLink('data-field', field.field_ref, field.field_name || '未命名字段', item.data_ref)).join('') || '<p>尚未定义字段。</p>'}</div>`)
+        + reviewSection('外部来源线索', (item.source_relations || []).map(source => reviewFacts([['来源部门', source.source_department], ['来源流程', source.source_process_name], ['来源环节', source.source_behavior_name], ['来源数据', source.source_data_name]])).join('') || '<p>尚未登记；不表示已经确定为本流程创建。</p>')
         + reviewSection('关联环节', `<div class="review-links">${behaviorLinks(item.behavior_links) || '<p>暂未关联到环节。</p>'}</div>`);
       return reviewSection('对象字段定义', reviewFacts([['名称', item.field_name], ['数据类型', item.field_type], ['业务定义', item.definition]]), 'data-field');
     }
@@ -5180,11 +5227,12 @@
     function renderReviewDetails() {
       const context = reviewContext();
       const target = reviewTarget();
-      const item = globalThis.ReviewWorkspace.resolve(currentDocument(), target);
+      const resolution = target ? globalThis.ElementReferences.lookup(globalThis.ElementReferences.buildCatalog(currentDocument()), target) : null;
+      const item = resolution?.status === 'valid' ? globalThis.ReviewWorkspace.resolve(currentDocument(), target) : null;
       const kinds = { behavior: '环节', relation: '关系', form: '表单', 'form-item': '表单字段', data: '数据对象', 'data-field': '对象字段' };
       const trail = context.trail.map((entry, index) => `<button class="button small" data-action="review-back" data-index="${index}" ${index === context.trail.length - 1 ? 'disabled aria-current="location"' : ''}>${kinds[entry.kind]}：${escapeHtml(globalThis.ReviewWorkspace.label(currentDocument(), entry))}</button>`).join('');
-      const body = !target ? '<p>从流程图或环节清单选择一项，查看人员、条件、数据与表单。</p>' : !item ? '<p>所选对象已不存在。请返回上级核对；不会自动选择其他对象。</p>'
-        : context.editingGroup ? `${renderReviewEditor(target, item)}<button class="button small" data-action="review-finish">返回摘要</button>` : renderReviewSummary(target, item);
+      const body = !target ? '<p>从流程图或环节清单选择一项，查看人员、条件、数据与表单。</p>' : !item ? `<p class="inline-warning">${resolution?.status === 'ambiguous' ? '所选标识重复，不能确定唯一对象。' : '所选对象已不存在或归属已变化。'}请返回上级核对；不会自动选择其他对象。</p>`
+        : context.editingGroup ? `${renderReviewEditor(target, item)}<button class="button small" data-action="review-finish">返回摘要</button>` : renderReviewSummary(target, item) + renderElementReferences(target);
       return `<aside class="section review-detail" id="reviewDetail" aria-label="当前对象详情" data-edit-group="${escapeAttribute(context.editingGroup)}" data-target-key="${escapeAttribute(target ? globalThis.ReviewWorkspace.targetKey(target) : '')}"><div class="section-body">
         <div class="item-title"><h2 tabindex="-1" data-review-heading>核对与补充</h2><button class="button small" data-action="review-size">${context.size === 'detail' ? '恢复并排' : '放大详情'}</button></div>
         <nav class="review-trail" aria-label="当前位置">${trail}</nav>
@@ -5213,11 +5261,13 @@
       const data = currentDocument();
       const objects = (data.data_objects || []).map(item => reviewLink('data', item.data_ref, `${item.data_name || '未命名数据'}${item.behavior_links?.length ? '' : '（暂未关联环节）'}`)).join('');
       const forms = (data.forms || []).map(item => reviewLink('form', item.form_ref, `${item.form_name || '未命名表单'}${item.behavior_links?.length ? '' : '（暂未关联环节）'}`)).join('');
-      return `<div class="review-catalog">${section('全流程数据', '包含暂未关联到环节的数据对象。', `<div class="review-links">${objects || '<p>尚无数据对象。</p>'}</div>`)}${section('全流程表单', '包含暂未关联到环节的表单和记录。', `<div class="review-links">${forms || '<p>尚无表单。</p>'}</div>`)}</div>`;
+      return `<div class="review-catalog">${section('全流程数据', '包含暂未关联到环节的数据对象。', `<div class="review-links">${objects || '<p>尚无数据对象。</p>'}</div>`)}${section('全流程表单', '包含暂未关联到环节的表单和记录。', `<div class="review-links">${forms || '<p>尚无表单。</p>'}</div>`)}</div><details class="element-preview-section"><summary>3000治理能力预览</summary><div class="feature-preview-list">${renderFeaturePreview('enterprise-catalog', '企业元素目录', '尚未读取企业目录；当前文件内的元素使用本地稳定标识。')}${renderFeaturePreview('mapping-recheck', '映射变更重检', '固定来源摘要与企业映射版本的重检须在3000进行。')}</div></details>`;
     }
 
     function openReviewTarget(target, root = false) {
       captureReviewPosition();
+      const resolution = globalThis.ElementReferences?.lookup(globalThis.ElementReferences.buildCatalog(currentDocument()), target);
+      if (resolution && resolution.status !== 'valid') return showStatus(resolution.status === 'ambiguous' ? '目标标识重复，不能确定唯一对象。请先修正；当前内容保持不变。' : '目标引用缺失或归属已变化，当前内容保持不变。', 'error');
       if (!globalThis.ReviewWorkspace.resolve(currentDocument(), target)) return showStatus('目标对象已不存在，当前内容保持不变。', 'error');
       editSessionManager.reset();
       if (root) {
@@ -5246,7 +5296,16 @@
         activeDataEditingMode = 'guided';
         return setActiveGovernanceStep('data', action === 'review-catalog' ? 'catalog' : element.dataset.view);
       }
-      if (action === 'review-open') return openReviewTarget({ kind: element.dataset.kind, ref: element.dataset.ref, parentRef: element.dataset.parentRef }, activeGovernanceStep === 'data' && !element.closest('#reviewDetail'));
+      if (action === 'review-open') {
+        const destination = { kind: element.dataset.kind, ref: element.dataset.ref, parentRef: element.dataset.parentRef };
+        if (element.dataset.referencePath) {
+          const api = globalThis.ElementReferences;
+          const reference = api.buildCatalog(currentDocument()).references.find(item => item.path === element.dataset.referencePath);
+          const currentDestination = element.dataset.referenceDirection === 'incoming' ? reference?.sourceTarget : reference?.target;
+          if (!reference || reference.status !== 'valid' || api.targetKey(currentDestination) !== api.targetKey(destination)) return showStatus('引用位置已经变化或无法唯一定位。当前内容保持不变，请重新核对引用。', 'error');
+        }
+        return openReviewTarget(destination, activeGovernanceStep === 'data' && !element.closest('#reviewDetail'));
+      }
       if (action === 'review-back') {
         if (context.manage) context.manage = false;
         else reviewWorkspaceManager.back(candidateStateKey(), element.hasAttribute('data-index') ? Number(element.dataset.index) : undefined);
@@ -5340,7 +5399,7 @@
               data-step="${escapeAttribute(targetStep)}"
               ${disabled && !task.steps.includes('start') ? 'disabled' : ''}
             >
-              <span class="step-copy"><span class="step-label">${escapeHtml(task.label)}</span></span>
+              <span class="step-copy"><span class="step-label">${escapeHtml(task.label)}</span><span class="step-responsibility">${escapeHtml(task.description)}</span></span>
               <span class="tab-status ${status.key === 'error' || status.key === 'missing' ? 'warning' : status.key === 'reviewable' ? 'ready' : 'waiting'}">${escapeHtml(status.label)}</span>
             </button>`;
           }).join('')}
@@ -5652,7 +5711,7 @@
               <article class="tool-help-card"><h3>使用人和责任</h3><p>编制人维护当前流程；业务核对人确认实际流程、表单、数据和跨部门事实；MDM工作组检查结构并组织后续交接。页面检查不能代替任何一方确认。</p></article>
               <article class="tool-help-card"><h3>开始前准备</h3><p>选择一条真实流程，准备可以核对的制度、表单、台账和实际做法，并明确编制人和不同人员担任的业务核对人。教学样例不能作为业务事实。</p></article>
               <article class="tool-help-card"><h3>保存和恢复</h3><p>3001不自动保存。每轮完成后由用户主动下载；关闭或刷新后，只能重新导入已下载文件继续编制。源文件不会被修改。</p></article>
-              <article class="tool-help-card"><h3>当前停止边界</h3><p>3001输出始终是未审核的单流程v7文件。3000的V7技术链路默认关闭，真实单流程试点待验收；3001不与3000通信，v7文件不得直接导入或自动降级。</p></article>
+              <article class="tool-help-card"><h3>当前交接边界</h3><p>3001下载未审核的单流程v8文件，由用户手工上传3000。3000按实际启用状态、权限和版本规则核对受支持的V7/V8；后续数据治理工作包仍限定已发布V7。3001不自动上传、不读取企业目录，也不降级文件。</p></article>
             </div>`
           )}
           ${section(
@@ -6269,7 +6328,7 @@
           <section class="next-stage-card future"><h3>外部材料</h3><p>准备结构预审问题处理记录和部门业务核对记录。3001不会生成、保存或嵌入这些记录。</p></section>
         </div>
         <p class="boundary"><strong>3000停止边界：</strong>3001只负责未审核编制，不判断3000的实际启用状态。用户手工上传前，由3000按功能开关、权限、部门范围、修订及内容摘要核对受支持的V7/V8文件，再按审核和发布要求办理。后续数据治理工作包仅支持明确选择的已发布V7版本，不自动建立工作包，也不将V8降级。</p>
-        ${renderLastDownloadResult()}`
+        ${renderLastDownloadResult()}<details class="element-preview-section"><summary>3000核对与发布能力预览</summary><div class="feature-preview-list">${renderFeaturePreview('department-review', '跨部门核对', '部门范围、确认记录和案例修订在3000办理；此按钮尚未接通。')}${renderFeaturePreview('publish', '审核与发布', '下载仍是未审核草稿；正式审核、批准与发布在3000进行。')}${renderFeaturePreview('data-governance', '数据治理工作包', '3000工作包目前限定明确选择的已发布V7；本页不生成工作包。')}</div></details>`
       )}`;
     }
 
@@ -6675,7 +6734,7 @@
               <label>执行部门<select data-graph-actor-department>${optionHtml([''].concat(DEPARTMENTS.filter(item => item !== '全公司')), actor.department)}</select></label>
               <label>执行岗位<select data-graph-actor-position>${optionHtml([''].concat(positions), actor.position)}</select></label>` : ''}
             ${actorAssignmentMode(behavior) === 'dynamic_from_data' ? `
-              <label>执行部门来源数据<select data-graph-property="actor_department_data_ref">${optionHtml([{ value: '', label: '请选择前序数据' }].concat((currentDocument().data_objects || []).map(item => ({ value: item.data_ref, label: item.data_name || '未命名数据' }))), behavior.actor_department_data_ref || '')}</select></label>
+              <label>执行部门来源数据<select data-graph-property="actor_department_data_ref">${dynamicDepartmentOptionHtml(behavior, currentDataFlowDetails())}</select><span class="technical-note">仅可选择本行为开始前已产生且可到达本行为的数据；失效原值保留并提示。</span></label>
               <label>岗位或责任人确定规则<textarea data-graph-property="actor_position_rule">${escapeHtml(behavior.actor_position_rule)}</textarea></label>` : ''}
             <label class="graph-property-wide">具体做什么（逐动作说明）<textarea data-graph-property="behavior_description" placeholder="按实际顺序写明动作、处理对象和结果">${escapeHtml(behavior.behavior_description || '')}</textarea></label>
             ${isEntry ? `<label class="graph-property-wide">流程如何开始<textarea data-graph-property="trigger" placeholder="写明谁在什么情况下发起本流程">${escapeHtml(behavior.trigger || '')}</textarea></label>` : ''}
@@ -6740,6 +6799,7 @@
                 <button class="button small" data-action="redo-graph" ${history.canRedo ? '' : 'disabled'}>重做</button>
                 ${renderGraphViewActions('flow')}
                 <button class="button small" data-action="toggle-diagram-expanded">${diagramExpanded ? '退出全屏' : '全屏检查流程图'}</button>
+                ${renderFeaturePreview('flow-animation', '流程图阅读演示', '流程图逐步动画尚未实现；当前只提供静态图、选择与定位。')}
               </div>
             </div>
             ${compactTaskUiEnabled() ? `<details><summary class="button small">查看流程图图例</summary>${renderDiagramLegend()}</details>` : renderDiagramLegend()}
@@ -6968,7 +7028,8 @@
             ${renderLifecycleStateFields(`data_objects.${dataIndex}.lifecycle.entry_state`, '这条数据进入本流程时的状态', lifecycle.entry_state)}
             <div class="cross-department-list">${routes || '<div class="inline-note">尚未记录生命周期路径。可以先核对入口状态；没有依据的内容保留待确认。</div>'}</div>
           </details>
-          <p class="boundary"><strong>边界：</strong>当前v8文件记录未审核的单流程事实和建议，暂不能直接导入3000。生命周期缺口属于业务提示，不阻止草稿下载。</p>
+          <p class="boundary"><strong>边界：</strong>当前v8文件记录未审核的单流程事实和建议，可由用户下载后手工上传3000，由3000按实际启用状态、权限与版本规则核对。生命周期缺口属于业务提示，不阻止草稿下载。</p>
+          ${renderFeaturePreview('lifecycle-execution', '执行归档与销毁', '3001只记录生命周期事实与建议，不执行真实归档、停用或销毁。')}
         </div>
       </section>`;
     }
@@ -8949,8 +9010,9 @@
     }
 
     function referencedDataField(item) {
-      return (currentDocument()?.data_objects || []).flatMap(dataObject => dataObject.fields || [])
-        .find(dataField => dataField.field_ref === item.data_field_ref) || null;
+      const target = { kind: 'data-field', ref: item.data_field_ref, parentRef: item.business_data_ref };
+      const resolution = globalThis.ElementReferences.lookup(globalThis.ElementReferences.buildCatalog(currentDocument()), target);
+      return resolution.status === 'valid' ? globalThis.ReviewWorkspace.resolve(currentDocument(), target) : null;
     }
 
     function formFieldReferenceDefaults(item, dataObject, dataField) {
@@ -8975,14 +9037,17 @@
     function groupedDataFieldSelector(pathKey, item) {
       const documentValue = currentDocument();
       const index = globalThis.FormFieldReuse.indexDataFields(documentValue);
+      const catalog = globalThis.ElementReferences.buildCatalog(documentValue);
       const currentRef = text(item.data_field_ref);
       const currentKnown = !currentRef || Boolean(index.byFieldRef[currentRef]);
       const groups = index.groups.map(group => {
         if (!group.fields.length) return '';
-        return `<optgroup label="${escapeAttribute(group.dataName || group.dataRef || '未命名数据对象')}">${group.fields.map(field => {
+        const duplicateObjectName = index.groups.filter(candidate => candidate.dataName && candidate.dataName === group.dataName).length > 1;
+        return `<optgroup label="${escapeAttribute((group.dataName || '未命名数据对象') + (duplicateObjectName ? ` · ${group.dataRef}` : ''))}">${group.fields.map(field => {
           const duplicateName = index.fields.filter(candidate => candidate.fieldName && candidate.fieldName === field.fieldName).length > 1;
-          const label = `${field.fieldName || '未命名对象字段'}（${field.fieldType || '类型待补'}）${duplicateName ? ` · ${field.fieldRef}` : ''}`;
-          return `<option value="${escapeAttribute(field.fieldRef)}" ${field.fieldRef === currentRef ? 'selected' : ''}>${escapeHtml(label)}</option>`;
+          const unique = globalThis.ElementReferences.lookup(catalog, { kind: 'data-field', ref: field.fieldRef, parentRef: group.dataRef }).status === 'valid';
+          const label = `${field.fieldName || '未命名对象字段'}（${field.fieldType || '类型待补'}）${duplicateName ? ` · ${field.fieldRef}` : ''}${unique ? '' : '（标识或归属无效）'}`;
+          return `<option value="${escapeAttribute(field.fieldRef)}" ${field.fieldRef === currentRef ? 'selected' : ''}${unique ? '' : ' disabled'}>${escapeHtml(label)}</option>`;
         }).join('')}</optgroup>`;
       }).join('');
       return `<div class="field"><label>引用对象字段</label><select data-bind="${escapeAttribute(pathKey)}" data-kind="nullable"><option value="">对象字段待补，仅登记业务数据归属</option>${!currentKnown ? `<option value="${escapeAttribute(currentRef)}" selected>${escapeHtml(currentRef)}（引用已失效）</option>` : ''}${groups}</select><span class="hint">按数据对象分组选择；同名字段仍按稳定技术标识区分。</span></div>`;
@@ -8992,6 +9057,7 @@
       const index = globalThis.FormFieldReuse.indexDataFields(currentDocument());
       const fieldEntry = index.byFieldRef[text(item.data_field_ref)];
       if (!fieldEntry) return null;
+      if (globalThis.ElementReferences.lookup(globalThis.ElementReferences.buildCatalog(currentDocument()), { kind: 'data-field', ref: item.data_field_ref, parentRef: fieldEntry.dataRef }).status !== 'valid') return null;
       return {
         dataRef: fieldEntry.dataRef,
         dataName: fieldEntry.dataName || fieldEntry.dataRef,
@@ -14442,7 +14508,7 @@
             currentEntry().stepView = activeStepView;
           }
         }
-        if (workspaceViewTitle) workspaceViewTitle.textContent = compactTaskUiEnabled() ? '编制任务' : '治理步骤';
+        if (workspaceViewTitle) workspaceViewTitle.textContent = compactTaskUiEnabled() ? '本次要做的工作' : '治理步骤';
         render();
       })
       .catch(() => {});

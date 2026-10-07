@@ -856,6 +856,10 @@ function jsonSafetyProblem(root) {
 app.get('/vendor/cytoscape.min.js', (_req, res) => {
   res.type('application/javascript').sendFile(cytoscapeBrowserPath);
 });
+// Keep the legacy page directly available while making the workbench the entry point.
+app.get('/', (_req, res) => {
+  res.set('Cache-Control', 'no-store').redirect(302, '/workbench/');
+});
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json({ limit: '10mb' }));
 

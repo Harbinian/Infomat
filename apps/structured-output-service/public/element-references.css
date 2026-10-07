@@ -1,0 +1,22 @@
+/* Reuse the existing paper, ink and accent palette. Desktop layout only. */
+.element-references h3 { margin-top: 0; }
+.element-references h4 { margin-bottom: 8px; }
+.element-reference-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.element-reference-list li { min-width: 0; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); overflow-wrap: anywhere; }
+.element-reference-title { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.reference-status { font-size: 12px; color: var(--sage); }
+[data-element-reference-status="missing"] .reference-status,
+[data-element-reference-status="ambiguous"] .reference-status,
+[data-element-reference-status="wrong-owner"] .reference-status { color: var(--red); }
+.element-reference-list .button { max-width: 100%; white-space: normal; text-align: left; }
+.element-reference-list details { margin-top: 8px; font-size: 12px; color: var(--muted); }
+.element-reference-list details p { margin: 4px 0; }
+.element-preview-section { margin-top: 12px; padding: 12px; border: 1px dashed var(--line); border-radius: 8px; background: var(--paper); }
+.feature-preview-list { display: grid; gap: 12px; margin-top: 12px; }
+.feature-preview { display: grid; gap: 4px; min-width: 0; margin-top: 8px; }
+.feature-preview .button { white-space: normal; cursor: default; opacity: 1; color: var(--muted); border-style: dashed; background: var(--paper-deep); }
+.feature-preview .technical-note { max-width: 48ch; overflow-wrap: anywhere; }
+.diagram-controls > .button { flex-shrink: 0; white-space: nowrap; }
+.diagram-controls .feature-preview { flex-basis: 100%; display: flex; align-items: center; gap: 8px; margin-top: 0; }
+.diagram-controls .feature-preview .button { flex: 0 0 auto; white-space: nowrap; }
+.compact-task .step-responsibility { white-space: normal; }
