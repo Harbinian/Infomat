@@ -6,7 +6,7 @@ import { createFlowLayoutScheduler } from './flow-layout-client.mjs';
 import { MOTION_MS, buildDirectRelationGraph, createMotionCoordinator, createReadingSession, kindLabel, locationViewport, targetKey } from './graph-motion.mjs';
 
 const array = value => Array.isArray(value) ? value : [];
-const READING_MESSAGES = { choice: '判断或多路线处已暂停：请选择文件中已记录的路线。', loop: '再次到达已读环节，已暂停，避免无限循环。', broken: '下一路线的稳定标识缺失或存在歧义，阅读已暂停。', end: '已到达当前记录路线的末端。' };
+const READING_MESSAGES = { choice: '判断或多路线处已暂停：请选择文件中已记录的路线。', loop: '再次到达已读环节，已暂停，避免无限循环。', broken: '下一路线的关联环节缺失或无法唯一确定，阅读已暂停。', end: '已到达当前记录路线的末端。' };
 const flowLayoutCache = new WeakMap();
 const appliedCueLedger = new WeakMap();
 const flowStyles = [
@@ -161,7 +161,7 @@ export default function GraphWorkspace({ document, candidateKey = '', selection,
     }
     async function mount() {
       const references = globalThis.ElementReferences;
-      if (!references) throw new Error('图形领域模块尚未加载，请重新打开工作台。');
+      if (!references) throw new Error('流程图暂时无法显示，请重新打开工作台。');
       let relationModel = null, flowModel = null, restore;
       if (relationTarget) {
         if (!relationActive.current) flowReturnViewport.current = viewportRef.current || viewport;
@@ -282,6 +282,7 @@ export default function GraphWorkspace({ document, candidateKey = '', selection,
           if (!isCurrent() || cy.destroyed()) return;
           const next = { width: container.clientWidth, height: container.clientHeight };
           if (next.width === dimensions.width && next.height === dimensions.height) return;
+          const widthChanged = next.width !== dimensions.width;
           dimensions = next;
           const restoredSize = graphRef.current?.cy === cy && graphRef.current.readingRestoreSize;
           const restoringReading = restoredSize && restoredSize.width === next.width && restoredSize.height === next.height;
@@ -290,7 +291,7 @@ export default function GraphWorkspace({ document, candidateKey = '', selection,
           const appliedUntil = graphRef.current?.cy === cy ? graphRef.current.appliedUntil : 0;
           motion.preserveResize();
           if (!readingSession.current) {
-            highlight(callbacks.current.selection, !restoringReading);
+            highlight(callbacks.current.selection, widthChanged && !restoringReading);
           }
           if (applied.length && appliedUntil > Date.now()) {
             applied.addClass('workbench-applied');
@@ -315,7 +316,7 @@ export default function GraphWorkspace({ document, candidateKey = '', selection,
       if (!isCurrent() || failure.name === 'AbortError') return;
       motion?.destroy(); cy?.destroy();
       if (graphRef.current?.cy === cy) graphRef.current = null;
-      setError(failure.message || '流程图布局失败，请检查文件后重新打开。'); setLayoutStatus('error');
+      setError('流程图暂时无法显示，请检查文件内容后重新打开工作台。'); setLayoutStatus('error');
     });
     return () => {
       // Invalidate before motion.destroy(), which flushes viewport reports.
@@ -378,14 +379,14 @@ export default function GraphWorkspace({ document, candidateKey = '', selection,
     try {
       const graph = graphRef.current;
       if (!graph?.isCurrent() || layoutStatus !== 'ready' || selection?.kind !== 'behavior') return;
-      if (graph.cy.nodes('.behavior-node').filter(node => node.data('focusRef') === selection.ref && node.data('status') === 'valid').length !== 1) throw new Error('请选择具有唯一稳定标识的起点环节。');
+      if (graph.cy.nodes('.behavior-node').filter(node => node.data('focusRef') === selection.ref && node.data('status') === 'valid').length !== 1) throw new Error('请选择能够唯一确定的起点环节。');
       readingSession.current = createReadingSession(document, selection.ref, { selection, viewport: graph.motion.snapshot('located'), layoutKey: graph.layoutKey }, {
         isUniqueBehavior: ref => graph.flowModel.nodes.filter(node => node.focusKind === 'behavior' && node.ref === ref && node.status === 'valid').length === 1,
         isUniqueRelation: ref => graph.flowModel.edges.filter(edge => edge.focusKind === 'relation' && edge.ref === ref && edge.status === 'valid').length === 1
       });
       callbacks.current.onReadingChange?.(true);
       updateReading(readingSession.current.snapshot());
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { setError('当前起点环节缺失或无法唯一确定，暂时不能开始阅读。'); }
   }
   useEffect(() => {
     if (!playing || reduce || !readingSession.current) return;
@@ -432,8 +433,8 @@ export default function GraphWorkspace({ document, candidateKey = '', selection,
       </Space>
     </div>
     {error && <Alert type="error" showIcon title={error} closable={layoutStatus !== 'error'} onClose={() => setError('')} />}
-    {flowInfo?.issues.length > 0 && <Alert type="warning" showIcon title={`图中保留 ${flowInfo.issues.length} 项标识或引用异常，未自动改连。`} description={flowInfo.issues.slice(0, 3).map(issue => issue.message).join('；')} />}
-    {relationInfo?.noTermUsage && <Alert type="info" showIcon title="术语已有定义和标识，当前文件没有结构化的术语使用关系。" />}
+    {flowInfo?.issues.length > 0 && <Alert type="warning" showIcon title={`图中保留 ${flowInfo.issues.length} 项对象或引用异常，未自动改连。`} description={flowInfo.issues.slice(0, 3).map(issue => issue.message).join('；')} />}
+    {relationInfo?.noTermUsage && <Alert type="info" showIcon title="术语已有定义，当前文件没有结构化的术语使用关系。" />}
     {reading && <div className="graph-reading-controls" style={{ padding: '8px 16px', background: '#efe3cc', borderBottom: '1px solid #dfd1b9' }}>
       <Space size={8} wrap>
         <Button disabled={!reading.canPrevious} onClick={() => { setPlaying(false); updateReading(readingSession.current.previous()); }}>上一步</Button>
@@ -445,7 +446,7 @@ export default function GraphWorkspace({ document, candidateKey = '', selection,
         {reduce && <Tag>减少动态效果 · 手动阅读</Tag>}
       </Space>
       {reading.stopped && <div role="status" style={{ marginTop: 8, color: '#8f4337' }}>{READING_MESSAGES[reading.stopped]}</div>}
-      {reading.choices.length > 0 && <Select aria-label="选择已记录路线" placeholder="选择已记录路线" style={{ width: 520, marginTop: 8 }} value={null} options={reading.choices.map(item => ({ value: item.ref, label: `${item.label} → ${array(document.behaviors).find(behavior => behavior.behavior_ref === item.toRef)?.behavior_name || item.toRef || '终点未填写'}` }))} onChange={ref => updateReading(readingSession.current.step(ref))} />}
+      {reading.choices.length > 0 && <Select aria-label="选择已记录路线" placeholder="选择已记录路线" style={{ width: 520, marginTop: 8 }} value={null} options={reading.choices.map(item => ({ value: item.ref, label: `${item.fromLabel} · ${item.label} → ${item.toLabel}` }))} onChange={ref => updateReading(readingSession.current.step(ref))} />}
     </div>}
     <div ref={containerRef} className="graph-canvas" role="img" aria-label={relationTarget ? `${kindLabel(relationTarget.kind)}直接关系画布` : '流程图画布，可拖动和缩放'} data-layout-status={layoutStatus} data-layout-engine={relationTarget ? 'direct-relations' : 'elk-layered'} data-layout-version={FLOW_LAYOUT_VERSION} data-layout-generation={readyGeneration} data-layout-revision={revision} style={{ flex: 1, minHeight: 0, position: 'relative', background: '#f4ecdc' }} />
     {layoutStatus === 'loading' && !empty && <div role="status" style={{ position: 'absolute', top: 72, left: 24, padding: '8px 16px', background: '#f1e7d4', border: '1px solid #dfd1b9', borderRadius: 8 }}>正在排列流程图…</div>}

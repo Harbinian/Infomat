@@ -1,5 +1,5 @@
 // Read-only display projection. Coordinates and diagnostics never enter business JSON.
-import { catalog } from './model.mjs';
+import { catalog, businessLabel, referenceName } from './model.mjs';
 const list = value => Array.isArray(value) ? value : [];
 const text = value => typeof value === 'string' ? value.trim() : '';
 const rawRef = value => typeof value === 'string' ? value : '';
@@ -44,12 +44,15 @@ function indexBy(items, key) {
   items.forEach(item => { const ref = rawRef(item?.[key]); if (ref) index.set(ref, [...(index.get(ref) || []), item]); });
   return index;
 }
-function actorFact(behavior, dataIndex, uniqueIdentity) {
+function actorFact(behavior, dataIndex, uniqueIdentity, entries) {
   if (['decision', 'parallel_split', 'parallel_join'].includes(behavior.node_type)) return '流程控制';
   if (behavior.actor_assignment_mode === 'dynamic_from_data') {
     const ref = rawRef(behavior.actor_department_data_ref);
     const matches = dataIndex.get(ref) || [];
-    return `部门：按数据动态确定\n${matches.length === 1 && uniqueIdentity('data', ref) ? text(matches[0].data_name) || ref : `${ref || '来源未填写'}（${matches.length ? '标识歧义' : '引用缺失'}）`}`;
+    const sourceName = matches.length === 1 && uniqueIdentity('data', ref)
+      ? referenceName(entries, ref, 'data')
+      : !ref ? '来源数据未填写' : matches.length ? '来源数据无法唯一确定' : '来源数据引用缺失';
+    return `部门：按数据动态确定\n${sourceName}`;
   }
   if (behavior.actor_assignment_mode === 'company_wide' || text(behavior.current_actor_role) === '全公司') return '执行范围：全公司';
   return text(behavior.current_actor_role) ? `执行信息：${text(behavior.current_actor_role)}` : '执行部门／岗位待明确';
@@ -95,13 +98,14 @@ export function buildFlowLayoutInput(document, { measureText = defaultMeasure } 
     const status = !ref ? 'missing' : uniqueIdentity('behavior', ref) ? 'valid' : 'ambiguous';
     const id = status === 'valid' ? `behavior:${encodeURIComponent(ref)}` : `unresolved-behavior:${index}`;
     if (status === 'valid') behaviorIds.set(ref, id);
-    else addIssue(`/behaviors/${index}/behavior_ref`, ref, ref ? `环节标识歧义，保留原值：${ref}` : '环节缺少稳定标识，不能推断身份');
+    else addIssue(`/behaviors/${index}/behavior_ref`, ref, ref ? '环节无法唯一确定，原引用已保留' : '环节信息不完整，无法确定对象');
     const control = { decision: '◇ 判断', parallel_split: '＋ 并行开始', parallel_join: '＋ 并行汇合' }[behavior.node_type];
-    const actor = actorFact(behavior, dataIndex, uniqueIdentity);
+    const actor = actorFact(behavior, dataIndex, uniqueIdentity, identities);
     if (behavior.actor_assignment_mode === 'dynamic_from_data' && !uniqueIdentity('data', rawRef(behavior.actor_department_data_ref))) addIssue(`/behaviors/${index}/actor_department_data_ref`, rawRef(behavior.actor_department_data_ref), actor.replaceAll('\n', ' · '));
     const aggregate = counts.get(ref);
     const aggregateLines = aggregate ? [aggregate.create + aggregate.update + aggregate.use + aggregate.pending_confirmation ? `数据 创${aggregate.create} 更${aggregate.update} 用${aggregate.use}${aggregate.pending_confirmation ? ` 待确认${aggregate.pending_confirmation}` : ''}` : '', aggregate.form ? `表单 ${aggregate.form}` : ''].filter(Boolean) : [];
-    const rawLabel = [control, text(behavior.behavior_name) || '环节名称待填写', actor, ...aggregateLines, status === 'valid' ? '' : `${status === 'ambiguous' ? '标识歧义' : '标识缺失'}${ref ? `：${ref}` : ''}`].filter(Boolean).join('\n');
+    const businessEntry = identities.find(item => item.path === `/behaviors/${index}`);
+    const rawLabel = [control, businessLabel(identities, businessEntry), actor, ...aggregateLines, status === 'valid' ? '' : status === 'ambiguous' ? '环节无法唯一确定' : '环节信息不完整'].filter(Boolean).join('\n');
     makeNode({ id, ref, focusKind: 'behavior', rawLabel, nodeType: behavior.node_type, path: `/behaviors/${index}`, status, extra: { actorFact: actor, dynamicActor: behavior.actor_assignment_mode === 'dynamic_from_data', aggregates: aggregate || null } });
   });
   function endpoint(ref, path, role) {
@@ -109,7 +113,7 @@ export function buildFlowLayoutInput(document, { measureText = defaultMeasure } 
     if (id) return id;
     const status = behaviorIndex.has(ref) ? 'ambiguous' : 'missing';
     const unresolvedId = `unresolved-endpoint:${path}:${role}`;
-    const rawLabel = `${role === 'source' ? '起点' : '终点'}引用${status === 'ambiguous' ? '歧义' : '缺失'}\n原值：${ref || '未填写'}\n未自动连接到同名环节`;
+    const rawLabel = `${role === 'source' ? '起点' : '终点'}环节${status === 'ambiguous' ? '无法唯一确定' : ref ? '引用缺失' : '未填写'}\n原引用已保留，未自动连接`;
     makeNode({ id: unresolvedId, ref, focusKind: 'unresolved', rawLabel, path, status, extra: { unresolvedRole: role } });
     addIssue(path, ref, rawLabel.replaceAll('\n', ' · '));
     return unresolvedId;
@@ -122,12 +126,12 @@ export function buildFlowLayoutInput(document, { measureText = defaultMeasure } 
     const ref = rawRef(relation.relation_ref);
     const path = `/flow_relations/${index}`;
     const status = !ref ? 'missing' : uniqueIdentity('relation', ref) ? 'valid' : 'ambiguous';
-    if (status !== 'valid') addIssue(`${path}/relation_ref`, ref, ref ? `流转标识歧义，保留原值：${ref}` : '流转缺少稳定标识，保留记录');
+    if (status !== 'valid') addIssue(`${path}/relation_ref`, ref, ref ? '流转无法唯一确定，原记录已保留' : '流转信息不完整，原记录已保留');
     const from = rawRef(relation.from_behavior_ref), to = rawRef(relation.to_behavior_ref);
     const sourceId = endpoint(from, `${path}/from_behavior_ref`, 'source');
     const targetId = endpoint(to, `${path}/to_behavior_ref`, 'target');
     const anomaly = status !== 'valid' || !behaviorIds.has(from) || !behaviorIds.has(to);
-    makeEdge({ id: status === 'valid' ? `relation:${encodeURIComponent(ref)}` : `unresolved-relation:${index}`, ref, sourceId, targetId, rawLabel: [relationLabel(relation), anomaly ? `引用异常 · 原值 ${from || '未填写'} → ${to || '未填写'}` : ''].filter(Boolean).join('\n'), path, status: anomaly ? 'unresolved' : 'valid', extra: { fromRef: from, toRef: to, relationType: relation.relation_type, loop: relation.relation_type === 'loop' || from === to } });
+    makeEdge({ id: status === 'valid' ? `relation:${encodeURIComponent(ref)}` : `unresolved-relation:${index}`, ref, sourceId, targetId, rawLabel: [relationLabel(relation), anomaly ? '流转引用异常 · 原引用已保留' : ''].filter(Boolean).join('\n'), path, status: anomaly ? 'unresolved' : 'valid', extra: { fromRef: from, toRef: to, relationType: relation.relation_type, loop: relation.relation_type === 'loop' || from === to } });
   });
   // Supported legacy calls remain explicit auxiliary information; they never create enterprise identities.
   const calls = [...list(source.internal_process_calls).map((call, index) => ({ call, path: `/internal_process_calls/${index}` })), ...list(source.migration?.internal_process_calls).map((call, index) => ({ call, path: `/migration/internal_process_calls/${index}` }))];
@@ -139,7 +143,7 @@ export function buildFlowLayoutInput(document, { measureText = defaultMeasure } 
     const migrationRetained = path.startsWith('/migration/');
     const navigationTarget = behaviorIds.has(caller) ? { kind: 'behavior', ref: caller, parentRef: '', relatedKind: 'call' } : null;
     const auxiliary = { auxiliary: true, migrationRetained, rawCall: { ...call }, callerRef: caller, returnRef: returned, navigationTarget };
-    makeNode({ id, ref, focusKind: 'call', rawLabel: `${migrationRetained ? '迁移留存 · 辅助引用' : '内部流程调用线索'}\n${text(call.target_process_name) || '目标流程待明确'}\n${ref || '调用标识未填写'}`, path, status, extra: auxiliary });
+    makeNode({ id, ref, focusKind: 'call', rawLabel: [migrationRetained ? '迁移留存 · 辅助引用' : '内部流程调用线索', text(call.target_process_name) || '目标流程待明确', status === 'valid' ? '' : status === 'ambiguous' ? '调用线索无法唯一确定' : '调用线索信息不完整'].filter(Boolean).join('\n'), path, status, extra: auxiliary });
     makeEdge({ id: `${id}:out`, ref, sourceId: endpoint(caller, `${path}/caller_behavior_ref`, 'source'), targetId: id, rawLabel: migrationRetained ? '迁移留存 · 调用引用' : '内部流程调用线索', path, focusKind: 'call', extra: auxiliary });
     if (returned) makeEdge({ id: `${id}:return`, ref, sourceId: id, targetId: endpoint(returned, `${path}/return_behavior_ref`, 'target'), rawLabel: migrationRetained ? '迁移留存 · 返回引用' : '返回环节线索', path, focusKind: 'call', extra: { ...auxiliary, loop: true } });
   });
@@ -166,18 +170,18 @@ export function pointsToSegments(points, start, end) {
   const length = Math.sqrt(squared);
   return { weights: points.map(point => ((point.x - start.x) * dx + (point.y - start.y) * dy) / squared), distances: points.map(point => (dx * (point.y - start.y) - dy * (point.x - start.x)) / length) };
 }
-function checkPoint(point, description) { if (!point || !finite(point.x) || !finite(point.y)) throw new Error(`ELK返回无效${description}坐标，未显示替代布局。`); }
+function checkPoint(point, description) { if (!point || !finite(point.x) || !finite(point.y)) throw new Error(`流程图${description}坐标无效，暂时无法显示。`); }
 
 /** Consume every section and label position; transparent anchors preserve self-loop geometry too. */
 export function materializeFlowLayout(input, graph) {
-  if (!graph || !finite(graph.width) || !finite(graph.height)) throw new Error('ELK未返回有效画布尺寸。');
+  if (!graph || !finite(graph.width) || !finite(graph.height)) throw new Error('流程图画布尺寸无效，暂时无法显示。');
   const outputNodes = new Map(list(graph.children).map(node => [node.id, node]));
   const outputEdges = new Map(list(graph.edges).map(edge => [edge.id, edge]));
   const elements = [], nodes = [], edges = [], labels = [], routeSegments = [];
   input.nodes.forEach(node => {
     const placed = outputNodes.get(node.id);
     checkPoint(placed, '节点');
-    if (!finite(placed.width) || !finite(placed.height)) throw new Error('ELK未返回有效节点尺寸。');
+    if (!finite(placed.width) || !finite(placed.height)) throw new Error('流程图对象尺寸无效，暂时无法显示。');
     const record = { ...node, x: placed.x, y: placed.y, width: placed.width, height: placed.height };
     nodes.push(record);
     elements.push({ group: 'nodes', classes: `${node.focusKind === 'behavior' ? 'behavior-node' : node.focusKind === 'call' ? 'internal-call-node' : 'unresolved-flow-node'} node-${node.nodeType}${node.status !== 'valid' ? ' flow-anomaly' : ''}${node.dynamicActor ? ' dynamic-actor-node' : ''}`, data: { ...node, nodeWidth: placed.width, nodeHeight: placed.height }, position: { x: placed.x + placed.width / 2, y: placed.y + placed.height / 2 } });
@@ -185,7 +189,7 @@ export function materializeFlowLayout(input, graph) {
   const nodeById = new Map(nodes.map(node => [node.id, node]));
   input.edges.forEach(edge => {
     const placed = outputEdges.get(edge.id);
-    if (!placed || !list(placed.sections).length) throw new Error(`ELK未返回路线 ${edge.ref || edge.path} 的完整路由。`);
+    if (!placed || !list(placed.sections).length) throw new Error('流程图未取得路线的完整路由，暂时无法显示。');
     const sections = placed.sections.map(section => {
       const points = [section.startPoint, ...list(section.bendPoints), section.endPoint];
       points.forEach(point => checkPoint(point, '路线'));
@@ -209,10 +213,10 @@ export function materializeFlowLayout(input, graph) {
       for (let pointIndex = 1; pointIndex < section.points.length; pointIndex += 1) routeSegments.push({ edgeId: edge.id, relationRef: edge.ref, sectionIndex: index, from: section.points[pointIndex - 1], to: section.points[pointIndex] });
     });
     const outputLabels = list(placed.labels);
-    if (edge.label && !outputLabels.length) throw new Error(`ELK未返回路线 ${edge.ref || edge.path} 的标签位置。`);
+    if (edge.label && !outputLabels.length) throw new Error('流程图未取得路线的标签位置，暂时无法显示。');
     outputLabels.forEach((label, index) => {
       checkPoint(label, '标签');
-      if (!finite(label.width) || !finite(label.height)) throw new Error('ELK未返回有效标签尺寸。');
+      if (!finite(label.width) || !finite(label.height)) throw new Error('流程图标签尺寸无效，暂时无法显示。');
       const bounds = { x1: label.x, y1: label.y, x2: label.x + label.width, y2: label.y + label.height, width: label.width, height: label.height };
       labels.push({ id: label.id, edgeId: edge.id, relationRef: edge.ref, text: edge.label, bounds });
       elements.push({ group: 'nodes', classes: `flow-label${edge.loop ? ' relation-loop' : ''}${edge.status !== 'valid' ? ' flow-anomaly' : ''}`, data: { id: `${edge.id}:label-node:${index}`, edgeId: edge.id, focusKind: edge.focusKind, focusRef: edge.ref, label: edge.label, rawLabel: edge.rawLabel, nodeWidth: label.width, nodeHeight: label.height, labelBounds: bounds, textMaxWidth: Math.max(1, label.width - 12), semanticSource: edge.source, semanticTarget: edge.target, path: edge.path, navigationTarget: edge.navigationTarget, auxiliary: edge.auxiliary, migrationRetained: edge.migrationRetained }, position: { x: label.x + label.width / 2, y: label.y + label.height / 2 } });
@@ -231,7 +235,7 @@ export function applyFlowRouteGeometry(cy, model) {
     for (const element of model.elements) {
       if (!element.style) continue;
       const edge = cy.getElementById(element.data.id);
-      if (!edge.length || !edge.isEdge()) throw new Error(`流程图路线 ${element.data.ref || element.data.id} 未完成端点关联。`);
+      if (!edge.length || !edge.isEdge()) throw new Error('流程图路线未完成起点和终点关联，暂时无法显示。');
       edge.style(element.style);
     }
   });
