@@ -62,7 +62,7 @@ check('cycles pause on the first revisited node and history cannot bypass that p
 check('missing and ambiguous stable IDs never become a reading route', () => {
   const document = base(); document.behaviors.push(behavior('b'));
   assert.equal(createReadingSession(document, 'a').step().stopped, 'broken');
-  assert.throws(() => createReadingSession(document, 'b'), /唯一稳定标识/);
+  assert.throws(() => createReadingSession(document, 'b'), /能够唯一确定/);
   document.behaviors = [behavior('a')]; document.flow_relations = [route('ax', 'a', 'missing')];
   assert.equal(createReadingSession(document, 'a').step().stopped, 'broken');
 });
@@ -79,7 +79,7 @@ check('reading uses ready-model identity checks for globally ambiguous source an
   const session = createReadingSession(document, 'a', {}, identity);
   const next = session.step();
   assert.equal(next.stopped, 'broken'); assert.deepEqual(next.refs, ['a']); assert.equal(next.position, 0);
-  assert.throws(() => createReadingSession(document, 'b', {}, identity), /唯一稳定标识/);
+  assert.throws(() => createReadingSession(document, 'b', {}, identity), /能够唯一确定/);
   assert.equal(JSON.stringify(document), before);
 });
 
@@ -133,7 +133,7 @@ check('parent ownership and a wrong-parent reference remain separate and explici
   const model = graph(document, target('form-item', 'item_1', 'form_1'));
   assert(model.elements.some(item => item.data.category === 'ownership' && item.data.label.includes('区域')));
   const failed = model.elements.find(item => item.data.anomaly && item.data.category === 'reference');
-  assert(failed.data.label.includes('父级不符')); assert(failed.data.label.includes('field_1'));
+  assert(failed.data.label.includes('父级不符')); assert(!failed.data.label.includes('field_1'));
   const unresolved = model.elements.find(item => item.data.id === failed.data.target);
   assert.equal(unresolved.data.target, null);
 });
@@ -144,7 +144,8 @@ check('aggregated field references name their source without inventing parent re
   document.forms = [{ form_ref: 'form_1', form_name: '测试表单', areas: [{ area_ref: 'area_1', area_title: '区域一', items: [{ item_ref: 'item_1', item_name: '显示名称', business_data_ref: 'data_1', data_field_ref: 'field_1' }] }] }];
   const model = graph(document, target('form-area', 'area_1', 'form_1'));
   const aggregate = model.elements.filter(item => item.data.category === 'reference');
-  assert.equal(aggregate.length, 2); assert(aggregate.every(item => item.data.label.includes('来自子项 item_1')));
+  assert.equal(aggregate.length, 2); assert(aggregate.every(item => item.data.label.includes('来自子项：表单字段') && item.data.label.includes('显示名称') && item.data.label.includes('测试表单')));
+  assert(aggregate.every(item => !item.data.label.includes('item_1')));
   assert(aggregate.every(item => item.data.source === model.centerId));
 });
 
@@ -180,9 +181,53 @@ check('incoming object references retain the exact structured-record source labe
   const model = graph(document, target('behavior', 'b'));
   const refs = model.elements.filter(item => item.data.category === 'reference');
   assert.equal(refs.length, 2);
-  assert(refs.some(item => item.data.label.includes('来自子项 link_1')));
-  assert(refs.some(item => item.data.label.includes('来自子项 link_2')));
+  assert(refs.some(item => item.data.label.includes('来自子项：数据与环节关系') && item.data.label.includes('创建') && item.data.label.includes('数据一')));
+  assert(refs.some(item => item.data.label.includes('来自子项：数据与环节关系') && item.data.label.includes('使用') && item.data.label.includes('数据一')));
+  assert(refs.every(item => !item.data.label.includes('link_1') && !item.data.label.includes('link_2')));
   assert(refs.every(item => item.data.target === model.centerId));
+});
+
+check('relation captions hide machine references and paths while preserving business codes and stable targets', () => {
+  const document = base();
+  document.process = { process_ref: 'machine_process_hidden', process_name: 'IT设备制度 GLTX-JY-34' };
+  document.behaviors = [{ ...behavior('machine_start_hidden'), behavior_name: '登记设备' }, { ...behavior('machine_end_hidden'), behavior_name: '归档登记' }];
+  document.flow_relations = [route('machine_route_hidden', 'machine_start_hidden', 'machine_end_hidden')];
+  document.data_objects = [{ data_ref: 'machine_data_hidden', data_name: '设备台账', fields: [{ field_ref: 'machine_field_hidden', field_name: '设备名称' }], lifecycle: { routes: [{ route_ref: 'machine_life_hidden', route_label: '保管路径', flow_relation_refs: ['machine_route_hidden'], events: [{ event_ref: 'machine_event_hidden', action: 'archive', trigger: { behavior_ref: 'machine_end_hidden' } }] }] } }];
+  document.forms = [{ form_ref: 'machine_form_hidden', form_name: '设备申请表 GLTX-JY-34-A-01', areas: [{ area_ref: 'machine_area_hidden', area_title: '基本信息', items: [{ item_ref: 'machine_item_hidden', item_name: '设备名称', business_data_ref: 'machine_data_hidden', data_field_ref: 'machine_unknown_hidden' }] }] }];
+  const before = JSON.stringify(document);
+  for (const current of [target('process', 'machine_process_hidden'), target('relation', 'machine_route_hidden'), target('form-item', 'machine_item_hidden', 'machine_form_hidden'), target('lifecycle-event', 'machine_event_hidden', 'machine_life_hidden')]) {
+    const model = graph(document, current), captions = [model.title, ...model.elements.map(item => item.data.label)].join('\n');
+    assert(!/machine_[a-z_]+|\/forms\/|\/data_objects\/|behavior_ref|data_field_ref|\barchive\b/.test(captions));
+    assert(model.elements.some(item => item.data.target?.ref === current.ref), 'Stable identities remain in internal navigation data');
+  }
+  assert(graph(document, target('process', 'machine_process_hidden')).elements.some(item => item.data.label.includes('GLTX-JY-34-A-01')), 'Business document numbers remain readable');
+  assert(graph(document, target('lifecycle-event', 'machine_event_hidden', 'machine_life_hidden')).title.includes('归档'));
+  assert.equal(JSON.stringify(document), before);
+});
+
+check('same-name fields display their parent names without exposing identifiers', () => {
+  const document = base();
+  document.data_objects = [{ data_ref: 'machine_owner_first', data_name: '设备台账', fields: [{ field_ref: 'machine_field_first', field_name: '名称' }] }, { data_ref: 'machine_owner_second', data_name: '软件台账', fields: [{ field_ref: 'machine_field_second', field_name: '名称' }] }];
+  const first = graph(document, target('data-field', 'machine_field_first', 'machine_owner_first'));
+  const second = graph(document, target('data-field', 'machine_field_second', 'machine_owner_second'));
+  assert(first.title.includes('设备台账') && second.title.includes('软件台账')); assert.notEqual(first.title, second.title);
+  assert(!first.title.includes('machine_') && !second.title.includes('machine_'));
+  assert.equal(first.elements.find(item => item.data.current).data.target.ref, 'machine_field_first');
+  assert.equal(second.elements.find(item => item.data.current).data.target.ref, 'machine_field_second');
+});
+
+check('unnamed reading choices use business names and explicit missing destinations without leaking route refs', () => {
+  const document = base();
+  document.behaviors = [{ ...behavior('machine_decision_hidden', 'decision'), behavior_name: '判断资料完整性' }, { ...behavior('machine_destination_hidden'), behavior_name: '补充申请' }];
+  document.flow_relations = [route('machine_choice_one', 'machine_decision_hidden', 'machine_destination_hidden', 'condition'), route('machine_choice_two', 'machine_decision_hidden', 'machine_missing_hidden', 'condition')];
+  const before = JSON.stringify(document), session = createReadingSession(document, 'machine_decision_hidden');
+  const current = session.step(); assert.equal(current.stopped, 'choice');
+  assert.deepEqual(current.choices.map(item => item.ref), ['machine_choice_one', 'machine_choice_two']);
+  assert(current.choices.every(item => item.label === '条件未填写' && item.fromLabel === '判断资料完整性'));
+  assert.equal(current.choices[0].toLabel, '补充申请'); assert.equal(current.choices[1].toLabel, '关联对象缺失');
+  assert(!current.choices.map(item => `${item.label} ${item.fromLabel} ${item.toLabel}`).join('\n').includes('machine_'));
+  assert.equal(session.step('machine_choice_two').stopped, 'broken'); assert.deepEqual(session.snapshot().refs, ['machine_decision_hidden']);
+  assert.equal(JSON.stringify(document), before);
 });
 
 check('existing shared trunks retain their specific logical source and destination', () => {
