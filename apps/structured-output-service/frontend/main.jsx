@@ -32,6 +32,6 @@ try {
   root.render(<ConfigProvider locale={zhCN} theme={theme}><AntApp><Workbench controller={controller} /></AntApp></ConfigProvider>);
   await controller.dispatch({ type: 'init' });
 } catch (error) {
-  root.render(<div className="startup-error"><h1>工作台暂未打开</h1><p>{error.message}</p><button onClick={() => location.reload()}>重新打开</button></div>);
+  root.render(<div className="startup-error"><h1>工作台暂未打开</h1><p>请确认服务可用后重新打开。</p><button onClick={() => location.reload()}>重新打开</button></div>);
 }
 if (import.meta.hot) import.meta.hot.dispose(() => { controller?.destroy(); root.unmount(); });

@@ -370,7 +370,8 @@ await check('real ELK routes missing/ambiguous references as explicit anomaly no
   assert(edge.semanticSource.startsWith('unresolved-endpoint:') && edge.semanticTarget.startsWith('unresolved-endpoint:'));
   assert(result.output.elements.some(item => item.group === 'nodes' && item.data.id === edge.semanticSource && item.classes.includes('flow-anomaly')));
   assert(result.output.elements.some(item => item.group === 'edges' && item.data.path === edge.path && item.classes.includes('flow-anomaly')));
-  assert(result.output.labels.find(item => item.edgeId === edge.id).text.includes(' start '));
+  assert(result.output.labels.find(item => item.edgeId === edge.id).text.includes('原引用已保留'));
+  assert(!result.output.labels.find(item => item.edgeId === edge.id).text.includes(' start '));
 });
 
 await check('cycles/self-loops/parallel/multi-edges preserve original semantic direction and type', () => {
@@ -493,7 +494,7 @@ await check('measured Chinese labels wrap and dynamic departments identify sourc
   assert.equal(node.dynamicActor, true); assert(node.actorFact.includes('按数据动态确定') && node.actorFact.includes('合成申请数据'));
   assert.equal(input.nodes.filter(item => item.focusKind === 'department').length, 0);
   document.data_objects.push({ data_ref: 'source_data', data_name: '合成重复数据', fields: [] });
-  assert(buildFlowLayoutInput(document).nodes.find(item => item.ref === 'start').actorFact.includes('标识歧义'));
+  assert(buildFlowLayoutInput(document).nodes.find(item => item.ref === 'start').actorFact.includes('无法唯一确定'));
 });
 
 await check('dynamic department source obeys full-document ambiguity, not a data-name guess', () => {
@@ -506,10 +507,34 @@ await check('dynamic department source obeys full-document ambiguity, not a data
     if (collision === 'package') document.export_meta = { package_ref: 'actor_source' };
     if (collision === 'migration') document.migration = { reference_materials: [{ material_ref: 'actor_source' }] };
     const before = bytes(document), input = buildFlowLayoutInput(document), node = input.nodes.find(item => item.focusKind === 'behavior' && item.ref === 'start');
-    assert(node.actorFact.includes('标识歧义'), `${collision}: dynamic actor source must not appear resolved`);
-    assert(node.actorFact.includes('actor_source'), `${collision}: preserve the original ref`);
+    assert(node.actorFact.includes('无法唯一确定'), `${collision}: dynamic actor source must not appear resolved`);
+    assert(!node.actorFact.includes('actor_source'), `${collision}: original ref cannot appear in the business label`);
+    assert.equal(document.behaviors[0].actor_department_data_ref, 'actor_source', `${collision}: preserve the original ref internally`);
     assert.equal(bytes(document), before);
   }
+});
+
+await check('flow business labels and diagnostics hide machine refs while retaining original values and auxiliary clues', async () => {
+  const document = fixture();
+  document.behaviors.forEach((item, index) => { item.behavior_name = `业务环节${index + 1}`; });
+  document.behaviors[0].actor_assignment_mode = 'dynamic_from_data';
+  document.behaviors[0].actor_department_data_ref = 'machine_actor_source_hidden';
+  document.behaviors.push(behavior('start', 'action', '同名业务环节'));
+  document.flow_relations.push(route('machine_route_hidden', ' machine_endpoint_hidden ', 'machine_missing_hidden', 'condition'));
+  document.internal_process_calls = [{ call_ref: 'machine_call_hidden', caller_behavior_ref: 'end', return_behavior_ref: 'decision', target_process_name: '设备制度 GLTX-JY-34' }];
+  document.migration = { internal_process_calls: [{ call_ref: 'machine_retained_hidden', caller_behavior_ref: 'branch_a', target_process_name: '申请表 GLTX-JY-34-A-01' }] };
+  const before = bytes(document), result = await layout(deepFreeze(document));
+  assertRoutes(result);
+  const captions = [...result.input.nodes.map(node => node.rawLabel), ...result.input.edges.map(edge => edge.rawLabel), ...result.input.issues.map(issue => issue.message)].join('\n');
+  assert(!/machine_[a-z_]+|\/behaviors\/|\/flow_relations\/|actor_department_data_ref/.test(captions));
+  assert(captions.includes('来源数据引用缺失') && captions.includes('无法唯一确定') && captions.includes('原引用已保留'));
+  assert(captions.includes('GLTX-JY-34') && captions.includes('GLTX-JY-34-A-01'));
+  const invalid = result.output.edges.find(edge => edge.ref === 'machine_route_hidden');
+  assert.equal(invalid.fromRef, ' machine_endpoint_hidden '); assert.equal(invalid.toRef, 'machine_missing_hidden');
+  assert(invalid.semanticSource.startsWith('unresolved-endpoint:') && invalid.semanticTarget.startsWith('unresolved-endpoint:'));
+  assert(result.input.issues.some(issue => issue.ref === 'machine_actor_source_hidden' && issue.path.endsWith('/actor_department_data_ref')));
+  assert.equal(result.output.nodes.find(node => node.ref === 'machine_call_hidden').rawCall.call_ref, 'machine_call_hidden');
+  assert.equal(bytes(document), before);
 });
 
 await check('synthetic condition/loop labels do not overlap object or label boxes', () => assertNoLabelOverlap(baseResult.output));

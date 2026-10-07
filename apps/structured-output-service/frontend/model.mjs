@@ -77,9 +77,58 @@ const ENUM_LABELS = {
   inherit_behavior:'沿用环节责任',explicit:'明确责任',record:'单条记录',version:'版本',batch:'批次',all_records:'全部记录',paper_original:'纸质原件',electronic_original:'电子原件',business_copy:'业务副本',paper_and_electronic:'纸质及电子',
   activate:'生效',deactivate:'停用',reactivate:'恢复生效',expire:'到期失效',restore_active_custody:'恢复使用',destroy:'销毁',irreversible_anonymize:'不可逆匿名化',
   auto_generated:'自动建议',confirmed:'已人工确认',needs_recheck:'需重新确认',rejected:'不采用',unclassified:'未分类',needs_review:'待核对',
-  source_not_applicable:'来源不适用',duplicate_suggestion:'重复建议',semantic_mismatch:'语义不符',insufficient_evidence:'依据不足',conflicting_sources:'来源冲突',other:'其他'
+  source_not_applicable:'来源不适用',duplicate_suggestion:'重复建议',semantic_mismatch:'语义不符',insufficient_evidence:'依据不足',conflicting_sources:'来源冲突',other:'其他',no_lifecycle_in_current_process:'本流程不发生生命周期变化',reference_only:'仅引用现有数据'
 };
-export const labelValue = value => ENUM_LABELS[value] || (value === '' ? '待填写' : String(value));
+export const labelValue = value => ENUM_LABELS[value] || (value === '' || value == null ? '待填写' : /^[a-z][a-z0-9_]*$/i.test(String(value)) ? '原有选项待核对' : String(value));
+
+function entryName(entries, entry) {
+  const entity=entry?.entity || {}, kind=normalizeKind(entry?.kind);
+  if(kind==='relation')return `${referenceName(entries,entity.from_behavior_ref,'behavior')} → ${referenceName(entries,entity.to_behavior_ref,'behavior')}${entity.condition ? ` · ${entity.condition}` : ''}`;
+  if(kind==='data-link')return `${labelValue(entity.operation || 'pending_confirmation')} · ${referenceName(entries,entity.behavior_ref,'behavior')}`;
+  if(kind==='form-link')return `${referenceName(entries,entity.behavior_ref,'behavior')} · ${(entity.operations||[]).map(labelValue).join('、') || '处理方式待填写'}`;
+  if(kind==='lifecycle-event')return labelValue(entity.action || 'pending_confirmation');
+  const key={process:'process_name',behavior:'behavior_name',data:'data_name','data-field':'field_name',form:'form_name','form-area':'area_title','form-item':'item_name',term:'term_name','data-source':'source_data_name','field-source':'source_data_name','lifecycle-route':'route_label'}[kind];
+  return entity[key] || (entry?.label && entry.label!==entry.ref && entry.label!==kind ? entry.label : '') || `${KIND_LABELS[kind] || '对象'}名称待填写`;
+}
+
+export function referenceName(entries, ref, kind) {
+  if(!ref)return '尚未指定';
+  const matches=entries.filter(entry=>entry.ref===ref && (!kind || entry.kind===normalizeKind(kind)));
+  if(matches.length!==1 || matches[0]?.ambiguous)return matches.length ? '关联对象无法唯一确定' : '关联对象缺失';
+  return entryName(entries,matches[0]);
+}
+
+export function businessContext(entries, entry) {
+  const refs=[entry?.formRef,entry?.areaRef,entry?.dataRef,entry?.parentRef].filter(ref=>ref && ref!==entry.ref);
+  return [...new Set(refs)].map(ref=>referenceName(entries,ref)).join(' / ');
+}
+
+export function businessLabel(entries, target) {
+  if(!target)return '对象待选择';
+  const matches=entries.filter(entry=>entry.kind===normalizeKind(target.kind) && entry.ref===target.ref && (!target.parentRef || entry.parentRef===target.parentRef));
+  const entry=target.entity ? target : matches.length===1 ? matches[0] : null;
+  if(!entry)return matches.length ? '关联对象无法唯一确定' : '关联对象缺失或所属范围不符';
+  const name=entryName(entries,entry),context=businessContext(entries,entry);
+  const peers=entries.filter(other=>other.kind===entry.kind && entryName(entries,other)===name && businessContext(entries,other)===context);
+  const description=entry.entity?.definition || entry.entity?.description || entry.entity?.behavior_description || '';
+  const hint=peers.length>1 && description ? ` · ${description.slice(0,24)}${description.length>24?'…':''}` : '';
+  const alike=peers.filter(other=>(other.entity?.definition || other.entity?.description || other.entity?.behavior_description || '')===description);
+  // The number is a display cue only. Selection and edits still use the original stable reference and owner.
+  const ordinal=alike.length>1 && !entry.ambiguous ? `（同名记录 ${[...alike].sort((a,b)=>String(a.ref).localeCompare(String(b.ref))).findIndex(other=>other===entry || other.path===entry.path)+1}）` : '';
+  return `${name}${context?` · ${context}`:''}${hint}${ordinal}${entry.ambiguous?'（关联无法唯一确定）':''}`;
+}
+
+export function messageForUser(document, message) {
+  let result=String(message || '当前操作未能完成，请核对内容后重试。');
+  const entries=catalog(document), refs=new Set(entries.map(entry=>entry.ref).filter(Boolean));
+  const collect=value=>{if(!value || typeof value!=='object')return;for(const [key,item] of Object.entries(value)){if(/_refs?$/.test(key)){for(const ref of Array.isArray(item)?item:[item])if(typeof ref==='string' && ref)refs.add(ref);}else if(item && typeof item==='object')collect(item);}};
+  collect(document);
+  for(const ref of [...refs].sort((a,b)=>b.length-a.length))result=result.replace(new RegExp(`(?<![A-Za-z0-9_])${ref.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}(?![A-Za-z0-9_])`,'g'),`「${referenceName(entries,ref)}」`);
+  result=result.replace(/\/(?:process|behaviors|flow_relations|terms|data_objects|forms|migration|export_meta)(?:\/[A-Za-z0-9_~.-]+)+/g,'对应内容');
+  const names={behavior_ref:'关联环节',from_behavior_ref:'起点环节',to_behavior_ref:'终点环节',relation_ref:'环节流转',data_ref:'数据对象',field_ref:'对象字段',form_ref:'表单',area_ref:'表单区域',item_ref:'表单字段',term_ref:'术语',source_ref:'数据来源',route_ref:'生命周期路径',event_ref:'生命周期事件',process_ref:'流程',package_ref:'文件',data_field_ref:'引用对象字段',business_data_ref:'业务数据归属',updated_field_refs:'更新字段',actor_department_data_ref:'用于确定部门的数据',available_from_behavior_ref:'可用起点环节',source_data_ref:'来源数据对象',behavior_name:'环节名称',data_name:'数据对象名称',field_name:'字段名称',form_name:'表单名称',item_name:'字段显示名称',area_title:'区域名称',node_type:'环节类型',information_type:'信息类型',schema_version:'文件格式'};
+  result=result.replace(/\b[A-Za-z_][A-Za-z0-9_]*\b/g,word=>names[word] || ENUM_LABELS[word] || (/^[a-z][a-z0-9]*(?:_[a-z0-9]+)+$/.test(word)?'对应内容':word));
+  return result.replace(/(?:技术|稳定)?标识存在歧义/g,'关联无法唯一确定').replace(/技术标识|稳定标识/g,'对象引用');
+}
 const opts = values => values.map(value => ({value,label:labelValue(value)}));
 const spec = (key,label,editor='text',values=null,extra={}) => ({ key,label,editor, ...(values ? {options:opts(values)} : {}), ...extra });
 const stateFields = (prefix,label) => [
@@ -90,8 +139,9 @@ const stateFields = (prefix,label) => [
 ];
 export function fields(document, target, enums = {}, modules = {}) {
   const kind = normalizeKind(target?.kind), current = resolve(document,target), entity = current.entity || {};
-  const references = (type, nullable = false, owner = '') => [ ...(nullable ? [{value:null,label:'未指定'}] : []), ...catalog(document).filter(item => item.kind===type && (!owner || item.parentRef===owner)).map(item => ({value:item.ref,label:`${item.label} · ${item.ref}${item.ambiguous ? '（标识歧义）' : ''}`,disabled:item.ambiguous})) ];
-  const ref = (key,label,type,nullable=false,owner='') => ({key,label,editor:'select',nullable,options:references(type,nullable,owner)});
+  const entries=catalog(document);
+  const references = (type, nullable = false, owner = '') => [ ...(nullable ? [{value:null,label:'未指定'}] : []), ...entries.filter(item => item.kind===type && (!owner || item.parentRef===owner)).map(item => ({value:item.ref,label:businessLabel(entries,item),disabled:item.ambiguous})) ];
+  const ref = (key,label,type,nullable=false,owner='') => ({key,label,editor:'select',reference:true,nullable,options:references(type,nullable,owner)});
   const types = enums.fieldType || enums.field_types || enums.fieldTypes || ['文本','长文本','数字','日期','日期时间','金额','枚举','布尔','部门','人员','文件编号','签名','图片','附件','二维码'];
   const definitions = {
     process:[spec('process_name','流程名称'),spec('owning_department','归属部门'),spec('purpose','目的','textarea'),spec('scope','适用范围','textarea'),spec('capability_domain','能力域','text',null,{nullable:true}),spec('business_capability','业务能力','text',null,{nullable:true}),spec('classification_status','分类状态','select',['unclassified','needs_review','confirmed'])],
@@ -103,11 +153,11 @@ export function fields(document, target, enums = {}, modules = {}) {
     'form-area':[spec('area_title','区域名称'),spec('area_type','区域类型','select',['','基本信息','明细清单'])],
     'form-item':[spec('item_name','显示名称'),spec('item_type','显示字段类型','select',types),spec('required','必填','boolean'),spec('instructions','填写说明','textarea'),ref('business_data_ref','业务数据归属','data',true),ref('data_field_ref','引用对象字段','data-field',true,entity.business_data_ref),spec('value_usage_mode','字段值使用方式','select',['authoritative_input','reuse_existing','calculated','external_source','pending_confirmation']),spec('value_origin_mode','取值方式','select',['direct_current_process','depends_on_data','pending_confirmation'])],
     term:[spec('term_name','术语名称'),spec('definition','术语定义','textarea')],
-    'data-link':[ref('behavior_ref','关联环节','behavior'),spec('operation','数据操作','select',['create','update','use','pending_confirmation']),{key:'updated_field_refs',label:'更新字段',editor:'multi-select',options:references('data-field',false,current.parentRef)}],
+    'data-link':[ref('behavior_ref','关联环节','behavior'),spec('operation','数据操作','select',['create','update','use','pending_confirmation']),{key:'updated_field_refs',label:'更新字段',editor:'multi-select',reference:true,options:references('data-field',false,current.parentRef)}],
     'data-source':[spec('source_department','来源部门'),spec('source_process_name','来源流程'),spec('source_behavior_name','来源环节'),spec('source_data_name','来源数据'),spec('availability_mode','可用时间','select',['process_start','at_behavior','pending_confirmation']),ref('available_from_behavior_ref','可用起点环节','behavior',true)],
     'form-link':[ref('behavior_ref','关联环节','behavior'),spec('operations','处理操作','multi-select',['create','fill','modify','review','approve','confirm','read','archive','void']),spec('notes','说明','textarea')],
     'field-source':[spec('source_type','来源类型','select',['process_data','external_system']),ref('source_data_ref','来源数据对象','data',true),spec('source_system_name','外部系统名称'),spec('source_data_name','来源数据名称'),spec('source_role','来源作用','select',['provides_value','calculation_input','validation_basis'])],
-    'lifecycle-route':[spec('route_label','路径名称'),{key:'flow_relation_refs',label:'对应环节流转',editor:'multi-select',options:references('relation')},...stateFields('exit_state','退出')],
+    'lifecycle-route':[spec('route_label','路径名称'),{key:'flow_relation_refs',label:'对应环节流转',editor:'multi-select',reference:true,options:references('relation')},...stateFields('exit_state','退出')],
     'lifecycle-event':[spec('action','生命周期动作','select',['activate','deactivate','reactivate','void','expire','archive','restore_active_custody','destroy','irreversible_anonymize']),spec('trigger.mode','触发方式','select',['behavior','time_period','business_condition','external_process_notice','pending_confirmation']),spec('trigger.operator','组合方式','select',['single','and','or','pending_confirmation']),ref('trigger.behavior_ref','触发环节','behavior',true),spec('trigger.expression','触发表达说明','textarea'),...stateFields('result_state','结果'),spec('target_scope','影响范围','select',['record','version','batch','all_records','pending_confirmation']),spec('carrier_scope','载体范围','select',['paper_original','electronic_original','business_copy','paper_and_electronic','not_applicable','pending_confirmation']),spec('responsibility.mode','责任方式','select',['inherit_behavior','explicit','pending_confirmation']),spec('responsibility.department','责任部门'),spec('responsibility.position','责任岗位'),spec('exception_handling','异常处理','textarea'),spec('review_status','编制确认状态','select',['auto_generated','pending_confirmation','confirmed','needs_recheck','not_applicable','rejected']),spec('high_risk','高风险动作','boolean'),spec('decision_reason','决定原因','select',['','source_not_applicable','duplicate_suggestion','semantic_mismatch','insufficient_evidence','conflicting_sources','other']),spec('decision_notes','决定说明','textarea')]
   };
   const result = definitions[kind] || [];
@@ -120,13 +170,14 @@ export function fields(document, target, enums = {}, modules = {}) {
   // Preserve invalid existing values visibly; selecting an unrelated same-name object is always explicit.
   return result.map(field => {
     const value = readPath(entity,field.key);
-    if (field.options && value != null && !Array.isArray(value) && !field.options.some(option => option.value === value)) return {...field,options:[...field.options,{value,label:`${value}（原值：缺失或不适用）`,disabled:true}]};
+    if (field.options && value != null && !Array.isArray(value) && !field.options.some(option => option.value === value)) return {...field,options:[...field.options,{value,label:field.reference?'关联对象缺失或不适用（原引用保留）':'原有选项待核对',disabled:true}]};
     return field;
   });
 }
 export function dynamicDepartmentOptions(document, behaviorRef, modules = {}) {
   const flow=modules.StructureLearningScore?.dataFlowConsistencyDetails(document);
-  if(flow?.isAvailableBeforeBehavior)return catalog(document).filter(item=>item.kind==='data'&&!item.ambiguous&&flow.isAvailableBeforeBehavior(item.ref,behaviorRef)===true).map(item=>({value:item.ref,label:`${item.label} · ${item.ref}`}));
+  const entries=catalog(document);
+  if(flow?.isAvailableBeforeBehavior)return entries.filter(item=>item.kind==='data'&&!item.ambiguous&&flow.isAvailableBeforeBehavior(item.ref,behaviorRef)===true).map(item=>({value:item.ref,label:businessLabel(entries,item)}));
   // A missing domain module never authorizes a second, approximate availability rule.
   return [];
 }
