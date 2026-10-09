@@ -156,6 +156,60 @@ async page => {
   assert(await readable() >= 13.5, 'Import must discard the previous blank candidate viewport and use readable 14px text.');
   await shot('initial-readable-start');
   check('import discards the previous candidate viewport and shows a readable start');
+  const entryView = refs => page.evaluate(refs => {
+    const canvas = document.querySelector('.graph-canvas'), cy = canvas._cyreg.cy;
+    const nodes = cy.nodes('.behavior-node').filter(node => refs.includes(node.data('focusRef')));
+    const bounds = nodes.renderedBoundingBox({ includeLabels: true, includeOverlays: false });
+    return { zoom: cy.zoom(), pan: cy.pan(), width: cy.width(), height: cy.height(), bounds,
+      entries: nodes.map(node => ({ ref: node.data('focusRef'), position: node.position(), rendered: node.renderedPosition(), font: node.numericStyle('font-size') * cy.zoom() })),
+      selected: cy.elements('.workbench-selected').length, generation: canvas.dataset.layoutGeneration,
+      overflow: document.documentElement.scrollWidth > innerWidth };
+  }, refs);
+  const assertInitialEntries = async refs => {
+    const view = await entryView(refs);
+    assert(view.entries.length === refs.length && Math.abs(view.bounds.x1 - 48) < 1 && view.zoom === 1 && !view.overflow, 'Fresh structural entry group must start 48px from the left at unit zoom with no page overflow.');
+    assert(view.entries.every(node => node.font >= 13.5 && node.rendered.x > 0 && node.rendered.x < view.width && node.rendered.y > 0 && node.rendered.y < view.height), 'All fitting entry nodes must be visible with readable labels.');
+    assert(view.selected === 0 && await page.getByRole('button', { name: '从当前环节阅读', exact: true }).isDisabled(), 'Fresh positioning must not select or authorize a business reading start.');
+    return view;
+  };
+  result.entryViews = { unique: await assertInitialEntries(['behavior_fixture_submit']) };
+  const importEntryFixture = async document => {
+    document.export_meta.exported_at = new Date().toISOString();
+    await page.getByLabel('导入文件', { exact: true }).setInputFiles({ name: 'fictional-entry-check.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(document), 'utf8') });
+    const discardChanges = page.getByRole('button', { name: '放弃未下载内容并继续', exact: true });
+    await page.waitForFunction(name => document.querySelector('.process-title')?.textContent === name || [...document.querySelectorAll('.ant-modal-title')].some(title => title.textContent === '先保留尚未下载的内容'), document.process.process_name);
+    if (await discardChanges.isVisible().catch(() => false)) await discardChanges.click();
+    await page.waitForFunction(({ name, count, first }) => document.querySelector('.process-title')?.textContent === name && document.querySelector('.graph-canvas')?.dataset.layoutStatus === 'ready' && document.querySelector('.graph-canvas')?._cyreg?.cy?.nodes('.behavior-node').length === count && document.querySelector('.graph-canvas')?._cyreg?.cy?.nodes('.behavior-node').first().data('focusRef') === first, { name: document.process.process_name, count: document.behaviors.length, first: document.behaviors[0].behavior_ref });
+    await stable();
+  };
+  const reordered = structuredClone(before.json);
+  reordered.behaviors.reverse(); reordered.process.process_name = '虚构测试：结构入口与数组顺序';
+  await importEntryFixture(reordered);
+  result.entryViews.reordered = await assertInitialEntries(['behavior_fixture_submit']);
+  assert(await page.evaluate(() => document.querySelector('.graph-canvas')._cyreg.cy.nodes('.behavior-node').first().data('focusRef')) === 'graph_finish', 'The reordered fixture must really put a non-entry record first.');
+  await shot('reordered-structural-entry');
+  check('structural entry excludes recorded return edges and is independent of behavior array order');
+  const multiple = structuredClone(reordered);
+  multiple.process.process_name = '虚构测试：并列结构入口';
+  multiple.behaviors.splice(1, 0, { ...structuredClone(before.json.behaviors.find(item => item.behavior_ref === 'behavior_fixture_submit')), behavior_ref: 'graph_second_entry', behavior_name: '测试另一入口：独立提交' });
+  multiple.flow_relations.push({ relation_ref: 'graph_second_start', from_behavior_ref: 'graph_second_entry', to_behavior_ref: 'graph_decision', relation_type: 'sequence', condition: '' });
+  await importEntryFixture(multiple);
+  result.entryViews.multiple = await assertInitialEntries(['behavior_fixture_submit', 'graph_second_entry']);
+  await page.locator('.graph-status').getByText('多个结构入口，阅读起点由你选择。', { exact: false }).waitFor();
+  await shot('multiple-fresh-entries');
+  const multipleBefore = await download('multiple-before-presentation');
+  await full(); await selectObject('graph_finance');
+  const selectedBefore = await cyState();
+  await page.getByRole('button', { name: '查看关系图', exact: true }).click(); await stable();
+  await page.getByRole('button', { name: '← 返回流程图', exact: true }).click(); await stable();
+  const selectedAfter = await cyState();
+  assert(Math.abs(selectedBefore.zoom - selectedAfter.zoom) < 0.001 && Math.abs(selectedBefore.pan.x - selectedAfter.pan.x) < 1 && Math.abs(selectedBefore.pan.y - selectedAfter.pan.y) < 1 && selectedAfter.selected.includes('graph_finance'), 'Returning from relationships must retain the selected non-entry and its exact viewport, without jumping to entry.');
+  const multipleAfter = await download('multiple-after-presentation');
+  assert(JSON.stringify(multipleBefore.json) === JSON.stringify(multipleAfter.json), 'Entry presentation, full fit and relationship return must preserve all business JSON.');
+  result.entryDownloads = { before: { digest: multipleBefore.digest, byteLength: multipleBefore.byteLength }, after: { digest: multipleAfter.digest, byteLength: multipleAfter.byteLength }, businessJsonUnchanged: true, excludedOnly: 'export_meta.exported_at' };
+  await shot('multiple-entry-selected-return');
+  await importEntryFixture(reordered);
+  check('multiple entries stay left without auto-selection; non-entry relationship return and actual downloaded JSON remain unchanged');
   const workerCount = await page.evaluate(() => { window.__elkWorkerDelay = 900; return window.__elkWorkerAudit.length; });
   await page.getByLabel('导入文件', { exact: true }).setInputFiles(config.fixturePath);
   await page.waitForFunction(count => window.__elkWorkerAudit.slice(count).some(worker => worker.queued && !worker.terminated), workerCount);
@@ -204,13 +258,14 @@ async page => {
         labels.forEach(label => { if (label.data('edgeId') !== edge.id() && segmentCrosses(actual[index - 1], actual[index], label.boundingBox({ includeLabels: true, includeOverlays: false }))) routeLabelCrossings.push([edge.data('focusRef'), label.data('focusRef')]); });
       }
     });
-    return { nodeCount: nodes.length, logicalCount: logical.length, labelCount: labels.length, nodeCollisions, labelCollisions, labelPairCollisions, invalidPaths, endpointMismatches, bendMismatches, routeNodeCrossings, routeLabelCrossings, engine: document.querySelector('.graph-canvas').dataset.layoutEngine, labels: labels.map(label => ({ ref: label.data('focusRef'), text: label.data('rawLabel'), background: label.style('background-color'), fontSize: label.numericStyle('font-size') })), aggregates: nodes.filter(node => node.data('aggregates')?.form).map(node => ({ ref: node.data('focusRef'), label: node.data('rawLabel') })), arrows: logical.map(edge => ({ ref: edge.data('focusRef'), shape: edge.style('target-arrow-shape'), lineColor: edge.style('line-color'), arrowColor: edge.style('target-arrow-color'), loop: edge.hasClass('relation-loop') })) };
+    return { nodeCount: nodes.length, logicalCount: logical.length, labelCount: labels.length, nodeCollisions, labelCollisions, labelPairCollisions, invalidPaths, endpointMismatches, bendMismatches, routeNodeCrossings, routeLabelCrossings, engine: document.querySelector('.graph-canvas').dataset.layoutEngine, labels: labels.map(label => ({ ref: label.data('focusRef'), text: label.data('rawLabel'), background: label.style('background-color'), fontSize: label.numericStyle('font-size') })), aggregates: nodes.filter(node => node.data('aggregates')).map(node => ({ ref: node.data('focusRef'), label: node.data('rawLabel'), renderedLabel: node.data('label'), counts: node.data('aggregates') })), arrows: logical.map(edge => ({ ref: edge.data('focusRef'), shape: edge.style('target-arrow-shape'), lineColor: edge.style('line-color'), arrowColor: edge.style('target-arrow-color'), loop: edge.hasClass('relation-loop') })) };
   });
   assert(result.geometry.logicalCount === 8 && result.geometry.nodeCount === 7, 'All recorded routes and nodes must render.');
   assert(result.geometry.engine === 'elk-layered' && !result.geometry.nodeCollisions.length && !result.geometry.labelCollisions.length && !result.geometry.labelPairCollisions.length && !result.geometry.invalidPaths.length && !result.geometry.endpointMismatches.length && !result.geometry.bendMismatches.length && !result.geometry.routeNodeCrossings.length && !result.geometry.routeLabelCrossings.length, `Actual ELK routes, endpoints, bends, nodes and labels must match and remain clear: ${JSON.stringify(result.geometry)}`);
   assert(result.geometry.arrows.every(edge => edge.shape === 'triangle' && edge.lineColor === (edge.loop ? 'rgb(140,63,51)' : 'rgb(111,124,99)') && edge.arrowColor === edge.lineColor), 'Each recorded route must retain its own warm arrow, including brick-red returns.');
   assert(result.geometry.labels.length > 0 && result.geometry.labels.every(label => label.fontSize === 13 && label.background === 'rgb(244,236,220)'), 'Measured route labels must render in 13px on warm paper.');
-  assert(result.geometry.aggregates.length > 0 && result.geometry.aggregates.every(node => node.label.includes('表单')), 'Recorded data and form counts must remain visible in the node summary.');
+  assert(result.geometry.aggregates.some(node => node.counts.form > 0) && result.geometry.aggregates.some(node => node.counts.create + node.counts.update + node.counts.use + node.counts.pending_confirmation > 0), 'Recorded data and form counts must remain intact as internal metadata.');
+  assert(result.geometry.aggregates.every(node => !/(?:^|\n)数据 创\d|(?:^|\n)表单\s+\d/.test(node.label) && !/(?:^|\n)数据 创\d|(?:^|\n)表单\s+\d/.test(node.renderedLabel)), 'Rendered flow nodes must omit data operation and form counts without removing recorded relationships.');
   await shot('full-flow-geometry');
   check('actual ELK node/label geometry, complete bend positions, endpoint arrows and individual logical route direction');
   await clickNode('behavior_fixture_submit');

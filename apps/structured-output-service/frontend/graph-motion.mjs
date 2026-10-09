@@ -81,6 +81,25 @@ export function locationViewport(cy, elements, { padding = 32, maxZoom = 0.65, r
   return { zoom, pan: { x: cy.width() / 2 - (bounds.x1 + bounds.x2) / 2 * zoom, y: cy.height() / 2 - (bounds.y1 + bounds.y2) / 2 * zoom } };
 }
 
+/** Fresh flow views start at the structural entry group; an unknown entry uses an overview. */
+export function initialFlowViewport(cy, entry, { padding = 48, readableZoom = 1 } = {}) {
+  const width = cy.width(), height = cy.height();
+  if (!(width > 2 * padding && height > 2 * padding)) return null;
+  const validEntries = ['unique', 'multiple'].includes(entry?.status) && entry.nodeIds?.length;
+  const entries = validEntries ? cy.nodes().filter(node => entry.nodeIds.includes(node.id()) && node.data('status') === 'valid' && node.hasClass('behavior-node')) : cy.collection();
+  // Incomplete presentation metadata cannot choose a different entry on the user's behalf.
+  const identified = validEntries && entries.length === entry.nodeIds.length;
+  const elements = identified ? entries : cy.elements().filter(element => !element.hasClass('flow-route-anchor'));
+  if (!elements.length) return null;
+  const bounds = elements.boundingBox({ includeLabels: true, includeOverlays: false });
+  if (![bounds.x1, bounds.y1, bounds.x2, bounds.y2, bounds.w, bounds.h].every(Number.isFinite)) return null;
+  const zoom = identified ? Math.min(cy.maxZoom(), Math.max(cy.minZoom(), readableZoom))
+    : Math.min(readableZoom, (width - 2 * padding) / Math.max(1, bounds.w), (height - 2 * padding) / Math.max(1, bounds.h));
+  return { zoom, pan: identified
+    ? { x: padding - bounds.x1 * zoom, y: bounds.h * zoom <= height - 2 * padding ? height / 2 - (bounds.y1 + bounds.y2) / 2 * zoom : padding - bounds.y1 * zoom }
+    : { x: width / 2 - (bounds.x1 + bounds.x2) / 2 * zoom, y: height / 2 - (bounds.y1 + bounds.y2) / 2 * zoom } };
+}
+
 /** Recorded routes only: no condition evaluation and no execution-time interpretation. */
 export function createReadingSession(document, startRef, saved = {}, identity = {}) {
   const index = new Map();
