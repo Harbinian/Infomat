@@ -5,7 +5,7 @@ const text = value => typeof value === 'string' ? value.trim() : '';
 const rawRef = value => typeof value === 'string' ? value : '';
 const finite = value => typeof value === 'number' && Number.isFinite(value);
 const copyPoint = point => ({ x: point.x, y: point.y });
-export const FLOW_LAYOUT_VERSION = 'elk-layered-0.12.0-v1';
+export const FLOW_LAYOUT_VERSION = 'elk-layered-0.12.0-v3';
 export const FLOW_FONT_SIZE = 14;
 export const FLOW_LABEL_FONT_SIZE = 13;
 export const FLOW_LAYOUT_OPTIONS = Object.freeze({
@@ -103,9 +103,8 @@ export function buildFlowLayoutInput(document, { measureText = defaultMeasure } 
     const actor = actorFact(behavior, dataIndex, uniqueIdentity, identities);
     if (behavior.actor_assignment_mode === 'dynamic_from_data' && !uniqueIdentity('data', rawRef(behavior.actor_department_data_ref))) addIssue(`/behaviors/${index}/actor_department_data_ref`, rawRef(behavior.actor_department_data_ref), actor.replaceAll('\n', ' · '));
     const aggregate = counts.get(ref);
-    const aggregateLines = aggregate ? [aggregate.create + aggregate.update + aggregate.use + aggregate.pending_confirmation ? `数据 创${aggregate.create} 更${aggregate.update} 用${aggregate.use}${aggregate.pending_confirmation ? ` 待确认${aggregate.pending_confirmation}` : ''}` : '', aggregate.form ? `表单 ${aggregate.form}` : ''].filter(Boolean) : [];
     const businessEntry = identities.find(item => item.path === `/behaviors/${index}`);
-    const rawLabel = [control, businessLabel(identities, businessEntry), actor, ...aggregateLines, status === 'valid' ? '' : status === 'ambiguous' ? '环节无法唯一确定' : '环节信息不完整'].filter(Boolean).join('\n');
+    const rawLabel = [control, businessLabel(identities, businessEntry), actor, status === 'valid' ? '' : status === 'ambiguous' ? '环节无法唯一确定' : '环节信息不完整'].filter(Boolean).join('\n');
     makeNode({ id, ref, focusKind: 'behavior', rawLabel, nodeType: behavior.node_type, path: `/behaviors/${index}`, status, extra: { actorFact: actor, dynamicActor: behavior.actor_assignment_mode === 'dynamic_from_data', aggregates: aggregate || null } });
   });
   function endpoint(ref, path, role) {
@@ -133,6 +132,12 @@ export function buildFlowLayoutInput(document, { measureText = defaultMeasure } 
     const anomaly = status !== 'valid' || !behaviorIds.has(from) || !behaviorIds.has(to);
     makeEdge({ id: status === 'valid' ? `relation:${encodeURIComponent(ref)}` : `unresolved-relation:${index}`, ref, sourceId, targetId, rawLabel: [relationLabel(relation), anomaly ? '流转引用异常 · 原引用已保留' : ''].filter(Boolean).join('\n'), path, status: anomaly ? 'unresolved' : 'valid', extra: { fromRef: from, toRef: to, relationType: relation.relation_type, loop: relation.relation_type === 'loop' || from === to } });
   });
+  const behaviorNodes = nodes.filter(node => node.focusKind === 'behavior');
+  const topologyUnresolved = behaviorNodes.some(node => node.status !== 'valid') || edges.some(edge => edge.status !== 'valid');
+  const nonReturnTargets = new Set(edges.filter(edge => edge.relationType !== 'loop').map(edge => edge.semanticTarget));
+  const entryNodes = topologyUnresolved ? [] : behaviorNodes.filter(node => !nonReturnTargets.has(node.id)).sort((left, right) => left.id.localeCompare(right.id, 'en'));
+  const entry = { status: topologyUnresolved ? 'unresolved' : entryNodes.length === 1 ? 'unique' : entryNodes.length > 1 ? 'multiple' : 'none', nodeIds: entryNodes.map(node => node.id), refs: entryNodes.map(node => node.ref) };
+  const entryNodeIds = new Set(entry.nodeIds);
   // Supported legacy calls remain explicit auxiliary information; they never create enterprise identities.
   const calls = [...list(source.internal_process_calls).map((call, index) => ({ call, path: `/internal_process_calls/${index}` })), ...list(source.migration?.internal_process_calls).map((call, index) => ({ call, path: `/migration/internal_process_calls/${index}` }))];
   const callIndex = indexBy(calls.map(item => item.call), 'call_ref');
@@ -159,8 +164,21 @@ export function buildFlowLayoutInput(document, { measureText = defaultMeasure } 
       edge[`${role}Port`] = portId;
     }
   });
-  const graph = { id: 'flow', layoutOptions: { ...FLOW_LAYOUT_OPTIONS }, children: nodes.map(node => ({ id: node.id, width: node.width, height: node.height, ports: portsByNode.get(node.id), layoutOptions: { 'elk.portConstraints': 'FIXED_POS' } })), edges: edges.map(edge => ({ id: edge.id, sources: [edge.sourcePort], targets: [edge.targetPort], labels: edge.label ? [{ id: `${edge.id}:label`, text: edge.label, width: edge.labelWidth, height: edge.labelHeight, layoutOptions: { 'elk.edgeLabels.placement': 'CENTER' } }] : [] })) };
-  return { graph, nodes, edges, issues, documentFingerprint: fingerprint(source) };
+  // Model-order cycle breaking respects FIRST while ELK restores each original edge direction after routing.
+  const graph = { id: 'flow', layoutOptions: { ...FLOW_LAYOUT_OPTIONS, ...(entryNodes.length ? { 'elk.layered.cycleBreaking.strategy': 'GREEDY_MODEL_ORDER', 'elk.separateConnectedComponents': 'false' } : {}) }, children: nodes.map(node => ({ id: node.id, width: node.width, height: node.height, ports: portsByNode.get(node.id), layoutOptions: { 'elk.portConstraints': 'FIXED_POS', ...(entryNodeIds.has(node.id) ? { 'elk.layered.layering.layerConstraint': 'FIRST' } : {}) } })), edges: edges.map(edge => ({ id: edge.id, sources: [edge.sourcePort], targets: [edge.targetPort], labels: edge.label ? [{ id: `${edge.id}:label`, text: edge.label, width: edge.labelWidth, height: edge.labelHeight, layoutOptions: { 'elk.edgeLabels.placement': 'CENTER' } }] : [] })) };
+  edges.forEach(edge => {
+    if (edge.relationType !== 'loop' || edge.source === edge.target || !entryNodeIds.has(edge.source) || !entryNodeIds.has(edge.target)) return;
+    // ELK FIRST nodes cannot connect directly to each other. A hidden routing point preserves the whole return
+    // relation while allowing both entries to stay in the first layer; coincident ports keep its sections continuous.
+    const helperId = `${edge.id}:entry-route-helper`, continuationId = `${edge.id}:entry-route-continuation`;
+    const incomingPort = `${helperId}:incoming`, outgoingPort = `${helperId}:outgoing`;
+    graph.children.push({ id: helperId, width: 1, height: 1, ports: [incomingPort, outgoingPort].map(id => ({ id, x: 0, y: 0.5, width: 0, height: 0, layoutOptions: { 'elk.port.side': 'WEST' } })), layoutOptions: { 'elk.portConstraints': 'FIXED_POS' } });
+    const planned = graph.edges.find(item => item.id === edge.id);
+    planned.targets = [incomingPort];
+    graph.edges.push({ id: continuationId, sources: [outgoingPort], targets: [edge.targetPort], labels: [] });
+    edge.layoutEdgeIds = [edge.id, continuationId];
+  });
+  return { graph, nodes, edges, issues, entry, documentFingerprint: fingerprint(source) };
 }
 
 export function pointsToSegments(points, start, end) {
@@ -188,9 +206,14 @@ export function materializeFlowLayout(input, graph) {
   });
   const nodeById = new Map(nodes.map(node => [node.id, node]));
   input.edges.forEach(edge => {
-    const placed = outputEdges.get(edge.id);
-    if (!placed || !list(placed.sections).length) throw new Error('流程图未取得路线的完整路由，暂时无法显示。');
-    const sections = placed.sections.map(section => {
+    const placedParts = (edge.layoutEdgeIds || [edge.id]).map(id => outputEdges.get(id));
+    if (placedParts.some(placed => !placed || !list(placed.sections).length)) throw new Error('流程图未取得路线的完整路由，暂时无法显示。');
+    if (edge.layoutEdgeIds) for (let index = 1; index < placedParts.length; index += 1) {
+      const end = placedParts[index - 1].sections.at(-1).endPoint, start = placedParts[index].sections[0].startPoint;
+      checkPoint(end, '路线'); checkPoint(start, '路线');
+      if (Math.abs(end.x - start.x) > 0.05 || Math.abs(end.y - start.y) > 0.05) throw new Error('流程图未取得连续的完整回流路线，暂时无法显示。');
+    }
+    const sections = placedParts.flatMap(placed => placed.sections).map(section => {
       const points = [section.startPoint, ...list(section.bendPoints), section.endPoint];
       points.forEach(point => checkPoint(point, '路线'));
       return { ...section, startPoint: copyPoint(section.startPoint), endPoint: copyPoint(section.endPoint), bendPoints: list(section.bendPoints).map(copyPoint), points: points.map(copyPoint) };
@@ -212,7 +235,7 @@ export function materializeFlowLayout(input, graph) {
       elements.push({ group: 'edges', classes: `flow-edge elk-route${edge.loop ? ' relation-loop' : ''}${edge.auxiliary ? ' call-auxiliary' : ''}${edge.status !== 'valid' ? ' flow-anomaly' : ''}`, data: { ...edge, id: index === 0 ? edge.id : `${edge.id}:section:${index}`, source: sourceId, target: targetId, sectionIndex: index, sections, points: record.points, label: '', rawLabel: edge.rawLabel, startPoint: start, endPoint: end, labelBounds: null }, style });
       for (let pointIndex = 1; pointIndex < section.points.length; pointIndex += 1) routeSegments.push({ edgeId: edge.id, relationRef: edge.ref, sectionIndex: index, from: section.points[pointIndex - 1], to: section.points[pointIndex] });
     });
-    const outputLabels = list(placed.labels);
+    const outputLabels = placedParts.flatMap(placed => list(placed.labels));
     if (edge.label && !outputLabels.length) throw new Error('流程图未取得路线的标签位置，暂时无法显示。');
     outputLabels.forEach((label, index) => {
       checkPoint(label, '标签');
@@ -222,7 +245,7 @@ export function materializeFlowLayout(input, graph) {
       elements.push({ group: 'nodes', classes: `flow-label${edge.loop ? ' relation-loop' : ''}${edge.status !== 'valid' ? ' flow-anomaly' : ''}`, data: { id: `${edge.id}:label-node:${index}`, edgeId: edge.id, focusKind: edge.focusKind, focusRef: edge.ref, label: edge.label, rawLabel: edge.rawLabel, nodeWidth: label.width, nodeHeight: label.height, labelBounds: bounds, textMaxWidth: Math.max(1, label.width - 12), semanticSource: edge.source, semanticTarget: edge.target, path: edge.path, navigationTarget: edge.navigationTarget, auxiliary: edge.auxiliary, migrationRetained: edge.migrationRetained }, position: { x: label.x + label.width / 2, y: label.y + label.height / 2 } });
     });
   });
-  return { elements, nodes, edges, labels, issues: input.issues, fingerprint: input.documentFingerprint, layout: { engine: 'elk-layered', version: FLOW_LAYOUT_VERSION, width: graph.width, height: graph.height, routeSegments, labelBounds: labels.map(label => ({ relationRef: label.relationRef, ...label.bounds })) } };
+  return { elements, nodes, edges, labels, issues: input.issues, entry: { ...input.entry, nodeIds: [...input.entry.nodeIds], refs: [...input.entry.refs] }, fingerprint: input.documentFingerprint, layout: { engine: 'elk-layered', version: FLOW_LAYOUT_VERSION, width: graph.width, height: graph.height, routeSegments, labelBounds: labels.map(label => ({ relationRef: label.relationRef, ...label.bounds })) } };
 }
 
 /** Edge endpoints must be restored before Cytoscape applies segment geometry. */

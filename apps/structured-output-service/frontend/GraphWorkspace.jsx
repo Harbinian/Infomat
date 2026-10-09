@@ -3,7 +3,7 @@ import { Alert, Button, Empty, Select, Space, Tag, Tooltip } from 'antd';
 import cytoscape from 'cytoscape';
 import { buildFlowLayoutInput, materializeFlowLayout, cytoscapeFlowElements, applyFlowRouteGeometry, FLOW_LAYOUT_VERSION } from './flow-layout.mjs';
 import { createFlowLayoutScheduler } from './flow-layout-client.mjs';
-import { MOTION_MS, buildDirectRelationGraph, createMotionCoordinator, createReadingSession, kindLabel, locationViewport, targetKey } from './graph-motion.mjs';
+import { MOTION_MS, buildDirectRelationGraph, createMotionCoordinator, createReadingSession, initialFlowViewport, kindLabel, locationViewport, targetKey } from './graph-motion.mjs';
 
 const array = value => Array.isArray(value) ? value : [];
 const READING_MESSAGES = { choice: '判断或多路线处已暂停：请选择文件中已记录的路线。', loop: '再次到达已读环节，已暂停，避免无限循环。', broken: '下一路线的关联环节缺失或无法唯一确定，阅读已暂停。', end: '已到达当前记录路线的末端。' };
@@ -201,12 +201,18 @@ export default function GraphWorkspace({ document, candidateKey = '', selection,
         } else {
           const anchor = validRestore && restore.layoutKey ? cy.nodes('.behavior-node').filter(node => node.data('focusRef') === restore.anchorRef && node.data('status') === 'valid').first() : cy.collection();
           const selected = flowTargetElements(cy, callbacks.current.selection, document).nodes('.behavior-node').first();
-          const first = anchor.length ? anchor : selected.length ? selected : cy.nodes('.behavior-node').first();
+          const first = anchor.length ? anchor : selected;
           const zoom = validRestore && restore.layoutKey ? Math.max(0.8, Math.min(1.2, restore.zoom)) : 1;
           cy.zoom(zoom);
           if (first.length) {
             const offset = anchor.length ? restore.anchorOffset || { x: 0, y: 0 } : { x: 0, y: 0 };
             cy.pan({ x: cy.width() / 2 + offset.x - first.position('x') * zoom, y: cy.height() / 2 + offset.y - first.position('y') * zoom });
+          } else {
+            const initial = initialFlowViewport(cy, flowModel?.entry);
+            if (initial) {
+              if (initial.zoom < cy.minZoom()) cy.minZoom(initial.zoom);
+              cy.zoom(initial.zoom); cy.pan(initial.pan);
+            }
           }
         }
       }
@@ -452,7 +458,7 @@ export default function GraphWorkspace({ document, candidateKey = '', selection,
     {layoutStatus === 'loading' && !empty && <div role="status" style={{ position: 'absolute', top: 72, left: 24, padding: '8px 16px', background: '#f1e7d4', border: '1px solid #dfd1b9', borderRadius: 8 }}>正在排列流程图…</div>}
     {empty && <div style={{ position: 'absolute', inset: '100px 24px 24px', display: 'grid', placeItems: 'center', pointerEvents: 'none' }}><Empty description="尚未编制环节。使用“新增环节”开始。" /></div>}
     <div role="status" className="graph-status" style={{ minHeight: 32, padding: '8px 16px', display: 'flex', justifyContent: 'space-between', gap: 16, background: '#f1e7d4', color: '#6c6455', fontSize: 13 }}>
-      <span>{relationTarget ? '实线为引用或流转，虚线为父子归属；异常原值保留。选择关联对象后可逐层查看。' : '拖动移动画布，滚轮缩放；选择环节或路线查看详情。'}{direction ? ' 方向提示已显示，箭头与关系文字持续保留。' : ''}</span>
+      <span>{relationTarget ? '实线为引用或流转，虚线为父子归属；异常原值保留。选择关联对象后可逐层查看。' : '拖动移动画布，滚轮缩放；选择环节或路线查看详情。'}{!relationTarget && flowInfo?.entry?.status === 'multiple' ? ' 多个结构入口，阅读起点由你选择。' : !relationTarget && ['none', 'unresolved'].includes(flowInfo?.entry?.status) ? ' 当前结构未确定入口，请选择环节。' : ''}{direction ? ' 方向提示已显示，箭头与关系文字持续保留。' : ''}</span>
       <span className="graph-zoom" aria-label="画布缩放">{zoomPercent}%{reduce ? ' · 减少动态效果已开启' : ''}</span>
     </div>
   </section>;

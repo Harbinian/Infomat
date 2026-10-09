@@ -4,6 +4,7 @@ import { catalog, resolve, fields, readPath, tableForTarget, businessLabel, busi
 import GraphWorkspace from './GraphWorkspace.jsx';
 import GridWorkspace, { GRID_NAMES, gridOptions } from './GridWorkspace.jsx';
 import FieldInput, { displayValue } from './FieldInput.jsx';
+import { behaviorAssociations } from './behavior-associations.mjs';
 
 const KINDS = { process:'流程',behavior:'环节',relation:'环节流转',data:'数据对象','data-field':'数据字段',form:'表单／记录','form-area':'表单区域','form-item':'表单字段',term:'术语','data-link':'数据与环节关系','data-source':'数据来源','form-link':'表单与环节关系','field-source':'字段取值来源','lifecycle-route':'生命周期路径','lifecycle-event':'生命周期事件' };
 const PRIMARY=['process','behavior','data','form','term'];
@@ -18,13 +19,15 @@ const SUMMARY_KEYS={behavior:['behavior_name','node_type','behavior_description'
 
 function ReferenceSummary({ document, target, dispatch }) {
   const projection=useMemo(()=>globalThis.ElementReferences?.buildCatalog(document),[document]);
+  const associations=useMemo(()=>target.kind==='behavior'?behaviorAssociations(document,target):null,[document,target.kind,target.ref,target.parentRef]);
   const references=projection ? globalThis.ElementReferences.forTarget(projection,target,{includeDescendants:true}) : {outgoing:[],incoming:[]};
   const all=[...references.outgoing,...references.incoming];
   const anomaly=all.filter(x=>!['valid','external'].includes(x.status));
-  return <section className="relation-summary"><div className="section-label">直接关系 <Tag>{references.outgoing.length} 项引用 · {references.incoming.length} 项被引用</Tag>{anomaly.length>0&&<Tag color="error">⚠ {anomaly.length} 项异常</Tag>}</div>
-    <Button onClick={()=>dispatch({type:'relations',target})}>查看关系图</Button>
+  return <section className={`relation-summary${associations?' behavior-relations':''}`}><div className="section-label">{associations?'关联数据与表单':'直接关系'} {!associations&&<Tag>{references.outgoing.length} 项引用 · {references.incoming.length} 项被引用</Tag>}{anomaly.length>0&&<Tag color="error">⚠ {anomaly.length} 项异常</Tag>}</div>
+    {associations&&<div className="behavior-associations">{associations.warning?<p className="helper">⚠ {associations.warning}</p>:<Collapse ghost size="small" items={associations.groups.map(group=>({key:group.key,label:`${group.title} · ${group.count}`,children:group.count?<div className="association-list">{group.items.map(item=><div key={item.key}><Button type="link" size="small" disabled={item.disabled} onClick={()=>dispatch({type:'select',target:item.target})}>{item.label}</Button>{item.operations.length>0&&<small>处理方式：{item.operations.join('、')}</small>}{item.warnings.map(warning=><small className="association-warning" key={warning}>⚠ {warning}，原记录保留。</small>)}</div>)}</div>:<p className="helper">本环节未记录{group.title}。</p>}))} />}</div>}
+    <Button type={associations?'link':undefined} size={associations?'small':undefined} className={associations?'relation-action':undefined} onClick={()=>dispatch({type:'relations',target})}>查看关系图</Button>
     {target.kind==='term'&&<p className="helper">术语已有定义，尚无结构化使用关系。</p>}
-    {!!all.length&&<Collapse ghost items={[{key:'references',label:'展开引用明细',children:<div className="reference-list">{all.map((entry,index)=>{
+    {!!all.length&&<Collapse ghost size={associations?'small':undefined} items={[{key:'references',label:'展开引用明细',children:<div className="reference-list">{all.map((entry,index)=>{
       const outgoing=references.outgoing.includes(entry); const destination=outgoing?entry.elementTarget||entry.target:entry.sourceTarget;
       const sourceRecord=(projection.nodes||[]).filter(node=>entry.path?.startsWith(`${node.path}/`)).sort((a,b)=>b.path.length-a.path.length)[0];
       return <div key={`${entry.id}-${index}`}><span>{outgoing?'→':'←'} {entry.relationLabel}</span><Button type="link" size="small" disabled={!destination||entry.status!=='valid'} onClick={()=>dispatch({type:'select-reference',reference:entry,direction:outgoing?'outgoing':'incoming',target:destination})}>{destination?businessLabel(catalog(document),destination):entry.status==='external'?'外部来源线索':'关联对象待核对'}</Button>

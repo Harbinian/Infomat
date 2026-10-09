@@ -1,7 +1,7 @@
 // Runs local, isolated projection/animation/reading checks; no service, database or persistent storage.
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { MOTION_MS, buildDirectRelationGraph, createMotionCoordinator, createReadingSession, locationViewport, targetKey } from '../frontend/graph-motion.mjs';
+import { MOTION_MS, buildDirectRelationGraph, createMotionCoordinator, createReadingSession, initialFlowViewport, locationViewport, targetKey } from '../frontend/graph-motion.mjs';
 const require = createRequire(import.meta.url);
 const References = require('../public/element-references.js');
 const ProcessDiagram = require('../public/process-diagram.js');
@@ -337,6 +337,69 @@ check('a unit-scale parallel reading group fits all recorded nodes within canvas
   assert.equal(next.pan.x, 32);
   assert(next.pan.y >= 32);
   assert(next.pan.y + 450 * next.zoom <= 568);
+});
+
+function initialViewGraph(positions) {
+  const cy = cytoscape({ headless: true, styleEnabled: true, minZoom: 0.08, maxZoom: 1.6,
+    elements: positions.map(([id, x, y]) => ({ data: { id, status: 'valid', label: id }, classes: 'behavior-node', position: { x, y } })),
+    layout: { name: 'preset' }, style: [{ selector: 'node', style: { width: 200, height: 80, label: 'data(label)', 'font-size': 14 } }] });
+  cy.width = () => 1699; cy.height = () => 600;
+  return cy;
+}
+
+check('fresh unique entry starts 48px from the left at readable zoom independently of array order', () => {
+  const cy = initialViewGraph([['later', 1100, 150], ['entry', 100, 200]]);
+  try {
+    const before = cy.json();
+    const viewport = initialFlowViewport(cy, { status: 'unique', nodeIds: ['entry'] });
+    const bounds = cy.getElementById('entry').boundingBox({ includeLabels: true, includeOverlays: false });
+    assert.equal(viewport.zoom, 1); assert.equal(bounds.x1 * viewport.zoom + viewport.pan.x, 48);
+    assert.equal((bounds.y1 + bounds.y2) / 2 * viewport.zoom + viewport.pan.y, 300);
+    assert.deepEqual(cy.json(), before, 'Computing the viewport is read-only.');
+  } finally { cy.destroy(); }
+});
+
+check('multiple entries use their full group bounds and never choose one array record as the start', () => {
+  const cy = initialViewGraph([['later', 1100, 300], ['lower', 100, 360], ['upper', 100, 140]]);
+  try {
+    const entry = { status: 'multiple', nodeIds: ['lower', 'upper'] };
+    const viewport = initialFlowViewport(cy, entry);
+    assert.deepEqual(viewport, initialFlowViewport(cy, { ...entry, nodeIds: ['upper', 'lower'] }));
+    const bounds = cy.nodes().filter(node => entry.nodeIds.includes(node.id())).boundingBox({ includeLabels: true, includeOverlays: false });
+    assert.equal(viewport.zoom, 1); assert.equal(bounds.x1 + viewport.pan.x, 48);
+    assert.equal((bounds.y1 + bounds.y2) / 2 + viewport.pan.y, 300);
+    assert(bounds.y1 + viewport.pan.y >= 48 && bounds.y2 + viewport.pan.y <= 552);
+  } finally { cy.destroy(); }
+});
+
+check('tall entry groups keep readable text and start at the group top without selecting a business first step', () => {
+  const cy = initialViewGraph([['lower', 100, 1400], ['upper', 100, 100]]);
+  try {
+    const viewport = initialFlowViewport(cy, { status: 'multiple', nodeIds: ['lower', 'upper'] });
+    const bounds = cy.nodes().boundingBox({ includeLabels: true, includeOverlays: false });
+    assert.equal(viewport.zoom, 1); assert.equal(bounds.y1 + viewport.pan.y, 48);
+  } finally { cy.destroy(); }
+});
+
+check('unknown or incomplete entry metadata gives a geometric overview, with no guessed array start', () => {
+  const cy = initialViewGraph([['a', 100, 100], ['b', 9000, 8000]]);
+  try {
+    const viewport = initialFlowViewport(cy, { status: 'none', nodeIds: [] });
+    assert.deepEqual(viewport, initialFlowViewport(cy, { status: 'unresolved', nodeIds: [] }));
+    assert.deepEqual(viewport, initialFlowViewport(cy, { status: 'unique', nodeIds: ['missing'] }));
+    assert(viewport.zoom > 0 && viewport.zoom < 0.08);
+    const bounds = cy.nodes().boundingBox({ includeLabels: true, includeOverlays: false });
+    assert(bounds.x1 * viewport.zoom + viewport.pan.x >= 48 - 0.001);
+    assert(bounds.x2 * viewport.zoom + viewport.pan.x <= 1651 + 0.001);
+    assert(bounds.y1 * viewport.zoom + viewport.pan.y >= 48 - 0.001);
+    assert(bounds.y2 * viewport.zoom + viewport.pan.y <= 552 + 0.001);
+  } finally { cy.destroy(); }
+});
+
+check('empty flow initial positioning safely leaves the empty canvas alone', () => {
+  const cy = initialViewGraph([]);
+  try { assert.equal(initialFlowViewport(cy, { status: 'none', nodeIds: [] }), null); }
+  finally { cy.destroy(); }
 });
 
 console.log(`Workbench graph: ${checks} isolated checks passed.`);

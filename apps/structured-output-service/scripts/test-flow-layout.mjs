@@ -1,4 +1,5 @@
-// Isolated ELK projection/routing/scheduling regressions. Synthetic data only; no service or storage.
+// Isolated ELK regressions use synthetic fixtures; --source also checks an explicitly supplied JSON read-only.
+// No service, source-file write or business storage is involved.
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { performance } from 'node:perf_hooks';
@@ -191,9 +192,11 @@ function assertRoutes({ input, graph, output }) {
   const originalEdges = new Map(graph.edges.map(edge => [edge.id, edge]));
   let segmentCount = 0;
   for (const edge of output.edges) {
-    const original = originalEdges.get(edge.id);
-    assert.equal(edge.sections.length, original.sections.length, `${edge.ref}: lost ELK sections`);
-    assert.deepEqual(edge.sections.map(section => section.points), original.sections.map(sectionPoints), `${edge.ref}: incomplete route geometry`);
+    const originals = (edge.layoutEdgeIds || [edge.id]).map(id => originalEdges.get(id));
+    assert(originals.every(Boolean), `${edge.ref}: lost ELK layout relation`);
+    const originalSections = originals.flatMap(original => original.sections);
+    assert.equal(edge.sections.length, originalSections.length, `${edge.ref}: lost ELK sections`);
+    assert.deepEqual(edge.sections.map(section => section.points), originalSections.map(sectionPoints), `${edge.ref}: incomplete route geometry`);
     edge.sections.forEach(section => { assertOrthogonal(section.points, edge.ref); segmentCount += section.points.length - 1; });
     const rendered = output.elements.filter(element => element.group === 'edges' && element.data.semanticSource === edge.semanticSource && element.data.semanticTarget === edge.semanticTarget && element.data.path === edge.path);
     assert.equal(rendered.length, edge.sections.length);
@@ -305,6 +308,108 @@ function assertCytoscapeLifecycle(model) {
 
 const base = fixture();
 const baseResult = await layout(base);
+
+function assertEntryLayer(result) {
+  assert.deepEqual(result.output.entry, result.input.entry, 'Entry metadata must survive materialization without entering source JSON');
+  const entries = result.output.nodes.filter(node => result.output.entry.nodeIds.includes(node.id));
+  if (!entries.length) return;
+  const nonEntries = result.output.nodes.filter(node => node.focusKind === 'behavior' && !result.output.entry.nodeIds.includes(node.id));
+  assert(entries.every(node => nonEntries.every(other => node.x + node.width <= other.x + 0.05)), 'Every entry must occupy the first layer before other business nodes');
+  const minimumRight = Math.min(...entries.map(node => node.x + node.width)), maximumLeft = Math.max(...entries.map(node => node.x));
+  assert(maximumLeft < minimumRight, 'Multiple entries must share one first-layer column, not consecutive layers');
+  entries.forEach(node => assert.equal(result.input.graph.children.find(child => child.id === node.id).layoutOptions['elk.layered.layering.layerConstraint'], 'FIRST'));
+}
+
+await check('unique entry ignores only declared return edges and remains first with full original loop direction', () => {
+  assert.deepEqual(baseResult.input.entry, { status: 'unique', nodeIds: ['behavior:start'], refs: ['start'] });
+  assertEntryLayer(baseResult); assertRoutes(baseResult); assertNoNodeOverlap(baseResult.graph); assertNoRouteThroughOtherNodes(baseResult.output); assertNoLabelOverlap(baseResult.output);
+  const returned = baseResult.output.edges.find(edge => edge.ref === 'r_return');
+  assert.equal(returned.fromRef, 'branch_b'); assert.equal(returned.toRef, 'start');
+  assertCytoscapeLifecycle(baseResult.output);
+});
+
+await check('non-return cycles and self-loops never produce an invented entry', async () => {
+  for (const self of [false, true]) {
+    const document = fixture();
+    document.behaviors = self ? [behavior('one')] : [behavior('one'), behavior('two')];
+    document.flow_relations = self ? [route('closed', 'one', 'one')] : [route('forward', 'one', 'two'), route('closed', 'two', 'one', 'condition', '已记录闭环')];
+    const before = bytes(document), result = await layout(deepFreeze(document));
+    assert.deepEqual(result.input.entry, { status: 'none', nodeIds: [], refs: [] });
+    assert(result.input.graph.children.every(node => !node.layoutOptions['elk.layered.layering.layerConstraint']));
+    assertRoutes(result); assertNoNodeOverlap(result.graph); assertNoRouteThroughOtherNodes(result.output); assertNoLabelOverlap(result.output);
+    assert.equal(bytes(document), before);
+  }
+});
+
+await check('ambiguous behaviors and broken structural references do not select an entry by array position or name', () => {
+  const cases = [
+    document => document.behaviors.push(behavior('start', 'action', '同名环节')),
+    document => { document.behaviors[0].behavior_ref = ''; },
+    document => { document.flow_relations[0].from_behavior_ref = 'missing'; },
+    document => { document.flow_relations[0].to_behavior_ref = ' missing '; },
+    document => { document.flow_relations[0].relation_ref = document.flow_relations[1].relation_ref; },
+    document => { document.terms = [{ term_ref: 'start', term_name: '全文件冲突' }]; }
+  ];
+  cases.forEach(change => {
+    const document = fixture(); change(document);
+    const before = bytes(document), input = buildFlowLayoutInput(deepFreeze(document));
+    assert.deepEqual(input.entry, { status: 'unresolved', nodeIds: [], refs: [] });
+    assert(input.graph.children.every(node => !node.layoutOptions['elk.layered.layering.layerConstraint']));
+    assert.equal(bytes(document), before);
+  });
+});
+
+await check('multiple entries share the first layer independently of source array order and identical names', async () => {
+  const document = fixture();
+  document.behaviors = [behavior('finish'), behavior('entry_b', 'action', '同名办理入口'), behavior('entry_a', 'action', '同名办理入口'), behavior('middle')];
+  document.flow_relations = [route('a_middle', 'entry_a', 'middle'), route('b_middle', 'entry_b', 'middle'), route('middle_finish', 'middle', 'finish'), route('return_a', 'finish', 'entry_a', 'loop', '保留回流到甲入口')];
+  const before = bytes(document), result = await layout(deepFreeze(document));
+  assert.deepEqual(result.input.entry, { status: 'multiple', nodeIds: ['behavior:entry_a', 'behavior:entry_b'], refs: ['entry_a', 'entry_b'] });
+  assertEntryLayer(result); assertRoutes(result); assertNoNodeOverlap(result.graph); assertNoRouteThroughOtherNodes(result.output); assertNoLabelOverlap(result.output); assertCytoscapeLifecycle(result.output);
+  const reversed = clone(document); reversed.behaviors.reverse(); reversed.flow_relations.reverse();
+  const reordered = await layout(deepFreeze(reversed));
+  assert.deepEqual(reordered.input.entry, result.input.entry); assertEntryLayer(reordered); assertRoutes(reordered); assertNoLabelOverlap(reordered.output);
+  assert.equal(bytes(document), before);
+});
+
+await check('returns between first-layer entries preserve complete continuous sections, labels and original arrow direction', async () => {
+  const document = fixture();
+  document.behaviors = [behavior('finish'), behavior('entry_b'), behavior('entry_a'), behavior('middle')];
+  document.flow_relations = [route('a_middle', 'entry_a', 'middle'), route('b_middle', 'entry_b', 'middle'), route('middle_finish', 'middle', 'finish'), route('return_between', 'entry_a', 'entry_b', 'loop', '回流至乙入口补充记录'), route('reverse_between', 'entry_b', 'entry_a', 'loop', '回流至甲入口核对资料'), route('self_return', 'entry_a', 'entry_a', 'loop', '当前入口重新核对')];
+  const before = bytes(document), result = await layout(deepFreeze(document));
+  assert.equal(result.input.entry.status, 'multiple'); assertEntryLayer(result);
+  assertRoutes(result); assertNoNodeOverlap(result.graph); assertNoRouteThroughOtherNodes(result.output); assertNoLabelOverlap(result.output); assertCytoscapeLifecycle(result.output);
+  assert.equal(result.output.nodes.length, document.behaviors.length, 'Routing helpers must not become business objects');
+  assert.equal(result.output.edges.length, document.flow_relations.length, 'Splitting the ELK projection must retain each original relation once');
+  assert.equal(result.input.graph.children.filter(node => node.id.endsWith(':entry-route-helper')).length, 2);
+  for (const ref of ['return_between', 'reverse_between']) {
+    const original = document.flow_relations.find(relation => relation.relation_ref === ref), edge = result.output.edges.find(item => item.ref === ref);
+    assert.equal(edge.fromRef, original.from_behavior_ref); assert.equal(edge.toRef, original.to_behavior_ref); assert.equal(edge.layoutEdgeIds.length, 2);
+    assert.equal(edge.semanticSource, result.output.nodes.find(node => node.ref === original.from_behavior_ref).id); assert.equal(edge.semanticTarget, result.output.nodes.find(node => node.ref === original.to_behavior_ref).id);
+    edge.sections.slice(1).forEach((section, index) => { assert(near(section.startPoint.x, edge.sections[index].endPoint.x)); assert(near(section.startPoint.y, edge.sections[index].endPoint.y)); });
+    const label = result.output.labels.find(item => item.relationRef === ref); assert(label && label.text.includes(original.condition));
+    const parts = result.output.elements.filter(element => element.group === 'edges' && element.data.focusRef === ref);
+    assert(parts.slice(0, -1).every(part => part.style['target-arrow-shape'] === 'none')); assert.equal(parts.at(-1).style['target-arrow-shape'], 'triangle');
+    const source = result.output.nodes.find(node => node.id === edge.semanticSource), target = result.output.nodes.find(node => node.id === edge.semanticTarget);
+    assertBoundary(edge.sections[0].startPoint, source, ref); assertBoundary(edge.sections.at(-1).endPoint, target, ref);
+  }
+  const partial = clone(result.graph), planned = result.input.edges.find(edge => edge.ref === 'return_between');
+  partial.edges.find(edge => edge.id === planned.layoutEdgeIds[1]).sections = [];
+  assert.throws(() => materializeFlowLayout(result.input, partial), /完整路由/);
+  const disconnected = clone(result.graph); disconnected.edges.find(edge => edge.id === planned.layoutEdgeIds[1]).sections[0].startPoint.y += 1;
+  assert.throws(() => materializeFlowLayout(result.input, disconnected), /连续.*回流路线/);
+  assert.equal(bytes(document), before);
+});
+
+const sourceArgument = process.argv.indexOf('--source');
+if (sourceArgument !== -1) await check('explicit read-only source retains every route and all identified entries in the first layer', async () => {
+  assert(process.argv[sourceArgument + 1], '--source requires an explicit JSON path');
+  const original = await readFile(process.argv[sourceArgument + 1], 'utf8');
+  const document = JSON.parse(original.replace(/^\uFEFF/, '')), before = bytes(document), result = await layout(deepFreeze(document));
+  assertEntryLayer(result); assertRoutes(result); assertNoNodeOverlap(result.graph); assertNoRouteThroughOtherNodes(result.output); assertNoLabelOverlap(result.output); assertCytoscapeLifecycle(result.output);
+  assert.equal(bytes(document), before); assert.equal(await readFile(process.argv[sourceArgument + 1], 'utf8'), original);
+  process.stdout.write(`EVIDENCE read-only source: ${result.output.nodes.length} nodes, ${result.output.edges.length} routes, ${result.output.entry.status}, ${result.output.entry.refs.length} entries, ${Math.round(result.output.layout.width)}x${Math.round(result.output.layout.height)}\n`);
+});
 
 await check('same names retain distinct stable nodes and independent same-endpoint relations', () => {
   const { input, output } = baseResult;
@@ -535,6 +640,36 @@ await check('flow business labels and diagnostics hide machine refs while retain
   assert(result.input.issues.some(issue => issue.ref === 'machine_actor_source_hidden' && issue.path.endsWith('/actor_department_data_ref')));
   assert.equal(result.output.nodes.find(node => node.ref === 'machine_call_hidden').rawCall.call_ref, 'machine_call_hidden');
   assert.equal(bytes(document), before);
+});
+
+await check('data and form statistics remain internal without changing node captions, dimensions or complete routes', async () => {
+  const document = fixture();
+  document.data_objects = ['create', 'update', 'use', 'pending_confirmation'].map(operation => ({
+    data_ref: `stat_data_${operation}`, data_name: `合成统计数据：${operation}`, fields: [],
+    behavior_links: [{ link_ref: `stat_data_link_${operation}`, behavior_ref: 'start', operation, updated_field_refs: [] }]
+  }));
+  document.forms = [0, 1].map(index => ({
+    form_ref: `stat_form_${index}`, form_name: `合成统计表单${index + 1}`, areas: [],
+    behavior_links: [{ link_ref: `stat_form_link_${index}`, behavior_ref: 'start', operations: ['review'] }]
+  }));
+  document.forms[0].behavior_links.push({ link_ref: 'stat_form_second_link', behavior_ref: 'start', operations: ['fill'] });
+  const before = bytes(document), result = await layout(deepFreeze(document));
+  const node = result.input.nodes.find(item => item.ref === 'start');
+  assert.deepEqual(node.aggregates, { create: 1, update: 1, use: 1, pending_confirmation: 1, form: 2 });
+  const geometry = input => input.nodes.map(item => ({ id: item.id, rawLabel: item.rawLabel, label: item.label, width: item.width, height: item.height, actorFact: item.actorFact, nodeType: item.nodeType }));
+  assert.deepEqual(geometry(result.input), geometry(baseResult.input), 'Recorded statistics must not add hidden caption space or resize a flow object');
+  assert(!/(?:^|\n)数据 创\d|(?:^|\n)表单\s+\d/.test(node.rawLabel));
+  assert.deepEqual(result.input.graph, baseResult.input.graph, 'Statistics must not change measured ELK input ports, labels or geometry');
+  const displayGeometry = output => ({
+    width: output.layout.width, height: output.layout.height,
+    nodes: output.nodes.map(({ id, x, y, width, height }) => ({ id, x, y, width, height })),
+    routes: output.edges.map(({ id, sections }) => ({ id, points: sections.map(section => section.points) })),
+    labels: output.labels
+  });
+  assert.deepEqual(displayGeometry(result.output), displayGeometry(baseResult.output), 'Identical visible flow facts must retain complete deterministic real ELK geometry');
+  assertRoutes(result); assertNoNodeOverlap(result.graph); assertNoRouteThroughOtherNodes(result.output); assertNoLabelOverlap(result.output);
+  assertCytoscapeLifecycle(result.output);
+  assert.equal(bytes(document), before, 'Removing visible counts must not remove or change recorded relationships');
 });
 
 await check('synthetic condition/loop labels do not overlap object or label boxes', () => assertNoLabelOverlap(baseResult.output));
