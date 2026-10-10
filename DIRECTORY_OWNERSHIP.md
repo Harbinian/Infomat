@@ -29,6 +29,7 @@
 apps/mdm-platform/AGENTS.md
 apps/structured-output-service/AGENTS.md
 apps/information-collection-service/AGENTS.md
+apps/slack-bot/AGENTS.md
 pmo/AGENTS.md
 pmo/procedure-management/AGENTS.md
 pmo/gantt-react/AGENTS.md
@@ -50,6 +51,7 @@ scripts/AGENTS.md
 | `apps/mdm-platform/` | MDM 平台源码 | `package.json`、`server/`、`public/`、`scripts/` | 平台功能、平台测试、平台维护脚本在此修改 | 不放 PMO 甘特图、流程制度原文、历史方案 |
 | `apps/structured-output-service/` | 局域网单流程治理编制工具 | `package.json`、`server.js`、`public/`、`scripts/` | 默认监听`0.0.0.0:3001`供公司局域网用户直接访问；本工作区按V8候选技术规则导出单流程未审核JSON，兼容导入v1至v8及已支持历史文件；服务部署和业务验收另行核对；页面内编辑会话区分未应用修改与未下载修改，并在切换、下载和替换前保护用户输入；可只读读取流程映射、花名册和 `docs/work-role-data.json` 做候选提示 | 不保存用户内容和图坐标，不写回 `docs/norms/`、花名册或工作角色副本，不调用3000，不依赖DeepSeek、MDM-AI助手或认证网关，不替代受控发布流程 |
 | `apps/information-collection-service/` | 内部信息表收集服务 | `package.json`、`server/`、`public/`、`scripts/`、`docs/` | 4000 管理端设计并发布收集任务，4001 填报端保存本人草稿和答卷；只读复用 `person`、`user_accounts`、`departments`，业务数据写入 `collection_*` 表，附件写入仓库外受控目录 | 不修改 MDM 身份、角色或治理业务表；不自动继承 3000 权限；不向浏览器持久化答案或附件 |
+| `apps/slack-bot/` | Slack 问答机器人（Claude Code CLI 无头模式的 Slack 入口） | `AGENTS.md`、`README.md`、`src/`、`compose.yaml`、`Dockerfile`、`sync.sh` | 只读档读 `repo-sync` 同步出的卷镜像（`:ro`），写入档仅对 `BOT_WRITE_USERS` 开放且直写宿主机仓库；凭据只存 `.env`，不进镜像；权限按提问者判定 | 不把 token 或密钥写入会被提交或被构建的文件；不绕过提问者粒度的权限判定；不让只读档拿到写工具或可写挂载；不把机器人输出当业务结论或治理决定 |
 | `apps/mdm-platform/server/` | MDM 后端实现 | Express 路由、当前MySQL运行schema与历史/测试SQLite兼容实现 | 修改时同步平台测试 | 不直接依赖 PMO 页面内嵌数据 |
 | `apps/mdm-platform/public/` | MDM 旧前端及共享本地资产 | 既有页面和本地图形资源 | 保留未迁移模块及资源路径兼容 | 不放 PMO 驾驶舱截图 |
 | `apps/mdm-platform/frontend/` | MDM 新前端 | React + Vite 源码、独立锁文件及构建配置 | P01提供同源访问骨架；后续按模块迁移，dist为被忽略的公开构建产物 | 不共用 PMO 业务代码、配置或5173服务，不公开业务材料及服务端源码 |

@@ -1,0 +1,6 @@
+# 构建上下文 = 本目录，以下内容一律不进镜像。
+# 尤其 .env：里面有 Slack token 和 DeepSeek key，绝不能烤进镜像层。
+node_modules
+.env
+sessions.json
+*.log
