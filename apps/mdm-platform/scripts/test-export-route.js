@@ -73,6 +73,9 @@ async function main() {
   const repo = makeFakeRepository();
   setDataMapRepositoryFactory(async () => repo);
   auth.setIdentityRepositoryFactory(async () => ({
+    // Under the MySQL identity read model an authenticated request is validated and carries an
+    // exact account and authorization version; the previous double omitted both.
+    async validateSession() { return { valid: true, user: { personId: 1, current_department_id: 1, must_change_password: 0 } }; },
     async getUserEffectivePermissions(personId) {
       assert.strictEqual(Number(personId), 1);
       return {
@@ -95,6 +98,8 @@ async function main() {
       req.session = {
         personId: Number(req.get('x-test-user-id')),
         userId: Number(req.get('x-test-user-id')),
+        accountId: 100 + Number(req.get('x-test-user-id')),
+        authVersion: 1,
         userName: 'MDM系统管理员',
         departmentId: 1
       };

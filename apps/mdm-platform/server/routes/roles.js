@@ -4,6 +4,9 @@ const mysql = require('mysql2/promise');
 const { requireAuth, requirePermission } = require('../auth');
 const { makeIdentityMysqlRepository } = require('../identityMysqlRepository');
 const { mysqlConfigFromEnv } = require('../mysqlConfig');
+const { identityInteger } = require('../sessionSubject');
+const { logRequestFailure } = require('../securityLog');
+const { createRegisteredPool } = require('../mysqlPoolRegistry');
 
 const router = express.Router();
 let identityRepoPromise = null;
@@ -13,7 +16,7 @@ async function identityRepository() {
   if (identityRepositoryFactory) return await identityRepositoryFactory();
   if (!identityRepoPromise) {
     identityRepoPromise = (async () => {
-      const pool = mysql.createPool(mysqlConfigFromEnv());
+      const pool = createRegisteredPool(process.env, 'identity');
       const repo = makeIdentityMysqlRepository(pool);
       await checkRuntimeSchema(pool, 'identity');
       return repo;
@@ -29,7 +32,7 @@ async function identityRepository() {
 
 function handleError(res, error) {
   if (sendMysqlUnavailable(res, error)) return;
-  console.error(error);
+  logRequestFailure(res, error);
   return res.status(503).json({
     error: '角色模型暂不可用',
     code: 'IDENTITY_ACCESS_SERVICE_UNAVAILABLE'
@@ -49,14 +52,18 @@ router.get('/', ...canRead, (req, res) => run(res, async () => {
 
 router.get('/:id', ...canRead, (req, res) => run(res, async () => {
   const repo = await identityRepository();
-  const role = await repo.getRoleDetail(Number(req.params.id));
+  const roleId = identityInteger(req.params.id);
+  if (roleId === null) return res.status(404).json({ error: '角色不存在', code: 'ROLE_NOT_FOUND' });
+  const role = await repo.getRoleDetail(roleId);
   if (!role) return res.status(404).json({ error: '角色不存在', code: 'ROLE_NOT_FOUND' });
   res.json(role);
 }));
 
 router.get('/:id/permissions', ...canRead, (req, res) => run(res, async () => {
   const repo = await identityRepository();
-  const payload = await repo.getRolePermissionMatrix(Number(req.params.id));
+  const roleId = identityInteger(req.params.id);
+  if (roleId === null) return res.status(404).json({ error: '角色不存在', code: 'ROLE_NOT_FOUND' });
+  const payload = await repo.getRolePermissionMatrix(roleId);
   if (!payload) return res.status(404).json({ error: '角色不存在', code: 'ROLE_NOT_FOUND' });
   res.json(payload);
 }));

@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="echarts.min.js"></script>
+  <script src="mdm-protocol.js"></script>
   <link rel="icon" href="/logo.png">
 
   <title>MDM 平台</title>
@@ -1512,7 +1513,7 @@
                 <h2>角色 → 业务能力 → L3流程 → A1业务行为 → 处理入口</h2>
                 <p id="roleWorkbenchSankeyMeta">点击节点可在右侧查看事项和样例。</p>
               </div>
-              <button class="wb-link-btn" type="button" onclick="renderRoleWorkbench()">刷新</button>
+              <button class="wb-link-btn" type="button"data-click="renderRoleWorkbench">刷新</button>
             </div>
             <div id="roleWorkbenchSankey"></div>
           </div>
@@ -1633,12 +1634,12 @@
       <!-- Data Map -->
       <section class="panel compact-panel" id="dataMap">
         <div class="compact-head"><div class="compact-title"><h2>流程与数据关系</h2><p>查看流程图和数据关系，图中明确标注预览修订或正式版本。</p></div></div>
-        <div class="compact-toolbar"><label>选择流程 <select id="nativeDiagramCase" onchange="updateNativeDiagramButtons()"><option value="">正在读取流程…</option></select></label><button class="btn" id="nativeProcessDiagramButton" disabled onclick="openSelectedCaseDiagram('process')">查看流程图</button><button class="btn secondary" id="nativeDataDiagramButton" disabled onclick="openSelectedCaseDiagram('data')">查看数据关系</button></div>
+        <div class="compact-toolbar"><label>选择流程 <select id="nativeDiagramCase"data-change="updateNativeDiagramButtons"><option value="">正在读取流程…</option></select></label><button class="btn" id="nativeProcessDiagramButton" disableddata-click="openSelectedCaseDiagram" data-click-args="[&quot;process&quot;]">查看流程图</button><button class="btn secondary" id="nativeDataDiagramButton" disableddata-click="openSelectedCaseDiagram" data-click-args="[&quot;data&quot;]">查看数据关系</button></div>
         <p id="nativeDiagramSourceNotice" class="muted" role="status"></p>
         <div class="compact-head"><div class="compact-title"><h2>字段台账</h2><p id="dataMapAccessNotice" role="status">正在读取当前访问权限…</p></div></div>
         <div class="compact-toolbar">
-          <label>选择上下文 <select id="dataMapContextSelect" onchange="renderDataMapFields()"></select></label>
-          <button class="btn secondary" type="button" onclick="loadDataMapContexts()">刷新</button>
+          <label>选择上下文 <select id="dataMapContextSelect"data-change="renderDataMapFields"></select></label>
+          <button class="btn secondary" type="button"data-click="loadDataMapContexts">刷新</button>
           <a class="btn secondary" href="/api/export/excel">导出台账</a>
         </div>
         <div class="data-map-summary" aria-live="polite">
@@ -1664,7 +1665,7 @@
             <div class="form-group"><label>来源文件<input id="dataMapContextSourceFile" placeholder="制度、台账或访谈记录名称"></label></div>
             <div class="form-group"><label>来源锚点<input id="dataMapContextSourceAnchor" placeholder="真实页码、条款、章节或内部抽取锚点"></label></div>
             <div class="toolbar">
-              <button class="btn primary" type="button" onclick="createDataMapContext()">创建上下文</button>
+              <button class="btn primary" type="button"data-click="createDataMapContext">创建上下文</button>
             </div>
           </div>
           <div class="compact-table-panel">
@@ -1672,7 +1673,7 @@
             <div class="notice" style="margin-bottom:12px">Excel 会导入到当前选中的数据地图上下文。字段名命中阻断级禁用词时会拒绝保存，警告级规则会进入质量问题。</div>
             <input type="file" id="importFile" accept=".xlsx,.xls" style="margin-bottom:12px">
             <div class="toolbar">
-              <button class="btn primary" type="button" id="dataMapImportButton" onclick="importFields()">导入字段台账</button>
+              <button class="btn primary" type="button" id="dataMapImportButton"data-click="importFields">导入字段台账</button>
               <a class="btn secondary" href="template.xlsx" download>下载模板</a>
             </div>
           </div>
@@ -1780,7 +1781,7 @@
         <div class="toolbar">
           <div>
             <h2>流程治理统一入口</h2>
-            <p class="muted">在同一入口完成单流程编制、跨部门承接和承接冲突处理。3001仍可独立使用，导出的v1/v2文件均可导入本页。</p>
+            <p class="muted">本入口接收3001导出的V7/V8文件，完成预览核对、正式流转与发布。编制由3001独立完成并手工下载上传，本页不提供在线编制。</p>
           </div>
           <div class="toolbar-right">
             <select id="pgRiskFilter" hidden style="width: 140px; height: 36px; padding: 0 12px;">
@@ -1841,17 +1842,17 @@
         <div class="pg-section" id="pgV7PreviewSection" data-pg-view="v7Preview">
           <div class="pg-section-hd">
             <div>
-              <h2>V7预览核对</h2>
-              <p class="muted">V7文件只用于预览和跨部门核对。核对完成不等于流程审核、批准、发布或生效。</p>
+              <h2>流程预览核对（V8）</h2>
+              <p class="muted">原生V8和受支持V7文件进入预览和跨部门核对。核对完成不等于流程审核、批准、发布或生效。</p>
             </div>
             <div class="process-design-actions">
-              <button type="button" class="btn primary" id="pgCreateV7PreviewBtn">上传V7建立案例</button>
+              <button type="button" class="btn primary" id="pgCreateV7PreviewBtn">上传V8建立案例</button>
               <button type="button" class="btn secondary" id="pgRefreshV7PreviewBtn">刷新</button>
               <input type="file" id="pgV7PreviewFileInput" accept=".json,application/json" style="display:none">
               <input type="file" id="pgV7PreviewRevisionInput" accept=".json,application/json" style="display:none">
             </div>
           </div>
-          <div class="notice" style="margin-bottom:12px">3000保存案例、部门核对结果和处理进度，不修改V7内容。编制人员在3001修改后，再把新修订上传到同一案例。</div>
+          <div class="notice" style="margin-bottom:12px">3000保存案例、部门核对结果和处理进度，按实际版本保留V8和受支持V7内容。编制人员在3001修改后，再把新修订上传到同一案例。</div>
           <div class="grid g4" style="margin-bottom:16px">
             <div class="metric"><div class="num" id="pgV7PreviewCaseCount">0</div><div class="lbl">可查看案例</div></div>
             <div class="metric"><div class="num" id="pgV7PreviewMyActionCount">0</div><div class="lbl">我的待核对</div></div>
@@ -1861,11 +1862,11 @@
           <div class="table-container">
             <table class="data-table">
               <thead><tr><th>流程</th><th>归口部门</th><th>案例状态</th><th>核对进度</th><th>当前修订</th><th>更新时间</th><th>操作</th></tr></thead>
-              <tbody id="pgV7PreviewCaseRows"><tr><td colspan="7" class="empty">正在读取V7预览核对案例...</td></tr></tbody>
+              <tbody id="pgV7PreviewCaseRows"><tr><td colspan="7" class="empty">正在读取流程预览核对（V8）案例...</td></tr></tbody>
             </table>
           </div>
           <div class="process-design-detail" id="pgV7PreviewDetail" style="margin-top:20px;">
-            <div class="empty">选择一条案例后查看V7内容、部门核对进度和操作记录。</div>
+            <div class="empty">选择一条案例后查看原生流程内容、部门核对进度和操作记录。</div>
           </div>
         </div>
         <div class="pg-section" id="pgDataGovernanceSection" data-pg-view="dataGovernance">
@@ -2149,18 +2150,18 @@
 
       <!-- Org Units Panel -->
       <section class="panel compact-panel" id="publications">
-        <div class="compact-head"><div class="compact-title"><h2>主数据发布</h2><p>手工导入表格、核对变化、发布版本，按版本查看和下载。</p></div><button class="btn" onclick="openPublicationImport('master_data')">导入主数据</button></div>
+        <div class="compact-head"><div class="compact-title"><h2>主数据发布</h2><p>手工导入表格、核对变化、发布版本，按版本查看和下载。</p></div><button class="btn"data-click="openPublicationImport" data-click-args="[&quot;master_data&quot;]">导入主数据</button></div>
         <div class="compact-toolbar">
-          <label>发布类型 <select id="publicationKindFilter" onchange="loadPublications()"><option value="master_data">主数据</option><option value="organization">组织架构</option><option value="roster">花名册</option></select></label>
-          <button class="btn secondary" onclick="openPublicationImport('organization')">导入组织架构</button>
-          <button class="btn secondary" onclick="openPublicationImport('roster')">导入花名册</button>
-          <button class="btn secondary" onclick="loadPublications()">刷新</button>
+          <label>发布类型 <select id="publicationKindFilter"data-change="loadPublications"><option value="master_data">主数据</option><option value="organization">组织架构</option><option value="roster">花名册</option></select></label>
+          <button class="btn secondary"data-click="openPublicationImport" data-click-args="[&quot;organization&quot;]">导入组织架构</button>
+          <button class="btn secondary"data-click="openPublicationImport" data-click-args="[&quot;roster&quot;]">导入花名册</button>
+          <button class="btn secondary"data-click="loadPublications">刷新</button>
         </div>
         <p class="muted" id="publicationPageStatus" role="status"></p>
         <div class="tw"><table><thead><tr><th>发布名称</th><th>版本</th><th>记录数</th><th>来源文件</th><th>发布时间</th><th>操作</th></tr></thead><tbody id="publicationRows"></tbody></table></div>
       </section>
       <section class="panel compact-panel" id="orgUnits">
-        <div class="compact-head"><div class="compact-title"><h2>组织架构</h2><p>部门归口管理，办公室承接工作，负责人向成员分配任务。</p></div><div class="publication-actions"><button class="btn" onclick="openPublicationImport('organization')">手工导入</button><button class="btn secondary" onclick="openPublicationHistory('organization')">发布记录</button></div></div>
+        <div class="compact-head"><div class="compact-title"><h2>组织架构</h2><p>部门归口管理，办公室承接工作，负责人向成员分配任务。</p></div><div class="publication-actions"><button class="btn"data-click="openPublicationImport" data-click-args="[&quot;organization&quot;]">手工导入</button><button class="btn secondary"data-click="openPublicationHistory" data-click-args="[&quot;organization&quot;]">发布记录</button></div></div>
         <div class="compact-toolbar">
           <select id="ouTypeFilter" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px">
             <option value="">全部类型</option>
@@ -2180,20 +2181,20 @@
       </section>
 
       <section class="panel compact-panel" id="officeWorkbench">
-        <div class="compact-head"><div class="compact-title"><h2>办公室工作台</h2><p>任务先交办公室，再由办公室负责人分配给成员，办理人填写结果后办结。</p></div><button class="btn secondary" onclick="loadOfficeWorkbench()">刷新</button></div>
-        <div class="compact-toolbar"><label>办公室<select id="officeSelect" onchange="loadOfficeWorkbench(this.value)"></select></label><button class="btn" id="officeCreateTask" hidden onclick="openOfficeTask('create')">交办到办公室</button></div>
+        <div class="compact-head"><div class="compact-title"><h2>办公室工作台</h2><p>任务先交办公室，再由办公室负责人分配给成员，办理人填写结果后办结。</p></div><button class="btn secondary"data-click="loadOfficeWorkbench">刷新</button></div>
+        <div class="compact-toolbar"><label>办公室<select id="officeSelect"data-change="loadOfficeWorkbenchSelf"></select></label><button class="btn" id="officeCreateTask" hiddendata-click="openOfficeTask" data-click-args="[&quot;create&quot;]">交办到办公室</button></div>
         <p class="notice" id="officeContext" role="status"></p>
         <div id="officeTaskSummary" class="publication-summary"></div>
         <details><summary id="officeMemberSummary">办公室成员</summary><div id="officeMembers" class="tw"></div></details>
         <h3 style="margin:20px 0 12px">办公室任务</h3>
-        <div class="compact-toolbar"><label>办理状态<select id="officeTaskFilter" onchange="renderOfficeTasks()"><option value="">全部</option><option value="unassigned">待分配</option><option value="assigned">待办理</option><option value="done">已办结</option></select></label></div>
+        <div class="compact-toolbar"><label>办理状态<select id="officeTaskFilter"data-change="renderOfficeTasks"><option value="">全部</option><option value="unassigned">待分配</option><option value="assigned">待办理</option><option value="done">已办结</option></select></label></div>
         <div class="tw"><table><thead><tr><th>工作内容与流程来源</th><th>办理人</th><th>截止日期</th><th>状态</th><th>操作与结果</th></tr></thead><tbody id="officeTaskRows"></tbody></table></div>
         <details id="officeUnallocated" hidden style="margin-top:24px"><summary>原部门待办：尚未指定办公室</summary><p class="muted">保留原接收部门，选择该部门下的办公室承接。</p><div class="tw"><table><thead><tr><th>待办内容</th><th>接收部门</th><th>操作</th></tr></thead><tbody id="officeUnallocatedRows"></tbody></table></div></details>
       </section>
 
       <!-- Persons Panel -->
       <section class="panel compact-panel" id="persons">
-        <div class="compact-head"><div class="compact-title"><h2>花名册</h2><p>按工号、姓名和部门查找人员，查看在职状态。</p></div><div class="publication-actions"><button class="btn" onclick="openPublicationImport('roster')">手工导入</button><button class="btn secondary" onclick="openPublicationHistory('roster')">发布记录</button></div></div>
+        <div class="compact-head"><div class="compact-title"><h2>花名册</h2><p>按工号、姓名和部门查找人员，查看在职状态。</p></div><div class="publication-actions"><button class="btn"data-click="openPublicationImport" data-click-args="[&quot;roster&quot;]">手工导入</button><button class="btn secondary"data-click="openPublicationHistory" data-click-args="[&quot;roster&quot;]">发布记录</button></div></div>
         <div class="action-metrics">
           <div class="action-metric primary" data-action-metric="persons-active"><span class="value" id="personMetricActive">0</span><span class="label">在职</span></div>
           <div class="action-metric" data-action-metric="persons-attention"><span class="value" id="personMetricAttention">0</span><span class="label">未关联部门</span></div>
@@ -2341,6 +2342,11 @@
 
   <script>
 // Manual import stays in this dialog's memory until an explicit publication.
+    // R13: one action table for the whole retained page. It is created before the
+    // wrapped sections below so a section can register its own (private) handlers.
+    const PAGE_ACTIONS = { click: {}, change: {}, input: {} };
+
+
 const officeWorkbench = {data:null,request:0,mode:null,task:null};
 async function loadOfficeWorkbench(officeId) {
   const request=++officeWorkbench.request;
@@ -2358,7 +2364,7 @@ async function loadOfficeWorkbench(officeId) {
   $('officeMemberSummary').textContent='办公室成员（'+data.members.length+'人，可同时属于其他办公室）';
   $('officeMembers').innerHTML='<table><thead><tr><th>工号</th><th>姓名</th><th>人员所属部门</th><th>在职状态</th></tr></thead><tbody>'+data.members.map(p=>'<tr><td>'+escHtml(p.employee_no)+'</td><td>'+escHtml(p.person_name)+'</td><td>'+escHtml(p.department_name||'未填写')+'</td><td>'+escHtml(p.employment_status==='active'?'在职':directoryStatusLabel(p.employment_status))+'</td></tr>').join('')+'</tbody></table>';
   $('officeUnallocated').hidden=!data.can_route;
-  $('officeUnallocatedRows').innerHTML=data.unallocated.map(t=>'<tr><td>'+escHtml(t.content)+'</td><td>'+escHtml(t.department_name||'未设置')+'</td><td><button class="btn secondary" onclick="openOfficeTask(\'receive\','+Number(t.id)+')">指定办公室</button></td></tr>').join('')||'<tr><td colspan="3">没有尚未指定办公室的待办</td></tr>';
+  $('officeUnallocatedRows').innerHTML=data.unallocated.map(t=>'<tr><td>'+escHtml(t.content)+'</td><td>'+escHtml(t.department_name||'未设置')+'</td><td><button class="btn secondary"data-click="openOfficeTask" data-click-args="' + actionArgs(['receive',Number(t.id)]) + '">指定办公室</button></td></tr>').join('')||'<tr><td colspan="3">没有尚未指定办公室的待办</td></tr>';
   renderOfficeTasks();
 }
 function renderOfficeTasks() {
@@ -2367,8 +2373,8 @@ function renderOfficeTasks() {
   $('officeTaskRows').innerHTML=data.tasks.filter(t=>!filter||(filter==='done'?t.status==='done':t.status==='pending'&&(filter==='assigned'?Boolean(t.assignee_person_id):!t.assignee_person_id))).map(function(t){
     const status=t.status==='done'?'已办结':t.assignee_person_id?'待办理':'待分配';
     let actions='';
-    if(t.status==='pending'&&data.can_assign)actions+='<button class="btn secondary" onclick="openOfficeTask(\'assign\','+Number(t.id)+')">'+(t.assignee_person_id?'重新分配':'分配人员')+'</button> ';
-    if(t.status==='pending'&&data.can_complete&&Number(t.assignee_person_id)===Number(data.actor_person_id))actions+='<button class="btn" onclick="openOfficeTask(\'complete\','+Number(t.id)+')">填写结果并办结</button>';
+    if(t.status==='pending'&&data.can_assign)actions+='<button class="btn secondary"data-click="openOfficeTask" data-click-args="' + actionArgs(['assign',Number(t.id)]) + '">'+(t.assignee_person_id?'重新分配':'分配人员')+'</button> ';
+    if(t.status==='pending'&&data.can_complete&&Number(t.assignee_person_id)===Number(data.actor_person_id))actions+='<button class="btn"data-click="openOfficeTask" data-click-args="' + actionArgs(['complete',Number(t.id)]) + '">填写结果并办结</button>';
     if(t.status==='done'&&t.completion_json){try{const value=typeof t.completion_json==='string'?JSON.parse(t.completion_json):t.completion_json;actions='<div style="white-space:pre-wrap">'+escHtml(value.note||'')+'</div><small>'+escHtml(new Date(Number(t.done_epoch)*1000).toLocaleString())+'</small>';}catch{actions='办理结果暂不可读';}}
     return '<tr><td style="white-space:pre-wrap;max-width:520px;overflow-wrap:anywhere">'+escHtml(t.content)+(t.process_version_id?'<p class="muted">'+escHtml(t.process_name)+' · 正式版 '+escHtml(t.process_edition)+'<br>流程归口：'+escHtml(t.owning_department_name||'未填写')+(t.behavior_ref?'<br>业务行为：'+escHtml(t.behavior_name||t.behavior_ref):'')+'</p>':'')+'</td><td>'+escHtml(t.assignee_name||'等待负责人分配')+'</td><td>'+escHtml(t.due_date?String(t.due_date).slice(0,10):'未设定')+'</td><td>'+status+'</td><td>'+actions+'</td></tr>';
   }).join('')||'<tr><td colspan="5" class="empty">当前没有此类办公室任务</td></tr>';
@@ -2386,13 +2392,13 @@ function openOfficeTask(mode,id) {
   if(mode==='create'||mode==='receive') {
     const offices=data.offices.filter(o=>o.status==='active'&&o.department_id&&(!task?.to_dept_id||Number(o.department_id)===Number(task.to_dept_id)));
     form+='<label>承接办公室<select id="officeTarget">'+offices.map(o=>'<option value="'+Number(o.id)+'">'+escHtml(o.department_name+' / '+o.name)+'</option>').join('')+'</select></label>';
-    if(mode==='create')form+='<label>工作内容<textarea id="officeTaskContent" rows="5" maxlength="16000" style="width:100%;box-sizing:border-box"></textarea></label><div class="publication-fields"><label>截止日期<input id="officeTaskDue" type="date"></label><label>紧急程度<select id="officeTaskUrgency"><option value="medium">普通</option><option value="high">紧急</option><option value="low">较低</option></select></label><label>关联正式流程（可选）<select id="officeTaskVersion" onchange="renderOfficeBehaviorOptions()"><option value="">不关联流程</option>'+data.versions.map(v=>'<option value="'+Number(v.id)+'">'+escHtml(v.title)+' · '+escHtml(v.edition)+'版'+'</option>').join('')+'</select></label><label>业务行为（可选）<select id="officeTaskBehavior"><option value="">整个流程</option></select></label></div>';
+    if(mode==='create')form+='<label>工作内容<textarea id="officeTaskContent" rows="5" maxlength="16000" style="width:100%;box-sizing:border-box"></textarea></label><div class="publication-fields"><label>截止日期<input id="officeTaskDue" type="date"></label><label>紧急程度<select id="officeTaskUrgency"><option value="medium">普通</option><option value="high">紧急</option><option value="low">较低</option></select></label><label>关联正式流程（可选）<select id="officeTaskVersion"data-change="renderOfficeBehaviorOptions"><option value="">不关联流程</option>'+data.versions.map(v=>'<option value="'+Number(v.id)+'">'+escHtml(v.title)+' · '+escHtml(v.edition)+'版'+'</option>').join('')+'</select></label><label>业务行为（可选）<select id="officeTaskBehavior"><option value="">整个流程</option></select></label></div>';
   } else if(mode==='assign') {
     const members=data.members.filter(p=>p.status==='active'&&p.employment_status==='active');
     form+='<label>办理人<select id="officeAssignee"><option value="">请选择办公室成员</option>'+members.map(p=>'<option value="'+Number(p.person_id)+'">'+escHtml(p.person_name+'（'+p.employee_no+'）')+'</option>').join('')+'</select></label>';
   } else form+='<label>办理结果<textarea id="officeCompletionNote" rows="6" maxlength="4000" style="width:100%;box-sizing:border-box"></textarea></label>';
   $('publicationDialogBody').innerHTML=form+'<p id="publicationDialogMessage" role="status"></p>';
-  $('publicationDialogFooter').innerHTML='<button class="btn" id="officeSaveTask" onclick="saveOfficeTask()">'+(mode==='complete'?'保存结果并办结':'确认保存')+'</button>';
+  $('publicationDialogFooter').innerHTML='<button class="btn" id="officeSaveTask"data-click="saveOfficeTask">'+(mode==='complete'?'保存结果并办结':'确认保存')+'</button>';
   $('publicationDialogBody').addEventListener('input',function(){publicationImport.dirty=true;});
   $('publicationDialogBody').addEventListener('change',function(){publicationImport.dirty=true;});
   if($('officeTarget')&&Array.from($('officeTarget').options).some(o=>Number(o.value)===Number(data.selected_office_id)))$('officeTarget').value=data.selected_office_id;
@@ -2453,7 +2459,7 @@ function createPublicationDialog(title) {
   if (!dialog) { dialog=document.createElement('dialog'); dialog.id='publicationDialog'; dialog.className='publication-dialog'; document.body.appendChild(dialog); dialog.addEventListener('cancel',function(event){event.preventDefault();closePublicationDialog();}); }
   if (nativeDiagram.instance) { nativeDiagram.instance.destroy(); nativeDiagram.instance=null; }
   dialog.classList.remove('diagram-dialog');
-  dialog.innerHTML='<header><h2 id="publicationDialogTitle">'+escHtml(title)+'</h2><button type="button" class="btn secondary" onclick="closePublicationDialog()" aria-label="关闭窗口">关闭</button></header><div class="publication-body" id="publicationDialogBody"></div><footer id="publicationDialogFooter"></footer>';
+  dialog.innerHTML='<header><h2 id="publicationDialogTitle">'+escHtml(title)+'</h2><button type="button" class="btn secondary"data-click="closePublicationDialog" aria-label="关闭窗口">关闭</button></header><div class="publication-body" id="publicationDialogBody"></div><footer id="publicationDialogFooter"></footer>';
   dialog.setAttribute('aria-labelledby','publicationDialogTitle');
   return dialog;
 }
@@ -2466,7 +2472,7 @@ async function loadPublications() {
   const [status,list]=await Promise.all([api('/api/publications/status'),api('/api/publications?kind='+kind)]);
   if ($('publicationKindFilter').value!==kind) return;
   $('publicationPageStatus').textContent=!status.ready?'发布记录表尚未准备。':list.rows.length?'当前显示最近'+list.rows.length+'个发布版本。历史版本保留原始列和值，可逐版查看和下载。':'还没有'+publicationLabels[kind]+'发布版本。选择文件后可以核对内容并发布。';
-  $('publicationRows').innerHTML=list.rows.length?list.rows.map(function(row){return '<tr><td>'+escHtml(row.title)+'</td><td>v'+Number(row.version_no)+'</td><td>'+Number(row.row_count)+'</td><td>'+escHtml(row.source_file_name)+'</td><td>'+escHtml(new Date(row.published_at).toLocaleString())+'</td><td><button class="btn secondary" onclick="viewPublication('+Number(row.id)+')">查看</button> <a href="/api/publications/'+Number(row.id)+'/download">下载</a>'+(kind==='master_data'&&status.canPrepare?' <button class="btn secondary" onclick="openPublicationImport(\'master_data\','+Number(row.id)+')">导入新版</button>':'')+'</td></tr>';}).join(''):'<tr><td colspan="6" class="muted">暂无发布记录</td></tr>';
+  $('publicationRows').innerHTML=list.rows.length?list.rows.map(function(row){return '<tr><td>'+escHtml(row.title)+'</td><td>v'+Number(row.version_no)+'</td><td>'+Number(row.row_count)+'</td><td>'+escHtml(row.source_file_name)+'</td><td>'+escHtml(new Date(row.published_at).toLocaleString())+'</td><td><button class="btn secondary"data-click="viewPublication" data-click-args="' + actionArgs([Number(row.id)]) + '">查看</button> <a href="/api/publications/'+Number(row.id)+'/download">下载</a>'+(kind==='master_data'&&status.canPrepare?' <button class="btn secondary"data-click="openPublicationImport" data-click-args="' + actionArgs(['master_data',Number(row.id)]) + '">导入新版</button>':'')+'</td></tr>';}).join(''):'<tr><td colspan="6" class="muted">暂无发布记录</td></tr>';
 }
 async function openPublicationImport(kind, previousId) {
   if (hasPublicationEdits()) return;
@@ -2481,7 +2487,7 @@ async function openPublicationImport(kind, previousId) {
     $('publicationDialogBody').innerHTML='<p class="muted">支持.xlsx或UTF-8编码的.csv，最多5MB、5000行、64列。第一行为列名。工号和编码建议设为文本。'+(kind==='master_data'?'你可以导入任意类型的主数据，并自行选择唯一标识列。':kind==='roster'?'按工号新增或更新人员。办公室编码可用分号分隔填写多个；未对应该列时保留已有归属，对应列的空值表示移除归属。账号另行管理。':'组织层级填写部门或办公室；办公室填写归口部门编码及负责人工号。没有组织层级列的旧表格仍按部门导入，未出现的组织继续保留。')+'</p>'+
       (kind==='master_data'?'':'<p class="notice">首次导入顺序：部门 → 花名册 → 办公室及负责人 → 再次导入花名册补充办公室归属。办公室尚未建立时，花名册先不对应“办公室编码”列。</p>')+
       '<p><a class="btn secondary" href="/api/publications/template?kind='+kind+'">下载空白Excel模板</a></p><div class="publication-fields"><label>发布名称<input id="publicationTitle" maxlength="255" value="'+escHtml(previous?previous.title:publicationLabels[kind])+'"></label><label>选择文件<input id="publicationFile" type="file" accept=".xlsx,.csv"></label></div><p id="publicationSelectedFile" class="muted"></p><div id="publicationSheetWrap" hidden><label>工作表<select id="publicationSheet"></select></label></div><div id="publicationMapping"></div><div id="publicationSourcePreview"></div><div id="publicationReview"></div><p id="publicationDialogMessage" role="status"></p>';
-    $('publicationDialogFooter').innerHTML='<button class="btn secondary" id="publicationPreviewButton" onclick="previewPublication()" disabled>核对导入内容</button><button class="btn" id="publicationPublishButton" onclick="publishPublication()" disabled>确认发布</button>';
+    $('publicationDialogFooter').innerHTML='<button class="btn secondary" id="publicationPreviewButton"data-click="previewPublication" disabled>核对导入内容</button><button class="btn" id="publicationPublishButton"data-click="publishPublication" disabled>确认发布</button>';
     $('publicationFile').addEventListener('change',selectPublicationFile);
     $('publicationTitle').addEventListener('input',invalidatePublicationReview);
     $('publicationSheet').addEventListener('change',async function(){
@@ -2549,7 +2555,7 @@ async function parsePublicationFile() {
 function renderPublicationTable(content,target) {
   publicationImport.table={content,target};
   const page=publicationImport.page, start=page*50, rows=content.rows.slice(start,start+50);
-  $(target).innerHTML='<p class="publication-step">文件内容</p><div class="tw"><table><thead><tr><th>行</th>'+content.headers.map(function(header){return '<th>'+escHtml(header)+'</th>';}).join('')+'</tr></thead><tbody>'+rows.map(function(row,i){return '<tr><td>'+(content.sourceRows?.[start+i]||start+i+2)+'</td>'+row.map(function(value){return '<td>'+escHtml(value)+'</td>';}).join('')+'</tr>';}).join('')+'</tbody></table></div><div class="publication-pager"><button class="btn secondary" onclick="pagePublication(-1)"'+(page===0?' disabled':'')+'>上一页</button><span>'+(start+1)+'–'+(start+rows.length)+' / '+content.rows.length+'</span><button class="btn secondary" onclick="pagePublication(1)"'+(start+50>=content.rows.length?' disabled':'')+'>下一页</button></div>';
+  $(target).innerHTML='<p class="publication-step">文件内容</p><div class="tw"><table><thead><tr><th>行</th>'+content.headers.map(function(header){return '<th>'+escHtml(header)+'</th>';}).join('')+'</tr></thead><tbody>'+rows.map(function(row,i){return '<tr><td>'+(content.sourceRows?.[start+i]||start+i+2)+'</td>'+row.map(function(value){return '<td>'+escHtml(value)+'</td>';}).join('')+'</tr>';}).join('')+'</tbody></table></div><div class="publication-pager"><button class="btn secondary"data-click="pagePublication" data-click-args="' + actionArgs([-1]) + '"'+(page===0?' disabled':'')+'>上一页</button><span>'+(start+1)+'–'+(start+rows.length)+' / '+content.rows.length+'</span><button class="btn secondary"data-click="pagePublication" data-click-args="' + actionArgs([1]) + '"'+(start+50>=content.rows.length?' disabled':'')+'>下一页</button></div>';
 }
 function pagePublication(delta) { publicationImport.page+=delta; renderPublicationTable(publicationImport.table.content,publicationImport.table.target); }
 async function previewPublication() {
@@ -2579,7 +2585,7 @@ async function publishPublication() {
     const published=await api('/api/publications/publish',{method:'POST',body:form});
     publicationImport.dirty=false;publicationImport.checked=null;
     $('publicationDialogBody').innerHTML='<div class="publication-summary">'+escHtml(published.title)+' v'+Number(published.version_no)+' 已发布，共'+Number(published.row_count)+'行。</div><p>来源：'+escHtml(published.source_file_name)+'</p><p><a href="/api/publications/'+Number(published.id)+'/download">下载此版本Excel</a> · <a href="/api/publications/'+Number(published.id)+'/download?format=json">下载完整发布记录JSON</a></p>';
-    $('publicationDialogFooter').innerHTML='<button class="btn" onclick="closePublicationDialog()">完成</button>';
+    $('publicationDialogFooter').innerHTML='<button class="btn"data-click="closePublicationDialog">完成</button>';
     if (state.currentRoute?.tab==='orgUnits') runPageTask(loadOrgUnits);
     if (state.currentRoute?.tab==='persons') runPageTask(loadPersons);
     if (state.currentRoute?.tab==='publications') runPageTask(loadPublications);
@@ -2620,7 +2626,7 @@ async function loadNativeDiagramCases() {
   select.innerHTML='<option value="">请选择流程</option>'+rows.map(function(row){return '<option value="'+Number(row.id)+'">'+escHtml(row.process_name)+' · 修订'+Number(row.current_revision_no)+'</option>';}).join('');
   if(rows.some(row=>String(row.id)===previous))select.value=previous;
   updateNativeDiagramButtons();
-  $('nativeDiagramSourceNotice').textContent=rows.length?'有正式版本时读取正式版本；尚未发布时明确标注为预览修订。':'暂无可查看的V7流程。流程图将在编制人员上传案例后提供。';
+  $('nativeDiagramSourceNotice').textContent=rows.length?'有正式版本时读取正式版本；尚未发布时明确标注为预览修订。':'暂无可查看的原生流程。流程图将在编制人员上传案例后提供。';
 }
 async function openSelectedCaseDiagram(mode) {
   const id=Number($('nativeDiagramCase').value);
@@ -2639,7 +2645,7 @@ function openPreviewDiagram(mode) {
 async function openFormalDiagram(id,mode) {
   return runPageTask(async function(){
     const version=await api('/api/process-design/versions/'+Number(id)+'/content');
-    if(version.schema_version!=='process-governance-v7'||!version.content_hash_verified)throw new Error('需要摘要核对通过的原生V7版本');
+    if(!['process-governance-v8','process-governance-v7'].includes(version.schema_version)||!version.content_hash_verified)throw new Error('需要摘要核对通过的原生V8或受支持V7版本');
     return showNativeDiagram(version.document,mode,(version.status==='published'?'已发布':'历史版本（'+version.status+'）')+' · 正式版本 '+version.process_version_id+' · '+version.document_no);
   },'正式版本图形读取失败');
 }
@@ -2651,11 +2657,11 @@ async function showNativeDiagram(documentValue,mode,source) {
   $('publicationDialogBody').innerHTML='<p id="publicationDialogMessage" role="status">正在绘图…</p>';dialog.showModal();
   try {
     await loadDiagramAssets();
-    $('publicationDialogBody').innerHTML='<p><strong>'+escHtml(nativeDiagram.title)+'</strong></p><p class="muted" style="margin:8px 0">'+escHtml(source)+'</p><div class="compact-toolbar"><label>视图<select id="nativeDiagramMode"><option value="process">流程图</option><option value="data">数据关系图</option></select></label><label id="nativeDiagramDataLabel">数据对象<select id="nativeDiagramData"></select></label><button class="btn secondary" onclick="nativeDiagram.instance?.fit()">完整视图</button><button class="btn secondary" onclick="nativeDiagram.instance?.reset()">清晰视图</button></div><div class="native-diagram-layout"><div class="native-diagram-canvas" id="nativeDiagramCanvas" aria-label="流程与数据关系图"></div><div class="native-diagram-detail" id="nativeDiagramDetail" role="status">点击图中节点查看原始内容。拖动空白处平移，滚轮缩放。</div></div>';
+    $('publicationDialogBody').innerHTML='<p><strong>'+escHtml(nativeDiagram.title)+'</strong></p><p class="muted" style="margin:8px 0">'+escHtml(source)+'</p><div class="compact-toolbar"><label>视图<select id="nativeDiagramMode"><option value="process">流程图</option><option value="data">数据关系图</option></select></label><label id="nativeDiagramDataLabel">数据对象<select id="nativeDiagramData"></select></label><button class="btn secondary"data-click="fitDiagram">完整视图</button><button class="btn secondary"data-click="resetDiagram">清晰视图</button></div><div class="native-diagram-layout"><div class="native-diagram-canvas" id="nativeDiagramCanvas" aria-label="流程与数据关系图"></div><div class="native-diagram-detail" id="nativeDiagramDetail" role="status">点击图中节点查看原始内容。拖动空白处平移，滚轮缩放。</div></div>';
     $('nativeDiagramMode').value=mode;
     $('nativeDiagramData').innerHTML=(documentValue.data_objects||[]).map(function(row){return '<option value="'+escHtml(row.data_ref)+'">'+escHtml(row.data_name)+'</option>';}).join('');
     $('nativeDiagramMode').onchange=renderNativeDiagram;$('nativeDiagramData').onchange=renderNativeDiagram;
-    $('publicationDialogFooter').innerHTML='<span class="muted" role="status" id="nativeDiagramExportStatus" style="margin-right:auto">图形按当前记录绘制，内容修订仍回到3001办理。</span><button class="btn" id="nativeDiagramExportButton" onclick="downloadNativeDiagram()">下载PNG</button>';
+    $('publicationDialogFooter').innerHTML='<span class="muted" role="status" id="nativeDiagramExportStatus" style="margin-right:auto">图形按当前记录绘制，内容修订仍回到3001办理。</span><button class="btn" id="nativeDiagramExportButton"data-click="downloadNativeDiagram">下载PNG</button>';
     renderNativeDiagram();
   }catch(error){publicationMessage(error.message,true);}
   finally{publicationImport.busy=false;}
@@ -2713,14 +2719,14 @@ async function downloadNativeDiagram() {
     const PROCESS_DESIGN_FIELD_TYPES = ['文本', '长文本', '数值', '金额', '数量', '日期', '日期时间', '是/否', '枚举', '人员', '部门', '附件'];
     const PROCESS_DESIGN_EVIDENCE_TYPES = ['制度条款', '表单样例', '台账记录', '流程图', '会议纪要', '访谈记录', '系统截图', 'OCR待复核', '其他'];
     const PROCESS_GOVERNANCE_SUBTABS = [
-      { key: 'v7Preview', label: 'V7预览核对' }
+      { key: 'v7Preview', label: '流程预览核对（V8）' }
     ];
     const PROCESS_GOVERNANCE_VIEW_ALIASES = {
       v7Preview: 'v7Preview',
       dataGovernance: 'dataGovernance'
     };
     const PROCESS_GOVERNANCE_VIEW_PRODUCTS = {
-      v7Preview: { label: 'V7预览核对', load: loadV7PreviewReviewView, render: renderV7PreviewReviewView },
+      v7Preview: { label: '流程预览核对（V8）', load: loadV7PreviewReviewView, render: renderV7PreviewReviewView },
       dataGovernance: { label: '数据生命周期治理', load: loadProcessDataGovernanceView, render: renderProcessDataGovernanceView }
     };
     const PROCESS_GOVERNANCE_GUIDANCE_VIEWS = new Set();
@@ -2826,7 +2832,7 @@ async function downloadNativeDiagram() {
     function confirmV7Leave(message) {
       if (v7Edits.busy) { showToast('当前操作仍在等待结果，请稍后再离开。', 'error'); return false; }
       if (!hasV7Edits()) return true;
-      return window.confirm(message + '\n\n有尚未保存的V7依据或意见。确定将放弃这些输入，取消则继续编辑。不会自动提交。');
+      return window.confirm(message + '\n\n有尚未保存的流程依据或意见。确定将放弃这些输入，取消则继续编辑。不会自动提交。');
     }
 
     function guardV7Route() {
@@ -2977,7 +2983,7 @@ async function downloadNativeDiagram() {
         scope_decision_recorded: '记录范围决定',
         review_result_carried_forward: '沿用未变化项的核对结果',
         review_item_reopened: '内容变化后重新核对',
-        formal_draft_promoted: '提升为正式 V7 草稿'
+        formal_draft_promoted: '提升为正式流程草稿'
       })[value] || value || '操作记录';
     }
 
@@ -3023,7 +3029,7 @@ async function downloadNativeDiagram() {
       var selection = focused && typeof focused.selectionStart === 'number' ? [focused.selectionStart, focused.selectionEnd] : null;
       var oldScroll = window.scrollY;
       if (!detail || !detail.case) {
-        panel.innerHTML = '<div class="empty">选择一条案例后查看V7内容、部门核对进度和操作记录。</div>';
+        panel.innerHTML = '<div class="empty">选择一条案例后查看原生流程内容、部门核对进度和操作记录。</div>';
         return;
       }
       var caseRow = detail.case;
@@ -3048,7 +3054,7 @@ async function downloadNativeDiagram() {
       }
       if (blockingIssues.some(function(issue) { return issue.code === 'OWNING_DEPARTMENT_CHANGE_PENDING'; })) {
         scopeDecisionOptions.push('<option value="keep_current_owner">保留案例当前归口部门</option>');
-        scopeDecisionOptions.push('<option value="accept_source_owner">采用V7修订中的归口部门</option>');
+        scopeDecisionOptions.push('<option value="accept_source_owner">采用本流程修订中的归口部门</option>');
       }
       var scopeDecisionEditor = allowedActions.indexOf('record_scope_decision') >= 0 && scopeDecisionOptions.length
         ? '<div class="process-design-form" style="margin-top:12px"><label>范围决定<select id="pgV7PreviewScopeDecision"><option value="">请选择</option>' + scopeDecisionOptions.join('') + '</select></label><label class="wide">范围决定依据<textarea id="pgV7PreviewScopeBasis" rows="3" placeholder="写明核对对象、依据和决定理由"></textarea></label><div class="wide process-design-actions"><button type="button" class="btn primary" id="pgSaveV7PreviewScopeDecisionBtn">保存范围决定</button></div></div>'
@@ -3065,7 +3071,7 @@ async function downloadNativeDiagram() {
       var formalActions = detail.formal_allowed_actions || [];
       var formalReviewDecisions = detail.formal_allowed_decisions || [];
       var promotionEditor = allowedActions.indexOf('promote_to_formal_draft') >= 0
-        ? '<details class="process-design-detail" open style="margin-top:18px"><summary><strong>提升为正式V7草稿</strong></summary>' +
+        ? '<details class="process-design-detail" open style="margin-top:18px"><summary><strong>提升为正式流程草稿</strong></summary>' +
           '<div class="notice" style="margin-top:12px">必须明确选择新建流程主档或选择已有流程主档。系统不会按名称或编号自动合并。</div>' +
           '<div class="process-design-form" style="margin-top:12px">' +
             '<label>正式承接方式<select id="pgV7FormalTargetMode"><option value="create">新建流程主档</option><option value="existing">选择已有流程主档</option></select></label>' +
@@ -3095,15 +3101,15 @@ async function downloadNativeDiagram() {
             '<button type="button" class="btn primary" id="pgReviewV7FormalDraftBtn">保存正式审核结论</button>';
         }
         if (formalActions.indexOf('publish_formal_draft') >= 0) {
-          formalActionHtml += '<button type="button" class="btn primary" id="pgPublishV7FormalDraftBtn">发布正式V7版本</button>';
+          formalActionHtml += '<button type="button" class="btn primary" id="pgPublishV7FormalDraftBtn">发布正式流程版本</button>';
         }
         if (formalActions.indexOf('read_formal_version') >= 0 && formalVersion.id) {
           formalActionHtml += '<button type="button" class="btn secondary" id="pgReadV7FormalVersionBtn">核对已发布正文</button>';
           formalActionHtml += '<button type="button" class="btn secondary" id="pgDownloadV7ProcedureBtn">下载程序文件（Markdown）</button>';
-          formalActionHtml += '<button type="button" class="btn secondary" onclick="openFormalDiagram(' + Number(formalVersion.id) + ',\'process\')">查看正式流程图</button><button type="button" class="btn secondary" onclick="openFormalDiagram(' + Number(formalVersion.id) + ',\'data\')">查看正式数据关系</button>';
+          formalActionHtml += '<button type="button" class="btn secondary"data-click="openFormalDiagram" data-click-args="' + actionArgs([Number(formalVersion.id),'process']) + '">查看正式流程图</button><button type="button" class="btn secondary"data-click="openFormalDiagram" data-click-args="' + actionArgs([Number(formalVersion.id),'data']) + '">查看正式数据关系</button>';
         }
         formalSummary = '<article class="process-design-detail" style="margin-top:18px">' +
-          '<div class="pg-section-hd"><div><h3>' + (formalDraft.status === 'published' ? '已发布的正式V7版本' : '正式V7草稿') + '</h3><p class="muted">主档 ' + safeText(formalDocument.document_no || formalDocument.id) + ' · 草稿 #' + Number(formalDraft.id) + ' · 来源修订 ' + Number(formalDraft.revision_no || 0) + '</p></div>' + statusTag(formalDraft.status) + '</div>' +
+          '<div class="pg-section-hd"><div><h3>' + (formalDraft.status === 'published' ? '已发布的正式流程版本' : '正式流程草稿') + '</h3><p class="muted">主档 ' + safeText(formalDocument.document_no || formalDocument.id) + ' · 草稿 #' + Number(formalDraft.id) + ' · 来源修订 ' + Number(formalDraft.revision_no || 0) + '</p></div>' + statusTag(formalDraft.status) + '</div>' +
           '<div class="grid g4"><div class="metric"><div class="lbl">内容摘要</div><div style="margin-top:6px;word-break:break-all">' + safeText(formalDraft.content_hash || '') + '</div></div>' +
           '<div class="metric"><div class="lbl">审核任务</div><div style="margin-top:6px">' + safeText(formalTask.status || '尚未提交') + '</div></div>' +
           '<div class="metric"><div class="lbl">正式版本</div><div style="margin-top:6px">' + safeText(formalVersion.version_no || '尚未发布') + '</div></div>' +
@@ -3118,12 +3124,12 @@ async function downloadNativeDiagram() {
       }).join('');
       panel.innerHTML = '<div class="pg-section-hd"><div><h2>' + safeText(caseRow.process_name) + '</h2><p class="muted">案例 ' + safeText(caseRow.case_ref) + ' · 当前修订 ' + Number(revision.revision_no || 0) + '</p></div><div class="process-design-actions">' +
         (canUploadRevision ? '<button type="button" class="btn secondary" id="pgUploadV7PreviewRevisionBtn">上传3001新修订</button>' : '') + statusTag(caseRow.status) + '</div></div>' +
-        '<div class="notice"><b>边界：</b>本区域保存的是V7预览核对记录。只有核对完成并由MDM工作组组长明确提升后，才会形成正式草稿；预览记录本身不是审核或发布结论。</div>' +
+        '<div class="notice"><b>边界：</b>本区域保存的是流程预览核对（V8）记录。只有核对完成并由MDM工作组组长明确提升后，才会形成正式草稿；预览记录本身不是审核或发布结论。</div>' +
         '<div class="notice" id="pgV7EditNotice" style="margin-top:12px" hidden></div>' +
-        '<div class="publication-actions" style="margin-top:12px"><button type="button" class="btn secondary" onclick="openPreviewDiagram(\'process\')">查看本修订流程图</button><button type="button" class="btn secondary" onclick="openPreviewDiagram(\'data\')">查看本修订数据关系</button></div>' +
+        '<div class="publication-actions" style="margin-top:12px"><button type="button" class="btn secondary"data-click="openPreviewDiagram" data-click-args="' + actionArgs(['process']) + '">查看本修订流程图</button><button type="button" class="btn secondary"data-click="openPreviewDiagram" data-click-args="' + actionArgs(['data']) + '">查看本修订数据关系</button></div>' +
         renderV7HandlingSummary(detail) + ownerAssignment + warningHtml + scopeDecisionEditor +
         '<div class="process-design-form" style="margin-top:12px"><label>流程名称<input readonly value="' + safeText(process.process_name || caseRow.process_name) + '"></label><label>归口部门<input readonly value="' + safeText(caseRow.owning_department_name || '待分派') + '"></label><label class="wide">目的<textarea rows="2" readonly>' + safeText(process.purpose || '待业务确认') + '</textarea></label><label class="wide">范围<textarea rows="3" readonly>' + safeText(process.scope || '待业务确认') + '</textarea></label></div>' +
-        '<details class="process-design-detail" open style="margin-top:12px"><summary><strong>V7业务行为预览</strong></summary><div class="table-container" style="margin-top:12px"><table class="data-table"><thead><tr><th>业务行为</th><th>执行角色</th><th>触发</th><th>完成标准</th></tr></thead><tbody>' + (behaviorRows || '<tr><td colspan="4" class="empty">没有业务行为</td></tr>') + '</tbody></table></div></details>' +
+        '<details class="process-design-detail" open style="margin-top:12px"><summary><strong>原生流程业务行为预览</strong></summary><div class="table-container" style="margin-top:12px"><table class="data-table"><thead><tr><th>业务行为</th><th>执行角色</th><th>触发</th><th>完成标准</th></tr></thead><tbody>' + (behaviorRows || '<tr><td colspan="4" class="empty">没有业务行为</td></tr>') + '</tbody></table></div></details>' +
         '<h3 style="margin-top:18px">跨部门核对项</h3>' + itemHtml +
         promotionEditor + formalSummary +
         '<details class="process-design-detail" style="margin-top:18px"><summary><strong>操作记录</strong></summary><div class="table-container" style="margin-top:12px"><table class="data-table"><thead><tr><th>时间</th><th>动作</th><th>部门</th><th>结果或依据</th></tr></thead><tbody>' + (eventRows || '<tr><td colspan="4" class="empty">暂无操作记录</td></tr>') + '</tbody></table></div></details>';
@@ -3155,7 +3161,7 @@ async function downloadNativeDiagram() {
         runPageTask(function() { return reviewV7FormalDraft(formalPromotion.review_task); }, '正式审核保存失败');
       };
       if ($('pgPublishV7FormalDraftBtn')) $('pgPublishV7FormalDraftBtn').onclick = function() {
-        runPageTask(function() { return publishV7FormalDraft(formalPromotion.draft); }, '正式V7版本发布失败');
+        runPageTask(function() { return publishV7FormalDraft(formalPromotion.draft); }, '正式流程版本发布失败');
       };
       if ($('pgReadV7FormalVersionBtn')) $('pgReadV7FormalVersionBtn').onclick = function() {
         runPageTask(function() { return readV7FormalVersion(formalPromotion.current_version.id); }, '正式版本读回失败');
@@ -3219,7 +3225,7 @@ async function downloadNativeDiagram() {
       if ($('pgCreateV7PreviewBtn')) $('pgCreateV7PreviewBtn').hidden = (listPayload.allowed_actions || []).indexOf('create_case') < 0;
       if ($('pgV7PreviewCaseRows')) $('pgV7PreviewCaseRows').innerHTML = rows.length ? rows.map(function(item) {
         return '<tr><td>' + safeText(item.process_name) + '</td><td>' + safeText(item.owning_department_name || '待分派') + '</td><td>' + statusTag(item.status) + '</td><td>' + Number(item.confirmed_item_count || 0) + ' / ' + Number(item.review_item_count || 0) + '</td><td>' + Number(item.current_revision_no || 0) + '</td><td>' + safeText(item.updated_at) + '</td><td><button type="button" class="btn secondary" data-v7-preview-open="' + Number(item.id) + '">查看</button></td></tr>';
-      }).join('') : '<tr><td colspan="7" class="empty">暂无V7预览核对案例</td></tr>';
+      }).join('') : '<tr><td colspan="7" class="empty">暂无流程预览核对（V8）案例</td></tr>';
       document.querySelectorAll('[data-v7-preview-open]').forEach(function(button) {
         button.addEventListener('click', function() {
           state.pgViewCache = {};
@@ -3235,7 +3241,7 @@ async function downloadNativeDiagram() {
     }
 
     async function readV7PreviewFile(file) {
-      if (!file) throw new Error('请选择V7 JSON文件');
+      if (!file) throw new Error('请选择V8或受支持的V7 JSON文件');
       var raw = await file.text();
       var documentValue;
       try { documentValue = JSON.parse(raw); } catch (_error) { throw new Error('所选文件不是有效JSON'); }
@@ -3269,7 +3275,7 @@ async function downloadNativeDiagram() {
           '受影响部门：' + (affectedDepartments.length ? affectedDepartments.join('、') : '无新增影响部门') + '。\n\n确认后才会上传新修订。'
         );
         if (!confirmed) {
-          showToast('已取消V7新修订上传');
+          showToast('已取消流程新修订上传');
           return { cancelled:true, comparison:previewResult.comparison };
         }
       }
@@ -3285,7 +3291,7 @@ async function downloadNativeDiagram() {
         var nextCaseId = Number(resultCase.id || caseId || 0);
         state.pgViewCache = {};
         state.pgSelectedV7PreviewCaseId = nextCaseId;
-        showToast(caseId ? 'V7新修订已上传' : 'V7预览核对案例已建立');
+        showToast(caseId ? '流程新修订已上传' : '流程预览核对（V8）案例已建立');
         location.hash = '#/processGovernance?workspace=v7Preview&v7Case=' + encodeURIComponent(nextCaseId);
         if (processGovernanceViewFromRoute(parseHash()) === 'v7Preview') await loadProcessGovernanceView('v7Preview', { route: parseHash(), force:true });
         return result;
@@ -3382,7 +3388,7 @@ async function downloadNativeDiagram() {
           target:target
       }, 'promotion');
       state.pgViewCache = {};
-      showToast(result.idempotent ? '当前修订已经提升，已返回原正式草稿' : '当前修订已提升为正式V7草稿');
+      showToast(result.idempotent ? '当前修订已经提升，已返回原正式草稿' : '当前修订已提升为正式流程草稿');
       return await loadProcessGovernanceView('v7Preview', { route:parseHash(), force:true });
     }
 
@@ -3392,7 +3398,7 @@ async function downloadNativeDiagram() {
           expected_content_hash:formalDraft.content_hash
       }, 'submit');
       state.pgViewCache = {};
-      showToast('正式V7草稿已提交审核');
+      showToast('正式流程草稿已提交审核');
       return await loadProcessGovernanceView('v7Preview', { route:parseHash(), force:true });
     }
 
@@ -3418,7 +3424,7 @@ async function downloadNativeDiagram() {
           expected_content_hash:formalDraft.content_hash
       }, 'publish');
       state.pgViewCache = {};
-      showToast('正式V7版本已发布，版本标识为 ' + Number(result.process_version_id));
+      showToast('正式流程版本已发布，版本标识为 ' + Number(result.process_version_id));
       return await loadProcessGovernanceView('v7Preview', { route:parseHash(), force:true });
     }
 
@@ -3530,8 +3536,8 @@ async function downloadNativeDiagram() {
         $('pdgFeatureNotice').textContent = feature.enabled
           ? (feature.read_only
             ? '本批成果仅供查阅。按原有权限保留已完成工作包及本部门定向事实记录，所有工作包办理操作均已关闭。'
-            : '选择任一已发布的V7流程版本，由MDM工作组建立工作包并记录治理依据。每个工作包固定使用所选版本，历史已发布版本也可独立办理。')
-          : '数据治理尚未开启。开启后，可选择已发布的V7流程版本建立工作包。';
+            : '选择任一已发布的原生V8或受支持V7流程版本，由MDM工作组建立工作包并记录治理依据。每个工作包固定使用所选版本，历史已发布版本也可独立办理。')
+          : '数据治理尚未开启。开启后，可选择已发布的原生V8或受支持V7流程版本建立工作包。';
       }
       if ($('pdgResponsibilitySummary')) $('pdgResponsibilitySummary').innerHTML = pdgResponsibilityHtml(payload.responsibilities || feature.responsibilities);
       if ($('pdgPackageCount')) $('pdgPackageCount').textContent = Number(payload.summary && payload.summary.work_packages || 0);
@@ -3539,13 +3545,13 @@ async function downloadNativeDiagram() {
       if ($('pdgActionCount')) $('pdgActionCount').textContent = Number(payload.summary && payload.summary.my_action_items || 0);
       var versions = payload.published_versions || [];
       if (feature.enabled && !feature.read_only && !versions.length && hasPermission('governance:read-global') && $('pdgFeatureNotice')) {
-        $('pdgFeatureNotice').textContent = '数据治理已开启。当前尚无已发布的V7流程版本；完成流程核对、审核和发布后，可在这里选择版本建立工作包。';
+        $('pdgFeatureNotice').textContent = '数据治理已开启。当前尚无已发布的原生V8或受支持V7流程版本；完成流程核对、审核和发布后，可在这里选择版本建立工作包。';
       }
       if ($('pdgAvailableVersionCount')) $('pdgAvailableVersionCount').textContent = versions.length;
       if ($('pdgVersionChooser')) $('pdgVersionChooser').hidden = !feature.enabled || feature.read_only || !versions.length && !pdgHasAction(payload, 'reconcile');
       if ($('pdgVersionSelect')) {
         var selectedVersion = $('pdgVersionSelect').value;
-        $('pdgVersionSelect').innerHTML = '<option value="">' + (versions.length ? '请选择流程版本' : '暂无已发布的V7流程版本，请先完成流程发布') + '</option>' + versions.map(function(version) {
+        $('pdgVersionSelect').innerHTML = '<option value="">' + (versions.length ? '请选择流程版本' : '暂无已发布的原生V8或受支持V7流程版本，请先完成流程发布') + '</option>' + versions.map(function(version) {
           var label = [version.department_name, version.document_title || version.document_no, version.edition ? version.edition + '版' : '', '正式版本 ' + version.process_version_id, version.status === 'superseded' ? '历史已发布' : '当前已发布', version.work_package_id ? '已有工作包' : ''].filter(Boolean).join(' · ');
           return '<option value="' + Number(version.process_version_id) + '">' + safeText(label) + '</option>';
         }).join('');
@@ -4796,76 +4802,41 @@ async function downloadNativeDiagram() {
 
     // ===== API helper (with 401 handling and CSRF protection) =====
     const nativeFetch = window.fetch.bind(window);
-    const unsafeHttpMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
-    let csrfToken = '';
-    let csrfTokenPromise = null;
+    const requestClient = MdmProtocol.createRequestClient({
+      fetchImpl: nativeFetch,
+      timeoutMs: 0, // Preserve the retained page's unbounded request duration.
+      onUnauthorized: function(context) { handleUnauthorized(context.url, context.silentUnauthorized); }
+    });
 
-    function requestUrl(input) {
-      if (typeof input === 'string') return input;
-      return input && input.url ? input.url : '';
-    }
+    function loadCsrfToken() { return requestClient.ensureCsrfToken(); }
 
-    function isSameOriginApiWrite(input, options) {
-      const method = String((options && options.method) || (input && input.method) || 'GET').toUpperCase();
-      const url = requestUrl(input);
-      return unsafeHttpMethods.has(method) && url.indexOf('/api/') === 0 && url !== '/api/org/login';
-    }
-
-    async function loadCsrfToken() {
-      if (csrfToken) return csrfToken;
-      if (!csrfTokenPromise) {
-        csrfTokenPromise = nativeFetch('/api/csrf-token', { credentials: 'same-origin' })
-          .then(function(res) {
-            if (!res.ok) {
-              if (res.status === 401) handleUnauthorized('/api/csrf-token', false);
-              throw { status:res.status, message:'当前会话无法完成安全校验，请重新登录或稍后重试。' };
-            }
-            return res.json();
-          })
-          .then(function(body) {
-            csrfToken = body.csrfToken || '';
-            return csrfToken;
-          })
-          .finally(function() {
-            csrfTokenPromise = null;
-          });
-      }
-      return csrfTokenPromise;
-    }
-
-    window.fetch = async function(input, options) {
-      const requestOptions = { ...(options || {}) };
-      if (isSameOriginApiWrite(input, requestOptions)) {
-        const token = await loadCsrfToken();
-        const headers = new Headers(requestOptions.headers || {});
-        if (token) headers.set('X-CSRF-Token', token);
-        requestOptions.headers = headers;
-      }
-      return nativeFetch(input, requestOptions);
+    // Retained native callers keep the Response contract. All same-origin API
+    // traffic uses the same session owner as api(); assets keep native fetch.
+    window.fetch = function(input, options) {
+      const url = typeof input === 'string' ? input : input && input.url;
+      const absoluteApi = typeof url === 'string' && url.startsWith(location.origin + '/api/');
+      return typeof url === 'string' && (url.startsWith('/api/') || absoluteApi)
+        ? requestClient.fetch(input, options)
+        : nativeFetch(input, options);
     };
 
     async function api(path, options = {}) {
-      const requestOptions = { ...options };
-      const silentUnauthorized = !!requestOptions.silentUnauthorized;
-      delete requestOptions.silentUnauthorized;
-      const res = await fetch(path, { credentials:'same-origin', headers:{ ...(requestOptions.body && !(requestOptions.body instanceof FormData) ? {'Content-Type':'application/json'} : {}) }, ...requestOptions });
-      const text = await res.text();
-      let body = {};
-      if (text) { try { body = JSON.parse(text); } catch { body = text; } }
-      if (!res.ok) {
-        if (res.status === 401) {
-          handleUnauthorized(path, silentUnauthorized);
-        }
-        var errorBody = body && typeof body === 'object' ? body : {};
+      try {
+        return await requestClient.request(path, {
+          headers: { ...(options.body && !(options.body instanceof FormData) ? { 'Content-Type': 'application/json' } : {}) },
+          ...options, bodyEncoding: 'native', responseType: 'text-json'
+        });
+      } catch (error) {
+        if (!(error instanceof MdmProtocol.RequestError)) throw error;
+        const errorBody = error.body && typeof error.body === 'object' ? error.body : {};
         throw {
           ...errorBody,
-          status: res.status,
-          code: errorBody.code,
-          message: errorBody.error || 'HTTP ' + res.status,
-          details: errorBody.details
+          status: error.status,
+          code: error.code,
+          message: error.message,
+          details: error.details
         };
       }
-      return body;
     }
 
     function isUnauthorizedError(error) {
@@ -4873,7 +4844,6 @@ async function downloadNativeDiagram() {
     }
 
     function handleUnauthorized(path, silentUnauthorized) {
-      csrfToken = '';
       if(publicationImport.mode==='office'&&officeWorkbench.task?.analysis_task&&$('publicationDialog')?.open){
         officeWorkbench.suspended={actor:Number(officeWorkbench.data.actor_person_id),office:officeWorkbench.task.office_id};
         $('publicationDialog').close();
@@ -4882,7 +4852,7 @@ async function downloadNativeDiagram() {
         v7Edits.message = '登录已失效，未提交输入仍保留在当前页面。请使用原账号重新登录；关闭或刷新页面前先保留意见。';
         renderV7EditNotice();
       }
-      showLogin();
+      showLogin({ sessionAlreadyReset: true });
       if (hasV7Edits() && $('loginMsg')) $('loginMsg').textContent = v7Edits.message;
       if (!silentUnauthorized && path !== '/api/org/login') showToast('登录已过期，请重新登录', 'error');
     }
@@ -4963,8 +4933,10 @@ async function downloadNativeDiagram() {
       if (!items || items.length === 0) { bc.style.display = 'none'; return; }
       bc.style.display = 'flex';
       bc.innerHTML = items.map(function(item, i) {
-        if (i === items.length - 1) return '<span>' + safeText(item.label, '') + '</span>';
-        return '<a onclick="' + (item.onclick || '') + '">' + safeText(item.label, '') + '</a><span class="sep">›</span>';
+        if (i === items.length - 1 || !item.action) return '<span>' + safeText(item.label, '') + '</span>';
+        // R13: a crumb declares its action and arguments as data. A stored handler string would
+        // have to be evaluated to run, which is exactly what the content security policy forbids.
+        return '<a data-click="' + safeText(item.action, '') + '" data-click-args="' + escHtml(JSON.stringify(item.args || [])) + '">' + safeText(item.label, '') + '</a><span class="sep">›</span>';
       }).join('');
     }
 
@@ -4981,8 +4953,8 @@ async function downloadNativeDiagram() {
       if (passwordChangeBtn) passwordChangeBtn.remove();
       if ($('logoutBtn')) $('logoutBtn').style.display = 'none';
     }
-    function showLogin() {
-      csrfToken = '';
+    function showLogin(options) {
+      if (!options || !options.sessionAlreadyReset) requestClient.resetSession();
       resetSessionUi();
       $('loginBox').style.display = 'flex';
       $('appContent').style.display = 'none';
@@ -5237,7 +5209,7 @@ async function downloadNativeDiagram() {
         '<p>' + safeText(role.description) + '</p>' +
         '<div class="role-guide-detail-grid">' +
           '<div><strong>角色目标</strong><p>' + safeText(role.goal) + '</p></div>' +
-          '<div><strong>第一步入口</strong><p><button type="button" class="btn secondary" onclick="openWorkbenchTarget(\'' + safeText(role.firstEntry && role.firstEntry.target) + '\')">' + safeText(role.firstEntry && role.firstEntry.label) + '</button></p></div>' +
+          '<div><strong>第一步入口</strong><p><button type="button" class="btn secondary"data-click="openWorkbenchTarget" data-click-args="' + actionArgs(['safeText(role.firstEntry && role.firstEntry.target)']) + '">' + safeText(role.firstEntry && role.firstEntry.label) + '</button></p></div>' +
           '<div><strong>可见功能标签</strong><p>' + safeText(visibleTabs.join('、') || '无') + '</p></div>' +
           '<div><strong>当前待办</strong><p>' + safeText(currentTodos.length ? currentTodos.length + '项，进入第一步入口查看' : '当前没有来自该角色的待办') + '</p></div>' +
           '<div><strong>允许动作</strong><p>' + safeText(permissionLabels.join('；') || '只读查看') + '</p></div>' +
@@ -5423,8 +5395,7 @@ async function downloadNativeDiagram() {
       var actions = [
         { key: 'inputBaselineReview', title: '确认待处理问题', count: issueCount, meta: '打开第一条' },
         { key: 'quality', title: '处理治理闭环', count: qualityCount, meta: '看等待我审核或关闭的事项' },
-        { key: 'map', title: '查看流程图谱', count: mapCount, meta: '按部门、流程和 A1 定位关系' },
-        { key: 'newProcess', title: '文档结构化输出', count: '+', meta: '在网页上创建制度，并映射为能力-流程-行为结构' }
+        { key: 'map', title: '查看流程图谱', count: mapCount, meta: '按部门、流程和 A1 定位关系' }
       ];
       wrap.innerHTML = actions.map(function(action, index) {
         return '<button type="button" class="workflow-action pg-workflow-task' + (index === 0 ? ' primary' : '') + '" data-pg-task-entry="' + safeText(action.key) + '">' +
@@ -5842,7 +5813,7 @@ async function downloadNativeDiagram() {
       if (!$('employeeNo').value.trim() || !$('password').value) { $('loginMsg').textContent = '请填写登录名和密码'; return; }
       try {
         var user = await api('/api/org/login', { method:'POST', body:JSON.stringify({ loginName:$('employeeNo').value, password:$('password').value }) });
-        csrfToken = '';
+        requestClient.resetSession();
         await activateAuthenticatedApp(user, { sessionRestored: false });
       } catch (error) {
         $('loginMsg').textContent = error.message || '登录失败';
@@ -5890,7 +5861,7 @@ async function downloadNativeDiagram() {
 
     function renderLegacyUnavailable() {
       $('detailPage').classList.add('on');
-      $('detailContent').innerHTML = '<div class="notice">此旧功能已停用，历史资料保留。请从左侧进入V7流程治理或查看现有成果。</div>';
+      $('detailContent').innerHTML = '<div class="notice">此旧功能已停用，历史资料保留。请从左侧进入流程治理（V8）或查看现有成果。</div>';
     }
 
     async function loadTermGovernanceProcesses() {
@@ -6153,7 +6124,7 @@ async function downloadNativeDiagram() {
           '<td>' + safeText(todoContentLabel(row)) + '</td>' +
           '<td>' + safeText(row.due_date ? formatIssueDateTime(row.due_date) : '未设置') + '</td>' +
           '<td>' + statusTag(row.status) + '</td>' +
-          '<td>' + (row.status === 'pending' ? '<button class="btn secondary" onclick="handleTodoAction(\'' + safeText(row.type, '') + '\', ' + rowId + ', ' + relatedId + ')">处理</button>' : '') + (canDelete ? ' <a href="#" onclick="deleteTodo(' + rowId + ');return false" style="color:#e53935;margin-left:8px;">删除</a>' : '') + '</td>' +
+          '<td>' + (row.status === 'pending' ? '<button class="btn secondary"data-click="handleTodoAction" data-click-args="' + actionArgs(['safeText(row.type,)', rowId + ', ' + relatedId]) + '">处理</button>' : '') + (canDelete ? ' <a href="#"data-click="deleteTodo" data-click-args="' + actionArgs([rowId]) + '" data-click-prevent style="color:#e53935;margin-left:8px;">删除</a>' : '') + '</td>' +
           '</tr>';
       }).join('');
     }
@@ -6191,11 +6162,11 @@ async function downloadNativeDiagram() {
         var rowId = Number(row.id);
         var termActions = [];
         if (hasPermission('governance:review-department')) {
-          termActions.push('<button class="btn success" onclick="reviewTerm(' + rowId + ',\'approve\')">通过</button>');
-          termActions.push('<button class="btn danger" onclick="reviewTerm(' + rowId + ',\'reject\')">驳回</button>');
+          termActions.push('<button class="btn success"data-click="reviewTerm" data-click-args="' + actionArgs([rowId,'approve']) + '">通过</button>');
+          termActions.push('<button class="btn danger"data-click="reviewTerm" data-click-args="' + actionArgs([rowId,'reject']) + '">驳回</button>');
         }
         if (hasPermission('governance:draft-department') && row.status === 'pending') {
-          termActions.push('<a href="#" onclick="deleteTerm(' + rowId + ');return false" style="color:#e53935;">删除</a>');
+          termActions.push('<a href="#"data-click="deleteTerm" data-click-args="' + actionArgs([rowId]) + '" data-click-prevent style="color:#e53935;">删除</a>');
         }
         var actions = termActions.join(' ') || '-';
         return '<tr><td>' + rowId + '</td><td>' + safeText(row.term_type_name || row.term_type_code || '名词') + '</td><td>' + safeText(row.term) + '</td><td>' + safeText(row.definition) + '</td><td>' + safeText(row.scope) + '</td><td>' + statusTag(row.status) + '</td><td>' + actions + '</td></tr>';
@@ -6273,7 +6244,7 @@ async function downloadNativeDiagram() {
             '<td>' + severityTag(row.severity) + '</td>' +
             '<td>' + (statusLabel[row.status] || row.status) + '</td>' +
             '<td>' + (row.deadline ? safeText(formatIssueDateTime(row.deadline)) : '未设置') + '</td>' +
-            '<td><button class="btn secondary" onclick="navigateTo(\'detail\',{tab:\'conflicts\',type:\'' + conflictType + '\',id:' + rowId + '})">查看</button></td>' +
+            '<td><button class="btn secondary"data-click="navigateTo" data-click-args="' + actionArgs(['detail',{tab:'conflicts',type:'conflictType',id:rowId}]) + '">查看</button></td>' +
             '</tr>';
         }).join('') + '</tbody>' +
         '</table></div>';
@@ -6311,11 +6282,11 @@ async function downloadNativeDiagram() {
       // Quick-action cards are permission driven.
       var quickActions = '';
       if (hasPermission('governance:submit-department')) {
-        quickActions = '<div class="notice" style="border-left-color: var(--accent);">快捷操作：<a onclick="navigateTo(\'list\',{tab:\'mySubmissions\'})">我的报送</a> · <a onclick="navigateTo(\'list\',{tab:\'todos\'})">待办 (' + pendingTodos + ')</a></div>';
+        quickActions = '<div class="notice" style="border-left-color: var(--accent);">快捷操作：<adata-click="navigateTo" data-click-args="' + actionArgs(['list',{tab:'mySubmissions'}]) + '">我的报送</a> · <adata-click="navigateTo" data-click-args="' + actionArgs(['list',{tab:'todos'}]) + '">待办 (' + pendingTodos + ')</a></div>';
       } else if (hasPermission('governance:review-department')) {
-        quickActions = '<div class="notice" style="border-left-color: var(--accent);">快捷操作：<a onclick="navigateTo(\'list\',{tab:\'todos\'})">待审核 (' + pendingTodos + ')</a></div>';
+        quickActions = '<div class="notice" style="border-left-color: var(--accent);">快捷操作：<adata-click="navigateTo" data-click-args="' + actionArgs(['list',{tab:'todos'}]) + '">待审核 (' + pendingTodos + ')</a></div>';
       } else if (hasPermission('governance:handle-assigned-conflict') || hasPermission('governance:decide-escalation')) {
-        quickActions = '<div class="notice" style="border-left-color: var(--accent);">快捷操作：<a onclick="navigateTo(\'list\',{tab:\'conflicts\'})">未解决冲突 (' + pendingConflicts + ')</a> · <a onclick="navigateTo(\'list\',{tab:\'todos\'})">待办 (' + pendingTodos + ')</a></div>';
+        quickActions = '<div class="notice" style="border-left-color: var(--accent);">快捷操作：<adata-click="navigateTo" data-click-args="' + actionArgs(['list',{tab:'conflicts'}]) + '">未解决冲突 (' + pendingConflicts + ')</a> · <adata-click="navigateTo" data-click-args="' + actionArgs(['list',{tab:'todos'}]) + '">待办 (' + pendingTodos + ')</a></div>';
       }
       var actionArea = $('dashboardActions');
       if (actionArea) actionArea.innerHTML = quickActions;
@@ -6585,7 +6556,7 @@ async function downloadNativeDiagram() {
               '<td>' + safeText(row.due_date || '') + '</td>' +
               '<td>' + safeText(source) + '</td>' +
               '<td>' + safeText(row.message) + '</td>' +
-              '<td><button class="btn secondary" type="button" onclick="renderProcessGovernanceQualityCaseDetail(' + Number(row.id) + ')">详情</button></td>' +
+              '<td><button class="btn secondary" type="button"data-click="renderProcessGovernanceQualityCaseDetail" data-click-args="' + actionArgs([Number(row.id)]) + '">详情</button></td>' +
             '</tr>';
           }).join('')
         : '<tr><td colspan="8" class="empty">暂无治理问题单</td></tr>';
@@ -6612,8 +6583,8 @@ async function downloadNativeDiagram() {
       var persons = state.pgAssignablePersons || [];
       var target = kind + ':' + id;
       var buttonAttr = kind === 'quality-case'
-        ? 'data-quality-case-assign="' + escapeHtml(id) + '" onclick="assignProcessGovernanceQualityCase(' + Number(id) + ')"'
-        : 'data-mapping-todo-assign="' + escapeHtml(id) + '" onclick="assignProcessGovernanceMappingTodo(' + Number(id) + ')"';
+        ? 'data-quality-case-assign="' + escapeHtml(id) + '"data-click="assignProcessGovernanceQualityCase" data-click-args="' + actionArgs([Number(id)]) + '"'
+        : 'data-mapping-todo-assign="' + escapeHtml(id) + '"data-click="assignProcessGovernanceMappingTodo" data-click-args="' + actionArgs([Number(id)]) + '"';
       return '<div class="process-design-actions">' +
         '<select data-process-governance-assignee="' + escapeHtml(target) + '">' +
           '<option value="">选择责任人</option>' +
@@ -6691,12 +6662,12 @@ async function downloadNativeDiagram() {
               '<div class="pg-work-help" style="margin-bottom:10px"><strong>整改这条问题单：</strong><div class="pg-help-steps"><span class="pg-help-step">1 看来源位置</span><span class="pg-help-step">2 回部门映射文件整改</span><span class="pg-help-step">3 提交处理说明</span><span class="pg-help-step">4 重新导入后关闭</span></div></div>' +
               '<div class="pg-action-meaning"><strong>按钮含义：</strong>标记整改中表示责任人已开始处理原文；提交整改表示已写明处理说明，等待重新质检；确认关闭只在重新导入后状态变成“待关闭确认”时可用；重开表示复核后仍需继续跟踪。</div>' +
               '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
-                "<button class=\"btn secondary\" type=\"button\" onclick=\"processQualityCaseAction(" + Number(item.id) + ",'status',{status:'rectifying',note:'已开始修改原文'})\">标记整改中</button>" +
-                "<button class=\"btn secondary\" type=\"button\" onclick=\"processQualityCaseAction(" + Number(item.id) + ",'submit',{note:'已提交整改说明，等待重新质检'})\">提交整改</button>" +
-                "<button class=\"btn secondary\" type=\"button\"" + closeAttrs + " onclick=\"processQualityCaseAction(" + Number(item.id) + ",'close',{note:'重新质检未再出现，确认关闭'})\">确认关闭</button>" +
-                "<button class=\"btn secondary\" type=\"button\" onclick=\"processQualityCaseAction(" + Number(item.id) + ",'reopen',{note:'复核后继续跟踪'})\">重开</button>" +
+                "<button class=\"btn secondary\" type=\"button\"data-click=\"processQualityCaseAction\" data-click-args=\"" + actionArgs([Number(item.id),'status',{status:'rectifying',note:'已开始修改原文'}]) + "\">标记整改中</button>" +
+                "<button class=\"btn secondary\" type=\"button\"data-click=\"processQualityCaseAction\" data-click-args=\"" + actionArgs([Number(item.id),'submit',{note:'已提交整改说明，等待重新质检'}]) + "\">提交整改</button>" +
+                "<button class=\"btn secondary\" type=\"button\"" + closeAttrs + "data-click=\"processQualityCaseAction\" data-click-args=\"" + actionArgs([Number(item.id),'close',{note:'重新质检未再出现，确认关闭'}]) + "\">确认关闭</button>" +
+                "<button class=\"btn secondary\" type=\"button\"data-click=\"processQualityCaseAction\" data-click-args=\"" + actionArgs([Number(item.id),'reopen',{note:'复核后继续跟踪'}]) + "\">重开</button>" +
               '</div>' +
-              '<div style="display:flex;gap:8px;margin-top:10px"><input id="pgQualityCaseCommentInput" placeholder="处理记录：已核对哪份文件；修改了哪里；还等什么验证" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:6px"><button class="btn" type="button" onclick="addProcessQualityCaseComment(' + Number(item.id) + ')">记录备注</button></div>' +
+              '<div style="display:flex;gap:8px;margin-top:10px"><input id="pgQualityCaseCommentInput" placeholder="处理记录：已核对哪份文件；修改了哪里；还等什么验证" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:6px"><button class="btn" type="button"data-click="addProcessQualityCaseComment" data-click-args="' + actionArgs([Number(item.id)]) + '">记录备注</button></div>' +
             '</div>' +
             '<div><strong>处理历史</strong>' + eventHtml + '</div>' +
           '</div>';
@@ -6826,7 +6797,7 @@ async function downloadNativeDiagram() {
               '<td>' + safeText(row.a1_code || '') + '</td>' +
               '<td>' + safeText(row.message || '') + '</td>' +
               '<td>' + safeText(owner) + '</td>' +
-              '<td><button class="btn secondary" type="button" onclick="renderProcessGovernanceMappingTodoDetail(' + Number(row.id) + ')">详情</button></td>' +
+              '<td><button class="btn secondary" type="button"data-click="renderProcessGovernanceMappingTodoDetail" data-click-args="' + actionArgs([Number(row.id)]) + '">详情</button></td>' +
             '</tr>';
           }).join('')
         : '<tr><td colspan="8" class="empty">暂无流程映射待办</td></tr>';
@@ -6875,12 +6846,12 @@ async function downloadNativeDiagram() {
               '<div class="pg-work-help" style="margin-bottom:10px"><strong>处理这条待办：</strong><div class="pg-help-steps"><span class="pg-help-step">1 看来源位置</span><span class="pg-help-step">2 按类型判断问题</span><span class="pg-help-step">3 回部门映射文件整改</span><span class="pg-help-step">4 重新导入后关闭</span></div></div>' +
               '<div class="pg-action-meaning"><strong>按钮含义：</strong>标记处理中表示已经开始核验或整改；提交处理表示已经写明处理结论，等待重新导入验证；确认关闭只在状态变成“待关闭确认”后可用；重开表示复核后仍需继续跟踪。</div>' +
               '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
-                "<button class=\"btn secondary\" type=\"button\" onclick=\"processMappingTodoAction(" + Number(item.id) + ",'status',{status:'rectifying',note:'已开始处理映射待办'})\">标记处理中</button>" +
-                "<button class=\"btn secondary\" type=\"button\" onclick=\"processMappingTodoAction(" + Number(item.id) + ",'submit',{note:'已提交映射处理说明，等待重新导入验证'})\">提交处理</button>" +
-                "<button class=\"btn secondary\" type=\"button\"" + closeAttrs + " onclick=\"processMappingTodoAction(" + Number(item.id) + ",'close',{note:'修改原文并重新导入后确认关闭'})\">确认关闭</button>" +
-                "<button class=\"btn secondary\" type=\"button\" onclick=\"processMappingTodoAction(" + Number(item.id) + ",'reopen',{note:'继续跟踪该映射待办'})\">重开</button>" +
+                "<button class=\"btn secondary\" type=\"button\"data-click=\"processMappingTodoAction\" data-click-args=\"" + actionArgs([Number(item.id),'status',{status:'rectifying',note:'已开始处理映射待办'}]) + "\">标记处理中</button>" +
+                "<button class=\"btn secondary\" type=\"button\"data-click=\"processMappingTodoAction\" data-click-args=\"" + actionArgs([Number(item.id),'submit',{note:'已提交映射处理说明，等待重新导入验证'}]) + "\">提交处理</button>" +
+                "<button class=\"btn secondary\" type=\"button\"" + closeAttrs + "data-click=\"processMappingTodoAction\" data-click-args=\"" + actionArgs([Number(item.id),'close',{note:'修改原文并重新导入后确认关闭'}]) + "\">确认关闭</button>" +
+                "<button class=\"btn secondary\" type=\"button\"data-click=\"processMappingTodoAction\" data-click-args=\"" + actionArgs([Number(item.id),'reopen',{note:'继续跟踪该映射待办'}]) + "\">重开</button>" +
               '</div>' +
-              '<div style="display:flex;gap:8px;margin-top:10px"><input id="pgMappingTodoCommentInput" placeholder="处理记录：已核对哪份文件；调整了哪个 L3/A1；等待哪次重新导入验证" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:6px"><button class="btn" type="button" onclick="addProcessMappingTodoComment(' + Number(item.id) + ')">记录备注</button></div>' +
+              '<div style="display:flex;gap:8px;margin-top:10px"><input id="pgMappingTodoCommentInput" placeholder="处理记录：已核对哪份文件；调整了哪个 L3/A1；等待哪次重新导入验证" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:6px"><button class="btn" type="button"data-click="addProcessMappingTodoComment" data-click-args="' + actionArgs([Number(item.id)]) + '">记录备注</button></div>' +
             '</div>' +
             '<div><strong>处理历史</strong>' + eventHtml + '</div>' +
           '</div>';
@@ -7136,7 +7107,6 @@ async function downloadNativeDiagram() {
       if (taskKey === 'inputBaselineReview') return processGovernanceIssueQueueHash('waiting_my_action');
       if (taskKey === 'quality') return '#/processGovernance?view=quality';
       if (taskKey === 'map') return '#/processGovernance?view=map';
-      if (taskKey === 'newProcess') return '#/processGovernance?view=documentStructure';
       return '#/processGovernance';
     }
 
@@ -8835,7 +8805,7 @@ async function downloadNativeDiagram() {
       if (view === 'editor' && $('pgDesignSummaryMeta')) $('pgDesignSummaryMeta').textContent = '正在加载单流程编制草稿...';
       if (view === 'handoffs' && $('pgHandoffQueueRows')) $('pgHandoffQueueRows').innerHTML = '<tr><td colspan="6" class="empty">正在读取跨部门承接待办...</td></tr>';
       if (view === 'conflicts' && $('pgHandoffConflictRows')) $('pgHandoffConflictRows').innerHTML = '<tr><td colspan="6" class="empty">正在读取承接冲突待办...</td></tr>';
-      if (view === 'v7Preview' && $('pgV7PreviewCaseRows')) $('pgV7PreviewCaseRows').innerHTML = '<tr><td colspan="7" class="empty">正在读取V7预览核对案例...</td></tr>';
+      if (view === 'v7Preview' && $('pgV7PreviewCaseRows')) $('pgV7PreviewCaseRows').innerHTML = '<tr><td colspan="7" class="empty">正在读取流程预览核对（V8）案例...</td></tr>';
       if (view === 'dataGovernance' && $('pdgFeatureNotice')) $('pdgFeatureNotice').textContent = '正在读取数据生命周期治理工作包...';
     }
 
@@ -9225,7 +9195,7 @@ async function downloadNativeDiagram() {
       }
       var listTab = sourceTab || config.tab;
       setBreadcrumb([
-        { label: config.listLabel, onclick: "navigateTo('list',{tab:'" + listTab + "'})" },
+        { label: config.listLabel, action: 'navigateTo', args: ['list', { tab: listTab }] },
         { label: (isNew ? '新增' : (isView ? '查看' : '编辑')) + config.label }
       ]);
       if (type === 'person' && row.assignments && row.assignments.length) {
@@ -9641,7 +9611,7 @@ async function downloadNativeDiagram() {
     if ($('pgRefreshV7PreviewBtn')) {
       $('pgRefreshV7PreviewBtn').addEventListener('click', function() {
         state.pgViewCache = {};
-        runPageTask(function() { return loadProcessGovernanceView('v7Preview', { route: parseHash(), force: true }); }, 'V7预览核对案例刷新失败');
+        runPageTask(function() { return loadProcessGovernanceView('v7Preview', { route: parseHash(), force: true }); }, '流程预览核对（V8）案例刷新失败');
       });
     }
     if ($('pgCreateV7PreviewBtn') && $('pgV7PreviewFileInput')) {
@@ -9652,7 +9622,7 @@ async function downloadNativeDiagram() {
         runPageTask(async function() {
           try { return await uploadV7PreviewFile(file, null); }
           finally { input.value = ''; }
-        }, 'V7预览核对案例建立失败');
+        }, '流程预览核对（V8）案例建立失败');
       });
     }
     if ($('pgV7PreviewRevisionInput')) {
@@ -9662,7 +9632,7 @@ async function downloadNativeDiagram() {
         runPageTask(async function() {
           try { return await uploadV7PreviewFile(file, state.pgSelectedV7PreviewCaseId); }
           finally { input.value = ''; }
-        }, 'V7新修订上传失败');
+        }, '流程新修订上传失败');
       });
     }
 
@@ -9722,7 +9692,7 @@ async function downloadNativeDiagram() {
       try {
         var detail = await api('/api/views/processes/' + processId);
         setBreadcrumb([
-          { label: '业务地图', onclick: "navigateTo('list',{tab:'businessMap'})" },
+          { label: '业务地图', action: 'navigateTo', args: ['list', { tab: 'businessMap' }] },
           { label: detail.name }
         ]);
 
@@ -9772,7 +9742,7 @@ async function downloadNativeDiagram() {
       } catch (e) {
         if (e.status === 404) {
           document.getElementById('detailContent').innerHTML =
-            '<div class="empty">流程不存在或无权访问 <button class="btn secondary" onclick="history.back()">返回上一页</button></div>';
+            '<div class="empty">流程不存在或无权访问 <button class="btn secondary"data-click="historyBack">返回上一页</button></div>';
         } else {
           showToast(e.message || '加载失败', 'error');
         }
@@ -9785,7 +9755,7 @@ async function downloadNativeDiagram() {
         const detail = await api(`/api/mappings/${mappingId}`);
         state.activeMapping = detail;
         setBreadcrumb([
-          { label: sourceTab === 'todos' ? '待办列表' : '我的报送', onclick: `navigateTo('list',{tab:'${sourceTab || 'mySubmissions'}'})` },
+          { label: sourceTab === 'todos' ? '待办列表' : '我的报送', action: 'navigateTo', args: ['list', { tab: sourceTab || 'mySubmissions' }] },
           { label: `流程映射 #${detail.id}` },
         ]);
 
@@ -9874,7 +9844,7 @@ async function downloadNativeDiagram() {
         if (searchEl) searchEl.oninput = () => filterFieldTable(detail.fields || [], rejectionHistory);
       } catch (e) {
         if (e.status === 404) {
-          $('detailContent').innerHTML = `<div class="empty">记录不存在或无权访问 <button class="btn secondary" onclick="history.back()">返回上一页</button></div>`;
+          $('detailContent').innerHTML = `<div class="empty">记录不存在或无权访问 <button class="btn secondary"data-click="historyBack">返回上一页</button></div>`;
         } else {
           showToast(e.message || '加载失败', 'error');
         }
@@ -9902,7 +9872,7 @@ async function downloadNativeDiagram() {
         const detail = await api('/api/conflicts/' + conflictId + '?type=' + conflictType);
         state.activeConflict = detail;
         setBreadcrumb([
-          { label: '冲突管理', onclick: 'navigateTo(\'list\',{tab:\'conflicts\'})' },
+          { label: '冲突管理', action: 'navigateTo', args: ['list', { tab: 'conflicts' }] },
           { label: '冲突 #' + conflictId },
         ]);
 
@@ -9990,7 +9960,7 @@ async function downloadNativeDiagram() {
         if (archiveBtn) archiveBtn.onclick = function() { handleArchive(conflictId, conflictType); };
       } catch (e) {
         if (e.status === 404) {
-          $('detailContent').innerHTML = '<div class="empty">记录不存在或无权访问 <button class="btn secondary" onclick="history.back()">返回上一页</button></div>';
+          $('detailContent').innerHTML = '<div class="empty">记录不存在或无权访问 <button class="btn secondary"data-click="historyBack">返回上一页</button></div>';
         } else {
           showToast(e.message || '加载失败', 'error');
         }
@@ -10109,8 +10079,8 @@ async function downloadNativeDiagram() {
       if (!mapping) return;
 
       setBreadcrumb([
-        { label: '待办列表', onclick: `navigateTo('list',{tab:'todos'})` },
-        { label: `流程映射 #${mappingId}`, onclick: `renderMappingDetail(${mappingId},'todos')` },
+        { label: '待办列表', action: 'navigateTo', args: ['list', { tab: 'todos' }] },
+        { label: `流程映射 #${mappingId}`, action: 'renderMappingDetail', args: [mappingId, 'todos'] },
         { label: '驳回审核' },
       ]);
 
@@ -10129,7 +10099,7 @@ async function downloadNativeDiagram() {
             <tbody id="rejectFieldRows">
               ${(mapping.fields || []).map(f => `
                 <tr>
-                  <td><input type="checkbox" class="reject-checkbox" data-field-id="${f.id}" onchange="toggleRejectRow(this)"></td>
+                  <td><input type="checkbox" class="reject-checkbox" data-field-id="${f.id}"data-change="toggleRejectRowSelf"></td>
                   <td>${safeText(f.field_name_cn)}</td>
                   <td>${safeText(f.note || f.field_type)}</td>
                   <td><input class="reject-reason-input" data-field-id="${f.id}" placeholder="填写该字段驳回原因" disabled style="width: 100%;"></td>
@@ -10140,7 +10110,7 @@ async function downloadNativeDiagram() {
         </div>
         <div class="error" id="rejectError" style="color: var(--error); font-size: 13px; margin-top: 16px;"></div>
         <div class="toolbar" style="margin-top: 24px; justify-content: flex-end;">
-          <button class="btn secondary" onclick="renderMappingDetail(${mappingId},'todos')">取消</button>
+          <button class="btn secondary"data-click="renderMappingDetail" data-click-args="${actionArgs([mappingId,'todos'])}">取消</button>
           <button class="btn danger" id="confirmRejectBtn">确认驳回</button>
         </div>
       `;
@@ -10249,7 +10219,7 @@ async function downloadNativeDiagram() {
           <label>协调说明<textarea id="coordinationNote" placeholder="说明协调过程和理由"></textarea></label>
         </div>
         <div style="margin-top: 24px; display: flex; justify-content: flex-end; gap: 8px;">
-          <button class="btn secondary" onclick="renderConflictDetail(${conflictId},'${conflictType}','conflicts')">取消</button>
+          <button class="btn secondary"data-click="renderConflictDetail" data-click-args="${actionArgs([conflictId,conflictType,'conflicts'])}">取消</button>
           <button class="btn primary" id="submitCoordBtn">提交</button>
         </div>
       `;
@@ -10283,7 +10253,7 @@ async function downloadNativeDiagram() {
           <label>终裁意见<textarea id="finalOpinion" placeholder="可选填终裁意见"></textarea></label>
         </div>
         <div style="margin-top: 24px; display: flex; justify-content: flex-end; gap: 8px;">
-          <button class="btn secondary" onclick="renderConflictDetail(${conflictId},'${conflictType}','conflicts')">取消</button>
+          <button class="btn secondary"data-click="renderConflictDetail" data-click-args="${actionArgs([conflictId,conflictType,'conflicts'])}">取消</button>
           <button class="btn primary" id="finalDecideConfirmBtn">确认终裁</button>
         </div>
       `;
@@ -10433,9 +10403,9 @@ async function downloadNativeDiagram() {
       setActionMetric('personMetricTotal', personRows.length);
       document.getElementById('personTableBody').innerHTML = (data.rows || []).map(function(r) {
         return '<tr><td><code>' + escHtml(r.employee_no) + '</code></td><td>' + escHtml(r.person_name) + '</td><td>' + escHtml(r.org_unit_name || '-') + '</td><td>' + escHtml(r.position_name || '-') + '</td><td>' + escHtml(r.mobile || '-') + '</td><td>' + escHtml(r.email || '-') + '</td><td>' + escHtml(r.employment_status) + '</td><td>' + escHtml(r.status) + '</td><td>' +
-          '<a href="#" onclick="navigateTo(\'detail\',{tab:\'persons\',type:\'person\',id:\'' + escHtml(r.employee_no) + '\'});return false">详情</a>' +
-          '<a href="#" onclick="navigateTo(\'form\',{tab:\'persons\',type:\'person\',id:\'' + escHtml(r.employee_no) + '\',action:\'edit\'});return false" style="margin-left:8px;">编辑</a>' +
-          (r.status === 'draft' ? '<a href="#" onclick="activatePerson(\'' + escHtml(r.employee_no) + '\');return false" style="margin-left:8px;">激活</a>' : '') +
+          '<a href="#"data-click="navigateTo" data-click-args="' + actionArgs(['detail',{tab:'persons',type:'person',id:'escHtml(r.employee_no)'}]) + '" data-click-prevent>详情</a>' +
+          '<a href="#"data-click="navigateTo" data-click-args="' + actionArgs(['form',{tab:'persons',type:'person',id:'escHtml(r.employee_no)',action:'edit'}]) + '" data-click-prevent style="margin-left:8px;">编辑</a>' +
+          (r.status === 'draft' ? '<a href="#"data-click="activatePerson" data-click-args="' + actionArgs(['escHtml(r.employee_no)']) + '" data-click-prevent style="margin-left:8px;">激活</a>' : '') +
           '</td></tr>';
       }).join('') || '<tr><td colspan="9" style="text-align:center">暂无数据</td></tr>';
     }
@@ -10552,6 +10522,11 @@ async function downloadNativeDiagram() {
     // ===== RBAC: Role & Permission Management =====
 
     (function retiredRbacUi() {
+    // R13: these handlers are private to this section; registering them keeps them private while
+    // still letting the markup reach them through the delegated dispatcher.
+    Object.assign(PAGE_ACTIONS.click, { cancelUserEditor, closeIdentityAccountEditor, deleteRole, editOverviewRoles, editRole, fitDiagram, grantIdentityRole, historyBack, openExternal, refreshUserManagement, removeBlock, renderIdentityAccounts, resetDiagram, resetUserDefaultPassword, revokeIdentityRole, runIdentityLifecycle, saveIdentityAccount, savePermMatrix, saveUserFromManagement, saveUserRoles, showCreateRoleDialog, showIdentityAccountEditor, showIdentityRoleAssignments, showUserEditor });
+    Object.assign(PAGE_ACTIONS.change, { applyIdentityAccountFilters, applyOverviewFilter, applyUserManagementFilters, handleImportFile, loadOfficeWorkbenchSelf, loadPermMatrix, renderGrantVisibleTabPreview, renderIdentityVisibleTabPreview, toggleRejectRowSelf });
+    Object.assign(PAGE_ACTIONS.input, { applyIdentityAccountFilters, applyUserManagementFilters, searchUsers });
     var rbacPanel = 'userManagement';
     var userManagementData = [];
     var userManagementRoles = [];
@@ -10637,12 +10612,12 @@ async function downloadNativeDiagram() {
         '<div id="rbacUserManagement">' +
           '<div class="user-management-head">' +
             '<div><h3>用户管理</h3><p>账号入库和角色分配。新增或重置后，系统生成一次性初始密码，用户登录后必须修改。</p></div>' +
-            '<button class="btn primary" onclick="showUserEditor(\'new\')">新增账号</button>' +
+            '<button class="btn primary"data-click="showUserEditor" data-click-args="' + actionArgs(['new']) + '">新增账号</button>' +
           '</div>' +
           '<div class="user-management-filters">' +
-            '<label>搜索<input id="userManagementSearch" value="' + safeText(userManagementSearch, '') + '" placeholder="工号 / 姓名 / 岗位" oninput="applyUserManagementFilters()"></label>' +
-            '<label>部门<select id="userManagementDeptFilter" onchange="applyUserManagementFilters()">' + deptOptions + '</select></label>' +
-            '<button class="btn secondary" onclick="refreshUserManagement()">刷新</button>' +
+            '<label>搜索<input id="userManagementSearch" value="' + safeText(userManagementSearch, '') + '" placeholder="工号 / 姓名 / 岗位"data-input="applyUserManagementFilters"></label>' +
+            '<label>部门<select id="userManagementDeptFilter"data-change="applyUserManagementFilters">' + deptOptions + '</select></label>' +
+            '<button class="btn secondary"data-click="refreshUserManagement">刷新</button>' +
           '</div>' +
           '<div id="userManagementEditor"></div>' +
           '<div class="table-container"><table class="data-table">' +
@@ -10694,8 +10669,8 @@ async function downloadNativeDiagram() {
           '<td>' + userRoleStatus(user) + '</td>' +
           '<td>' + safeText(user.created_at || '-') + '</td>' +
           '<td><div class="user-management-actions">' +
-            '<button class="btn secondary" onclick="showUserEditor(\'edit\',' + Number(user.id) + ')">编辑</button>' +
-            '<button class="btn secondary" onclick="resetUserDefaultPassword(' + Number(user.id) + ')">重置密码</button>' +
+            '<button class="btn secondary"data-click="showUserEditor" data-click-args="' + actionArgs(['edit',Number(user.id)]) + '">编辑</button>' +
+            '<button class="btn secondary"data-click="resetUserDefaultPassword" data-click-args="' + actionArgs([Number(user.id)]) + '">重置密码</button>' +
           '</div></td>' +
         '</tr>';
       }).join('');
@@ -10735,8 +10710,8 @@ async function downloadNativeDiagram() {
             '<div><label>项目治理角色</label><div class="role-check-list" id="userEditorProjectRoles">' + projectChecks + '</div></div>' +
           '</div>' +
           '<div class="entity-form-actions">' +
-            '<button class="btn secondary" onclick="cancelUserEditor()">取消</button>' +
-            '<button class="btn primary" onclick="saveUserFromManagement()">保存账号</button>' +
+            '<button class="btn secondary"data-click="cancelUserEditor">取消</button>' +
+            '<button class="btn primary"data-click="saveUserFromManagement">保存账号</button>' +
           '</div>' +
         '</div>';
     }
@@ -10828,7 +10803,7 @@ async function downloadNativeDiagram() {
       panel.innerHTML = '<h3>角色列表</h3><div id="roleTableContainer">加载中...</div>';
 
       fetch('/api/roles').then(function(r) { return r.json(); }).then(function(roles) {
-        var html = '<button class="btn primary" onclick="showCreateRoleDialog()" style="margin-bottom:12px;">新建角色</button>';
+        var html = '<button class="btn primary"data-click="showCreateRoleDialog" style="margin-bottom:12px;">新建角色</button>';
         html += '<table class="data-table" style="width:100%;"><thead><tr><th>角色编码</th><th>名称</th><th>描述</th><th>继承自</th><th>权限数</th><th>用户数</th><th>系统</th><th>操作</th></tr></thead><tbody>';
         roles.forEach(function(r) {
           html += '<tr>';
@@ -10841,9 +10816,9 @@ async function downloadNativeDiagram() {
           html += '<td>' + (r.is_system ? '是' : '否') + '</td>';
           html += '<td>';
           if (!r.is_system) {
-            html += '<a href="#" onclick="navigateTo(\'detail\',{tab:\'rbac\',type:\'role\',id:' + r.role_id + '});return false">详情</a> ';
-            html += '<a href="#" onclick="editRole(' + r.role_id + ');return false" style="margin-left:8px;">编辑</a> ';
-            html += '<a href="#" onclick="deleteRole(' + r.role_id + ')" style="color:#e53935;">删除</a>';
+            html += '<a href="#"data-click="navigateTo" data-click-args="' + actionArgs(['detail',{tab:'rbac',type:'role',id:r.role_id}]) + '" data-click-prevent>详情</a> ';
+            html += '<a href="#"data-click="editRole" data-click-args="' + actionArgs([r.role_id]) + '" data-click-prevent style="margin-left:8px;">编辑</a> ';
+            html += '<a href="#"data-click="deleteRole" data-click-args="' + actionArgs([r.role_id]) + '" style="color:#e53935;">删除</a>';
           } else {
             html += '<span style="color:#999;">—</span>';
           }
@@ -10876,7 +10851,7 @@ async function downloadNativeDiagram() {
 
       fetch('/api/roles').then(function(r) { return r.json(); }).then(function(roles) {
         var roleOptions = roles.map(function(r) { return '<option value="' + r.role_id + '">' + escapeHtml(r.role_code) + ' — ' + escapeHtml(r.role_name) + (r.is_system ? ' (系统)' : '') + '</option>'; }).join('');
-        panel.innerHTML = '<h3>权限矩阵</h3><select id="permMatrixRoleSelect" onchange="loadPermMatrix()" style="padding:6px;margin-bottom:16px;min-width:250px;"><option value="">— 选择角色 —</option>' + roleOptions + '</select><div id="permMatrixContent"></div>';
+        panel.innerHTML = '<h3>权限矩阵</h3><select id="permMatrixRoleSelect"data-change="loadPermMatrix" style="padding:6px;margin-bottom:16px;min-width:250px;"><option value="">— 选择角色 —</option>' + roleOptions + '</select><div id="permMatrixContent"></div>';
       });
     }
 
@@ -10915,7 +10890,7 @@ async function downloadNativeDiagram() {
           html += '</tr>';
         });
         html += '</tbody></table>';
-        html += '<button onclick="savePermMatrix(' + roleId + ')" style="margin-top:12px;padding:6px 16px;background:#2e7d32;color:white;border:none;border-radius:4px;cursor:pointer;">保存权限</button>';
+        html += '<buttondata-click="savePermMatrix" data-click-args="' + actionArgs([roleId]) + '" style="margin-top:12px;padding:6px 16px;background:#2e7d32;color:white;border:none;border-radius:4px;cursor:pointer;">保存权限</button>';
         document.getElementById('permMatrixContent').innerHTML = html;
       });
     }
@@ -10939,7 +10914,7 @@ async function downloadNativeDiagram() {
     function renderUserRolesPanel() {
       var panel = document.getElementById('rbacPanel');
       panel.innerHTML = '<h3>用户角色分配</h3><div style="display:flex;gap:16px;">' +
-        '<div style="width:45%;"><label>搜索用户</label><input type="text" id="userSearchInput" placeholder="工号/姓名..." oninput="searchUsers()" style="width:100%;padding:6px;margin-bottom:8px;border:1px solid #ddd;border-radius:4px;"><div id="userSearchResults" style="max-height:400px;overflow-y:auto;border:1px solid #eee;border-radius:4px;"></div></div>' +
+        '<div style="width:45%;"><label>搜索用户</label><input type="text" id="userSearchInput" placeholder="工号/姓名..."data-input="searchUsers" style="width:100%;padding:6px;margin-bottom:8px;border:1px solid #ddd;border-radius:4px;"><div id="userSearchResults" style="max-height:400px;overflow-y:auto;border:1px solid #eee;border-radius:4px;"></div></div>' +
         '<div style="width:55%;" id="userRolesDetail"><p style="color:#999;">请选择左侧用户</p></div>' +
         '</div>';
     }
@@ -10975,7 +10950,7 @@ async function downloadNativeDiagram() {
         allRoles.forEach(function(r) {
           html += '<label style="display:block;margin-bottom:4px;"><input type="checkbox" value="' + r.role_id + '" ' + (userRoleIds.has(r.role_id) ? 'checked' : '') + '> ' + escapeHtml(r.role_code) + ' — ' + escapeHtml(r.role_name) + (r.is_system ? ' (系统)' : '') + '</label>';
         });
-        html += '<button onclick="saveUserRoles(' + userId + ')" style="margin-top:12px;padding:6px 16px;background:#2e7d32;color:white;border:none;border-radius:4px;cursor:pointer;">保存分配</button>';
+        html += '<buttondata-click="saveUserRoles" data-click-args="' + actionArgs([userId]) + '" style="margin-top:12px;padding:6px 16px;background:#2e7d32;color:white;border:none;border-radius:4px;cursor:pointer;">保存分配</button>';
         document.getElementById('userRoleCheckboxes').innerHTML = html;
       });
     }
@@ -11010,7 +10985,7 @@ async function downloadNativeDiagram() {
         var deptOptions = '<option value="">全部</option>' + depts.map(function(d) { return '<option value="' + escapeHtml(d) + '">' + escapeHtml(d) + '</option>'; }).join('');
 
         var html = '<div style="margin-bottom:12px;display:flex;gap:12px;align-items:center;">' +
-          '<label>部门筛选：<select id="overviewDeptFilter" onchange="applyOverviewFilter()" style="padding:4px 8px;border:1px solid #ddd;border-radius:4px;">' + deptOptions + '</select></label>' +
+          '<label>部门筛选：<select id="overviewDeptFilter"data-change="applyOverviewFilter" style="padding:4px 8px;border:1px solid #ddd;border-radius:4px;">' + deptOptions + '</select></label>' +
           '<span style="color:#999;font-size:13px;">共 ' + data.length + ' 人</span>' +
           '</div>' +
           '<table class="data-table" style="width:100%;font-size:13px;">' +
@@ -11044,7 +11019,7 @@ async function downloadNativeDiagram() {
         html += '<td>' + escapeHtml(u.post || '-') + '</td>';
         html += '<td>' + escapeHtml(u.role) + '</td>';
         html += '<td><span id="badge-' + u.id + '">' + (u.rbac_role_codes || '<span style="color:#999;">未分配</span>') + '</span></td>';
-        html += '<td><button onclick="editOverviewRoles(' + u.id + ',\'' + escapeHtml(u.name) + '\',\'' + escapeHtml(u.employee_no) + '\',\'' + (u.rbac_role_codes || '') + '\')" style="padding:4px 10px;background:#1565c0;color:white;border:none;border-radius:4px;cursor:pointer;font-size:12px;">编辑角色</button></td>';
+        html += '<td><buttondata-click="editOverviewRoles" data-click-args="' + actionArgs([u.id,'escapeHtml(u.name)','escapeHtml(u.employee_no)','(u.rbac_role_codes ||)']) + '" style="padding:4px 10px;background:#1565c0;color:white;border:none;border-radius:4px;cursor:pointer;font-size:12px;">编辑角色</button></td>';
         html += '</tr>';
       });
       if (filtered.length === 0) {
@@ -11074,7 +11049,7 @@ async function downloadNativeDiagram() {
           '<p style="color:#999;font-size:13px;margin-bottom:16px;">' + escapeHtml(employeeNo) + '</p>' +
           '<div id="overviewRoleChecks">' + checkboxesHtml + '</div>' +
           '<div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end;">' +
-            '<button onclick="this.closest(\'[style]\').parentElement.remove()" style="padding:6px 16px;border:1px solid #ddd;border-radius:4px;cursor:pointer;">取消</button>' +
+            '<buttondata-click="removeBlock" style="padding:6px 16px;border:1px solid #ddd;border-radius:4px;cursor:pointer;">取消</button>' +
             '<button id="overviewSaveBtn" style="padding:6px 16px;background:#2e7d32;color:white;border:none;border-radius:4px;cursor:pointer;">保存</button>' +
           '</div></div>';
         document.body.appendChild(dialog);
@@ -11108,11 +11083,11 @@ async function downloadNativeDiagram() {
       panel.innerHTML = '<h3>批量导入</h3>' +
         '<p style="color:#666;margin-bottom:8px;">当前批量导入仅给已存在用户分配角色，不创建新用户；工号空的行用于定义角色权限。</p>' +
         '<div style="margin-bottom:12px;">' +
-          '<button onclick="window.open(\'/api/import-rbac/templates/full\',\'_blank\')" style="padding:6px 12px;background:#555;color:white;border:none;border-radius:4px;cursor:pointer;">下载模板</button>' +
+          '<buttondata-click="openExternal" data-click-args="' + actionArgs(['/api/import-rbac/templates/full','_blank']) + '" style="padding:6px 12px;background:#555;color:white;border:none;border-radius:4px;cursor:pointer;">下载模板</button>' +
         '</div>' +
         '<div style="border:2px dashed #ccc;border-radius:6px;padding:40px;text-align:center;">' +
           '<p style="color:#999;">选择文件上传 (.xlsx / .csv)</p>' +
-          '<input type="file" id="importFileInput" accept=".xlsx,.xls,.csv" onchange="handleImportFile()" style="margin-top:12px;">' +
+          '<input type="file" id="importFileInput" accept=".xlsx,.xls,.csv"data-change="handleImportFile" style="margin-top:12px;">' +
         '</div>' +
         '<div id="importResult" style="margin-top:16px;"></div>';
     }
@@ -11226,12 +11201,12 @@ async function downloadNativeDiagram() {
       panel.innerHTML =
         '<div class="user-management-head">' +
           '<div><h3>账号管理</h3><p>管理员手工创建待启用账号，并分别记录角色授权和账号生命周期。系统不提供自助注册或批量开户。</p></div>' +
-          '<button class="btn primary" onclick="showIdentityAccountEditor()">手工创建账号</button>' +
+          '<button class="btn primary"data-click="showIdentityAccountEditor">手工创建账号</button>' +
         '</div>' +
         '<div class="user-management-filters">' +
-          '<label>搜索<input id="identityAccountSearch" value="' + safeText(identitySearch) + '" placeholder="登录名 / 工号 / 姓名" oninput="applyIdentityAccountFilters()"></label>' +
-          '<label>部门<select id="identityDepartmentFilter" onchange="applyIdentityAccountFilters()">' + departmentOptions + '</select></label>' +
-          '<button class="btn secondary" onclick="renderIdentityAccounts()">刷新</button>' +
+          '<label>搜索<input id="identityAccountSearch" value="' + safeText(identitySearch) + '" placeholder="登录名 / 工号 / 姓名"data-input="applyIdentityAccountFilters"></label>' +
+          '<label>部门<select id="identityDepartmentFilter"data-change="applyIdentityAccountFilters">' + departmentOptions + '</select></label>' +
+          '<button class="btn secondary"data-click="renderIdentityAccounts">刷新</button>' +
         '</div>' +
         '<div id="identityAccountEditor"></div>' +
         '<div class="table-container"><table class="data-table">' +
@@ -11263,15 +11238,15 @@ async function downloadNativeDiagram() {
       body.innerHTML = accounts.map(function(account) {
         var lifecycleActions = '';
         if (account.account_status === 'pending_activation') {
-          lifecycleActions += '<button class="btn primary" onclick="runIdentityLifecycle(' + Number(account.person_id) + ',\'activate\')">启用</button>';
+          lifecycleActions += '<button class="btn primary"data-click="runIdentityLifecycle" data-click-args="' + actionArgs([Number(account.person_id),'activate']) + '">启用</button>';
         } else if (account.account_status === 'active') {
-          lifecycleActions += '<button class="btn secondary" onclick="runIdentityLifecycle(' + Number(account.person_id) + ',\'disable\')">停用</button>';
+          lifecycleActions += '<button class="btn secondary"data-click="runIdentityLifecycle" data-click-args="' + actionArgs([Number(account.person_id),'disable']) + '">停用</button>';
         } else if (account.account_status === 'disabled' || account.account_status === 'locked') {
-          lifecycleActions += '<button class="btn primary" onclick="runIdentityLifecycle(' + Number(account.person_id) + ',\'enable\')">' +
+          lifecycleActions += '<button class="btn primary"data-click="runIdentityLifecycle" data-click-args="' + actionArgs([Number(account.person_id),'enable']) + '">' +
             (account.account_status === 'locked' ? '解锁' : '重新启用') + '</button>';
         }
         if (account.account_id) {
-          lifecycleActions += '<button class="btn secondary" onclick="runIdentityLifecycle(' + Number(account.person_id) + ',\'reset-password\')">重置密码</button>';
+          lifecycleActions += '<button class="btn secondary"data-click="runIdentityLifecycle" data-click-args="' + actionArgs([Number(account.person_id),'reset-password']) + '">重置密码</button>';
         }
         return '<tr>' +
           '<td>' + safeText(account.login_name || '-') + '</td>' +
@@ -11282,8 +11257,8 @@ async function downloadNativeDiagram() {
           '<td><span class="tag">' + safeText(accountStatusLabel(account.account_status)) + '</span></td>' +
           '<td>' + safeText(account.auth_version || '-') + '</td>' +
           '<td><div class="user-management-actions">' +
-            '<button class="btn secondary" onclick="showIdentityAccountEditor(' + Number(account.person_id) + ')">维护人员</button>' +
-            '<button class="btn secondary" onclick="showIdentityRoleAssignments(' + Number(account.person_id) + ')">授权记录</button>' +
+            '<button class="btn secondary"data-click="showIdentityAccountEditor" data-click-args="' + actionArgs([Number(account.person_id)]) + '">维护人员</button>' +
+            '<button class="btn secondary"data-click="showIdentityRoleAssignments" data-click-args="' + actionArgs([Number(account.person_id)]) + '">授权记录</button>' +
             lifecycleActions +
           '</div></td>' +
         '</tr>';
@@ -11301,7 +11276,7 @@ async function downloadNativeDiagram() {
     function identityRoleChecks(roles, checkedCodes) {
       return roles.map(function(role) {
         var checked = checkedCodes.indexOf(role.code) >= 0 ? ' checked' : '';
-        return '<label><input type="checkbox" data-identity-role="' + safeText(role.code) + '"' + checked + ' onchange="renderIdentityVisibleTabPreview()">' +
+        return '<label><input type="checkbox" data-identity-role="' + safeText(role.code) + '"' + checked + 'data-change="renderIdentityVisibleTabPreview">' +
           '<span>' + safeText(role.name) + ' <span class="tag">' + safeText(role.code) + '</span></span></label>';
       }).join('');
     }
@@ -11361,8 +11336,8 @@ async function downloadNativeDiagram() {
             '<label>失效日期（可选）<input id="identityEffectiveTo" type="date"></label>' +
           '</div>' +
           '<div class="entity-form-actions">' +
-            '<button class="btn secondary" onclick="closeIdentityAccountEditor()">取消</button>' +
-            '<button class="btn primary" onclick="saveIdentityAccount(' + (account ? Number(account.person_id) : 'null') + ')">' +
+            '<button class="btn secondary"data-click="closeIdentityAccountEditor">取消</button>' +
+            '<button class="btn primary"data-click="saveIdentityAccount" data-click-args="' + actionArgs([(account ? Number(account.person_id) : 'null')]) + '">' +
               (account ? '保存人员信息' : '创建待启用账号') + '</button>' +
           '</div>' +
         '</div>';
@@ -11450,7 +11425,7 @@ async function downloadNativeDiagram() {
           '<strong>一次性临时密码</strong>' +
           '<p>只在本次响应中显示。请通过线下安全渠道交给账号本人；关闭或刷新后无法再次查看。</p>' +
           '<code style="display:inline-block;margin:8px 0;padding:6px 10px;background:#fff;border:1px solid var(--border);border-radius:4px;">' + safeText(password) + '</code>' +
-          '<div><button class="btn secondary" onclick="closeIdentityAccountEditor()">我已安全记录</button></div>' +
+          '<div><button class="btn secondary"data-click="closeIdentityAccountEditor">我已安全记录</button></div>' +
         '</div>';
     }
 
@@ -11512,7 +11487,7 @@ async function downloadNativeDiagram() {
       if (!account) return;
       var rows = (account.roleAssignments || []).map(function(assignment) {
         var revoke = assignment.status === 'active'
-          ? '<button class="btn secondary" onclick="revokeIdentityRole(' + Number(personId) + ',' + Number(assignment.assignmentId) + ')">撤销</button>'
+          ? '<button class="btn secondary"data-click="revokeIdentityRole" data-click-args="' + actionArgs([Number(personId) + ',' + Number(assignment.assignmentId)]) + '">撤销</button>'
           : '-';
         return '<tr>' +
           '<td>' + safeText(assignment.roleName || assignment.roleCode) + '</td>' +
@@ -11530,15 +11505,15 @@ async function downloadNativeDiagram() {
           '<div><h3>' + safeText(account.person_name) + '的角色授权</h3><p>角色授权只追加或撤销，不覆盖历史记录。</p></div>' +
           '<div class="table-container"><table class="data-table"><thead><tr><th>角色</th><th>范围</th><th>授权依据</th><th>有效期</th><th>状态</th><th>操作</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
           '<div class="user-management-grid">' +
-            '<label>新增角色<select id="identityGrantRole" onchange="renderGrantVisibleTabPreview(' + Number(personId) + ')">' + roleOptions + '</select></label>' +
+            '<label>新增角色<select id="identityGrantRole"data-change="renderGrantVisibleTabPreview" data-change-args="' + actionArgs([Number(personId)]) + '">' + roleOptions + '</select></label>' +
             '<label>授权依据<input id="identityGrantBasis" placeholder="必填"></label>' +
             '<label>生效日期<input id="identityGrantFrom" type="date" value="' + currentDateInputValue() + '"></label>' +
             '<label>失效日期（可选）<input id="identityGrantTo" type="date"></label>' +
           '</div>' +
           '<div class="notice" id="identityGrantVisibleTabPreview"></div>' +
           '<div class="entity-form-actions">' +
-            '<button class="btn secondary" onclick="closeIdentityAccountEditor()">关闭</button>' +
-            '<button class="btn primary" onclick="grantIdentityRole(' + Number(personId) + ')">授予角色</button>' +
+            '<button class="btn secondary"data-click="closeIdentityAccountEditor">关闭</button>' +
+            '<button class="btn primary"data-click="grantIdentityRole" data-click-args="' + actionArgs([Number(personId)]) + '">授予角色</button>' +
           '</div>' +
         '</div>';
       renderGrantVisibleTabPreview(personId);
@@ -11794,6 +11769,47 @@ async function downloadNativeDiagram() {
       el.textContent = msg;
       el.style.display = '';
     }
+
+    // ===== R13: delegated event actions =====
+    // An inline event-handler attribute cannot be allowed by a content security policy: a nonce
+    // does not apply to attributes, and 'unsafe-hashes' only covers values that can be enumerated
+    // ahead of time -- which runtime-composed calls cannot be. Each handler therefore declares its
+    // action and arguments as data, and the listeners below dispatch them.
+    function actionArgs(values) { return escHtml(JSON.stringify(values)); }
+    function historyBack() { history.back(); }
+    function fitDiagram() { if (nativeDiagram.instance) nativeDiagram.instance.fit(); }
+    function resetDiagram() { if (nativeDiagram.instance) nativeDiagram.instance.reset(); }
+    function removeBlock() { const host = this.closest('[style]'); if (host && host.parentElement) host.parentElement.remove(); }
+    function openExternal(url, target) { window.open(url, target || '_blank'); }
+    function loadOfficeWorkbenchSelf() { return loadOfficeWorkbench(this.value); }
+    function toggleRejectRowSelf() { return toggleRejectRow(this); }
+
+    // The allow list is explicit on purpose: a data attribute may only reach a handler named here,
+    // so markup that an attacker could influence cannot call an arbitrary global.
+    // R13: the handlers declared at the top level of this page.
+    Object.assign(PAGE_ACTIONS.click, {
+      activatePerson, addProcessMappingTodoComment, addProcessQualityCaseComment, assignProcessGovernanceMappingTodo, assignProcessGovernanceQualityCase, closePublicationDialog, createDataMapContext, deleteTerm, deleteTodo, downloadNativeDiagram, handleTodoAction, importFields, loadDataMapContexts, loadOfficeWorkbench, loadPublications, navigateTo, openFormalDiagram, openOfficeTask, openPreviewDiagram, openPublicationHistory, openPublicationImport, openSelectedCaseDiagram, openWorkbenchTarget, pagePublication, previewPublication, publishPublication, renderConflictDetail, renderMappingDetail, renderProcessGovernanceMappingTodoDetail, renderProcessGovernanceQualityCaseDetail, renderRoleWorkbench, reviewTerm, saveOfficeTask, viewPublication,
+    });
+    Object.assign(PAGE_ACTIONS.change, {
+      loadPublications, renderDataMapFields, renderOfficeBehaviorOptions, renderOfficeTasks, updateNativeDiagramButtons,
+    });
+
+    function installDelegatedActions(root) {
+      ['click', 'change', 'input'].forEach(function (type) {
+        root.addEventListener(type, function (event) {
+          const el = event.target && event.target.closest ? event.target.closest('[data-' + type + ']') : null;
+          if (!el) return;
+          const handler = PAGE_ACTIONS[type][el.getAttribute('data-' + type)];
+          if (typeof handler !== 'function') return;
+          if (el.hasAttribute('data-' + type + '-prevent')) event.preventDefault();
+          const raw = el.getAttribute('data-' + type + '-args');
+          let args = [];
+          if (raw) { try { const parsed = JSON.parse(raw); if (Array.isArray(parsed)) args = parsed; } catch (e) { args = []; } }
+          handler.apply(el, args);
+        });
+      });
+    }
+    installDelegatedActions(document);
 
     // ===== Init =====
     checkSession();

@@ -1,5 +1,8 @@
+const { sessionSubject, identityInteger, sameIdentityInteger } = require('../sessionSubject');
 const express = require('express');
 const mysql = require('mysql2/promise');
+const { logRequestFailure } = require('../securityLog');
+const { createRegisteredPool } = require('../mysqlPoolRegistry');
 const router = express.Router();
 const {
   getDepartmentByIdAsync,
@@ -35,10 +38,15 @@ function httpError(statusCode, code, message, extra = {}) {
 
 function runAction(res, action) {
   return action().catch(error => {
+    // R04/R06: an unresolved commit is recorded as its own event, so the receipt lookup the
+    // caller is asked to perform has a correlation id to search on.
+    if (error && error.code === 'PROCESS_DATA_GOVERNANCE_COMMIT_UNKNOWN') {
+      require('../securityLog').securityLog(res).write({ event: 'commit_unknown', code: error.code, status: 503 });
+    }
     if (error && (error.statusCode || error.payload)) {
       return res.status(error.statusCode || 400).json(error.payload || { error: error.message, code: error.code });
     }
-    console.error(error);
+    logRequestFailure(res, error);
     return res.status(500).json({ error: '服务器错误' });
   });
 }
@@ -47,7 +55,7 @@ async function getProcessDataGovernanceRepository() {
   if (repositoryFactory) return await repositoryFactory();
   if (!repositoryPromise) {
     repositoryPromise = (async () => {
-      const pool = mysql.createPool(mysqlConfigFromEnv());
+      const pool = createRegisteredPool(process.env, 'processDataGovernance');
       return makeProcessDataGovernanceRepository(pool);
     })();
   }
@@ -79,13 +87,16 @@ function resetProcessDataGovernanceActorFactory() {
 
 async function currentActor(req) {
   if (actorFactory) return await actorFactory(req);
-  const personId = Number(req.session.personId || req.session.userId || 0);
-  const userId = Number(req.session.userId || personId || 0);
-  const roleRows = await getUserRoleCodesAsync(personId, req.session.role);
+  const subject=sessionSubject(req.session,req.identity);
+  const systemIdentity = subject.kind === 'system_admin';
+  const personId = systemIdentity ? null : identityInteger(subject.personId);
+  const userId = personId;
+  const principal = subject.principal;
+  const roleRows = await getUserRoleCodesAsync(principal, req.session.role);
   const roleCodes = new Set((Array.isArray(roleRows) ? roleRows : []).map(item => text(item && (item.code || item.role_code))).filter(Boolean));
-  const permissionResult = await getUserEffectivePermissionsAsync(personId);
+  const permissionResult = await getUserEffectivePermissionsAsync(principal);
   const permissions = permissionResult && permissionResult.permSet || new Set();
-  const department = req.session.departmentId ? await getDepartmentByIdAsync(Number(req.session.departmentId)) : null;
+  const department = req.session.departmentId ? await getDepartmentByIdAsync(identityInteger(req.session.departmentId)) : null;
   const roleCode = roleCodes.has('mdm_lead') ? 'mdm_lead'
     : roleCodes.has('data_quality_auditor') ? 'data_quality_auditor'
       : roleCodes.has('department_mdm_reviewer') ? 'department_mdm_reviewer'
@@ -94,7 +105,10 @@ async function currentActor(req) {
   return {
     userId,
     personId,
-    departmentId: department ? Number(department.id || department.department_id) : null,
+    identityKind: subject.kind,
+    accountId: identityInteger(subject.accountId),
+    authVersion: identityInteger(subject.authVersion),
+    departmentId: department ? identityInteger(department.id || department.department_id) : null,
     departmentName: department ? text(department.name || department.department_name) : '',
     roleCodes,
     permissions,
@@ -121,7 +135,7 @@ function assertCanRead(actor) {
 }
 
 function assertAdminCannotWrite(actor) {
-  if (actor.roleCodes.has('admin')) {
+  if (sessionSubject(actor).kind === 'system_admin' || actor.roleCodes.has('admin')) {
     throw httpError(403, 'PROCESS_DATA_GOVERNANCE_ADMIN_READ_ONLY', '管理员对治理材料只读，不能执行数据生命周期治理写操作');
   }
 }
@@ -169,7 +183,7 @@ function allowedActions(actor, detail = null) {
   }
   if (detail && actor.departmentId) {
     const canAnswer = (detail.fact_requests || []).some(item =>
-      item.status === 'open' && Number(item.target_department_id) === Number(actor.departmentId)
+      item.status === 'open' && sameIdentityInteger(item.target_department_id, actor.departmentId)
     );
     if (canAnswer && (actor.roleCodes.has('department_contact') || actor.roleCodes.has('department_mdm_reviewer'))) {
       actions.push('answer_targeted_business_fact');
@@ -295,7 +309,7 @@ router.get('/fact-requests/:id', (req, res) => runAction(res, async () => {
   if (!context) throw httpError(404, 'PROCESS_DATA_GOVERNANCE_FACT_NOT_FOUND', '业务事实问题不存在');
   const fact = context.fact_request;
   assertProcessVersionAllowed(Number(fact.process_version_id));
-  if (!actor.canReadGlobal && Number(actor.departmentId) !== Number(fact.target_department_id)) {
+  if (!actor.canReadGlobal && !sameIdentityInteger(actor.departmentId, fact.target_department_id)) {
     throw httpError(403, 'PROCESS_DATA_GOVERNANCE_FACT_DEPARTMENT_DENIED', '该事实问题不是发给本人所属部门的');
   }
   assertRetainedPackageReadable(context.package);

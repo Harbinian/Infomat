@@ -62,6 +62,15 @@ function makeFakeRepository() {
       state.calls.push(['recordImportBatch', payload]);
       state.batches.push(payload);
       return { id: state.batches.length };
+    },
+    // The route imports the whole parsed batch through one repository call; this double keeps the
+    // original observable effect (one field per row, one batch record) so the assertions below
+    // still describe the same business behaviour.
+    async importFieldsBatch({ contextId, rows, fileName, requestId }, actor) {
+      state.calls.push(['importFieldsBatch', { contextId, rowCount: rows.length, fileName, requestId }]);
+      for (const row of rows) await this.createField(row, row.submitted_by);
+      await this.recordImportBatch({ context_id: contextId, file_name: fileName, row_count: rows.length, request_id: requestId, actor });
+      return { imported: rows.length, batch_id: state.batches.length, context_id: contextId };
     }
   };
 }
@@ -104,6 +113,10 @@ async function main() {
         };
       }
       return { permSet: new Set(), fieldConstraints: {} };
+    },
+    // Under the MySQL identity read model a session is validated on every authenticated request.
+    async validateSession(session) {
+      return { valid: true, user: { personId: session.personId, current_department_id: session.departmentId, person_name: '合成调用者' } };
     }
   }));
 
@@ -115,6 +128,8 @@ async function main() {
       req.session = {
         personId: userId,
         userId,
+        accountId: 1000 + userId,
+        authVersion: 1,
         userName: userId === 1 ? 'MDM系统管理员' : '部门主对接人',
         departmentId: userId === 99 ? 2 : 1
       };
@@ -163,6 +178,22 @@ async function main() {
     const noFileBody = await noFile.json();
     assert.strictEqual(noFile.status, 400);
     assert.strictEqual(noFileBody.error, '缺少 Excel 文件');
+
+    // R05: a file that fails the bounded parse must not reach the repository at all, so a
+    // failed import cannot leave a partial field set or a partial batch behind.
+    const fieldsBefore = repo.state.fields.length;
+    const batchesBefore = repo.state.batches.length;
+    const damaged = await workbookBlob([['供应商', '说明', '名称', 'name', '文本', 'ERP', '实时']]);
+    const damagedBuffer = Buffer.from(await damaged.arrayBuffer()).subarray(0, 64);
+    const damagedForm = new FormData();
+    damagedForm.append('context_id', '10');
+    damagedForm.append('file', new Blob([damagedBuffer], { type: damaged.type }), 'field-ledger.xlsx');
+    const damagedImport = await fetch(`${baseUrl}/api/import/field-entries`, {
+      method: 'POST', headers: { 'x-test-user-id': '42' }, body: damagedForm
+    });
+    assert.strictEqual(damagedImport.status, 400, await damagedImport.text());
+    assert.strictEqual(repo.state.fields.length, fieldsBefore, 'a failed parse writes no field');
+    assert.strictEqual(repo.state.batches.length, batchesBefore, 'a failed parse writes no batch');
 
     assert.ok(repo.state.calls.some(call => call[0] === 'createField'), 'import should create fields through Data Map repository');
     assert.ok(repo.state.calls.some(call => call[0] === 'recordImportBatch'), 'import should record a Data Map import batch');

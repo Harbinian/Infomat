@@ -7,6 +7,8 @@ let processContextBundleCache = null;
 const { checkRuntimeSchema, sendMysqlUnavailable } = require('../mysqlRuntimeSchema');
 const express = require('express');
 const mysql = require('mysql2/promise');
+const { logRequestFailure, securityLog } = require('../securityLog');
+const { createRegisteredPool } = require('../mysqlPoolRegistry');
 const router = express.Router();
 function legacyDb() { return require('../db'); }
 const { requireAuth, getUserEffectivePermissions } = require('../auth');
@@ -44,7 +46,7 @@ function runAsyncAction(res, action, unavailableMessage) {
       return res.status(error.statusCode).json({ error: error.message });
     }
     if (sendMysqlUnavailable(res, error)) return;
-    console.error(error);
+    logRequestFailure(res, error);
     return res.status(unavailableMessage ? 503 : 500).json({ error: unavailableMessage || '服务器错误' });
   });
 }
@@ -63,7 +65,7 @@ async function identityRepository() {
   }
   if (!identityRepoPromise) {
     identityRepoPromise = (async () => {
-      const pool = mysql.createPool(mysqlConfigFromEnv());
+      const pool = createRegisteredPool(process.env, 'identity');
       const repo = makeIdentityMysqlRepository(pool);
       await checkRuntimeSchema(pool, 'identity');
       return repo;
@@ -487,9 +489,8 @@ async function loadProcessDataGovernanceWorkItems(identity) {
       permissions: identity.permSet
     });
   } catch (error) {
-    if (process.env.MDM_DB_QUIET !== '1') {
-      console.warn(`process data governance work items unavailable: ${error.message}`);
-    }
+    // R06: recorded as a classification; the driver's text stays out of the log.
+    securityLog(res).write({ event: 'dependency_degraded', code: 'PROCESS_DATA_GOVERNANCE_ITEMS_UNAVAILABLE' });
     throw error;
   }
 }
@@ -510,7 +511,7 @@ router.get('/', requireAuth, (req, res) => {
       const [officeWorkItems, processDataGovernance, v7WorkItems] = await Promise.all([
         useMysqlIdentityReadModel() ? require('./offices').getOfficeRepository().personalWorkItems(req.session) : [],
         loadProcessDataGovernanceWorkItems(identity),
-        useMysqlProcessGovernanceReadModel() ? require('./processV7PreviewReview').listV7WorkbenchItems({
+        useMysqlProcessGovernanceReadModel() ? require('./processPreviewReview').listProcessWorkbenchItems({
           userId: identity.user.id, personId: identity.user.personId, departmentId: identity.user.departmentId,
           accountId: Number(req.session.accountId || 0), authVersion: Number(req.session.authVersion || 0),
           departmentName: identity.user.departmentName, roleCodes: new Set(roleCodes), permissions: permSet,
