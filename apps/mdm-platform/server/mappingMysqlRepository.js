@@ -2,6 +2,7 @@ const { checkRuntimeSchema } = require('./mysqlRuntimeSchema');
 const mysql = require('mysql2/promise');
 const { mysqlConfigFromEnv } = require('./mysqlConfig');
 const { mdmMysqlSchemaSql, splitSqlStatements } = require('./mysqlSchema');
+const { createRegisteredPool } = require('./mysqlPoolRegistry');
 
 let mappingRepoPromise = null;
 let mappingRepositoryFactory = null;
@@ -526,7 +527,7 @@ async function mappingRepository() {
   if (mappingRepositoryFactory) return await mappingRepositoryFactory();
   if (!mappingRepoPromise) {
     mappingRepoPromise = (async () => {
-      const pool = mysql.createPool(mysqlConfigFromEnv());
+      const pool = createRegisteredPool(process.env, 'mapping');
       const repo = makeMappingMysqlRepository(pool);
       await checkRuntimeSchema(pool, 'mapping');
       return repo;

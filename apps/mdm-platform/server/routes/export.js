@@ -1,8 +1,10 @@
 const express = require('express');
+const { logRequestFailure } = require('../securityLog');
 const router = express.Router();
 const ExcelJS = require('exceljs');
 const { requireAuth, getUserEffectivePermissionsAsync } = require('../auth');
 const { dataMapRepository } = require('../dataMapMysqlRepository');
+const { EXPORT_LIMITS, acquireExportSlot, createAbortScope } = require('../exportBudget');
 
 function jsonListText(value) {
   if (!value) return '';
@@ -32,15 +34,21 @@ async function exportScope(req) {
 }
 
 router.get('/excel', requireAuth, async (req, res) => {
+  let release = null;
+  let abortScope = null;
   try {
     const scope = await exportScope(req);
     if (!scope) return res.status(403).json({ error: '无权导出治理数据' });
+    // R09: the slot and the departure scope are taken before any data is read, so a burst or a
+    // client that hangs up is bounded before the cost is incurred rather than after.
+    release = acquireExportSlot();
+    abortScope = createAbortScope(req, res);
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'MDM 平台';
     workbook.created = new Date();
 
     const repo = await dataMapRepository();
-    const data = await repo.exportFieldLedger(scope);
+    const data = await repo.exportFieldLedger(scope, { signal: abortScope.signal, maxRows: EXPORT_LIMITS.maxRows });
     const fields = data.fields || [];
     const identities = data.identities || [];
 
@@ -106,14 +114,26 @@ router.get('/excel', requireAuth, async (req, res) => {
       });
     });
 
+    // The headers go out immediately before the first byte, so a failure above is still a JSON
+    // error and a failure below can never be rewritten into one.
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', 'attachment; filename=mdm-data-map-field-ledger.xlsx');
 
     await workbook.xlsx.write(res);
     res.end();
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: '服务器错误' });
+    logRequestFailure(res, error, { status: error && error.statusCode ? error.statusCode : 500 });
+    if (res.headersSent) {
+      // The download already started: the only honest signal left is to end the connection, so
+      // the client can tell a complete file from an interrupted one.
+      return res.destroy();
+    }
+    if (error && error.code === 'EXPORT_ABORTED') return undefined;
+    const status = error && error.statusCode ? error.statusCode : 500;
+    return res.status(status).json({ error: status === 500 ? '服务器错误' : error.message, code: error && error.code });
+  } finally {
+    if (abortScope) abortScope.dispose();
+    if (release) release();
   }
 });
 

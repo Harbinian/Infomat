@@ -12,7 +12,7 @@ const DOMAIN_TABLES = {
   mapping: ['mdm_mapping_records', 'mdm_mapping_approval_tasks', 'mdm_mapping_approval_history'],
   conflict: ['mdm_field_conflicts', 'mdm_term_conflicts', 'mdm_conflict_assignments'],
   todo: ['mdm_todos', 'mdm_todo_events', 'mdm_version_log'],
-  terminology: ['data_map_terms', 'data_map_term_types'],
+  terminology: ['data_map_terms', 'data_map_term_types', 'terminology_terms', 'terminology_term_types', 'process_mapping_records', 'departments'],
   audit: ['mdm_version_log', 'mdm_change_sets'],
   processDesign: ['process_design_documents', 'process_design_drafts', 'process_design_versions', 'process_design_cross_dept_handoffs']
 };
@@ -51,7 +51,11 @@ function sendMysqlUnavailable(res, error) {
     'ER_TABLEACCESS_DENIED_ERROR', 'ER_COLUMNACCESS_DENIED_ERROR', 'ER_ACCESS_DENIED_ERROR', 'ER_DBACCESS_DENIED_ERROR',
     'ER_BAD_DB_ERROR', 'ECONNREFUSED', 'ECONNRESET', 'ETIMEDOUT', 'PROTOCOL_CONNECTION_LOST']);
   if (!error || !unavailableCodes.has(error.code)) return false;
+  // R06: a database-availability refusal is recorded by classification only. The response body
+  // and the log both stay free of the driver's own text, SQL and parameters.
+  require('./securityLog').logRequestFailure(res, error, { status: 503 });
   res.status(503).json({ code: 'MYSQL_RUNTIME_UNAVAILABLE',
+    request_id: (res.req && res.req.requestId) || null,
     error: '数据服务或所需结构不可用，请运维人员核对连接并按迁移手册检查结构；应用不会自动修复。' });
   return true;
 }

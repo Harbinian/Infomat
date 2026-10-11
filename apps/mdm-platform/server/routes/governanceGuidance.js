@@ -6,6 +6,8 @@ const { mysqlConfigFromEnv } = require('../mysqlConfig');
 const { makeIdentityMysqlRepository } = require('../identityMysqlRepository');
 const { makeGovernanceGuidanceMysqlRepository } = require('../governanceGuidanceMysqlRepository');
 const { permissionSetHas } = require('../roleDefinitions');
+const { logRequestFailure } = require('../securityLog');
+const { createRegisteredPool } = require('../mysqlPoolRegistry');
 
 const router = express.Router();
 
@@ -22,7 +24,7 @@ async function identityRepository() {
   if (identityRepositoryFactory) return await identityRepositoryFactory();
   if (!identityRepoPromise) {
     identityRepoPromise = (async () => {
-      const pool = mysql.createPool(mysqlConfigFromEnv());
+      const pool = createRegisteredPool(process.env, 'identity');
       const repo = makeIdentityMysqlRepository(pool);
       await checkRuntimeSchema(pool, 'identity');
       return repo;
@@ -40,7 +42,7 @@ async function guidanceRepository() {
   if (guidanceRepositoryFactory) return await guidanceRepositoryFactory();
   if (!guidanceRepoPromise) {
     guidanceRepoPromise = (async () => {
-      const pool = mysql.createPool(mysqlConfigFromEnv());
+      const pool = createRegisteredPool(process.env, 'guidance');
       const repo = makeGovernanceGuidanceMysqlRepository(pool);
       await checkRuntimeSchema(pool, 'guidance');
       return repo;
@@ -88,7 +90,7 @@ function requireGuidancePermission(permCode) {
       req.effectiveFieldConstraints = fieldConstraints;
       return next();
     } catch (error) {
-      console.error(error);
+      logRequestFailure(res, error);
       return res.status(503).json({ error: '身份 MySQL 读取模型不可用' });
     }
   };
@@ -123,7 +125,7 @@ router.get('/', requireAuth, async (req, res) => {
     return res.json(await repo.listGuidanceForPerson(personId, permSet, filters));
   } catch (error) {
     if (sendMysqlUnavailable(res, error)) return;
-    console.error(error);
+    logRequestFailure(res, error);
     return res.status(503).json({ error: '指导意见读取模型不可用' });
   }
 });
@@ -141,7 +143,7 @@ router.get('/:id', requireAuth, async (req, res) => {
     return res.json(guidance);
   } catch (error) {
     if (sendMysqlUnavailable(res, error)) return;
-    console.error(error);
+    logRequestFailure(res, error);
     return res.status(503).json({ error: '指导意见读取模型不可用' });
   }
 });
@@ -160,7 +162,7 @@ router.get('/:id/events', requireAuth, async (req, res) => {
     return res.json(await repo.listGuidanceEvents(Number(req.params.id), personId, permSet));
   } catch (error) {
     if (sendMysqlUnavailable(res, error)) return;
-    console.error(error);
+    logRequestFailure(res, error);
     return res.status(503).json({ error: '指导意见事件读取模型不可用' });
   }
 });
@@ -196,7 +198,7 @@ router.post('/', requireAuth, requireGuidancePermission('guidance:create'), asyn
     return res.status(201).json(created);
   } catch (error) {
     if (sendMysqlUnavailable(res, error)) return;
-    console.error(error);
+    logRequestFailure(res, error);
     return res.status(503).json({ error: '指导意见写入模型不可用' });
   }
 });
@@ -208,7 +210,7 @@ router.post('/:id/respond', requireAuth, requireGuidancePermission('guidance:res
     return sendGuidanceActionResult(res, result);
   } catch (error) {
     if (sendMysqlUnavailable(res, error)) return;
-    console.error(error);
+    logRequestFailure(res, error);
     return res.status(503).json({ error: '指导意见写入模型不可用' });
   }
 });
@@ -220,7 +222,7 @@ router.post('/:id/clarify', requireAuth, requireGuidancePermission('guidance:res
     return sendGuidanceActionResult(res, result);
   } catch (error) {
     if (sendMysqlUnavailable(res, error)) return;
-    console.error(error);
+    logRequestFailure(res, error);
     return res.status(503).json({ error: '指导意见写入模型不可用' });
   }
 });
@@ -232,7 +234,7 @@ router.post('/:id/object', requireAuth, requireGuidancePermission('guidance:resp
     return sendGuidanceActionResult(res, result);
   } catch (error) {
     if (sendMysqlUnavailable(res, error)) return;
-    console.error(error);
+    logRequestFailure(res, error);
     return res.status(503).json({ error: '指导意见写入模型不可用' });
   }
 });
@@ -244,7 +246,7 @@ router.post('/:id/delegate', requireAuth, requireGuidancePermission('guidance:de
     return sendGuidanceActionResult(res, result);
   } catch (error) {
     if (sendMysqlUnavailable(res, error)) return;
-    console.error(error);
+    logRequestFailure(res, error);
     return res.status(503).json({ error: '指导意见写入模型不可用' });
   }
 });
@@ -260,7 +262,7 @@ router.delete('/:id/delegations/:delegationId', requireAuth, requireGuidancePerm
     return sendGuidanceActionResult(res, result);
   } catch (error) {
     if (sendMysqlUnavailable(res, error)) return;
-    console.error(error);
+    logRequestFailure(res, error);
     return res.status(503).json({ error: '指导意见写入模型不可用' });
   }
 });
@@ -272,7 +274,7 @@ router.post('/:id/assign-executor', requireAuth, requireGuidancePermission('guid
     return sendGuidanceActionResult(res, result);
   } catch (error) {
     if (sendMysqlUnavailable(res, error)) return;
-    console.error(error);
+    logRequestFailure(res, error);
     return res.status(503).json({ error: '指导意见写入模型不可用' });
   }
 });
@@ -284,7 +286,7 @@ router.post('/:id/final-confirm', requireAuth, requireGuidancePermission('guidan
     return sendGuidanceActionResult(res, result);
   } catch (error) {
     if (sendMysqlUnavailable(res, error)) return;
-    console.error(error);
+    logRequestFailure(res, error);
     return res.status(503).json({ error: '指导意见写入模型不可用' });
   }
 });

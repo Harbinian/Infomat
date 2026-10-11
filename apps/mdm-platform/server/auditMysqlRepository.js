@@ -2,6 +2,8 @@ const { checkRuntimeSchema } = require('./mysqlRuntimeSchema');
 const mysql = require('mysql2/promise');
 const { mysqlConfigFromEnv } = require('./mysqlConfig');
 const { mdmMysqlSchemaSql, splitSqlStatements } = require('./mysqlSchema');
+const { identityInteger } = require('./sessionSubject');
+const { createRegisteredPool } = require('./mysqlPoolRegistry');
 
 let auditRepoPromise = null;
 let auditRepositoryFactory = null;
@@ -58,14 +60,18 @@ function auditDomainSchemaStatements() {
   });
 }
 
+// R08/R01: identity columns are returned through identityInteger so an entity id beyond the
+// safe-integer range stays exact instead of being rounded to a neighbouring object. An absent
+// operator stays null and is never turned into 0.
 function publicVersionRow(row) {
   if (!row) return null;
   return {
     ...row,
-    id: Number(row.id),
-    entity_id: Number(row.entity_id),
-    operated_by: row.operated_by == null ? null : Number(row.operated_by),
-    change_set_id: row.change_set_id == null ? null : Number(row.change_set_id)
+    id: identityInteger(row.id),
+    entity_id: identityInteger(row.entity_id),
+    operated_by: row.operated_by == null ? null : identityInteger(row.operated_by),
+    operated_by_person_id: row.operated_by_person_id == null ? null : identityInteger(row.operated_by_person_id),
+    change_set_id: row.change_set_id == null ? null : identityInteger(row.change_set_id)
   };
 }
 
@@ -73,9 +79,9 @@ function publicChangeSetRow(row) {
   if (!row) return null;
   return {
     ...row,
-    id: Number(row.id),
-    entity_id: Number(row.entity_id),
-    operated_by: row.operated_by == null ? null : Number(row.operated_by)
+    id: identityInteger(row.id),
+    entity_id: identityInteger(row.entity_id),
+    operated_by: row.operated_by == null ? null : identityInteger(row.operated_by)
   };
 }
 
@@ -101,14 +107,48 @@ function makeAuditMysqlRepository(pool) {
   async function listVersionLogs(entityType, entityId) {
     const result = await rows(
       pool,
-      `SELECT vl.*, u.name AS operator_name
+      // R08: identity columns are projected as characters. The driver turns a BIGINT into a
+      // JavaScript number, and a value beyond the safe range is already rounded by then -- the
+      // rounding cannot be undone afterwards, so the exact form has to come out of the query.
+      `SELECT CAST(vl.id AS CHAR) AS id, vl.entity_type, CAST(vl.entity_id AS CHAR) AS entity_id,
+              vl.field_name, vl.old_value, vl.new_value, vl.operation,
+              CAST(vl.operated_by AS CHAR) AS operated_by,
+              CAST(vl.operated_by_person_id AS CHAR) AS operated_by_person_id,
+              CAST(vl.change_set_id AS CHAR) AS change_set_id,
+              vl.operated_at, vl.metadata_json,
+              CASE WHEN vl.entity_type IN ('legacy_field_import','terminology_term','conflict_field','conflict_term')
+                   THEN p.person_name ELSE u.name END AS operator_name
        FROM mdm_version_log vl
        LEFT JOIN users u ON vl.operated_by = u.id
-       WHERE vl.entity_type=? AND vl.entity_id=?
+       LEFT JOIN person p ON vl.operated_by_person_id = p.person_id
+       WHERE vl.entity_type=? AND vl.entity_id=CAST(? AS SIGNED)
        ORDER BY vl.operated_at DESC, vl.id DESC`,
-      [entityType, Number(entityId)]
+      [entityType, String(entityId)]
     );
     return result.map(publicVersionRow);
+  }
+
+  // Scope lookups for versionAuditScope. The repository only reads; authorization is decided by
+  // the caller. Absent rows mean the object is gone or never existed -- not that it is open.
+  async function readContextDepartment(contextId) {
+    const result = await rows(
+      pool,
+      `SELECT CAST(dept_id AS CHAR) AS department_id FROM data_map_contexts WHERE id=CAST(? AS SIGNED) LIMIT 1`,
+      [String(contextId)]
+    );
+    return result[0] ? { departmentId: result[0].department_id } : null;
+  }
+
+  async function readFieldDepartment(fieldId) {
+    const result = await rows(
+      pool,
+      `SELECT CAST(c.dept_id AS CHAR) AS department_id
+       FROM data_map_fields f
+       JOIN data_map_contexts c ON c.id = f.context_id
+       WHERE f.id=CAST(? AS SIGNED) LIMIT 1`,
+      [String(fieldId)]
+    );
+    return result[0] ? { departmentId: result[0].department_id } : null;
   }
 
   return {
@@ -157,12 +197,15 @@ function makeAuditMysqlRepository(pool) {
     async listEntityVersions(entityType, entityId) {
       const changeSets = await rows(
         pool,
-        `SELECT cs.*, u.name AS operator_name
+        `SELECT CAST(cs.id AS CHAR) AS id, cs.entity_type, CAST(cs.entity_id AS CHAR) AS entity_id,
+                CAST(cs.operated_by AS CHAR) AS operated_by,
+                CAST(cs.operated_by_person_id AS CHAR) AS operated_by_person_id,
+                cs.operated_at, cs.description, cs.metadata_json, u.name AS operator_name
          FROM mdm_change_sets cs
          LEFT JOIN users u ON cs.operated_by = u.id
-         WHERE cs.entity_type=? AND cs.entity_id=?
+         WHERE cs.entity_type=? AND cs.entity_id=CAST(? AS SIGNED)
          ORDER BY cs.operated_at DESC, cs.id DESC`,
-        [entityType, Number(entityId)]
+        [entityType, String(entityId)]
       );
       const logs = await listVersionLogs(entityType, entityId);
       return {
@@ -178,6 +221,9 @@ function makeAuditMysqlRepository(pool) {
     async listFieldVersions(fieldId) {
       return await listVersionLogs('field_entry', fieldId);
     },
+
+    readContextDepartment,
+    readFieldDepartment,
 
     async listActivityRows({ startDate, endDate } = {}) {
       const result = await rows(
@@ -251,7 +297,7 @@ async function auditRepository() {
   if (auditRepositoryFactory) return await auditRepositoryFactory();
   if (!auditRepoPromise) {
     auditRepoPromise = (async () => {
-      const pool = mysql.createPool(mysqlConfigFromEnv());
+      const pool = createRegisteredPool(process.env, 'audit');
       const repo = makeAuditMysqlRepository(pool);
       await checkRuntimeSchema(pool, 'audit');
       return repo;

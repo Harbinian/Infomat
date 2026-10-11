@@ -1,3 +1,4 @@
+const { sessionSubject, identityInteger } = require('../sessionSubject');
 const express = require('express');
 const multer = require('multer');
 const mysql = require('mysql2/promise');
@@ -6,6 +7,7 @@ const { requireAuth, getUserEffectivePermissionsAsync, getUserRoleCodesAsync } =
 const { mysqlConfigFromEnv } = require('../mysqlConfig');
 const { makePublicationRepository } = require('../publicationRepository');
 const { FIELDS, MAX_ROWS, MAX_COLUMNS, failure, parseSpreadsheet, suggestedMapping, normalizePublication, exportSpreadsheet } = require('../publicationSpreadsheet');
+const { createRegisteredPool } = require('../mysqlPoolRegistry');
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024, files: 1, fields: 12, fieldSize: 32768 } });
 let repository;
@@ -14,16 +16,19 @@ let actorFactory;
 
 function repo() {
   if (repositoryFactory) return repositoryFactory();
-  if (!repository) repository = makePublicationRepository(mysql.createPool(mysqlConfigFromEnv()));
+  if (!repository) repository = makePublicationRepository(createRegisteredPool(process.env, 'publications'));
   return repository;
 }
 
 async function currentPublicationActor(req) {
   if (actorFactory) return actorFactory(req);
-  const personId = Number(req.session.personId || req.session.userId);
-  const [{ permSet }, roles] = await Promise.all([getUserEffectivePermissionsAsync(personId), getUserRoleCodesAsync(personId)]);
-  const admin = roles.some(role => (role.code || role.role_code) === 'admin');
-  return { personId, accountId:Number(req.session.accountId), authVersion:Number(req.session.authVersion), canRead: permSet.has('identity:read') || permSet.has('governance:read-global'), canPrepare: permSet.has('identity:manage-account') || permSet.has('governance:publish'), canPublish: !admin && permSet.has('governance:publish') };
+  const subject=sessionSubject(req.session,req.identity);
+  const systemIdentity = subject.kind === 'system_admin';
+  const personId = systemIdentity ? null : identityInteger(subject.personId);
+  const principal = subject.principal;
+  const [{ permSet }, roles] = await Promise.all([getUserEffectivePermissionsAsync(principal), getUserRoleCodesAsync(principal)]);
+  const admin = systemIdentity || roles.some(role => (role.code || role.role_code) === 'admin');
+  return { identityKind: subject.kind, personId, accountId:identityInteger(subject.accountId), authVersion:identityInteger(subject.authVersion), canRead: permSet.has('identity:read') || permSet.has('governance:read-global'), canPrepare: permSet.has('identity:manage-account') || permSet.has('governance:publish'), canPublish: !admin && permSet.has('governance:publish') };
 }
 
 function run(res, action) {

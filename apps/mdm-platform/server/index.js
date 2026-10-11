@@ -6,6 +6,9 @@ const { assertRuntimeConfig, legacyTestMode } = require('./runtimeBoundary');
 assertRuntimeConfig(process.env);
 const { requireAuth } = require('./auth');
 const { securityHeaders, csrfProtection, issueCsrfToken } = require('./security');
+const { sendBodyParserError } = require('./httpErrorContract');
+const { installRequestLogging, securityLog, logRequestFailure } = require('./securityLog');
+const { closeAllPools } = require('./mysqlPoolRegistry');
 const { ACCESS_MODEL_VERSION } = require('./roleDefinitions');
 const { sessionConfig } = require('./sessionConfig');
 const { MysqlSessionStore } = require('./mysqlSessionStore');
@@ -24,9 +27,16 @@ app.locals.readiness = readiness;
 app.locals.closeRuntime = async () => {
   readiness.stop();
   await Promise.all([readiness.close(), typeof store.close === 'function' ? store.close() : Promise.resolve()]);
+  // R11: once the entry points that use the domain pools have stopped, drain every pool the
+  // process owns. Bounded, idempotent, and it reports rather than waits on a pool that will not
+  // close -- the 15 second hard exit remains the backstop, not the plan.
+  return await closeAllPools({ timeoutMs: Number(process.env.MDM_SHUTDOWN_DRAIN_MS || 5000) });
 };
 
 app.use(securityHeaders);
+// R06: request identity and the completion record are installed before any parser, so a request
+// that fails during body parsing still gets an id and a log line.
+installRequestLogging(app);
 // Health endpoints bypass session storage, so database failure cannot hide process liveness.
 app.get('/api/health', (req, res) => {
   res.set('Cache-Control', 'no-store').json({ status: 'ok', identityModel: 'person', governanceModelVersion: ACCESS_MODEL_VERSION, version });
@@ -51,6 +61,17 @@ app.use('/api/analysis', (error, req, res, next) => {
   if (!error) return next();
   res.set('Cache-Control', 'no-store').status(error.type === 'entity.too.large' ? 413 : 400).json({
     code: error.type === 'entity.too.large' ? 'DEFINITION_ANALYSIS_PAYLOAD_TOO_LARGE' : 'DEFINITION_ANALYSIS_JSON_INVALID', error: '分析请求格式无效或超出允许大小。' });
+});
+// R07: the general body contract. Registered after the analysis mapper (which keeps its own
+// codes) and before the routes, so it sees parser failures only -- a malformed or oversized body
+// on any other path is a client problem, not the generic 500 it used to become.
+app.use((error, req, res, next) => {
+  if (!error) return next();
+  if (sendBodyParserError(res, error)) {
+    securityLog(req).write({ event: 'parse_failed', code: error.type, status: res.statusCode });
+    return undefined;
+  }
+  return next(error);
 });
 
 app.use(session({
@@ -106,7 +127,7 @@ registerRouteIfExists('/api/export', 'export');
 registerRouteIfExists('/api/process-governance/guidance', 'governanceGuidance');
 registerRouteIfExists('/api/process-governance', 'processGovernance');
 registerRouteIfExists('/api/process-design', 'processDesignMysql');
-registerRouteIfExists('/api/process-v7-preview', 'processV7PreviewReview');
+registerRouteIfExists('/api/process-v7-preview', 'processPreviewReview');
 registerRouteIfExists('/api/process-data-governance', 'processDataGovernance');
 registerRouteIfExists('/api/role-workbench', 'roleWorkbench');
 registerRouteIfExists('/api/page-workflows', 'pageWorkflows');
@@ -123,7 +144,11 @@ app.get('/api/runtime-capabilities', requireAuth, (req, res) => {
 app.use((error, req, res, next) => {
   if (res.headersSent) return next(error);
   const sessionFailure = error && error.code === 'SESSION_STORE_UNAVAILABLE';
+  // R06: every unhandled failure is recorded with the request's correlation id, and only the
+  // error's code -- never its message, SQL, parameters or stack.
+  logRequestFailure(req, error, sessionFailure ? 503 : 500);
   res.status(sessionFailure ? 503 : 500).json({ code: sessionFailure ? error.code : 'REQUEST_FAILED',
+    request_id: req.requestId || null,
     error: sessionFailure ? '会话服务暂不可用，请稍后重试' : '请求暂时无法完成' });
 });
 
@@ -138,7 +163,12 @@ if (require.main === module) {
     readiness.stop();
     const deadline = setTimeout(() => { server.closeAllConnections(); process.exit(1); }, 15000);
     server.close(async () => {
-      await app.locals.closeRuntime().catch(() => {});
+      const drained = await app.locals.closeRuntime().catch(() => null);
+      // R11: what did not drain is named, so a stuck pool is visible instead of being hidden by
+      // the hard exit. A clean stop reports nothing.
+      if (drained && drained.notDrained && drained.notDrained.length) {
+        console.log(`MDM_SHUTDOWN_NOT_DRAINED domains=${drained.notDrained.join(',')}`);
+      }
       clearTimeout(deadline);
       process.exit(0);
     });

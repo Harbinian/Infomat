@@ -1,10 +1,12 @@
 const { sendMysqlUnavailable } = require('../mysqlRuntimeSchema');
 const express = require('express');
 const { terminologyScope } = require('../terminologyAccess');
+const { logRequestFailure } = require('../securityLog');
 const router = express.Router();
 const {
   requireAuth,
-  getUserEffectivePermissionsAsync
+  getUserEffectivePermissionsAsync,
+  getUserByIdAsync
 } = require('../auth');
 const {
   resetTodoRepositoryFactory,
@@ -21,7 +23,7 @@ function handleDbError(res, error) {
   if (code.startsWith('ER_') || message.includes('constraint')) {
     return res.status(400).json({ error: '数据不符合约束' });
   }
-  console.error(error);
+  logRequestFailure(res, error);
   return res.status(500).json({ error: '服务器错误' });
 }
 
@@ -67,6 +69,24 @@ async function canUseTodo(req, todo) {
   ].some(code => perms.has(code));
 }
 
+// Called again after the request lock, because permissions and department may
+// change while a same-key request waits. This adds no role or scope exception.
+async function currentTermActor(req) {
+  const current = await getUserByIdAsync(req.session.userId);
+  if (req.session.accountId && (!current || current.accountStatus !== 'active' || current.status !== 'active' ||
+      Number(current.accountId) !== Number(req.session.accountId) || Number(current.authVersion) !== Number(req.session.authVersion))) {
+    throw Object.assign(new Error('账号状态或授权已经变化，请重新登录'), {statusCode:401,code:'TODO_TERM_SESSION_CHANGED'});
+  }
+  const permissions = await permissionSet(req.session.userId);
+  const departmentId = current?.current_department_id ?? current?.department_id ?? null;
+  const currentRequest = { ...req, session:{ ...req.session, userId:req.session.userId, departmentId } };
+  return {
+    actor_user_id:req.session.userId,actor_person_id:req.session.personId || req.session.userId,
+    actor_dept_id:departmentId,can_assign_work:permissions.has('governance:assign-work'),
+    is_admin:permissions.has('identity:manage-account'),term_scope:await terminologyScope(currentRequest)
+  };
+}
+
 router.get('/', requireAuth, (req, res) => {
   return runAction(res, async () => {
     const repo = await todoRepository();
@@ -92,6 +112,7 @@ router.post('/', requireAuth, (req, res) => {
       actor_dept_id: req.session.departmentId || null,
       can_assign_work: true,
       is_admin: false,
+      resolve_current: () => currentTermActor(req),
       term_scope: req.body?.related_term_id != null ? await terminologyScope(req) : null
     });
     return res.json({ id: created.id });
@@ -118,7 +139,8 @@ router.delete('/:id', requireAuth, (req, res) => {
     const repo = await todoRepository();
     const todo = await repo.getTodo(req.params.id);
     if (!todo) return res.status(404).json({ error: '待办不存在' });
-    if (!await hasPermission(req, 'governance:structure-gate')) {
+    const permissions = await permissionSet(req.session.userId);
+    if (!permissions.has('governance:structure-gate') || permissions.has('identity:manage-account')) {
       return res.status(403).json({ error: '无权删除该待办' });
     }
     const deleted = await repo.deleteTodo(req.params.id, {

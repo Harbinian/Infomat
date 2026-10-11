@@ -1,6 +1,8 @@
 const { checkRuntimeSchema, sendMysqlUnavailable } = require('../mysqlRuntimeSchema');
 const express = require('express');
 const mysql = require('mysql2/promise');
+const { logRequestFailure } = require('../securityLog');
+const { createRegisteredPool } = require('../mysqlPoolRegistry');
 const router = express.Router();
 function legacyDb() { return require('../db'); }
 const { hashPassword, verifyPassword, verifyPasswordAsync, requireAuth, requirePermission, getUserEffectivePermissions } = require('../auth');
@@ -9,6 +11,8 @@ const { makeIdentityMysqlRepository } = require('../identityMysqlRepository');
 const { resolveInitialPassword, validatePasswordStrength } = require('../passwordPolicy');
 const { loginRateLimit, recordLoginFailure, clearLoginFailures } = require('../security');
 const { permissionSetHas, ACCESS_MODEL_VERSION } = require('../roleDefinitions');
+const { identityInteger } = require('../sessionSubject');
+const { loginCredentialProblem, CREDENTIAL_INVALID } = require('../httpErrorContract');
 let identityRepoPromise = null;
 let identityRepositoryFactory = null;
 
@@ -27,7 +31,7 @@ function handleDbError(res, error) {
   if (error && (String(error.code).startsWith('SQLITE_CONSTRAINT') || String(error.message).includes('constraint failed'))) {
     return res.status(400).json({ error: '数据不符合约束' });
   }
-  console.error(error);
+  logRequestFailure(res, error);
   return res.status(500).json({ error: '服务器错误' });
 }
 
@@ -53,7 +57,7 @@ function runAsyncAction(res, action, unavailableMessage) {
       return handleDbError(res, error);
     }
     if (sendMysqlUnavailable(res, error)) return;
-    console.error(error);
+    logRequestFailure(res, error);
     return res.status(unavailableMessage ? 503 : 500).json({ error: unavailableMessage || '服务器错误' });
   });
 }
@@ -76,7 +80,7 @@ function requireOrgPermission(permCode) {
         return next();
       })
       .catch(error => {
-        console.error(error);
+        logRequestFailure(res, error);
         return res.status(503).json({ error: '身份 MySQL 读取模型不可用' });
       });
   };
@@ -97,7 +101,7 @@ async function identityRepository() {
   }
   if (!identityRepoPromise) {
     identityRepoPromise = (async () => {
-      const pool = mysql.createPool(mysqlConfigFromEnv());
+      const pool = createRegisteredPool(process.env, 'identity');
       const repo = makeIdentityMysqlRepository(pool);
       await checkRuntimeSchema(pool, 'identity');
       return repo;
@@ -613,15 +617,22 @@ router.post('/users/:id/password', requireOrgPermission('admin:access'), (req, r
   });
 });
 
-function writeLoginSession(req, user) {
+// `exactIdentity` carries the already-validated {personId, accountId, authVersion} of the
+// MySQL identity read model. It is the only path allowed to write a session, so the local
+// identity repository cannot silently degrade an unrepresentable authorization version to 0.
+// The legacy SQLite branch keeps its historical shape: it has no auth version column and
+// requireAuth skips identifier validation outside the MySQL read model.
+function writeLoginSession(req, user, exactIdentity = null) {
   return new Promise((resolve, reject) => {
     req.session.regenerate(error => {
       if (error) return reject(error);
-      const personId = user.personId || user.person_id || user.id;
+      const personId = exactIdentity ? exactIdentity.personId : (user.personId || user.person_id || user.id);
       if (user.identityKind === 'system_admin') req.session.identityKind = 'system_admin';
       else req.session.personId = personId;
-      req.session.accountId = user.accountId || user.account_id || null;
-      req.session.authVersion = Number(user.authVersion || user.auth_version || 0);
+      req.session.accountId = exactIdentity ? exactIdentity.accountId : (user.accountId || user.account_id || null);
+      req.session.authVersion = exactIdentity
+        ? exactIdentity.authVersion
+        : identityInteger(user.authVersion || user.auth_version) || 0;
       if (!req.session.accountId) {
         req.session.userId = personId;
         req.session.employeeNo = user.employeeNo || user.employee_no || null;
@@ -635,6 +646,9 @@ function writeLoginSession(req, user) {
 }
 
 async function loginWithMysqlIdentity(req, res) {
+  // R07: the credential shape is checked before any account lookup and before any hashing, so a
+  // malformed submission is a client error instead of reaching bcrypt and surfacing as 503.
+  if (loginCredentialProblem(req.body || {})) return res.status(400).json({ ...CREDENTIAL_INVALID });
   const loginName = String(req.body.loginName || req.body.employee_no || '').trim();
   const { password } = req.body;
   const repo = await identityRepository();
@@ -651,15 +665,31 @@ async function loginWithMysqlIdentity(req, res) {
     return res.status(401).json({ error: '工号或密码错误' });
   }
 
-  await writeLoginSession(req, user);
-  await repo.recordSuccessfulLogin(user.identityRef || user.personId || user.id);
+  // R08 exact-identity boundary. A session is written only when person, account and
+  // authorization version are all representable without rounding. Values that cannot be
+  // converted exactly are refused here rather than truncated, defaulted, back-filled or
+  // replaced by a newly created identity. Credentials are already proven at this point,
+  // so the refusal adds no account-existence channel.
+  const systemAdminIdentity = user.identityKind === 'system_admin';
+  const exactIdentity = {
+    personId: systemAdminIdentity ? null : identityInteger(user.personId ?? user.person_id ?? user.id),
+    accountId: identityInteger(user.accountId ?? user.account_id),
+    authVersion: identityInteger(user.authVersion ?? user.auth_version)
+  };
+  if (exactIdentity.accountId === null || exactIdentity.authVersion === null ||
+      (!systemAdminIdentity && exactIdentity.personId === null)) {
+    return res.status(503).json({ code: 'IDENTITY_UNAVAILABLE', error: '账号身份标识无法精确表示，已拒绝登录' });
+  }
+
+  await writeLoginSession(req, user, exactIdentity);
+  await repo.recordSuccessfulLogin(user.identityRef || exactIdentity.personId);
   await new Promise((resolve, reject) => req.session.save(error => error ? reject(error) : resolve()));
   clearLoginFailures(req);
   return res.json({
-    id: user.identityRef || user.personId || user.id,
-    personId: user.identityKind === 'system_admin' ? null : user.personId || user.id,
+    id: user.identityRef || exactIdentity.personId,
+    personId: systemAdminIdentity ? null : exactIdentity.personId,
     ...(user.identityKind === 'system_admin' ? { identityKind: 'system_admin' } : {}),
-    accountId: user.accountId || null,
+    accountId: exactIdentity.accountId,
     employeeNo: user.employeeNo || user.employee_no,
     name: user.personName || user.name,
     mustChangePassword: Boolean(user.must_change_password),
@@ -673,6 +703,7 @@ router.post('/login', loginRateLimit, (req, res) => {
   }
 
   return runAsyncAction(res, async () => {
+    if (loginCredentialProblem(req.body || {})) return res.status(400).json({ ...CREDENTIAL_INVALID });
       const { employee_no, password } = req.body;
     const user = legacyDb().prepare('SELECT * FROM users WHERE employee_no=?').get(employee_no);
     if (!user) {
@@ -752,7 +783,7 @@ router.get('/users/:id/roles', requireAuth, requireOrgPermission('identity:read'
   if (useMysqlIdentityReadModel()) {
     return runAsyncAction(res, async () => {
       const repo = await identityRepository();
-      return res.json(await repo.getAssignedRoles(Number(req.params.id)));
+      return res.json(await repo.getAssignedRoles(req.params.id));
     }, '身份 MySQL 读取模型不可用');
   }
 

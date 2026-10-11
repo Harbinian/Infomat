@@ -108,6 +108,15 @@ async function main() {
     await assert.rejects(manageSessionSchema(admin, 'apply'), /DRIFT/);
     await admin.execute('CREATE INDEX idx_mdm_http_sessions_expiry ON mdm_http_sessions (expires_at)');
     await admin.execute('DELETE FROM schema_migrations WHERE migration_key=?', [MIGRATION_KEY]);
+    // R12: readiness also gates on the todo term-source migration marker. The fixture has to
+    // apply it through the same maintenance entry the runtime uses -- writing the marker by hand
+    // would prove nothing about that entry -- while keeping the "marker missing must be refused"
+    // negative case.
+    const { inspectTodoTermSource, manageTodoTermSource } = require('../server/todoTermSourceMigration');
+    assert.equal((await inspectTodoTermSource(admin)).state, 'unrecorded', 'a freshly built database is unrecorded, not applied');
+    assert.equal((await manageTodoTermSource(admin, 'apply')).state, 'applied');
+    assert.equal((await manageTodoTermSource(admin, 'apply')).state, 'applied', 'applying twice is idempotent');
+    assert.equal((await manageTodoTermSource(admin, 'inspect')).state, 'applied');
     assert.equal((await manageSessionSchema(admin, 'apply')).state, 'applied', 'resume empty exact schema after DDL interruption');
     // All fixture writes occur in the fresh container through its administration connection.
     await makeIdentityMysqlRepository(admin).initSchema();
@@ -140,6 +149,14 @@ async function main() {
     await startApp();
     assert.equal((await request('/api/ready')).status, 200);
     assert.equal((await request('/')).status, 200);
+    // R12: the negative case is kept, not relaxed. Removing the marker must make readiness
+    // refuse, and re-applying it through the maintenance entry must restore it.
+    await admin.execute('DELETE FROM schema_migrations WHERE migration_key=?', ['2026-09-28-todo-term-source-v1']);
+    await sleep(1100);
+    assert.equal((await request('/api/ready')).status, 503, 'a missing migration marker must refuse readiness');
+    assert.equal((await manageTodoTermSource(admin, 'apply')).state, 'applied');
+    await sleep(1100);
+    assert.equal((await request('/api/ready')).status, 200, 'the maintenance entry restores readiness');
     const forged = await fetch(`http://127.0.0.1:${backendPort}/api/org/session`, { headers: { Host: 'localhost', 'X-Forwarded-Proto': 'https', 'X-Forwarded-Host': 'localhost' } });
     assert.equal(forged.status, 400, 'untrusted direct source cannot forge TLS');
     assert.equal((await request('/api/org/me')).status, 401);
