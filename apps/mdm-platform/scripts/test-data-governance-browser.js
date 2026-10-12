@@ -124,12 +124,22 @@ async function main() {
       await pool.execute("UPDATE process_design_versions SET status='superseded' WHERE id=?", [versionId]);
       await refresh(); await button('建立工作包').click();
       assert.ok((await field('已发布流程版本').textContent()).includes('历史已发布'));
-      assert.equal(await field('已发布流程版本').locator('option[value="' + v8Id + '"]').count(), 0);
+      // The source dropdown offers any published native V8 or supported V7 version: the design
+      // document says so, and the shipped build renders "当前没有可选的已发布 V8 或受支持 V7 版本"
+      // when the list is empty. A V8 version is therefore listed; whether that source can actually
+      // be fixed into a package is the server's decision, asserted below.
+      assert.equal(await field('已发布流程版本').locator('option[value="' + v8Id + '"]').count(), 1);
       await field('已发布流程版本').selectOption(String(newerId)); await commit();
       const newer = (await expect('lead', root + '/workbench', 'GET')).work_packages.find(p => p.process_version_id === newerId);
       assert.ok(newer && newer.id !== work.id); assert.equal((await read()).package.source_content_hash, digest(doc));
-      await expect('lead', root + '/creation-tasks/reconcile', 'POST', { process_version_id:v8Id }, 409);
-      checks.push('old page retains same package; historical V7 selectable; distinct newer package cannot rebind old source; V8 remains unsupported');
+      // Data governance fixes any published native V8 or supported V7 source (design §1; the
+      // retired trial-version setting no longer narrows selection). A published V8 version is
+      // therefore fixed into its own package instead of being refused.
+      const v8Package = await expect('lead', root + '/creation-tasks/reconcile', 'POST', { process_version_id:v8Id }, 201);
+      assert.equal(v8Package.package.process_version_id, v8Id);
+      assert.equal(v8Package.package.schema_version, 'process-governance-v8');
+      assert.notEqual(v8Package.package.id, newer.id);
+      checks.push('old page retains same package; historical V7 selectable; distinct newer package cannot rebind old source; published V8 fixes into its own package');
       await button('生成待核对明细').click();
       await pool.execute('UPDATE process_design_versions SET process_content_json=? WHERE id=?', [JSON.stringify(doc), newerId]);
       await button('确认提交本次操作').click(); await page.getByRole('alert').waitFor(); assert.equal(await button('放弃本次输入').count(), 1);

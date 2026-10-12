@@ -10,7 +10,7 @@
 // `INLINE_SCRIPT_SHA256` is checked against the file by scripts/test-csp-policy-contract.js and
 // by audit-inline-script-inventory.js -- a stale hash would silently blank the page, so drift
 // has to fail loudly rather than quietly.
-const INLINE_SCRIPT_SHA256 = 'sha256-0gSqgBtzWbq9NhwGoJHpuNFRPElTum4s+ndGPJv8cSA=';
+const INLINE_SCRIPT_SHA256 = 'sha256-ccum62GvJpi1XvHQV+jSe7zqO4neh99AI7UixRfupRc=';
 
 function buildCsp({ allowInlineScript = false, scriptHash = INLINE_SCRIPT_SHA256 } = {}) {
   const scriptSrc = allowInlineScript

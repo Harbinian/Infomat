@@ -1634,7 +1634,7 @@
       <!-- Data Map -->
       <section class="panel compact-panel" id="dataMap">
         <div class="compact-head"><div class="compact-title"><h2>流程与数据关系</h2><p>查看流程图和数据关系，图中明确标注预览修订或正式版本。</p></div></div>
-        <div class="compact-toolbar"><label>选择流程 <select id="nativeDiagramCase"data-change="updateNativeDiagramButtons"><option value="">正在读取流程…</option></select></label><button class="btn" id="nativeProcessDiagramButton" disableddata-click="openSelectedCaseDiagram" data-click-args="[&quot;process&quot;]">查看流程图</button><button class="btn secondary" id="nativeDataDiagramButton" disableddata-click="openSelectedCaseDiagram" data-click-args="[&quot;data&quot;]">查看数据关系</button></div>
+        <div class="compact-toolbar"><label>选择流程 <select id="nativeDiagramCase"data-change="updateNativeDiagramButtons"><option value="">正在读取流程…</option></select></label><button class="btn" id="nativeProcessDiagramButton" disabled data-click="openSelectedCaseDiagram" data-click-args="[&quot;process&quot;]">查看流程图</button><button class="btn secondary" id="nativeDataDiagramButton" disabled data-click="openSelectedCaseDiagram" data-click-args="[&quot;data&quot;]">查看数据关系</button></div>
         <p id="nativeDiagramSourceNotice" class="muted" role="status"></p>
         <div class="compact-head"><div class="compact-title"><h2>字段台账</h2><p id="dataMapAccessNotice" role="status">正在读取当前访问权限…</p></div></div>
         <div class="compact-toolbar">
@@ -2182,7 +2182,7 @@
 
       <section class="panel compact-panel" id="officeWorkbench">
         <div class="compact-head"><div class="compact-title"><h2>办公室工作台</h2><p>任务先交办公室，再由办公室负责人分配给成员，办理人填写结果后办结。</p></div><button class="btn secondary"data-click="loadOfficeWorkbench">刷新</button></div>
-        <div class="compact-toolbar"><label>办公室<select id="officeSelect"data-change="loadOfficeWorkbenchSelf"></select></label><button class="btn" id="officeCreateTask" hiddendata-click="openOfficeTask" data-click-args="[&quot;create&quot;]">交办到办公室</button></div>
+        <div class="compact-toolbar"><label>办公室<select id="officeSelect"data-change="loadOfficeWorkbenchSelf"></select></label><button class="btn" id="officeCreateTask" hidden data-click="openOfficeTask" data-click-args="[&quot;create&quot;]">交办到办公室</button></div>
         <p class="notice" id="officeContext" role="status"></p>
         <div id="officeTaskSummary" class="publication-summary"></div>
         <details><summary id="officeMemberSummary">办公室成员</summary><div id="officeMembers" class="tw"></div></details>
@@ -6282,11 +6282,11 @@ async function downloadNativeDiagram() {
       // Quick-action cards are permission driven.
       var quickActions = '';
       if (hasPermission('governance:submit-department')) {
-        quickActions = '<div class="notice" style="border-left-color: var(--accent);">快捷操作：<adata-click="navigateTo" data-click-args="' + actionArgs(['list',{tab:'mySubmissions'}]) + '">我的报送</a> · <adata-click="navigateTo" data-click-args="' + actionArgs(['list',{tab:'todos'}]) + '">待办 (' + pendingTodos + ')</a></div>';
+        quickActions = '<div class="notice" style="border-left-color: var(--accent);">快捷操作：<a data-click="navigateTo" data-click-args="' + actionArgs(['list',{tab:'mySubmissions'}]) + '">我的报送</a> · <a data-click="navigateTo" data-click-args="' + actionArgs(['list',{tab:'todos'}]) + '">待办 (' + pendingTodos + ')</a></div>';
       } else if (hasPermission('governance:review-department')) {
-        quickActions = '<div class="notice" style="border-left-color: var(--accent);">快捷操作：<adata-click="navigateTo" data-click-args="' + actionArgs(['list',{tab:'todos'}]) + '">待审核 (' + pendingTodos + ')</a></div>';
+        quickActions = '<div class="notice" style="border-left-color: var(--accent);">快捷操作：<a data-click="navigateTo" data-click-args="' + actionArgs(['list',{tab:'todos'}]) + '">待审核 (' + pendingTodos + ')</a></div>';
       } else if (hasPermission('governance:handle-assigned-conflict') || hasPermission('governance:decide-escalation')) {
-        quickActions = '<div class="notice" style="border-left-color: var(--accent);">快捷操作：<adata-click="navigateTo" data-click-args="' + actionArgs(['list',{tab:'conflicts'}]) + '">未解决冲突 (' + pendingConflicts + ')</a> · <adata-click="navigateTo" data-click-args="' + actionArgs(['list',{tab:'todos'}]) + '">待办 (' + pendingTodos + ')</a></div>';
+        quickActions = '<div class="notice" style="border-left-color: var(--accent);">快捷操作：<a data-click="navigateTo" data-click-args="' + actionArgs(['list',{tab:'conflicts'}]) + '">未解决冲突 (' + pendingConflicts + ')</a> · <a data-click="navigateTo" data-click-args="' + actionArgs(['list',{tab:'todos'}]) + '">待办 (' + pendingTodos + ')</a></div>';
       }
       var actionArea = $('dashboardActions');
       if (actionArea) actionArea.innerHTML = quickActions;
@@ -10890,7 +10890,7 @@ async function downloadNativeDiagram() {
           html += '</tr>';
         });
         html += '</tbody></table>';
-        html += '<buttondata-click="savePermMatrix" data-click-args="' + actionArgs([roleId]) + '" style="margin-top:12px;padding:6px 16px;background:#2e7d32;color:white;border:none;border-radius:4px;cursor:pointer;">保存权限</button>';
+        html += '<button data-click="savePermMatrix" data-click-args="' + actionArgs([roleId]) + '" style="margin-top:12px;padding:6px 16px;background:#2e7d32;color:white;border:none;border-radius:4px;cursor:pointer;">保存权限</button>';
         document.getElementById('permMatrixContent').innerHTML = html;
       });
     }
@@ -10950,7 +10950,7 @@ async function downloadNativeDiagram() {
         allRoles.forEach(function(r) {
           html += '<label style="display:block;margin-bottom:4px;"><input type="checkbox" value="' + r.role_id + '" ' + (userRoleIds.has(r.role_id) ? 'checked' : '') + '> ' + escapeHtml(r.role_code) + ' — ' + escapeHtml(r.role_name) + (r.is_system ? ' (系统)' : '') + '</label>';
         });
-        html += '<buttondata-click="saveUserRoles" data-click-args="' + actionArgs([userId]) + '" style="margin-top:12px;padding:6px 16px;background:#2e7d32;color:white;border:none;border-radius:4px;cursor:pointer;">保存分配</button>';
+        html += '<button data-click="saveUserRoles" data-click-args="' + actionArgs([userId]) + '" style="margin-top:12px;padding:6px 16px;background:#2e7d32;color:white;border:none;border-radius:4px;cursor:pointer;">保存分配</button>';
         document.getElementById('userRoleCheckboxes').innerHTML = html;
       });
     }
@@ -11019,7 +11019,7 @@ async function downloadNativeDiagram() {
         html += '<td>' + escapeHtml(u.post || '-') + '</td>';
         html += '<td>' + escapeHtml(u.role) + '</td>';
         html += '<td><span id="badge-' + u.id + '">' + (u.rbac_role_codes || '<span style="color:#999;">未分配</span>') + '</span></td>';
-        html += '<td><buttondata-click="editOverviewRoles" data-click-args="' + actionArgs([u.id,'escapeHtml(u.name)','escapeHtml(u.employee_no)','(u.rbac_role_codes ||)']) + '" style="padding:4px 10px;background:#1565c0;color:white;border:none;border-radius:4px;cursor:pointer;font-size:12px;">编辑角色</button></td>';
+        html += '<td><button data-click="editOverviewRoles" data-click-args="' + actionArgs([u.id,'escapeHtml(u.name)','escapeHtml(u.employee_no)','(u.rbac_role_codes ||)']) + '" style="padding:4px 10px;background:#1565c0;color:white;border:none;border-radius:4px;cursor:pointer;font-size:12px;">编辑角色</button></td>';
         html += '</tr>';
       });
       if (filtered.length === 0) {
@@ -11049,7 +11049,7 @@ async function downloadNativeDiagram() {
           '<p style="color:#999;font-size:13px;margin-bottom:16px;">' + escapeHtml(employeeNo) + '</p>' +
           '<div id="overviewRoleChecks">' + checkboxesHtml + '</div>' +
           '<div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end;">' +
-            '<buttondata-click="removeBlock" style="padding:6px 16px;border:1px solid #ddd;border-radius:4px;cursor:pointer;">取消</button>' +
+            '<button data-click="removeBlock" style="padding:6px 16px;border:1px solid #ddd;border-radius:4px;cursor:pointer;">取消</button>' +
             '<button id="overviewSaveBtn" style="padding:6px 16px;background:#2e7d32;color:white;border:none;border-radius:4px;cursor:pointer;">保存</button>' +
           '</div></div>';
         document.body.appendChild(dialog);
@@ -11083,7 +11083,7 @@ async function downloadNativeDiagram() {
       panel.innerHTML = '<h3>批量导入</h3>' +
         '<p style="color:#666;margin-bottom:8px;">当前批量导入仅给已存在用户分配角色，不创建新用户；工号空的行用于定义角色权限。</p>' +
         '<div style="margin-bottom:12px;">' +
-          '<buttondata-click="openExternal" data-click-args="' + actionArgs(['/api/import-rbac/templates/full','_blank']) + '" style="padding:6px 12px;background:#555;color:white;border:none;border-radius:4px;cursor:pointer;">下载模板</button>' +
+          '<button data-click="openExternal" data-click-args="' + actionArgs(['/api/import-rbac/templates/full','_blank']) + '" style="padding:6px 12px;background:#555;color:white;border:none;border-radius:4px;cursor:pointer;">下载模板</button>' +
         '</div>' +
         '<div style="border:2px dashed #ccc;border-radius:6px;padding:40px;text-align:center;">' +
           '<p style="color:#999;">选择文件上传 (.xlsx / .csv)</p>' +

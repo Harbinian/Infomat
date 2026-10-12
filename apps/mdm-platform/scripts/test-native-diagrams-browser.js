@@ -15,8 +15,13 @@ async function main() {
     const browser = await runtime().chromium.launch({ channel: 'msedge', headless: true });
     const context = await browser.newContext({ viewport: { width: 1699, height: 828 }, deviceScaleFactor: 1 });
     const page = await context.newPage(); page.setDefaultTimeout(12000);
-    // Bound a stalled renderer/evaluate call as well as ordinary locator waits.
-    const deadline = setTimeout(() => { console.error('DIAGRAM_SUITE_DEADLINE'); browser.close().catch(() => {}); }, 240000);
+    // Bound a stalled renderer/evaluate call as well as ordinary locator waits. This suite renders
+    // Cytoscape graphs at every stage; 240s was enough only while the retained page's diagram
+    // buttons were dead markup that rendered nothing. With the buttons fixed the same stages do
+    // real rendering, so the bound is set where it still catches a hang without cutting a healthy
+    // run short. Override with DIAGRAM_SUITE_DEADLINE_MS when the machine is under load.
+    const deadlineMs = Number(process.env.DIAGRAM_SUITE_DEADLINE_MS || 600000);
+    const deadline = setTimeout(() => { console.error('DIAGRAM_SUITE_DEADLINE'); browser.close().catch(() => {}); }, deadlineMs);
     const errors = [], checks = [], consoleErrors = [], geometry = [];
     let writes = 0;
     page.on('pageerror', e => errors.push(e.message));
