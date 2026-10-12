@@ -8,6 +8,8 @@
 
 `node --test scripts/test-system-admin-definition-reads.js`使用合成SQL核对独立管理员读取设计交接时的账号状态、密码代次、现有全局读取权限及事务内账号锁，同时检查治理写入被拒绝；不读取私有配置、不连接真实数据库。结构指纹检查由其他专项覆盖，本脚本只替换该检查外壳，身份及权限逻辑使用实际实现。
 
+`node --test scripts/test-degraded-log-context.js`使用合成会话、合成仓储工厂和随机回环HTTP服务，核对两个降级入口写入`dependency_degraded`，在分类日志中保留来源错误码，并按现有MySQL不可用契约返回503，避免回显来源错误消息。静态守卫使用开发依赖`acorn`解析语法树，按词法作用域检查`server/`下`securityLog(<标识>)`的自由变量；其他函数或兄弟块的局部变量不能提供绑定。它不检查变量初始化顺序或运行时值。完整入口要求安装开发依赖；生产镜像不安装或加载解析器。不读取私有配置、不连接真实数据库，不使用3000端口。
+
 ## 执行边界
 
 - 运行、结构维护及数据写入使用不同入口。`inspect`、`dry-run`及`smoke`名称本身不证明无副作用；先核对脚本加载的配置、目标、连接和写入。
@@ -289,16 +291,18 @@
 | `test-b02-login-identity-boundary.js` | 登录的精确身份边界：大整数保真、不可表示的身份拒绝登录 | 无（替身仓储） |
 | `test-versions-scope-contract.js` | 历史读取范围：全局／同部门／异部门／无权限／管理员／已删除对象六类组合 | 无（替身仓储） |
 | `test-versions-scope-mysql.js` | 同上，真实隔离库；并断言未删除任何历史行 | 隔离 MySQL |
-| `test-login-admission-contract.js` | 登录准入：空白变体、并发计数、容量上限、在途释放 | 无 |
+| `test-login-admission-contract.js` | 登录准入：空白及大小写变体、并发成功与计数、容量拒绝、过期回收、在途释放 | 无 |
 | `test-http-error-contract.js` | 请求错误契约：400/413/415 分类、analysis 既有码保留、凭据闸门 | 无 |
-| `test-security-log-contract.js` | 安全日志白名单、敏感字段拦截、sink 失败不影响业务 | 无 |
+| `test-security-log-contract.js` | 安全日志字段及标量白名单、嵌套敏感对象拦截、sink 失败不影响业务 | 无 |
 | `test-security-log-http.js` | 关联号可追溯、事件分类、日志故障不改变响应 | 无 |
 | `audit-security-log-hygiene.js` | 静态守卫：不得再直接打印驱动错误或把异常文本写进日志 | 无 |
 | `test-mysql-resource-budget-contract.js` | 池预算、登记簿、幂等关闭、提交不明语义；并静态断言无裸 `createPool` | 无 |
-| `test-mysql-resource-budget-mysql.js` | 池耗尽、锁等待、数据库暂停、提交回执丢失、排空 | 隔离 MySQL（黑洞用例会 `docker pause` 自有容器） |
+| `test-mysql-resource-budget-mysql.js` | 实际池查询超时、池耗尽、锁等待、数据库暂停、提交回执丢失、排空 | 隔离 MySQL（黑洞用例会 `docker pause` 自有容器） |
 | `test-shutdown-drain-mysql.js` | 真实服务进程按普通路径停止并排空领域池 | 隔离 MySQL |
 | `test-legacy-import-parser.js` | 旧字段台账解析：预算、损坏压缩包、并发门禁、取消 | 无 |
 | `test-export-budget-contract.js` | 导出行数与并发预算、中断后不再二次发送 | 无 |
-| `test-analysis-visible-page-contract.js` | 可见分页的扫描预算与游标语义 | 无 |
-| `test-csp-policy-contract.js` | 内容安全策略逐条回归与收紧目标 | 无 |
-| `audit-inline-script-inventory.js` | 保留页内联脚本与内联事件处理器清单；`--require-clean` 作为收紧前的门禁 | 无 |
+| `test-backend-resource-regressions.js` | 实际池执行、事务超时及迟到提交、回滚预算、取消等待、排空失败、导出计时、worker取消及精确身份投影 | 无，强制阻断真实MySQL |
+| `test-export-read-regressions.js` | 仓储SQL行数预算、精确部门标识、字段与黄金源投影、断连后停止读取 | 无，强制阻断真实MySQL |
+| `test-analysis-visible-page-contract.js` | 可见分页的行数及实际等待预算、游标语义、最终解析超时 | 无 |
+| `test-csp-policy-contract.js` | 内容安全策略回归；LF/CRLF/CR 换行一致、真实脚本变化、缺失/额外脚本，以及事件属性引号形式的 CLI 正负例 | 无 |
+| `audit-inline-script-inventory.js` | 保留页内联脚本与事件处理器清单；哈希按浏览器换行语义计算；`--require-clean` 要求唯一脚本哈希匹配且无内联事件处理器，支持单双引号及无引号属性 | 无 |

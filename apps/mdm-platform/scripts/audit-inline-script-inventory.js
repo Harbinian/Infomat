@@ -6,10 +6,10 @@
 // handler values that are composed at runtime. This script reports exactly what stands in the
 // way, so the conversion has a checklist and a number that has to reach zero.
 //
-// With --require-clean it exits non-zero while any inline handler remains; that is the gate the
-// CSP can be tightened behind.
+// With --require-clean it requires one matching script hash and no inline handler attributes.
 const fs = require('node:fs');
 const path = require('node:path');
+const { scriptCspHash, inlineScriptBlocks } = require('./testHelpers/retainedPageCsp');
 
 const PAGE = path.resolve(__dirname, '../public/index.html');
 const requireClean = process.argv.includes('--require-clean');
@@ -17,27 +17,19 @@ const html = fs.readFileSync(PAGE, 'utf8');
 const { INLINE_SCRIPT_SHA256 } = require('../server/cspPolicy');
 
 // Inline <script> blocks (those without a src attribute).
-const blocks = [];
-const scriptRe = /<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi;
+const scripts = inlineScriptBlocks(html);
+const blocks = scripts.map(({ line, code }) => ({ line, bytes: Buffer.byteLength(code), chars: code.length }));
 let match;
-while ((match = scriptRe.exec(html)) !== null) {
-  const before = html.slice(0, match.index);
-  blocks.push({
-    line: before.split('\n').length,
-    bytes: Buffer.byteLength(match[1]),
-    chars: match[1].length
-  });
-}
 
 // Inline event-handler attributes. The handler text is normalised so a runtime-composed call is
 // counted once with the call that composes it, instead of once per rendered row.
 const attributes = {};
-const handlerRe = /\son(click|change|submit|input|keydown|keyup|focus|blur|load|error)\s*=\s*"([^"]*)"/gi;
+const handlerRe = /\son([a-z][a-z0-9]*)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>\x60]+))/gi;
 while ((match = handlerRe.exec(html)) !== null) {
   if (!attributes[match[1]]) attributes[match[1]] = { count: 0, templates: new Map() };
   const entry = attributes[match[1]];
   entry.count += 1;
-  const template = match[2]
+  const template = (match[2] ?? match[3] ?? match[4])
     .replace(/'[^']*'/g, "'…'")
     .replace(/"[^"]*"/g, '"…"')
     .replace(/\$\{[^}]*\}/g, '${…}')
@@ -54,10 +46,27 @@ const onclick = attributes.click || { count: 0, templates: new Map() };
 let runtimeComposed = 0;
 handlerRe.lastIndex = 0;
 while ((match = handlerRe.exec(html)) !== null) {
-  if (match[1] === 'click' && (/'\s*\+/.test(match[2]) || /\$\{/.test(match[2]))) runtimeComposed += 1;
+  const value = match[2] ?? match[3] ?? match[4];
+  if (match[1] === 'click' && (/'\s*\+/.test(value) || /\$\{/.test(value))) runtimeComposed += 1;
 }
 
-const blockHash = blocks.length ? `sha256-${require("node:crypto").createHash("sha256").update(html.slice(html.indexOf("<script>", html.indexOf("  <script>")) + 8, html.indexOf("</script>", html.indexOf("<script>", html.indexOf("  <script>")))), "utf8").digest("base64")}` : null;
+// Conversion safety: an attribute that lost its separating whitespace is fatal and silent.
+// `disableddata-click="…"` parses as a single attribute named `disableddata-click`, so the button
+// keeps neither `disabled` nor its handler, and `<buttondata-click="…">` becomes an unknown element
+// instead of a button. The handler inventory above only matches `\son…=`, so these are counted
+// separately. Only two shapes can occur, because a valued attribute always ends in a quote and the
+// parser recovers after one: the tag name itself (`<adata-click=`) or a valueless boolean attribute
+// (`disableddata-click=`).
+const BOOLEAN_ATTRIBUTES = 'disabled|hidden|readonly|checked|required|selected|multiple|autofocus|open|controls|loop|muted|default|reversed|novalidate|itemscope';
+const GLUED_NAME = '(?:on[a-z]+|data-[a-z-]+)=';
+const glued = [];
+const gluedRe = new RegExp(`<([a-z][a-z0-9]*)(?=${GLUED_NAME})|\\s(${BOOLEAN_ATTRIBUTES})(?=${GLUED_NAME})`, 'g');
+while ((match = gluedRe.exec(html)) !== null) {
+  const name = html.slice(match.index + match[0].length).match(new RegExp(`^${GLUED_NAME}`))[0];
+  glued.push({ line: html.slice(0, match.index).split('\n').length, glued: `${match[1] || match[2]}${name}` });
+}
+
+const blockHash = scripts.length === 1 ? scriptCspHash(scripts[0].code) : null;
 const report = {
   inlineScriptSha256: blockHash,
   policySha256: INLINE_SCRIPT_SHA256,
@@ -68,6 +77,7 @@ const report = {
   distinctOnclickTemplates: onclick.templates.size,
   onclickTemplates: [...onclick.templates.entries()].sort((a, b) => b[1] - a[1]).map(([template, count]) => ({ template, count })),
   runtimeComposedHandlers: runtimeComposed,
+  gluedAttributes: glued,
   // The retained block is allowed by its hash, so what still forces 'unsafe-inline' is only an
   // inline event-handler attribute -- a hash cannot cover one of those.
   stillRequiresUnsafeInline: onclick.count > 0 || Object.entries(attributes).some(([name, entry]) => name !== 'click' && entry.count > 0)
@@ -77,6 +87,8 @@ for (const block of blocks) console.log(`inline <script> at line ${block.line}, 
 for (const [name, count] of Object.entries(report.inlineHandlerAttributes)) console.log(`inline ${name}= attributes: ${count}`);
 console.log(`distinct onclick templates: ${report.distinctOnclickTemplates} (of which ${runtimeComposed} are composed while the page renders)`);
 console.log(`retained inline script hash: ${blockHash} (policy matches page: ${report.policyHashMatchesPage})`);
+console.log(`glued attributes (name lost its separating whitespace): ${glued.length}`);
+for (const item of glued) console.log(`  line ${item.line}: ${item.glued}`);
 console.log(`script-src 'unsafe-inline' is still required: ${report.stillRequiresUnsafeInline}`);
 
 const output = process.argv.indexOf('--output');
@@ -88,7 +100,7 @@ if (output > 0 && process.argv[output + 1]) {
   fs.writeFileSync(target, `${JSON.stringify(report, null, 2)}\n`, { flag: 'wx' });
 }
 
-if (requireClean && (report.stillRequiresUnsafeInline || !report.policyHashMatchesPage)) {
-  console.error('inline script still present: the content security policy cannot be tightened yet');
+if (requireClean && (report.stillRequiresUnsafeInline || !report.policyHashMatchesPage || glued.length > 0)) {
+  console.error('CSP inventory rejected: expected one matching script hash, no inline event handlers and no glued attributes');
   process.exitCode = 1;
 }

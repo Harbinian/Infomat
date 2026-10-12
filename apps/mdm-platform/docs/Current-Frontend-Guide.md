@@ -464,6 +464,6 @@ links每项为 `{record_type, source_row, entity_id, expected_revision}`，只�
 
 ## 导出规模、连接中断与站点安全策略
 
-字段台账导出设有行数上限（`MDM_EXPORT_MAX_ROWS`，默认20000）与并发上限（`MDM_EXPORT_MAX_CONCURRENCY`，默认2）。超过行数上限返回413且不产生下载；并发超出返回503 `EXPORT_BUSY`，不排队。客户端中断后服务端停止取数与生成；若响应已开始，失败以连接终止表示，不再改发JSON，因此中断的下载与完整下载在HTTP语义上可区分。导出范围授权与在线读取一致。
+字段台账导出设有行数上限（`MDM_EXPORT_MAX_ROWS`，默认20000）、并发上限（`MDM_EXPORT_MAX_CONCURRENCY`，默认2）及时间上限（`MDM_EXPORT_TIMEOUT_MS`，默认60000毫秒），数据库连接同时受操作预算约束。取完整字段值前按可见范围检查行数并限制SQL结果；超行数返回413，并发超出返回503 `EXPORT_BUSY`，不排队。两个工作表流式生成，保留字段说明、已保存的黄金源及维护部门投影。客户端中断或超时取消读取及压缩生成；若响应已开始，失败以连接终止表示，不再改发JSON。超限不会提供截断台账，下载范围和原输入保护方式保持。
 
-内容安全策略由 `server/cspPolicy.js` 集中定义，当前为 `script-src 'self' 'sha256-…'`：保留页唯一的那个内联脚本块按**哈希**放行，其他内联脚本一律阻断；为此该页原有的 116 处内联事件处理器属性已全部改为 `data-click`/`data-change`/`data-input` 声明加一个委托监听器，处理器白名单见 `PAGE_ACTIONS`。`script-src` 不再包含 `unsafe-inline`。脚本块内容变化时哈希必须同步更新，`node scripts/test-csp-policy-contract.js` 与 `node scripts/audit-inline-script-inventory.js --require-clean` 会把过期哈希判为失败。`style-src` 保持不变。桌面 Edge、100%、1699×828 仍是唯一支持环境。
+当前候选源码的内容安全策略由 `server/cspPolicy.js` 集中定义，为 `script-src 'self' 'sha256-…'`：保留页唯一的内联脚本块按**哈希**放行，其他内联脚本一律阻断；该页原有的 116 处内联事件处理器属性已改为 `data-click`/`data-change`/`data-input` 声明和委托监听器，处理器白名单见 `PAGE_ACTIONS`。`script-src` 不包含 `unsafe-inline`。哈希按浏览器解析后的脚本文本计算，CRLF 和独立 CR 先归一为 LF，因此仅换行编码差异不要求改动哈希；其他字符或空白变化仍须同步更新。`node scripts/test-csp-policy-contract.js` 与 `node scripts/audit-inline-script-inventory.js --require-clean` 检查唯一脚本哈希、缺失或额外脚本及内联事件处理器；事件属性使用双引号、单引号或无引号时均会被拒绝。`style-src` 保持不变。实际部署策略按目标响应核对；桌面 Edge、100%、1699×828 仍是唯一支持环境。

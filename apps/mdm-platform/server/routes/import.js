@@ -6,6 +6,7 @@ const router = express.Router();
 const { requireAuth, getUserEffectivePermissionsAsync } = require('../auth');
 const { dataMapRepository } = require('../dataMapMysqlRepository');
 const { sessionOf } = require('../legacyGovernanceWrites');
+const { sameIdentityInteger } = require('../sessionSubject');
 const { parseLegacyFields } = require('../legacyImportParser');
 
 // R05: the file-size bound is joined by part and field bounds, so a multipart body cannot
@@ -18,7 +19,7 @@ const upload = multer({
 function handleUpload(req, res, next) {
   upload.single('file')(req, res, error => {
     if (!error) return next();
-    if (error.code === 'LIMIT_FILE_SIZE') return res.status(400).json({ error: 'Excel 文件不能超过 5MB' });
+    if (error.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ code: 'LEGACY_IMPORT_LIMIT', error: 'Excel 文件不能超过 5MB' });
     return res.status(400).json({ error: 'Excel 文件上传失败' });
   });
 }
@@ -36,7 +37,7 @@ function handleError(res, error) {
 
 async function canImportForContext(req, context) {
   const { permSet } = await getUserEffectivePermissionsAsync(req.session.userId);
-  const sameDepartment = Number(context.dept_id || 0) === Number(req.session.departmentId || 0);
+  const sameDepartment = sameIdentityInteger(context.dept_id, req.session.departmentId);
   return sameDepartment && !permSet.has('identity:manage-account') && permSet.has('governance:draft-department');
 }
 
@@ -57,14 +58,19 @@ router.post('/field-entries', requireAuth, handleUpload, async (req, res) => {
     // unchanged and still happens before the workbook is read; the import itself keeps its
     // UUID idempotency, named lock, context hash and atomic batch semantics untouched.
     const abort = new AbortController();
-    res.on('close', () => { if (!res.writableEnded) abort.abort(); });
-    const rows = await parseLegacyFields({
+    const onClose = () => { if (!res.writableEnded) abort.abort(); };
+    res.on('close', onClose);
+    if (req.aborted || res.destroyed) abort.abort();
+    let rows;
+    try { rows = await parseLegacyFields({
       bytes: req.file.buffer,
       originalName: req.file.originalname,
       contextId,
       submittedBy: req.session.userId,
       signal: abort.signal
-    });
+    }); } finally { res.off('close', onClose); }
+    // The parser can finish just as the client departs. Do not start a new write after cancellation.
+    if (abort.signal.aborted || req.aborted || res.destroyed) return;
 
     res.json(await repo.importFieldsBatch({ contextId, rows, fileName: req.file.originalname,
       buffer: req.file.buffer, requestId: req.body.request_id }, sessionOf(req.session)));

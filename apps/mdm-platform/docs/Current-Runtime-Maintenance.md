@@ -75,8 +75,14 @@ getHistoricalReview复用当前账号/人员/auth_version验证，仅既有gover
 
 本节记录 R01–R13 本地整改引入的运行边界。数值是本地工程默认值，可经环境变量覆盖，不是已确认的生产容量或SLA。
 
-数据库访问按领域设置等待与执行上限：`MYSQL_QUEUE_LIMIT`（排队上限）、`MYSQL_CONNECT_TIMEOUT_MS`（连接上限）、`MYSQL_OPERATION_TIMEOUT_MS`（单次操作上限），连接数上限沿用`MYSQL_CONNECTION_LIMIT`。所有领域池经`server/mysqlPoolRegistry.js`登记，进程级总量可读；停止时按登记顺序排空，`MDM_SHUTDOWN_DRAIN_MS`为排空预算，未排空的领域在停止输出中以`MDM_SHUTDOWN_NOT_DRAINED`点名，15秒硬退出只作兜底。事务提交无法确认时返回`MYSQL_COMMIT_UNKNOWN`/`PROCESS_DATA_GOVERNANCE_COMMIT_UNKNOWN`（503），必须按请求标识查回执，禁止自动重试。
+数据库访问按领域设置等待与执行上限：`MYSQL_QUEUE_LIMIT`为排队上限，`MYSQL_CONNECT_TIMEOUT_MS`为连接建立上限，连接数上限沿用`MYSQL_CONNECTION_LIMIT`。`MYSQL_OPERATION_TIMEOUT_MS`默认10000毫秒，接入实际领域池的查询及连接获取；一次连接借用从开始等待到释放共用同一预算，包含其事务语句、提交和清理。超时销毁正在执行的连接，已取消的等待若随后获得连接则立即释放，不执行迟到语句。排队容量耗尽返回503；超时发生在提交期间时保留`MYSQL_COMMIT_UNKNOWN`或已有领域提交不明码，必须核对原请求回执，禁止自动重试。
 
-安全日志采用允许字段白名单（`event`、`code`、`route`、`method`、`status`、`duration_ms`、`request_id`、`actor_ref`、`at`），不记录异常文本、SQL、参数、正文、Cookie、CSRF或claim。每个响应带`X-Request-Id`，错误响应体同样回传`request_id`，可据此在日志中定位该次请求。日志写入失败不影响业务结果。日志轮转与集中存储属部署配置，须另行核对。
+领域池经`server/mysqlPoolRegistry.js`登记，正常关闭后移除登记，失败的关闭保留诊断。`MDM_SHUTDOWN_DRAIN_MS`默认5000毫秒，领域池、就绪检查和会话存储并行关闭并分别受此预算约束。成功输出`MDM_SHUTDOWN_DRAINED`及实际关闭池数；失败或超时以`MDM_SHUTDOWN_NOT_DRAINED`点名并退出1，不能报告正常退出。15秒硬退出仍是HTTP服务的兜底。
+
+登录准入在密码核验前计数；同一地址的账号大小写及首尾空白变体共用窗口，地址另有独立窗口。成功仅清理已结束的账号失败记录，其他在途核验仍占用名额。容量回收只移除已过期且没有在途请求的记录；容量已满时拒绝新窗口并返回429及`Retry-After`，不淘汰仍有效的失败记录。旧字段台账解析在线程中执行，线程不继承服务环境变量；上传超过5MB返回413，客户端在解析期间取消后不再启动导入写入。
+
+台账导出使用`MDM_EXPORT_MAX_ROWS`（默认20000行）、`MDM_EXPORT_MAX_CONCURRENCY`（默认2）及`MDM_EXPORT_TIMEOUT_MS`（默认60000毫秒）。先按可读取部门在SQL中检查行数，并限制上下文及字段读取规模，再流式生成原两个工作表。数据库连接还受操作预算约束。客户端断连或超时取消正在执行的读取及压缩归档，发送文件后发生错误时中断连接，不追加JSON；超限或超时不返回截断台账。
+
+安全日志采用允许字段白名单（`event`、`code`、`route`、`method`、`status`、`duration_ms`、`request_id`、`actor_ref`、`at`），仅接收相应标量类型，不序列化嵌套对象、异常文本、SQL、参数、正文、Cookie、CSRF或claim。路径记录已匹配的路由模板；未匹配请求记录固定标记，不记录客户端任意路径。响应头带`X-Request-Id`，统一MySQL不可用及提交不明响应体还回传`request_id`；其他接口以响应头关联日志。日志写入失败不影响业务结果。日志轮转与集中存储属部署配置，须另行核对。
 
 就绪检查要求`2026-09-28-todo-term-source-v1`迁移标记存在。基础结构已含`related_term_id`列，因此新库处于`unrecorded`状态并会被拒绝，必须先经`node scripts/manage-todo-term-source.js --apply --target <host:port/db>`登记（与集成测试夹具共用同一函数）。缺标记与结构漂移一律拒绝，不放宽ready断言。

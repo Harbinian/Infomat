@@ -115,10 +115,42 @@ test('storage stays bounded under many distinct accounts', () => {
   const stats = security.loginRateLimitStats();
   assert.ok(stats.size <= limit, `limiter storage is bounded: ${stats.size} <= ${limit}`);
   assert.ok(stats.rejectedByCapacity > 0, 'the capacity bound is what kept it bounded');
-  // The limiter still works after eviction: a fresh key is counted normally.
+  // Capacity refuses new keys instead of evicting a live failure window.
   const fresh = attempt({ loginName: 'after_flood', password: 'x' }, '10.9.9.9');
-  assert.equal(fresh.admitted, true);
-  assert.equal(attempt({ loginName: 'after_flood', password: 'x' }, '10.9.9.9').admitted, true);
+  assert.equal(fresh.admitted, false);
+  assert.equal(fresh.res.body.code, 'LOGIN_BUSY');
+});
+
+test('case variants cannot bypass an account window', () => {
+  for (let i = 0; i < 8; i += 1) {
+    const outcome = attempt({ loginName: i % 2 ? 'KNOWN' : 'known', password: 'x' });
+    assert.equal(outcome.admitted, true);
+    outcome.res.settle();
+  }
+  assert.equal(attempt({ loginName: 'Known', password: 'x' }).admitted, false);
+});
+
+test('success keeps concurrent admissions counted until each response finishes', () => {
+  const held = Array.from({ length: security.loginRateLimitStats().concurrencyLimit }, () => attempt({ loginName: 'parallel_success' }));
+  security.clearLoginFailures(held[0].req);
+  assert.equal(attempt({ loginName: 'PARALLEL_SUCCESS' }).admitted, false);
+  for (const outcome of held) outcome.res.settle();
+  assert.equal(security.loginRateLimitStats().inFlight, 0);
+});
+
+test('expired entries are reclaimed even when a recently touched live key comes first', () => {
+  const now = Date.now;
+  let clock = now();
+  Date.now = () => clock;
+  try {
+    const old = attempt({ loginName: 'old' }, '10.30.0.1'); old.res.settle();
+    clock += 1000;
+    const newer = attempt({ loginName: 'newer' }, '10.30.0.2'); newer.res.settle();
+    const touch = attempt({ loginName: 'old' }, '10.30.0.1'); touch.res.settle();
+    clock += 15 * 60 * 1000 - 1000;
+    const fresh = attempt({ loginName: 'fresh' }, '10.30.0.3'); fresh.res.settle();
+    assert.equal(security.loginRateLimitStats().size, 4, 'only newer and fresh account/address windows survive');
+  } finally { Date.now = now; }
 });
 
 test('in-flight admissions are bounded and released on a refused request', () => {

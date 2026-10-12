@@ -176,6 +176,32 @@ async function main() {
     as('global');
     assert.strictEqual((await get('/api/versions/entity/terminology_term/7')).status, 200);
 
+    // MySQL's case/accent-insensitive collation may return legacy variants of "todo".
+    // Every returned row in that scope must use the retained metadata filter.
+    versionsRouter.setAuditRepositoryFactory(async () => ({ async listEntityVersions() {
+      const retained = dept => JSON.stringify({ schema_version: 'todo-deletion-v1', todo: { to_dept_id: dept } });
+      return { logs: [logRow('TODO', 1, { metadata_json: retained(HOME_DEPARTMENT) }), logRow('tódo', 2, { metadata_json: retained(OTHER_DEPARTMENT) })],
+        changeSets: [logRow('TODO', 3, { metadata_json: retained(OTHER_DEPARTMENT) })] };
+    } }));
+    as('sameDepartment');
+    const todo = await get('/api/versions/entity/todo/1');
+    assert.equal(todo.body.logs.length, 1);
+    assert.equal(todo.body.logs[0].entity_id, '1');
+    assert.equal(todo.body.changeSets.length, 0);
+
+    // Factory failures cannot turn a policy refusal or an unlisted type into a dependency error.
+    versionsRouter.setAuditRepositoryFactory(async () => { throw new Error('FORBIDDEN_REPOSITORY_LOOKUP'); });
+    as('noReadRight');
+    for (const url of ['/api/versions/mapping/100', '/api/versions/field/101', '/api/versions/entity/publication/7']) {
+      const result = await get(url);
+      assert.equal(result.status, 404);
+      assert.equal(result.text, refused[0]);
+    }
+    assert.deepEqual((await get('/api/versions/entity/unlisted_type/100')).body, { changeSets: [], logs: [] });
+    assert.deepEqual((await get('/api/versions/entity/todo/100')).body, { changeSets: [], logs: [] });
+    as('global');
+    for (const id of ['100junk', '-1', '9223372036854775808']) assert.equal((await get('/api/versions/mapping/' + id)).status, 404);
+
     console.log('R01 version history scope contract passed: six caller/object combinations, no existence leak');
   } finally {
     await closeServer(server);

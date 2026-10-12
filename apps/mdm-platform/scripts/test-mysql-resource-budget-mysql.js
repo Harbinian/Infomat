@@ -31,7 +31,7 @@ async function main() {
       await raw.execute('CREATE TABLE budget_probe (id BIGINT PRIMARY KEY, note VARCHAR(64))');
 
       // The registry pool is the unit under test: it is the one the application would use.
-      const env = { MYSQL_HOST: '127.0.0.1', MYSQL_PORT: String(port), MYSQL_USER: 'root', MYSQL_PASSWORD: ctx.password, MYSQL_DATABASE: database, MYSQL_CONNECTION_LIMIT: '2' };
+      const env = { MYSQL_HOST: '127.0.0.1', MYSQL_PORT: String(port), MYSQL_USER: 'root', MYSQL_PASSWORD: ctx.password, MYSQL_DATABASE: database, MYSQL_CONNECTION_LIMIT: '2', MYSQL_OPERATION_TIMEOUT_MS: '2000' };
       const pool = registry.createRegisteredPool(env, 'audit');
       const budget = registry.totalPoolBudget();
       assert.equal(budget.pools, 1);
@@ -39,6 +39,13 @@ async function main() {
       save('pool-budget.json', budget);
 
       const countRows = async () => Number((await raw.query('SELECT COUNT(*) AS n FROM budget_probe'))[0][0].n);
+      await check('ordinary runtime execute has a deadline without a transaction helper', async () => {
+        const { ms } = await elapsed(async () => {
+          await assert.rejects(pool.execute('SELECT SLEEP(10)'), { code: 'MYSQL_DEADLINE' });
+        });
+        assert.ok(ms < 5000, `actual pool execution bounded: ${ms} ms`);
+        assert.equal((await pool.execute('SELECT 1 AS n'))[0][0].n, 1, 'the pool recovers after destroying the timed-out connection');
+      });
 
       await check('a saturated pool fails within its bound instead of queueing without end', async () => {
         const held = [await pool.getConnection(), await pool.getConnection()];

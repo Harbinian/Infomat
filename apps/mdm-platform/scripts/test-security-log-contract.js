@@ -79,3 +79,12 @@ test('the actor reference is an identifier, never a name or a session', () => {
   assert.equal(actorRef({ personName: '张三' }), null, 'a display name is not an identity');
   assert.equal(actorRef(null), null);
 });
+
+test('allowed fields cannot serialize nested request or driver values', () => {
+  const { log, lines } = capture();
+  const poisoned = { password: 'private-value', sql: 'SELECT private' };
+  log.write({ event: 'request_failed', route: poisoned, actor_ref: poisoned, status: poisoned, duration_ms: Infinity });
+  assert.equal(lines.length, 1);
+  assert.ok(!lines[0].includes('private'));
+  assert.deepEqual(Object.keys(JSON.parse(lines[0])).sort(), ['at', 'event']);
+});

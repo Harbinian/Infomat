@@ -81,7 +81,8 @@ function publicChangeSetRow(row) {
     ...row,
     id: identityInteger(row.id),
     entity_id: identityInteger(row.entity_id),
-    operated_by: row.operated_by == null ? null : identityInteger(row.operated_by)
+    operated_by: row.operated_by == null ? null : identityInteger(row.operated_by),
+    operated_by_person_id: row.operated_by_person_id == null ? null : identityInteger(row.operated_by_person_id)
   };
 }
 

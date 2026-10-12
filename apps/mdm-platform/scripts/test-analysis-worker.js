@@ -20,15 +20,15 @@ const checks = [], uuid = () => crypto.randomUUID(), sleep = ms => new Promise(r
 const rejects = (p, c) => assert.rejects(p, e => { assert.equal(e.code, c); return true; });
 async function check(name, fn) { await fn(); checks.push(name); console.log('PASS ' + name); }
 async function main() {
-  await withStage05Fixture(async ({ pool, backup, restore }) => {
+  await withStage05Fixture(async ({ pool, owner, backup, restore }) => {
     const repo = makeDataMapDefinitionRepository(pool), lead = { personId: 82, accountId: 182, authVersion: 1 }, contact = { personId: 83, accountId: 183, authVersion: 1 };
     const cfg = pool.pool.config.connectionConfig;
     const env = isolatedEnvironment({ MYSQL_HOST: cfg.host, MYSQL_PORT: String(cfg.port), MYSQL_USER: cfg.user, MYSQL_PASSWORD: cfg.password, MYSQL_DATABASE: cfg.database });
     const target = cfg.host + ':' + cfg.port + '/' + cfg.database;
     const cli = (script, args) => execFileSync(process.execPath, [path.join(__dirname, script), ...args, '--target', target], { env, windowsHide: true, encoding: 'utf8', timeout: 20000, stdio: ['ignore', 'pipe', 'pipe'] });
     const children = new Set(), logs = [];
-    function spawn(script) {
-      const child = fork(path.join(__dirname, script), script === 'analysis-worker.js' ? ['start', '--target', target] : [], { env, silent: true, windowsHide: true, execArgv: [] });
+    function spawn(script, overrides = {}) {
+      const child = fork(path.join(__dirname, script), script === 'analysis-worker.js' ? ['start', '--target', target] : [], { env: { ...env, ...overrides }, silent: true, windowsHide: true, execArgv: [] });
       children.add(child); child.on('exit', () => children.delete(child));
       child.stdout.on('data', data => { for (const line of String(data).trim().split('\n')) { try { logs.push({ pid: child.pid, ...JSON.parse(line) }); } catch { logs.push({ pid: child.pid, text: line }); } } });
       child.stderr.on('data', data => logs.push({ pid: child.pid, error: String(data).trim() }));
@@ -101,21 +101,39 @@ async function main() {
         const task = await repo.nextAnalysisStep(claim);
         await rejects(repo.beginAnalysisAttempt(lead, { request_id: uuid(), run_id: run.run_id, expected_revision: task.revision_no, step_key: task.step.step_key }), 'DEFINITION_ANALYSIS_WORKER_TOKEN_REQUIRED');
         const result = { request_id: uuid(), attempt_id: task.attempt_id, expected_revision: task.revision_no, status: 'succeeded', checked_ids: task.step.check_ids, error_code: null, evidence: [], findings: [] };
-        assert.deepEqual(await repo.completeQueuedAnalysis(claim, result), await repo.completeQueuedAnalysis(claim, result));
+        // The manual winning claimant must heartbeat like the independent
+        // worker while doing multiple round trips. Keep the original 500ms lease.
+        assert.equal((await repo.heartbeatAnalysis(claim)).live, true);
+        const completed = await repo.completeQueuedAnalysis(claim, result);
+        assert.equal((await repo.heartbeatAnalysis(claim)).live, true);
+        assert.deepEqual(completed, await repo.completeQueuedAnalysis(claim, result));
         assert.equal(Number((await pool.execute("SELECT COUNT(*) n FROM data_map_analysis_queue_events WHERE run_id=? AND event_type='step_completed'", [run.run_id]))[0][0].n), 1);
+        assert.equal((await repo.heartbeatAnalysis(claim)).live, true);
         await repo.nextAnalysisStep(claim); assert.equal((await get(run)).status, 'succeeded');
         save('competition.json', { claimants: 2, winners: 1, run: await get(run) });
       });
       await check('heartbeat extends lease, expired claim recovery fences old token and preserves attempts', async () => {
         const run = await enqueue(), c1 = await repo.claimAnalysis(uuid()), t1 = await repo.nextAnalysisStep(c1);
+        // Match the real worker's renewal after metadata/step reads, then keep
+        // the original 280ms waits and 500ms lease-expiry/fencing assertions.
+        assert.equal((await repo.heartbeatAnalysis(c1)).live, true);
         await sleep(280); await repo.heartbeatAnalysis(c1); await sleep(280); await repo.heartbeatAnalysis(c1);
-        await pool.execute('UPDATE data_map_analysis_queue SET lease_until=TIMESTAMPADD(SECOND,-1,UTC_TIMESTAMP(3)) WHERE run_id=?', [run.run_id]);
+        // This case isolates lease expiry from the independently tested hard
+        // deadline; explicit maintenance CLI startup must not change its cause.
+        await pool.execute('UPDATE data_map_analysis_queue SET lease_until=TIMESTAMPADD(SECOND,-1,UTC_TIMESTAMP(3)),deadline_at=TIMESTAMPADD(SECOND,30,UTC_TIMESTAMP(3)) WHERE run_id=?', [run.run_id]);
         await rejects(complete(c1, t1), 'DEFINITION_ANALYSIS_QUEUE_LEASE_LOST');
         assert.equal(JSON.parse(cli('analysis-worker.js', ['recover'])).recovered, 1);
         const c2 = await repo.claimAnalysis(uuid()); assert(c2.generation > c1.generation);
         await rejects(repo.heartbeatAnalysis(c1), 'DEFINITION_ANALYSIS_QUEUE_LEASE_LOST');
         await rejects(complete(c1, t1), 'DEFINITION_ANALYSIS_QUEUE_LEASE_LOST');
-        const t2 = await repo.nextAnalysisStep(c2); await complete(c2, t2); await repo.nextAnalysisStep(c2);
+        // Only the replacement claimant renews; both original-token rejection
+        // calls above still reach their original repository operations.
+        assert.equal((await repo.heartbeatAnalysis(c2)).live, true);
+        const t2 = await repo.nextAnalysisStep(c2);
+        assert.equal((await repo.heartbeatAnalysis(c2)).live, true);
+        await complete(c2, t2);
+        assert.equal((await repo.heartbeatAnalysis(c2)).live, true);
+        await repo.nextAnalysisStep(c2);
         const actual = await get(run); assert.equal(actual.attempts.length, 2); assert.equal(actual.attempts[0].error_code, 'LEASE_EXPIRED');
         save('recovery.json', actual);
       });
@@ -151,9 +169,23 @@ async function main() {
         const next = spawn('analysis-worker.js'); const started = await waitFor(() => logs.find(l => l.pid === next.pid && l.event === 'worker_started'));
         await waitFor(async () => (await get(run)).status === 'partial');
         const actual = await get(run); assert.equal(actual.steps[0].attempt_no, 1); assert.equal(actual.steps[1].attempt_no, 2);
-        assert.deepEqual(actual.attempts.filter(a => a.step_key === 'step1').map(a => a.error_code), ['LEASE_EXPIRED', 'STEP_TIMEOUT']);
+        const reasons = actual.attempts.filter(a => a.step_key === 'step1').map(a => a.error_code);
+        assert.equal(reasons[0], 'LEASE_EXPIRED');
+        // The live worker can lose its 500ms lease before the 1200ms hard deadline; recovery
+        // must report whichever boundary expired first. The hard deadline has a separate case.
+        assert.ok(['LEASE_EXPIRED', 'STEP_TIMEOUT'].includes(reasons[1]), reasons[1]);
         cli('analysis-worker.js', ['stop', '--worker-id', started.worker_id]); await once(next, 'exit');
         save('process-crash-timeout.json', actual);
+      });
+      await check('hard deadline recovery is distinct from lease expiry and fences late results', async () => {
+        const run = await enqueue(['stub_hang']), claim = await repo.claimAnalysis(uuid()), task = await repo.nextAnalysisStep(claim);
+        await pool.execute('UPDATE data_map_analysis_queue SET lease_until=TIMESTAMPADD(SECOND,30,UTC_TIMESTAMP(3)),deadline_at=TIMESTAMPADD(SECOND,-1,UTC_TIMESTAMP(3)) WHERE run_id=?', [run.run_id]);
+        await rejects(complete(claim, task), 'DEFINITION_ANALYSIS_QUEUE_LEASE_LOST');
+        assert.equal((await repo.recoverAnalysisQueue()).recovered, 1);
+        assert.equal((await get(run)).attempts[0].error_code, 'STEP_TIMEOUT');
+        // Finish the retry so later cases cannot pick up this synthetic pending run.
+        const next = await repo.claimAnalysis(uuid()), retry = await repo.nextAnalysisStep(next);
+        await complete(next, retry); await repo.nextAnalysisStep(next);
       });
       await check('stop during running adapter is graceful; restart resumes persisted interrupted attempt', async () => {
         const run = await enqueue(['stub_hang'], { timeout_ms: 1200, max_attempts: 2 });
@@ -175,9 +207,13 @@ async function main() {
       });
       await check('queue result transaction rollback has no partial step or evidence', async () => {
         const run = await enqueue(), c = await repo.claimAnalysis(uuid()), task = await repo.nextAnalysisStep(c);
+        assert.equal((await repo.heartbeatAnalysis(c)).live, true);
         await pool.query("CREATE TRIGGER synthetic_p10_event_failure BEFORE INSERT ON data_map_analysis_queue_events FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='SYNTHETIC_FAILURE'");
         try { await assert.rejects(complete(c, task)); assert.equal((await get(run)).attempts[0].status, 'running'); }
         finally { await pool.query('DROP TRIGGER synthetic_p10_event_failure'); }
+        // Inspection and trigger cleanup are owned test work, not a stopped
+        // claimant. Renew explicitly before the original successful retry.
+        assert.equal((await repo.heartbeatAnalysis(c)).live, true);
         await complete(c, task); await repo.nextAnalysisStep(c);
       });
       await check('prior successful findings and evidence survive a later failed step unchanged', async () => {
@@ -202,6 +238,24 @@ async function main() {
         assert.deepEqual(await snapshot(), protectedBefore);
         save('backup-and-protection.json', { queue: before, protected: protectedBefore, restored: true });
       });
+      await check('IPC stop interrupts a paused database and the worker closes within its operation budget', async () => {
+        const docker = args => execFileSync('docker', args, { env: isolatedEnvironment(), encoding: 'utf8', windowsHide: true, timeout: 30000 }).trim();
+        const id = docker(['ps', '--filter', `label=infomat.stage04=${owner}`, '--format', '{{.ID}}']);
+        assert.match(id, /^[a-f0-9]{12}$/);
+        assert.equal(docker(['inspect', '--format', '{{index .Config.Labels "infomat.stage04"}}', id]), owner);
+        const child = spawn('analysis-worker.js', { MYSQL_OPERATION_TIMEOUT_MS: '1500' });
+        await waitFor(() => logs.find(l => l.pid === child.pid && l.event === 'worker_started'));
+        const exited = once(child, 'exit');
+        docker(['pause', id]);
+        try {
+          await sleep(100);
+          const started = Date.now(); child.send('mdm:stop', () => {});
+          const result = await Promise.race([exited, sleep(6000).then(() => null)]);
+          assert.ok(result, 'database outage cannot keep the worker alive indefinitely');
+          assert.ok(Date.now() - started < 5000);
+          save('database-stop.json', { ms: Date.now() - started, code: child.exitCode, signal: child.signalCode, bounded: true });
+        } finally { docker(['unpause', id]); await kill(child); }
+      });
       await check('recovery preserves BIGINT attempt identities above JavaScript safe integer', async () => {
         await pool.query('ALTER TABLE data_map_analysis_attempts AUTO_INCREMENT=9007199254741100');
         const run = await enqueue(), c = await repo.claimAnalysis(uuid()), task = await repo.nextAnalysisStep(c);
@@ -221,6 +275,6 @@ async function main() {
       save('worker-events.json', logs);
       save('cleanup.json', { remaining_owned_children: children.size });
     }
-  });
+  }, { evidenceDir: output, randomDatabase: true });
 }
 main().catch(e => { save('failure.json', { code: e.code, message: e.message, stack: e.stack, checks }); console.error(e); process.exitCode = 1; });
