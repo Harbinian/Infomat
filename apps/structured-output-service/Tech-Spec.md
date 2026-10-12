@@ -1,5 +1,13 @@
 # 3001 V8候选技术增量与历史交互规格
 
+## React工作台检查
+
+`frontend/checks.mjs`在页面内存中汇总三类诊断：`technical`来自`/api/validate`的结构和引用错误，`incomplete`复用`StructureLearningScore.evaluateContent`及`behaviorExecutabilityDetails`，`confirmation`包含未登记数据/表单的适用性提示、明确待确认值及接口警告。这里只投影既有规则，不修改Schema、API、枚举或JSON内容。内容检查异常时保留技术错误并标记`contentStatus=unavailable`，明确显示内容检查未完成。
+
+适配器将原点分路径转换为页面定位所用的JSON Pointer，按实际所属对象建立目标和字段；无对象时保留导航意图。“编制信息”是`export_meta`的页面投影，复用既有`package_ref`，只编辑已有的发起部门、编制人字段，不新增持久化对象或身份。Controller沿用原异步来源核对、编辑保护和撤销事务；检查前处理可见输入，应用后检查快照过期，过期快照禁止定位。`CheckResults.jsx`分别显示三组诊断、计数及处理建议。检查与下载继续独立，诊断不进入JSON、服务端草稿或浏览器存储。
+
+`test-workbench-checks.mjs`使用内存夹具或调用者提供的只读JSON，验证分类、空判断出口、逐动作检查、失败可见性、根元信息和字段定位、输入保护及下载保持。`test-workbench-checks-browser.ps1`使用独立Edge100%、1699×828页面验证三组呈现、定位、显式应用、过期结果及实际下载字节，并检查控制台、网络和持久化边界；技术错误显示用独立页面拦截响应验证，不能写成服务真实结构错误或业务验收。
+
 ## 环节关联展示候选（2026-10-08）
 
 `/workbench/` 流程节点不再投影数据操作计数、待确认计数或表单数量；内部 `aggregates` 保留供兼容读取。节点文字及尺寸只由名称、执行信息、控制类型和异常决定。显示布局版本升为v2，避免把旧节点尺寸的绝对视口应用到新图；布局和视口仍只存在页面内存，不修改JSON、业务修订或下载基线。

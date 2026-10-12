@@ -1,4 +1,5 @@
 import { clone, catalog, resolve, fields, readPath, writePath, normalizeKind, tableForTarget, gridTarget, newEntity, pendingLifecycle, createAddition, deletionPlan, KIND_LABELS } from './model.mjs';
+import { collectWorkbenchChecks } from './checks.mjs';
 
 const frozen = value => {
   if (!value || typeof value !== 'object' || Object.isFrozen(value)) return value;
@@ -20,7 +21,7 @@ function issueTarget(document,issue) {
 }
 function decorateIssue(document,issue,severity) {
   const owner=issueTarget(document,issue);
-  return {...issue,severity,...(owner?{target:{kind:owner.kind,ref:owner.ref,parentRef:owner.parentRef,formRef:owner.formRef,areaRef:owner.areaRef,dataRef:owner.dataRef,routeRef:owner.routeRef},focusField:issue.column || issue.params?.missingProperty || String(issue.path || issue.instancePath || issue.focusPath || '').slice(owner.path?.length || 0).replace(/^\//,'').replaceAll('/','.')}: {})};
+  return {...issue,severity,...(owner?{target:{kind:owner.kind,ref:owner.ref,parentRef:owner.parentRef,formRef:owner.formRef,areaRef:owner.areaRef,dataRef:owner.dataRef,routeRef:owner.routeRef},focusField:issue.focusField || issue.column || issue.params?.missingProperty || String(issue.path || issue.instancePath || issue.focusPath || '').slice(owner.path?.length || 0).replace(/^\//,'').replaceAll('/','.')}: {})};
 }
 export function createWorkbenchController(options = {}) {
   const modules = options.modules;
@@ -287,7 +288,7 @@ export function createWorkbenchController(options = {}) {
       if(typeof action==='string')action={type:action};
       // Camera and resize feedback must not erase a failure before the user can read it.
       if(action.type!=='viewport')state.error=null;
-      const protectedActions=['new','import','choose-import','select','select-reference','view','close-detail','exit-edit','add','delete','undo','redo','download','relations','return-flow','focus-issue','reuse-fields','reuse-picker-open'];
+      const protectedActions=['check','new','import','choose-import','select','select-reference','view','close-detail','exit-edit','add','delete','undo','redo','download','relations','return-flow','focus-issue','reuse-fields','reuse-picker-open'];
       const preserveGrid=grid && ['select','select-reference','close-detail','expand-detail','grid-table','grid-select','reuse-fields','reuse-picker-open'].includes(action.type);
       const pickerNavigation=pickerPending() && ['grid-table','grid-select','grid-start','grid-add','grid-delete','grid-cancel','cancel','edit'].includes(action.type);
       if((protectedActions.includes(action.type) && (!preserveGrid || pickerPending()) || pickerNavigation) && !action.guardResolved) {const blocked=guarded(action);if(blocked)return blocked;}
@@ -419,8 +420,10 @@ export function createWorkbenchController(options = {}) {
           state.document=result.document;state.revision+=1;state.appliedTarget=null;state.appliedRevision=null;state.checks.stale=true;discardSession();if(state.selection&&resolve(state.document,state.selection).status!=='valid'){state.selection=null;state.detailOpen=false;}else if(state.editing&&state.selection)objectSession();emit();break;
         }
         case 'check':
-          return operation(async(signal,mark)=>{const validation=await validate(state.document,signal);if(!current(mark))return {ok:false,stale:true};state.checks={issues:[...(validation.errors||[]).map(item=>decorateIssue(state.document,item,'error')),...(validation.warnings||[]).map(item=>decorateIssue(state.document,item,'warning'))],stale:false,valid:validation.valid,revision:state.revision};emit();return {ok:true};},{session:false});
+          return operation(async(signal,mark)=>{const validation=await validate(state.document,signal);if(!current(mark))return {ok:false,stale:true};const checks=collectWorkbenchChecks(state.document,validation,modules.StructureLearningScore);state.checks={...checks,issues:checks.issues.map(item=>decorateIssue(state.document,item,item.severity)),stale:false,revision:state.revision};emit();return {ok:true};},{session:false});
         case 'focus-issue': {
+          if(state.checks.stale)throw new Error('检查结果已经过期，请重新检查后定位');
+          if(action.issue.navigation&&!action.issue.target){discardSession();state.selection=null;state.detailOpen=false;state.editing=false;state.view='list';state.viewport.list={...state.viewport.list,category:'primary',search:''};emit();return {ok:true};}
           const issue=action.issue,target=issueTarget(state.document,issue),resolved=resolve(state.document,target);
           if(resolved.status!=='valid')throw new Error('该问题的对象已经变化或没有可定位对象，原位置保持不变，请重新检查');
           const relative=issue.focusField || issue.column || issue.params?.missingProperty || String(issue.path || issue.instancePath || issue.focusPath || '').slice(resolved.path.length).replace(/^\//,'').replaceAll('/','.');
