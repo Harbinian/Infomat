@@ -45,6 +45,7 @@ function runDbAction(res, action) {
 
 function runAsyncAction(res, action, unavailableMessage) {
   return action().catch(error => {
+    if (sendMysqlUnavailable(res, error)) return;
     if (error && error.statusCode) {
       return res.status(error.statusCode).json({ error: error.message });
     }
@@ -56,7 +57,6 @@ function runAsyncAction(res, action, unavailableMessage) {
     )) {
       return handleDbError(res, error);
     }
-    if (sendMysqlUnavailable(res, error)) return;
     logRequestFailure(res, error);
     return res.status(unavailableMessage ? 503 : 500).json({ error: unavailableMessage || '服务器错误' });
   });

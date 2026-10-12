@@ -56,10 +56,10 @@ async function main() {
   await once(server, 'listening');
   const base = `http://127.0.0.1:${server.address().port}`;
 
-  async function send(url, { method = 'POST', body, contentType = 'application/json' } = {}) {
+  async function send(url, { method = 'POST', body, contentType = 'application/json', encoding = null } = {}) {
     const res = await fetch(base + url, {
       method,
-      headers: body === undefined ? {} : { 'Content-Type': contentType },
+      headers: body === undefined ? {} : { 'Content-Type': contentType, ...(encoding ? { 'Content-Encoding': encoding } : {}) },
       body
     });
     const text = await res.text();
@@ -87,6 +87,10 @@ async function main() {
     const analysisOversized = await send('/api/analysis/runs', { body: JSON.stringify({ padding: 'x'.repeat(300 * 1024) }) });
     assert.equal(analysisOversized.status, 413, analysisOversized.text.slice(0, 200));
     assert.equal(analysisOversized.body.code, 'DEFINITION_ANALYSIS_PAYLOAD_TOO_LARGE');
+    for (const url of ['/api/org/me', '/api/analysis/runs']) {
+      assert.equal((await send(url, { body: '{}', encoding: 'unsupported-synthetic' })).status, 415);
+      assert.equal((await send(url, { body: '{}', contentType: 'application/json; charset=iso-8859-1' })).status, 415);
+    }
 
     // 4. A credential of the wrong type is rejected before any account lookup and before hashing.
     const lookupsBefore = identityLookups, hashesBefore = hashAttempts;

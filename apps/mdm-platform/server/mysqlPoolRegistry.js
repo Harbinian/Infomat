@@ -7,21 +7,37 @@
 // The registry only accounts for pools; it does not create connections, verify schemas or decide
 // policy. Registration happens where the pool is created.
 const mysql = require('mysql2/promise');
-const { mysqlConfigFromEnv, poolBudget } = require('./mysqlConfig');
+const { mysqlConfigFromEnv, poolBudget, operationTimeoutMs } = require('./mysqlConfig');
+const { boundMysqlPool } = require('./boundedMysql');
 
 const pools = new Map(); // domain -> Set of {pool, config}
 let closePromise = null;
 
 function registerPool(domain, pool, config) {
+  if (closePromise) throw Object.assign(new Error('数据服务正在关闭'), { code: 'MYSQL_POOL_CLOSING', statusCode: 503 });
   const label = String(domain || 'shared');
   if (!pools.has(label)) pools.set(label, new Set());
-  pools.get(label).add({ pool, config });
+  const entry = { pool, config };
+  const entries = pools.get(label);
+  entries.add(entry);
+  const end = pool.end.bind(pool);
+  let ending;
+  pool.end = () => {
+    if (!ending) ending = Promise.resolve().then(end).then(value => {
+      entries.delete(entry);
+      if (!entries.size && pools.get(label) === entries) pools.delete(label);
+      return value;
+    });
+    return ending;
+  };
   return pool;
 }
 
 function createRegisteredPool(env = process.env, domain = null) {
+  if (closePromise) throw Object.assign(new Error('数据服务正在关闭'), { code: 'MYSQL_POOL_CLOSING', statusCode: 503 });
   const config = mysqlConfigFromEnv(env, domain);
-  return registerPool(domain, mysql.createPool(config), config);
+  const pool = boundMysqlPool(mysql.createPool(config), operationTimeoutMs(env, domain));
+  return registerPool(domain, pool, config);
 }
 
 // Read-only totals for diagnostics and for tests that need to prove a queue drained.
@@ -48,8 +64,6 @@ function registeredPoolCount() {
   return [...pools.values()].reduce((sum, set) => sum + set.size, 0);
 }
 
-const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-
 // Idempotent: the runtime calls it on shutdown, and a second call reuses the first result. A pool
 // that will not close within the budget is reported rather than waited on forever -- the process
 // still has its hard exit, and the report says which domain did not drain.
@@ -61,14 +75,17 @@ function closeAllPools({ timeoutMs = 5000 } = {}) {
     pools.clear();
     const results = await Promise.all(entries.map(async ({ domain, pool }) => {
       let timedOut = false;
-      await Promise.race([
-        pool.end().catch(() => {}),
-        sleep(timeoutMs).then(() => { timedOut = true; })
-      ]);
+      let timer;
+      try {
+        await Promise.race([
+          Promise.resolve().then(() => pool.end()).catch(() => { timedOut = true; }),
+          new Promise(resolve => { timer = setTimeout(() => { timedOut = true; resolve(); }, timeoutMs); })
+        ]);
+      } finally { clearTimeout(timer); }
       return { domain, timedOut };
     }));
-    const notDrained = results.filter(result => result.timedOut).map(result => result.domain);
-    return { closed: results.length, notDrained };
+    const notDrained = [...new Set(results.filter(result => result.timedOut).map(result => result.domain))];
+    return { closed: results.filter(result => !result.timedOut).length, notDrained };
   })();
   return closePromise;
 }

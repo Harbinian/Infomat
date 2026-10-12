@@ -147,6 +147,7 @@ async function parseLegacyFields({ bytes, originalName, contextId, submittedBy, 
   try {
     worker = new Worker(require.resolve('./legacyImportThread'), {
       workerData: { bytes, originalName, contextId, submittedBy },
+      env: {},
       resourceLimits: { maxOldGenerationSizeMb: 256 }
     });
     return await new Promise((resolve, reject) => {
@@ -159,7 +160,7 @@ async function parseLegacyFields({ bytes, originalName, contextId, submittedBy, 
         fail(message.error && message.error.name ? message.error.name : 'DAMAGED', (message.error && message.error.statusCode) || 400),
         { message: (message.error && message.error.message) || '字段台账解析失败' }))));
       worker.once('error', () => reject(fail('RESOURCE_LIMIT', 413, '字段台账超出可解析规模')));
-      worker.once('exit', code => { if (code) reject(fail('RESOURCE_LIMIT', 413, '字段台账超出可解析规模')); });
+      worker.once('exit', () => reject(fail('RESOURCE_LIMIT', 413, '字段台账超出可解析规模')));
     });
   } finally {
     clearTimeout(timer);

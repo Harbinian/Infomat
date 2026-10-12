@@ -45,7 +45,7 @@ function poolBudget(domain) {
 
 function positiveInteger(value, fallback) {
   const number = Number(value);
-  return Number.isInteger(number) && number > 0 ? number : fallback;
+  return Number.isSafeInteger(number) && number > 0 ? number : fallback;
 }
 
 function mysqlConfigFromEnv(env = process.env, domain = null) {
@@ -57,14 +57,14 @@ function mysqlConfigFromEnv(env = process.env, domain = null) {
     password: env.MYSQL_PASSWORD || '',
     database: env.MYSQL_DATABASE || 'infomat_mdm',
     waitForConnections: true,
-    connectionLimit: Number(env.MYSQL_CONNECTION_LIMIT || budget.connectionLimit),
+    connectionLimit: positiveInteger(env.MYSQL_CONNECTION_LIMIT, budget.connectionLimit),
     charset: 'utf8mb4'
   };
   // A bounded wait and a bounded operation are what keep a stalled database from turning into an
   // unbounded queue. The driver's own connectTimeout does not cover pool waiting or query time.
   config.queueLimit = positiveInteger(env.MYSQL_QUEUE_LIMIT, budget.queueLimit);
   config.connectTimeout = positiveInteger(env.MYSQL_CONNECT_TIMEOUT_MS, budget.connectTimeoutMs);
-  config.maxIdle = positiveInteger(env.MYSQL_MAX_IDLE, config.connectionLimit);
+  config.maxIdle = Math.min(positiveInteger(env.MYSQL_MAX_IDLE, config.connectionLimit), config.connectionLimit);
   config.idleTimeout = positiveInteger(env.MYSQL_IDLE_TIMEOUT_MS, 60000);
   return config;
 }

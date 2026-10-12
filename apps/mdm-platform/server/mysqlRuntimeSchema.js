@@ -47,9 +47,16 @@ async function checkRuntimeSchema(pool, domain) {
 }
 
 function sendMysqlUnavailable(res, error) {
+  if (error && error.code === 'MYSQL_COMMIT_UNKNOWN') {
+    require('./securityLog').securityLog(res).write({ event: 'commit_unknown', code: error.code, status: 503 });
+    res.status(503).json({ code: error.code, request_id: (res.req && res.req.requestId) || null,
+      error: '提交回执不明，请保留原请求并核对记录，不能自动重试' });
+    return true;
+  }
   const unavailableCodes = new Set(['MYSQL_RUNTIME_SCHEMA_UNAVAILABLE', 'ER_NO_SUCH_TABLE', 'ER_BAD_FIELD_ERROR',
     'ER_TABLEACCESS_DENIED_ERROR', 'ER_COLUMNACCESS_DENIED_ERROR', 'ER_ACCESS_DENIED_ERROR', 'ER_DBACCESS_DENIED_ERROR',
-    'ER_BAD_DB_ERROR', 'ECONNREFUSED', 'ECONNRESET', 'ETIMEDOUT', 'PROTOCOL_CONNECTION_LOST']);
+    'ER_BAD_DB_ERROR', 'ECONNREFUSED', 'ECONNRESET', 'ETIMEDOUT', 'PROTOCOL_CONNECTION_LOST',
+    'MYSQL_DEADLINE', 'MYSQL_BUSY', 'MYSQL_POOL_CLOSING']);
   if (!error || !unavailableCodes.has(error.code)) return false;
   // R06: a database-availability refusal is recorded by classification only. The response body
   // and the log both stay free of the driver's own text, SQL and parameters.

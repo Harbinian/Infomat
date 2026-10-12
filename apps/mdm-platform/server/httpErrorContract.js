@@ -40,6 +40,7 @@ const PASSWORD_MIN = 1;
 const PASSWORD_MAX = 256;
 
 function loginCredentialProblem(body = {}) {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return 'credential-body-shape';
   const rawName = body.loginName !== undefined ? body.loginName : body.employee_no;
   if (rawName !== undefined && rawName !== null && typeof rawName !== 'string') return 'login-name-type';
   const name = typeof rawName === 'string' ? rawName.trim() : '';

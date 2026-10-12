@@ -1,6 +1,7 @@
 const { mdmMysqlSchemaSql, splitSqlStatements } = require('./mysqlSchema');
 const { ACCESS_MODEL_VERSION } = require('./roleDefinitions');
 const systemAdmin = require('./systemAdminIdentity');
+const { sessionSubject, identityInteger, sameIdentityInteger } = require('./sessionSubject');
 const {
   ensureRbacRaciV2Schema,
   seedFixedAccessModel
@@ -14,6 +15,38 @@ async function rows(pool, sql, params = []) {
 async function first(pool, sql, params = []) {
   const result = await rows(pool, sql, params);
   return result[0] || null;
+}
+
+// Read projections only. CAST aliases replace the selected identity columns,
+// leaving SELECT * and all unknown physical columns intact. No snapshot/hash
+// consumer uses these department methods; publication keeps its own raw read.
+const DEPARTMENT_IDENTITY_FIELDS = ['id', 'parent_id', 'manager_user_id', 'data_owner_user_id',
+  'final_responsible_person_id', 'data_owner_person_id', 'created_by', 'updated_by'];
+const DEPARTMENT_READ_COLUMNS = `*, ${DEPARTMENT_IDENTITY_FIELDS.map(field => `CAST(${field} AS CHAR) AS ${field}`).join(', ')}`;
+
+function normalizeIdentityRead(row, fields) {
+  const result = { ...row };
+  for (const field of fields) {
+    if (!Object.prototype.hasOwnProperty.call(row, field) || row[field] == null) continue;
+    const id = identityInteger(row[field]);
+    if (id !== null) result[field] = id;
+    // Preserve historical non-positive safe values in display reads. These
+    // remain invalid identities for session/authority/SQL parameter checks.
+    else if (typeof row[field] === 'string' && /^-?\d+$/.test(row[field])) {
+      const integer = BigInt(row[field]);
+      if (integer >= BigInt(Number.MIN_SAFE_INTEGER) && integer <= BigInt(Number.MAX_SAFE_INTEGER)) result[field] = Number(row[field]);
+    }
+  }
+  return result;
+}
+
+// Keep every valid identity binding decimal even when a prepared statement is
+// reused after a safe-number request. Invalid values cannot select a neighbour;
+// undefined is left to the driver's existing parameter-error contract.
+function identityReadParam(value) {
+  if (value === undefined) return undefined;
+  const id = identityInteger(value);
+  return id === null ? null : String(id);
 }
 
 function parseJsonObject(value, fallback = {}) {
@@ -54,7 +87,7 @@ function shouldFallbackFromPersonIdentity(error) {
 }
 
 function sessionPersonId(session = {}) {
-  return Number(session.personId || 0) || null;
+  return sessionSubject(session).kind === 'person' ? identityInteger(session.personId) : null;
 }
 
 function legacyIdentityWriteError() {
@@ -65,8 +98,8 @@ function legacyIdentityWriteError() {
 }
 
 function normalizePersonUser(row = {}) {
-  const personId = Number(row.person_id || row.id || 0) || null;
-  const accountId = Number(row.account_id || 0) || null;
+  const personId = identityInteger(row.person_id || row.id);
+  const accountId = identityInteger(row.account_id);
   return {
     ...row,
     id: personId,
@@ -77,12 +110,12 @@ function normalizePersonUser(row = {}) {
     name: row.person_name || row.name || '',
     personName: row.person_name || row.name || '',
     employeeNo: row.employee_no || row.login_name || '',
-    department_id: row.current_department_id || row.department_id || null,
-    current_department_id: row.current_department_id || row.department_id || null,
+    department_id: identityInteger(row.current_department_id || row.department_id),
+    current_department_id: identityInteger(row.current_department_id || row.department_id),
     departmentName: row.department_name || row.dept_name || null,
     role: row.role || null,
     accountStatus: row.account_status || null,
-    authVersion: Number(row.auth_version || 0),
+    authVersion: identityInteger(row.auth_version) || 0,
     post: row.post || row.position_name || null
   };
 }
@@ -101,6 +134,67 @@ function deriveDataScopes(user = {}, permissions = []) {
   const personId = user.personId || user.person_id || user.id;
   if (personId) scopes.add(`person:${personId}`);
   return Array.from(scopes);
+}
+
+// These values describe current rows; they never grant permission by role alone.
+function roleAuthority(roles = []) {
+  const roleCodes = new Set(roles.map(role => String(role.code || role.role_code || '').trim()).filter(Boolean));
+  return { roleCodes, readOnly: roleCodes.has('admin') };
+}
+
+// Formal operations consume only their locked direct assignments. Do not replace
+// this with the general identity reader's role-ancestor/field-constraint policy.
+function assignmentAuthority(assignments = []) {
+  const effects = new Map();
+  for (const item of assignments) {
+    const code = String(item.perm_code || '').trim();
+    if (!code) continue;
+    if (String(item.effect || '').trim() === 'deny') effects.set(code, 'deny');
+    else if (!effects.has(code)) effects.set(code, 'allow');
+  }
+  return { ...roleAuthority(assignments), effects };
+}
+
+// Caller owns the existing account/person/assignment locks and transaction.
+// Each invocation reads current qualifications on that exact connection.
+async function readPersonAuthority(db, session, personId, { currentRead = false, includeFieldConstraints = false } = {}) {
+  const subject = sessionSubject(session);
+  if (subject.kind !== 'person' || !sameIdentityInteger(subject.personId, personId)) return { valid: false };
+  // Only identity SELECTs pass through this adapter. Locking reads bypass an
+  // earlier repeatable-read snapshot and hold qualifications through commit.
+  // The caller still owns the transaction and its account/person/assignment locks.
+  const reader = currentRead ? {
+    execute(sql, params) {
+      if (!/^\s*SELECT\b/i.test(sql)) throw new Error('Current identity reader accepts SELECT only');
+      return db.execute(`${sql.trim()} FOR SHARE`, params);
+    }
+  } : db;
+  const identity = makeIdentityMysqlRepository(reader);
+  const validation = await identity.validateSession(session);
+  if (!validation.valid || !validation.user) return includeFieldConstraints ? { valid: false, reason: validation.reason } : { valid: false };
+  if (validation.user.must_change_password) return includeFieldConstraints ? { valid: false, passwordChangeRequired: true } : { valid: false };
+  const authority = await readAuthorityDetails(identity, validation.user, personId, includeFieldConstraints);
+  if (includeFieldConstraints) authority.department = validation.user.current_department_id == null
+    ? null : await identity.getDepartmentById(validation.user.current_department_id);
+  return authority;
+}
+
+async function readAuthorityDetails(identity, user, personId, includeFieldConstraints = false) {
+  const { permSet, fieldConstraints } = await identity.getUserEffectivePermissions(personId);
+  const roles = await identity.getUserRoleCodes(personId);
+  return { valid: true, user, permissions: permSet, roles, ...roleAuthority(roles), ...(includeFieldConstraints ? { fieldConstraints } : {}) };
+}
+
+// Eligibility only: no session, authentication assertion, business write grant or
+// locking adapter. The acting reviewer retains the caller's separate locked path.
+async function readPersonQualification(db, personId) {
+  personId = identityInteger(personId);
+  if (!personId) return { valid: false };
+  const identity = makeIdentityMysqlRepository(db);
+  const user = await identity.getUserById(personId);
+  if (!user || user.accountStatus !== 'active' || user.status !== 'active' || user.must_change_password ||
+    !sameIdentityInteger(user.personId, personId) || !identityInteger(user.accountId) || !identityInteger(user.authVersion)) return { valid: false };
+  return readAuthorityDetails(identity, user, personId);
 }
 
 async function executeIfSupported(pool, sql, params = []) {
@@ -344,7 +438,7 @@ function makeIdentityMysqlRepository(pool) {
              pr.effective_to AS effectiveTo
       FROM person_roles pr
       JOIN roles r ON pr.role_id = r.role_id
-      WHERE pr.person_id=?
+      WHERE pr.person_id=CAST(? AS SIGNED)
         AND r.status='active'
         AND r.model_version=?
         AND pr.assignment_status='active'
@@ -353,15 +447,15 @@ function makeIdentityMysqlRepository(pool) {
         AND (pr.effective_from IS NULL OR pr.effective_from<=CURRENT_DATE)
         AND (pr.effective_to IS NULL OR pr.effective_to>=CURRENT_DATE)
       ORDER BY r.role_group, r.role_code
-    `, [userId, ACCESS_MODEL_VERSION]);
+    `, [String(userId), ACCESS_MODEL_VERSION]);
   }
 
   async function getDirectRoleIds(userId) {
     return (await rows(pool, `
-      SELECT pr.role_id
+      SELECT pr.role_id, CAST(pr.role_id AS CHAR) AS role_id
       FROM person_roles pr
       JOIN roles r ON r.role_id=pr.role_id
-      WHERE pr.person_id=?
+      WHERE pr.person_id=CAST(? AS SIGNED)
         AND r.status='active'
         AND r.model_version=?
         AND pr.assignment_status='active'
@@ -369,7 +463,7 @@ function makeIdentityMysqlRepository(pool) {
         AND pr.effective_from IS NOT NULL
         AND (pr.effective_from IS NULL OR pr.effective_from<=CURRENT_DATE)
         AND (pr.effective_to IS NULL OR pr.effective_to>=CURRENT_DATE)
-    `, [userId, ACCESS_MODEL_VERSION])).map(role => role.role_id);
+    `, [identityReadParam(userId), ACCESS_MODEL_VERSION])).map(role => normalizeIdentityRead(role, ['role_id']).role_id);
   }
 
   async function collectRoleAndAncestors(roleIds, executor = pool) {
@@ -378,8 +472,8 @@ function makeIdentityMysqlRepository(pool) {
     async function collect(roleId) {
       if (!roleId || allRoleIds.has(roleId)) return;
       allRoleIds.add(roleId);
-      const parent = await first(executor, 'SELECT parent_role_id FROM roles WHERE role_id=?', [roleId]);
-      if (parent && parent.parent_role_id) await collect(parent.parent_role_id);
+      const parent = await first(executor, 'SELECT parent_role_id, CAST(parent_role_id AS CHAR) AS parent_role_id FROM roles WHERE role_id=CAST(? AS SIGNED)', [identityReadParam(roleId)]);
+      if (parent && parent.parent_role_id) await collect(normalizeIdentityRead(parent, ['parent_role_id']).parent_role_id);
     }
 
     for (const roleId of roleIds) await collect(roleId);
@@ -398,14 +492,14 @@ function makeIdentityMysqlRepository(pool) {
       return { permSet: new Set(), fieldConstraints: {} };
     }
 
-    const placeholders = allRoleIds.map(() => '?').join(',');
+    const placeholders = allRoleIds.map(() => 'CAST(? AS SIGNED)').join(',');
     const permissionRows = await rows(pool, `
       SELECT p.perm_code, p.field_constraints, rp.effect
       FROM role_permissions rp
       JOIN permissions p ON rp.perm_id = p.perm_id
       WHERE rp.role_id IN (${placeholders})
       ORDER BY rp.effect ASC
-    `, allRoleIds);
+    `, allRoleIds.map(identityReadParam));
 
     const permSet = new Set();
     const fieldConstraints = {};
@@ -447,20 +541,20 @@ function makeIdentityMysqlRepository(pool) {
   async function getPersonAccountByLogin(loginName) {
     const row = await first(pool, `
       SELECT
-        p.person_id,
+        CAST(p.person_id AS CHAR) AS person_id,
         p.employee_no,
         p.person_name,
-        p.current_department_id,
+        CAST(p.current_department_id AS CHAR) AS current_department_id,
         p.mobile,
         p.email,
         p.employment_status,
         p.status,
-        ua.account_id,
+        CAST(ua.account_id AS CHAR) AS account_id,
         ua.login_name,
         ua.password_hash,
         ua.must_change_password,
         ua.account_status,
-        ua.auth_version,
+        CAST(ua.auth_version AS CHAR) AS auth_version,
         d.name AS department_name
       FROM user_accounts ua
       JOIN person p ON ua.person_id = p.person_id
@@ -476,43 +570,43 @@ function makeIdentityMysqlRepository(pool) {
   async function getPersonAccountByPersonId(personId, executor = pool) {
     const row = await first(executor, `
       SELECT
-        p.person_id,
+        CAST(p.person_id AS CHAR) AS person_id,
         p.employee_no,
         p.person_name,
-        p.current_department_id,
+        CAST(p.current_department_id AS CHAR) AS current_department_id,
         p.mobile,
         p.email,
         p.employment_status,
         p.status,
-        ua.account_id,
+        CAST(ua.account_id AS CHAR) AS account_id,
         ua.login_name,
         ua.password_hash,
         ua.must_change_password,
         ua.account_status,
-        ua.auth_version,
+        CAST(ua.auth_version AS CHAR) AS auth_version,
         d.name AS department_name
       FROM person p
       LEFT JOIN user_accounts ua ON ua.person_id = p.person_id
       LEFT JOIN departments d ON p.current_department_id = d.id
-      WHERE p.person_id=?
+      WHERE p.person_id=CAST(? AS SIGNED)
       LIMIT 1
-    `, [personId]);
+    `, [String(personId)]);
     return row ? normalizePersonUser(row) : null;
   }
 
   async function readPersonPositionInfo(personId, executor = pool) {
     try {
       const positionRows = await rows(executor, `
-        SELECT p.position_id, p.position_code, p.position_name,
+        SELECT CAST(p.position_id AS CHAR) AS position_id, p.position_code, p.position_name,
                p.department_admin_level, p.department_admin_title, p.responsibility_scope
         FROM person_position_assignment ppa
-        JOIN position p ON ppa.position_id = p.position_id
-        WHERE ppa.person_id=?
+        JOIN \`position\` p ON ppa.position_id = p.position_id
+        WHERE ppa.person_id=CAST(? AS SIGNED)
           AND ppa.status='active'
         ORDER BY p.department_admin_level IS NULL, p.department_admin_level, p.position_name
-      `, [personId]);
+      `, [identityReadParam(personId)]);
       const positions = positionRows.map(row => ({
-        positionId: row.position_id,
+        positionId: normalizeIdentityRead(row, ['position_id']).position_id,
         positionCode: row.position_code,
         positionName: row.position_name,
         departmentAdminLevel: row.department_admin_level,
@@ -577,7 +671,7 @@ function makeIdentityMysqlRepository(pool) {
       if (session.identityKind === 'system_admin') {
         if (session.personId || !systemAdmin.enabled()) return { valid: false };
         const user = await systemAdmin.getSystemAdmin(pool, systemAdmin.principal(session.accountId));
-        return { valid: Boolean(user && user.authVersion === Number(session.authVersion)), user };
+        return { valid: Boolean(user && sameIdentityInteger(user.authVersion, session.authVersion)), user };
       }
       const personId = sessionPersonId(session);
       if (!personId) return { valid: false, reason: 'missing_person' };
@@ -585,10 +679,10 @@ function makeIdentityMysqlRepository(pool) {
       if (!user || user.accountStatus !== 'active' || user.status !== 'active') {
         return { valid: false, reason: 'account_inactive' };
       }
-      if (!session.accountId || Number(session.accountId) !== Number(user.accountId)) {
+      if (!sameIdentityInteger(session.accountId, user.accountId)) {
         return { valid: false, reason: 'account_changed' };
       }
-      if (!session.authVersion || Number(session.authVersion) !== Number(user.authVersion)) {
+      if (!sameIdentityInteger(session.authVersion, user.authVersion)) {
         return { valid: false, reason: 'authorization_changed' };
       }
       return { valid: true, user };
@@ -607,15 +701,18 @@ function makeIdentityMysqlRepository(pool) {
     getUserRoleCodes,
 
     async listDepartments() {
-      return await rows(pool, 'SELECT * FROM departments ORDER BY code');
+      const departments = await rows(pool, `SELECT ${DEPARTMENT_READ_COLUMNS} FROM departments ORDER BY code`);
+      return departments.map(row => normalizeIdentityRead(row, DEPARTMENT_IDENTITY_FIELDS));
     },
 
     async getDepartmentById(departmentId) {
-      return await first(pool, 'SELECT * FROM departments WHERE id=?', [departmentId]);
+      const department = await first(pool, `SELECT ${DEPARTMENT_READ_COLUMNS} FROM departments WHERE id=CAST(? AS SIGNED)`, [identityReadParam(departmentId)]);
+      return department ? normalizeIdentityRead(department, DEPARTMENT_IDENTITY_FIELDS) : null;
     },
 
     async getDepartmentByName(departmentName) {
-      return await first(pool, 'SELECT * FROM departments WHERE name=?', [departmentName]);
+      const department = await first(pool, `SELECT ${DEPARTMENT_READ_COLUMNS} FROM departments WHERE name=?`, [departmentName]);
+      return department ? normalizeIdentityRead(department, DEPARTMENT_IDENTITY_FIELDS) : null;
     },
 
     async createDepartment(payload = {}) {
@@ -737,37 +834,37 @@ function makeIdentityMysqlRepository(pool) {
 
     async listUsers() {
       const personRows = await rows(pool, `
-        SELECT p.person_id AS id, p.person_id, p.person_name AS name, p.employee_no,
-               p.current_department_id AS department_id, NULL AS post,
+        SELECT CAST(p.person_id AS CHAR) AS id, CAST(p.person_id AS CHAR) AS person_id, p.person_name AS name, p.employee_no,
+               CAST(p.current_department_id AS CHAR) AS department_id, NULL AS post,
                p.created_at, p.status, d.name AS dept_name,
-               ua.account_id, ua.login_name, ua.account_status, ua.auth_version,
+               CAST(ua.account_id AS CHAR) AS account_id, ua.login_name, ua.account_status, CAST(ua.auth_version AS CHAR) AS auth_version,
                ua.must_change_password
         FROM person p
         LEFT JOIN departments d ON p.current_department_id = d.id
         LEFT JOIN user_accounts ua ON ua.person_id=p.person_id
         ORDER BY p.employee_no
       `);
-      return personRows.map(row => normalizePersonUser(row));
+      return personRows.map(row => normalizePersonUser(normalizeIdentityRead(row, ['id', 'person_id', 'department_id', 'account_id', 'auth_version'])));
     },
 
     async listRoster() {
       const roster = await rows(pool, `
-        SELECT p.person_id, p.employee_no, p.person_name, p.current_department_id,
+        SELECT CAST(p.person_id AS CHAR) AS person_id, p.employee_no, p.person_name, CAST(p.current_department_id AS CHAR) AS current_department_id,
                p.employment_status, p.status, p.mobile, p.email,
                d.name AS department_name, d.code AS department_code
         FROM person p
         LEFT JOIN departments d ON d.id=p.current_department_id
         ORDER BY p.employee_no, p.person_id
       `);
-      const memberships = await rows(pool, `SELECT m.person_id,o.org_unit_id AS id,o.org_unit_code AS code,o.org_unit_name AS name
+      const memberships = await rows(pool, `SELECT CAST(m.person_id AS CHAR) AS person_id,CAST(o.org_unit_id AS CHAR) AS id,o.org_unit_code AS code,o.org_unit_name AS name
         FROM office_membership m JOIN org_unit o ON o.org_unit_id=m.office_id WHERE m.status='active' AND o.org_type='office' ORDER BY o.org_unit_code`);
-      return roster.map(person => ({...person,offices:memberships.filter(m=>Number(m.person_id)===Number(person.person_id)).map(({person_id,...office})=>office)}));
+      return roster.map(person => ({...person,person_id:identityInteger(person.person_id),current_department_id:identityInteger(person.current_department_id),offices:memberships.filter(m=>sameIdentityInteger(m.person_id,person.person_id)).map(({person_id,...office})=>({...office,id:identityInteger(office.id)}))}));
     },
 
     async listUserRoleSummaries() {
       const userRows = await rows(pool, `
-        SELECT p.person_id AS id, p.person_id, p.person_name AS name, p.employee_no,
-               NULL AS post, p.current_department_id AS department_id, p.created_at,
+        SELECT CAST(p.person_id AS CHAR) AS id, CAST(p.person_id AS CHAR) AS person_id, p.person_name AS name, p.employee_no,
+               NULL AS post, CAST(p.current_department_id AS CHAR) AS department_id, p.created_at,
                d.name AS dept_name, ua.account_status,
                COALESCE(GROUP_CONCAT(
                  CASE WHEN r.status='active' AND pr.assignment_status='active'
@@ -787,7 +884,7 @@ function makeIdentityMysqlRepository(pool) {
         GROUP BY p.person_id, ua.account_status
         ORDER BY p.employee_no
       `);
-      return userRows.map(user => ({
+      return userRows.map(row => normalizeIdentityRead(row, ['id', 'person_id', 'department_id'])).map(user => ({
         id: user.id,
         personId: user.person_id || user.id,
         name: user.name,
@@ -819,15 +916,15 @@ function makeIdentityMysqlRepository(pool) {
           AND ua.account_status='active'
       ` : '';
       const userRows = await rows(pool, `
-        SELECT p.person_id AS id, p.person_id, p.person_name AS name,
-               p.current_department_id AS department_id, d.name AS dept_name
+        SELECT CAST(p.person_id AS CHAR) AS id, CAST(p.person_id AS CHAR) AS person_id, p.person_name AS name,
+               CAST(p.current_department_id AS CHAR) AS department_id, d.name AS dept_name
         FROM person p
         ${roleJoin}
         LEFT JOIN departments d ON p.current_department_id = d.id
         WHERE p.status='active'
         ORDER BY d.name, p.person_name
       `, roleCode ? [roleCode, ACCESS_MODEL_VERSION] : []);
-      return userRows.map(user => ({
+      return userRows.map(row => normalizeIdentityRead(row, ['id', 'person_id', 'department_id'])).map(user => ({
         id: user.id,
         personId: user.person_id || user.id,
         name: user.name,
@@ -837,16 +934,17 @@ function makeIdentityMysqlRepository(pool) {
     },
 
     async getAssignedRoles(userId) {
-      return await rows(pool, `
-        SELECT r.role_id, r.role_code, r.role_name, r.is_system, r.status,
-               pr.person_role_id, pr.scope_type, pr.scope_department_id,
+      const assignments = await rows(pool, `
+        SELECT CAST(r.role_id AS CHAR) AS role_id, r.role_code, r.role_name, r.is_system, r.status,
+               CAST(pr.person_role_id AS CHAR) AS person_role_id, pr.scope_type, CAST(pr.scope_department_id AS CHAR) AS scope_department_id,
                pr.authorization_basis, pr.effective_from, pr.effective_to,
                pr.assignment_status, pr.revocation_reason
         FROM person_roles pr
         JOIN roles r ON pr.role_id = r.role_id
-        WHERE pr.person_id=?
+        WHERE pr.person_id=CAST(? AS SIGNED)
         ORDER BY r.status, r.role_group, r.role_code
-      `, [userId]);
+      `, [identityReadParam(userId)]);
+      return assignments.map(row => normalizeIdentityRead(row, ['role_id', 'person_role_id', 'scope_department_id']));
     },
 
     async getPermissionsGrouped() {
@@ -860,25 +958,31 @@ function makeIdentityMysqlRepository(pool) {
     },
 
     async listRoles() {
-      return await rows(pool, `
+      const roles = await rows(pool, `
         SELECT r.*,
+          CAST(r.role_id AS CHAR) AS role_id, CAST(r.parent_role_id AS CHAR) AS parent_role_id,
+          CAST(r.created_by AS CHAR) AS created_by,
           (SELECT role_name FROM roles pr WHERE pr.role_id = r.parent_role_id) AS parent_role_name,
           (SELECT COUNT(*) FROM role_permissions WHERE role_id = r.role_id) AS perm_count,
           (SELECT COUNT(*) FROM person_roles WHERE role_id = r.role_id AND assignment_status='active') AS user_count
         FROM roles r
         ORDER BY FIELD(r.status, 'active', 'legacy', 'retired'), r.role_group, r.role_code
       `);
+      return roles.map(role => normalizeIdentityRead(role, ['role_id', 'parent_role_id', 'created_by']));
     },
 
     async getRoleDetail(roleId) {
-      const role = await first(pool, 'SELECT * FROM roles WHERE role_id=?', [roleId]);
+      const roleRow = await first(pool, `SELECT *, CAST(role_id AS CHAR) AS role_id,
+        CAST(parent_role_id AS CHAR) AS parent_role_id, CAST(created_by AS CHAR) AS created_by
+        FROM roles WHERE role_id=CAST(? AS SIGNED)`, [identityReadParam(roleId)]);
+      const role = roleRow && normalizeIdentityRead(roleRow, ['role_id', 'parent_role_id', 'created_by']);
       if (!role) return null;
 
       const ownPerms = await rows(pool, `
-        SELECT p.perm_id, p.perm_code, p.resource, p.action, p.field_constraints, p.description, rp.effect, 0 as inherited
+        SELECT CAST(p.perm_id AS CHAR) AS perm_id, p.perm_code, p.resource, p.action, p.field_constraints, p.description, rp.effect, 0 as inherited
         FROM role_permissions rp JOIN permissions p ON rp.perm_id = p.perm_id
-        WHERE rp.role_id=?
-      `, [roleId]);
+        WHERE rp.role_id=CAST(? AS SIGNED)
+      `, [identityReadParam(roleId)]);
       const knownPermCodes = new Set(ownPerms.map(permission => permission.perm_code));
       const inheritedPerms = [];
 
@@ -887,48 +991,54 @@ function makeIdentityMysqlRepository(pool) {
       while (parentId && !visited.has(parentId)) {
         visited.add(parentId);
         const parentPerms = await rows(pool, `
-          SELECT p.perm_id, p.perm_code, p.resource, p.action, p.field_constraints, p.description, rp.effect, 1 as inherited
+          SELECT CAST(p.perm_id AS CHAR) AS perm_id, p.perm_code, p.resource, p.action, p.field_constraints, p.description, rp.effect, 1 as inherited
           FROM role_permissions rp JOIN permissions p ON rp.perm_id = p.perm_id
-          WHERE rp.role_id=?
-        `, [parentId]);
+          WHERE rp.role_id=CAST(? AS SIGNED)
+        `, [identityReadParam(parentId)]);
         for (const permission of parentPerms) {
           if (!knownPermCodes.has(permission.perm_code)) {
             inheritedPerms.push(permission);
             knownPermCodes.add(permission.perm_code);
           }
         }
-        const parent = await first(pool, 'SELECT parent_role_id FROM roles WHERE role_id=?', [parentId]);
-        parentId = parent ? parent.parent_role_id : null;
+        const parent = await first(pool, 'SELECT CAST(parent_role_id AS CHAR) AS parent_role_id FROM roles WHERE role_id=CAST(? AS SIGNED)', [identityReadParam(parentId)]);
+        parentId = parent ? normalizeIdentityRead(parent, ['parent_role_id']).parent_role_id : null;
       }
 
       const users = await rows(pool, `
-        SELECT p.person_id AS id, p.person_id, p.person_name AS name, p.employee_no,
-               p.current_department_id AS department_id, NULL AS post, d.name AS dept_name,
-               pr.assignment_status, pr.scope_type, pr.scope_department_id
+        SELECT CAST(p.person_id AS CHAR) AS id, CAST(p.person_id AS CHAR) AS person_id, p.person_name AS name, p.employee_no,
+               CAST(p.current_department_id AS CHAR) AS department_id, NULL AS post, d.name AS dept_name,
+               pr.assignment_status, pr.scope_type, CAST(pr.scope_department_id AS CHAR) AS scope_department_id
         FROM person_roles pr
         JOIN person p ON pr.person_id = p.person_id
         LEFT JOIN departments d ON p.current_department_id = d.id
-        WHERE pr.role_id=?
-      `, [roleId]);
+        WHERE pr.role_id=CAST(? AS SIGNED)
+      `, [identityReadParam(roleId)]);
 
-      return { ...role, permissions: [...ownPerms, ...inheritedPerms], users };
+      return { ...role,
+        permissions: [...ownPerms, ...inheritedPerms].map(permission => normalizeIdentityRead(permission, ['perm_id'])),
+        users: users.map(user => normalizeIdentityRead(user, ['id', 'person_id', 'department_id', 'scope_department_id']))
+      };
     },
 
     async getRolePermissionMatrix(roleId) {
-      const role = await first(pool, 'SELECT * FROM roles WHERE role_id=?', [roleId]);
+      const roleRow = await first(pool, `SELECT *, CAST(role_id AS CHAR) AS role_id,
+        CAST(parent_role_id AS CHAR) AS parent_role_id, CAST(created_by AS CHAR) AS created_by
+        FROM roles WHERE role_id=CAST(? AS SIGNED)`, [identityReadParam(roleId)]);
+      const role = roleRow && normalizeIdentityRead(roleRow, ['role_id', 'parent_role_id', 'created_by']);
       if (!role) return null;
 
-      const allPerms = await rows(pool, 'SELECT * FROM permissions ORDER BY resource, action');
+      const allPerms = await rows(pool, 'SELECT *, CAST(perm_id AS CHAR) AS perm_id FROM permissions ORDER BY resource, action');
       const rolePerms = await rows(pool, `
         SELECT p.perm_code, rp.effect FROM role_permissions rp
-        JOIN permissions p ON rp.perm_id = p.perm_id WHERE rp.role_id=?
-      `, [roleId]);
+        JOIN permissions p ON rp.perm_id = p.perm_id WHERE rp.role_id=CAST(? AS SIGNED)
+      `, [identityReadParam(roleId)]);
       const rolePermMap = new Map(rolePerms.map(permission => [permission.perm_code, permission.effect]));
 
       return {
         role,
         matrix: allPerms.map(permission => ({
-          ...permission,
+          ...normalizeIdentityRead(permission, ['perm_id']),
           assigned: rolePermMap.has(permission.perm_code),
           effect: rolePermMap.get(permission.perm_code) || null
         }))
@@ -1075,7 +1185,7 @@ function makeIdentityMysqlRepository(pool) {
           await executor.execute('UPDATE system_admin_accounts SET password_hash=?,must_change_password=0,auth_version=auth_version+1 WHERE account_id=?', [passwordHash, user.accountId]);
           await systemAdmin.event(executor, user.accountId, 'password_changed');
           return true;
-        }).catch(() => { throw systemAdmin.fail('SYSTEM_ADMIN_PASSWORD_UNAVAILABLE', 503); });
+        }).catch(error => { if (error.code === 'MYSQL_COMMIT_UNKNOWN') throw error; throw systemAdmin.fail('SYSTEM_ADMIN_PASSWORD_UNAVAILABLE', 503); });
       }
       const result = await pool.execute(
         'UPDATE user_accounts SET password_hash=?, must_change_password=0, auth_version=auth_version+1 WHERE person_id=?',
@@ -1110,6 +1220,10 @@ function makeIdentityMysqlRepository(pool) {
 
 module.exports = {
   makeIdentityMysqlRepository,
+  readPersonAuthority,
+  readPersonQualification,
+  roleAuthority,
+  assignmentAuthority,
   ensureMysqlBuiltInRolesAndPermissions,
   ensureMysqlPersonIdentityColumns,
   migrateLegacyIdentityToPersonIdentity

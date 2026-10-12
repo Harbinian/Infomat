@@ -199,7 +199,7 @@ function resetIssuePoolRepositoryFactory() {
   issuePoolRepoPromise = null;
 }
 
-async function inputBaselineReviewRepositoryOrNull() {
+async function inputBaselineReviewRepositoryOrNull(res) {
   if (!inputBaselineReviewRepositoryFactory && !useInputBaselineReviewMysqlStore()) return null;
   try {
     return await inputBaselineReviewRepository();
@@ -2537,7 +2537,7 @@ router.get('/input-baseline-review/runs', requireAuth, (req, res) => {
   return runAsyncAction(res, async () => {
     const artifactRuns = listReviewRuns();
     const byRunId = new Map(artifactRuns.map(item => [item.run_id, item]));
-    const repo = await inputBaselineReviewRepositoryOrNull();
+    const repo = await inputBaselineReviewRepositoryOrNull(res);
     if (repo) {
       const storedRuns = await repo.listRuns();
       for (const item of storedRuns) {
@@ -2569,7 +2569,7 @@ router.get('/input-baseline-review/runs/:runId/review-items', requireAuth, (req,
     };
     const departmentName = await currentInputBaselineReviewDepartmentName(req);
     const filters = scopedInputBaselineReviewFilters(requestedFilters, departmentName);
-    const repo = await inputBaselineReviewRepositoryOrNull();
+    const repo = await inputBaselineReviewRepositoryOrNull(res);
     if (repo) {
       try {
         const runDir = reviewRunDir(req.params.runId);

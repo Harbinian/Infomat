@@ -42,10 +42,12 @@ const GOVERNANCE_TYPE_BY_TODO_TYPE = {
 
 function runAsyncAction(res, action, unavailableMessage) {
   return action().catch(error => {
+    // Dependency errors also carry statusCode; classify them before the
+    // application-status branch so driver messages never reach the response.
+    if (sendMysqlUnavailable(res, error)) return;
     if (error && error.statusCode) {
       return res.status(error.statusCode).json({ error: error.message });
     }
-    if (sendMysqlUnavailable(res, error)) return;
     logRequestFailure(res, error);
     return res.status(unavailableMessage ? 503 : 500).json({ error: unavailableMessage || '服务器错误' });
   });
@@ -474,7 +476,7 @@ function buildSankey(activeRoles, contexts, workItems) {
   return { nodes: Array.from(nodes.values()), links: Array.from(links.values()) };
 }
 
-async function loadProcessDataGovernanceWorkItems(identity) {
+async function loadProcessDataGovernanceWorkItems(identity, res) {
   if (!isProcessDataGovernanceEnabled()) return [];
   try {
     const repo = processDataGovernanceRepositoryFactory
@@ -511,7 +513,7 @@ router.get('/', requireAuth, (req, res) => {
     const body = await getOrBuildWorkbenchResponse(cacheKey, async () => {
       const [officeWorkItems, processDataGovernance, v7WorkItems] = await Promise.all([
         useMysqlIdentityReadModel() && !administrator ? require('./offices').getOfficeRepository().personalWorkItems(req.session) : [],
-        loadProcessDataGovernanceWorkItems(identity),
+        loadProcessDataGovernanceWorkItems(identity, res),
         useMysqlProcessGovernanceReadModel() ? require('./processPreviewReview').listProcessWorkbenchItems({
           userId: identity.user.id, personId: identity.user.personId, departmentId: identity.user.departmentId,
           accountId: Number(req.session.accountId || 0), authVersion: Number(req.session.authVersion || 0),

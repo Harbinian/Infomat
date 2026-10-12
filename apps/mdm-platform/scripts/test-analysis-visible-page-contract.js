@@ -90,3 +90,22 @@ test('an invalid cursor or page parameter is refused', () => {
   }
   assert.deepEqual(analysisApi.page({ cursor: '9007199254740993', limit: '10' }), { offset: 0, limit: 10, cursor: '9007199254740993' });
 });
+
+test('a stalled database call cannot keep a visible page open beyond its time budget', async () => {
+  let destroyed = false;
+  await assert.rejects(visiblePage({ execute: () => new Promise(() => {}), destroy() { destroyed = true; } },
+    't', 'version_id', { limit: 1 }, async id => ({ id })),
+    error => error.statusCode === 503 && /SCAN_BUDGET_EXCEEDED/.test(error.code));
+  assert.equal(destroyed, true, 'the in-flight connection is cancelled');
+});
+
+test('a slow final item cannot return a page after the scan budget expired', async () => {
+  const original = Date.now;
+  let time = original();
+  Date.now = () => time;
+  try {
+    await assert.rejects(visiblePage({ async execute() { return [[{ id: '1' }]]; } }, 't', 'version_id', { limit: 1 },
+      async id => { time += SCAN_BUDGET.maxMs + 1; return { id }; }),
+      error => /SCAN_BUDGET_EXCEEDED/.test(error.code));
+  } finally { Date.now = original; }
+});

@@ -53,14 +53,20 @@ async function visiblePage(db, table, column, query, resolveItem) {
   const seen = [];
   let scanned = 0;
   let after = cursor || '0';
+  let expired = false;
+  let timer;
+  const check = () => { if (expired || Date.now() - startedAt >= SCAN_BUDGET.maxMs) throw fail('SCAN_BUDGET_EXCEEDED', 503); };
+  const scan = async () => {
   while (items.length <= offset + limit) {
+    check();
     const [rows] = await db.execute(`SELECT CAST(${column} AS CHAR) id FROM ${table} WHERE ${column}>? ORDER BY ${column} LIMIT 100`, [after]);
+    check();
     if (!rows.length) break;
     for (const row of rows) {
       after = row.id;
       scanned += 1;
       if (scanned > SCAN_BUDGET.maxRows || Date.now() - startedAt > SCAN_BUDGET.maxMs) throw fail('SCAN_BUDGET_EXCEEDED', 503);
-      try { items.push(await resolveItem(row.id)); seen.push(row.id); }
+      try { const item = await resolveItem(row.id); check(); items.push(item); seen.push(row.id); }
       catch (e) { if (e.statusCode !== 403) throw e; }
       if (items.length > offset + limit) break;
     }
@@ -73,6 +79,16 @@ async function visiblePage(db, table, column, query, resolveItem) {
   const lastDelivered = items.length > offset + limit ? seen[offset + limit - 1] : null;
 
   return pageResult(items, offset, limit, lastDelivered);
+  };
+  try {
+    return await Promise.race([scan(), new Promise((_, reject) => {
+      timer = setTimeout(() => {
+        expired = true;
+        if (typeof db.destroy === 'function') db.destroy();
+        reject(fail('SCAN_BUDGET_EXCEEDED', 503));
+      }, Math.max(0, SCAN_BUDGET.maxMs - (Date.now() - startedAt)));
+    })]);
+  } finally { clearTimeout(timer); }
 }
 
 module.exports = function (helpers) {
@@ -142,7 +158,7 @@ module.exports = function (helpers) {
       if (layer === 'summary') return pick(run, SUMMARY_FIELDS);
       if (layer === 'detail') return runView(run);
       const findings = run.attempts.flatMap(a => a.findings.map(f => findingView(f, a)));
-      if (layer === 'findings') { const { offset, limit } = page(options); return pageResult(findings, offset, limit); }
+      if (layer === 'findings') { const { offset, limit, cursor } = page(options); if (cursor !== null) throw fail('QUERY_INVALID'); return pageResult(findings, offset, limit); }
       if (layer === 'finding') {
         const found = findings.find(f => f.finding_id === id(options.id));
         if (!found) throw fail('FINDING_NOT_FOUND', 404);

@@ -7,6 +7,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { fork } = require('node:child_process');
 const { withFreshMysql } = require('./testHelpers/freshMysql');
+const { mdmMysqlSchemaSql, splitSqlStatements } = require('../server/mysqlSchema');
 
 const at = process.argv.indexOf('--output');
 assert(at > 0 && process.argv[at + 1], '--output is required');
@@ -23,17 +24,17 @@ async function main() {
   const checks = [];
   const check = name => { checks.push(name); console.log('PASS ' + name); };
   try {
-    await withFreshMysql(async ({ port, password, database, owner, containerId }) => {
+    await withFreshMysql(async ({ pool, port, password, database, owner, containerId }) => {
       target = { owner, database, containerId, port, image: 'mysql:8.4', pull: 'never', tmpfs: true };
       save('owned-target.json', target);
+      for (const sql of splitSqlStatements(mdmMysqlSchemaSql())) await pool.execute(sql);
 
-      // A dedicated listener port so the test can address the child directly. The port is chosen
-      // from the process id and is never 3000, so the running deployment cannot be touched.
-      const listenPort = 40000 + (process.pid % 10000);
+      // An ephemeral listener port belongs only to the test child, leaving deployment ports alone.
+      let listenPort;
       const child = fork(path.resolve(__dirname, '../server/index.js'), [], {
         env: {
           PATH: process.env.PATH, SystemRoot: process.env.SystemRoot, TEMP: process.env.TEMP, TMP: process.env.TMP,
-          NODE_ENV: 'test', HOST: '127.0.0.1', PORT: String(listenPort), MDM_ACCESS_MODE: 'http-local',
+          NODE_ENV: 'test', HOST: '127.0.0.1', PORT: '0', MDM_ACCESS_MODE: 'http-local',
           MDM_SESSION_STORE: 'memory', SESSION_SECRET: 'synthetic-shutdown-drain-secret-only',
           MDM_IDENTITY_READ_MODEL: 'mysql', PROCESS_GOVERNANCE_READ_MODEL: 'mysql',
           MYSQL_HOST: '127.0.0.1', MYSQL_PORT: String(port), MYSQL_USER: 'root', MYSQL_PASSWORD: password,
@@ -51,14 +52,17 @@ async function main() {
         const startedAt = Date.now();
         while (!/MDM_LISTENING/.test(stdout) && Date.now() - startedAt < 20000) await sleep(100);
         assert.match(stdout, /MDM_LISTENING/, `the server started: ${stdout}${stderr}`);
+        listenPort = Number(stdout.match(/MDM_LISTENING port=(\d+)/)[1]);
         check('the server starts against the isolated database');
 
-        // The isolated database deliberately has no application schema. The pool is still created
-        // and registered before the schema probe rejects the request, which is exactly the pool
-        // shutdown has to drain.
-        const response = await fetch(`http://127.0.0.1:${listenPort}/api/org/me`).catch(() => null);
+        // A missing synthetic login exercises the repository and retains a real open domain pool.
+        // An unauthenticated /me would stop at requireAuth without creating any pool.
+        const response = await fetch(`http://127.0.0.1:${listenPort}/api/org/login`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ loginName: 'SHUTDOWN_SYNTHETIC_MISSING', password: 'synthetic-only' })
+        }).catch(() => null);
         assert.ok(response, 'the listener answered');
-        assert.ok([401, 403, 500, 503].includes(response.status), `unexpected status ${response.status}`);
+        assert.equal(response.status, 401, 'the initialized repository looked up the missing identity');
         await response.text().catch(() => {});
         await sleep(200);
         check('an API request opens a registered domain pool');
@@ -74,6 +78,7 @@ async function main() {
         assert.equal(result.code, 0, `a clean stop exits 0 rather than through the forced path: ${stdout}${stderr}`);
         assert.ok(ms < 11000, `stopped in ${ms} ms, before the fifteen second hard exit`);
         assert.ok(!/MDM_SHUTDOWN_NOT_DRAINED/.test(stdout), `every pool drained: ${stdout}`);
+        assert.match(stdout, /MDM_SHUTDOWN_DRAINED pools=[1-9]\d*/, 'at least one actual domain pool was drained');
         save('shutdown.json', { ms, code: result.code, signal: result.signal, stdout, stderr: stderr.slice(0, 2000) });
         check('the process stops through the ordinary path and reports no undrained pool');
       } finally {

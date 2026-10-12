@@ -12,6 +12,7 @@
 // Writing must never change an outcome: every failure inside the sink is swallowed, so a broken
 // log destination cannot turn a served request into a 500 or hide the original business result.
 const crypto = require('crypto');
+const { identityInteger } = require('./sessionSubject');
 
 const ALLOWED_FIELDS = Object.freeze([
   'event', 'code', 'route', 'method', 'status', 'duration_ms', 'request_id', 'actor_ref', 'at'
@@ -39,9 +40,11 @@ function safeErrorCode(error) {
 function actorRef(session) {
   if (!session) return null;
   if (session.identityKind === 'system_admin') {
-    return session.accountId ? `system-admin:${session.accountId}` : 'system-admin';
+    const accountId = identityInteger(session.accountId);
+    return accountId ? `system-admin:${accountId}` : 'system-admin';
   }
-  if (session.personId) return String(session.personId);
+  const personId = identityInteger(session.personId);
+  if (personId) return String(personId);
   return null;
 }
 
@@ -58,6 +61,11 @@ function createSecurityLog({ sink = defaultSink, now = Date.now, maxBytes = MAX_
         const value = entry[field];
         if (value === undefined || value === null || value === '') continue;
         if (FORBIDDEN_KEY.test(field)) continue;
+        // An allowed field cannot contain nested request/driver objects or custom serializers.
+        if (['status', 'duration_ms'].includes(field)) {
+          if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) continue;
+        } else if (typeof value !== 'string') continue;
+        if (field === 'event' && !CODE_SHAPE.test(value)) continue;
         // A code is an identifier, not free text: anything that does not look like one is dropped
         // rather than written, so a caller cannot pass a query or a message through this field.
         if (field === 'code' && !CODE_SHAPE.test(String(value))) continue;
@@ -99,7 +107,8 @@ function requestFields(target) {
   const req = requestOf(target);
   if (!req) return {};
   return {
-    route: req.route?.path || String(req.originalUrl || req.url || '').split('?')[0] || null,
+    // Only a matched route template is safe; an unmatched URL is arbitrary client input.
+    route: typeof req.route?.path === 'string' ? req.route.path : '(unmatched)',
     method: req.method || null,
     request_id: req.requestId || null,
     actor_ref: actorRef(req.session)

@@ -4,6 +4,7 @@ const { dataMapRepository } = require('../dataMapMysqlRepository');
 const { MAX_BYTES } = require('../v7FixedSource');
 const router = express.Router();
 function fail(res, e) {
+  if (require('../mysqlRuntimeSchema').sendMysqlUnavailable(res,e)) return;
   const known = /^DEFINITION_[A-Z0-9_]+$/.test(e.code || '');
   const uploadError = String(e.code || '').startsWith('LIMIT_');
   let status = uploadError ? 413 : known ? e.statusCode || 400 : 503;

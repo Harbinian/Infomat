@@ -8,16 +8,17 @@ const LOGIN_FAILURE_WINDOW_MS = 15 * 60 * 1000;
 // The address-level window is deliberately wider than the account window: one office egress
 // carries many legitimate users, so it must bound sustained abuse without locking a shared exit
 // out after a handful of ordinary mistakes.
-const LOGIN_IP_FAILURE_LIMIT = Number(process.env.LOGIN_IP_FAILURE_LIMIT || 40);
-const LOGIN_CONCURRENCY_LIMIT = Number(process.env.LOGIN_CONCURRENCY_LIMIT || 4);
-const LOGIN_RATE_LIMIT_MAX_ENTRIES = Number(process.env.LOGIN_RATE_LIMIT_MAX_ENTRIES || 5000);
+const positive = (value, fallback) => Number.isSafeInteger(Number(value)) && Number(value) > 0 ? Number(value) : fallback;
+const LOGIN_IP_FAILURE_LIMIT = positive(process.env.LOGIN_IP_FAILURE_LIMIT, 40);
+const LOGIN_CONCURRENCY_LIMIT = positive(process.env.LOGIN_CONCURRENCY_LIMIT, 4);
+const LOGIN_RATE_LIMIT_MAX_ENTRIES = Math.max(2, positive(process.env.LOGIN_RATE_LIMIT_MAX_ENTRIES, 5000));
 const failedLogins = new Map();
 let rejectedByCapacity = 0;
 
 function securityHeaders(req, res, next) {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'same-origin');
-  // R13: the policy is built in one place. The deployed value is unchanged.
+  // This source's policy is built in one place; running deployments have their own release.
   res.setHeader('Content-Security-Policy', require('./cspPolicy').DEPLOYED_CSP);
   next();
 }
@@ -47,14 +48,16 @@ function csrfProtection(req, res, next) {
 }
 
 // R03: the login lookup trims the submitted name, so the rate-limit key has to trim it too.
-// Whitespace variants of one account previously landed in different windows. Case is left alone:
-// the column collation already folds it, and changing it here would alter which names are valid.
+// Case variants share a limiter key because the current MySQL login collation folds case.
+// This normalization is only for admission; the submitted name still reaches the login lookup.
 function normalizeLoginName(raw) {
-  return String(raw === undefined || raw === null ? '' : raw).trim();
+  return String(raw === undefined || raw === null ? '' : raw).trim().toLowerCase();
 }
 
 function loginKeys(req) {
-  const loginName = normalizeLoginName(req.body && (req.body.loginName || req.body.employee_no)) || 'unknown';
+  const body = req.body || {};
+  const rawName = body.loginName !== undefined ? body.loginName : body.employee_no;
+  const loginName = normalizeLoginName(typeof rawName === 'string' ? rawName : '') || 'unknown';
   const address = String(req.ip || 'unknown');
   return { account: `acct:${address}:${loginName}`, address: `ip:${address}` };
 }
@@ -67,14 +70,7 @@ function loginLimitFor(key) {
 // LOGIN_RATE_LIMIT_MAX_ENTRIES, so random account names cannot turn the limiter into a leak.
 function evictIfNeeded(now) {
   for (const [key, state] of failedLogins) {
-    if (state.resetAt > now) break;
-    failedLogins.delete(key);
-  }
-  while (failedLogins.size > LOGIN_RATE_LIMIT_MAX_ENTRIES) {
-    const oldest = failedLogins.keys().next();
-    if (oldest.done) break;
-    failedLogins.delete(oldest.value);
-    rejectedByCapacity += 1;
+    if (state.resetAt <= now && state.inFlight === 0) failedLogins.delete(key);
   }
 }
 
@@ -87,7 +83,10 @@ function touch(key, state, now) {
 
 function stateFor(key, now) {
   const existing = failedLogins.get(key);
-  if (existing && existing.resetAt > now) return existing;
+  if (existing && (existing.resetAt > now || existing.inFlight > 0)) {
+    if (existing.resetAt <= now) { existing.count = existing.inFlight; existing.resetAt = now + LOGIN_FAILURE_WINDOW_MS; }
+    return existing;
+  }
   if (existing) failedLogins.delete(key);
   return { count: 0, inFlight: 0, resetAt: now + LOGIN_FAILURE_WINDOW_MS };
 }
@@ -102,6 +101,14 @@ function loginRateLimit(req, res, next) {
   const now = Date.now();
   evictIfNeeded(now);
   const keys = loginKeys(req);
+  const needed = [keys.account, keys.address].filter(key => !failedLogins.has(key)).length;
+  // Never evict a live failure window or an active admission to make room for random names.
+  if (failedLogins.size + needed > LOGIN_RATE_LIMIT_MAX_ENTRIES) {
+    rejectedByCapacity += 1;
+    res.set('Retry-After', '60');
+    securityLog(req).write({ event: 'rate_limited', code: 'LOGIN_BUSY', status: 429 });
+    return res.status(429).json({ code: 'LOGIN_BUSY', error: '登录请求过多，请稍后再试' });
+  }
   const admitted = [];
   let refused = null;
   for (const key of [keys.account, keys.address]) {
@@ -112,10 +119,6 @@ function loginRateLimit(req, res, next) {
     state.inFlight += 1;
     admitted.push([key, state]);
   }
-  // Enforce the capacity bound again now that this request's keys exist; the keys just touched
-  // are the newest in the map, so trimming the oldest cannot evict the request being served.
-  evictIfNeeded(now);
-
   if (refused) {
     // A refused request leaves no trace of its own: undo what this request took, including the
     // count it added to the key that refused it.
@@ -124,6 +127,10 @@ function loginRateLimit(req, res, next) {
       state.inFlight = Math.max(0, state.inFlight - 1);
     }
     refused.state.count = Math.max(0, refused.state.count - 1);
+    for (const key of [keys.account, keys.address]) {
+      const state = failedLogins.get(key);
+      if (state && state.count === 0 && state.inFlight === 0) failedLogins.delete(key);
+    }
     securityLog(req).write({ event: 'rate_limited', code: refused.code, status: 429 });
     res.set('Retry-After', String(retryAfterSeconds(refused.state, now)));
     return res.status(429).json(refused.code === 'LOGIN_BUSY'
@@ -133,6 +140,7 @@ function loginRateLimit(req, res, next) {
 
   const admittedKeys = admitted.map(([key]) => key);
   req.loginRateLimitKeys = admittedKeys;
+  req.loginRateLimitStates = admitted;
   req.loginRateLimitKey = keys.account;
   // Releasing on every outcome is what makes the in-flight bound a bound instead of a leak,
   // including when the handler throws before it settles the login.
@@ -140,9 +148,9 @@ function loginRateLimit(req, res, next) {
   const release = () => {
     if (released) return;
     released = true;
-    for (const key of admittedKeys) {
-      const state = failedLogins.get(key);
-      if (state) state.inFlight = Math.max(0, state.inFlight - 1);
+    for (const [key, state] of admitted) {
+      state.inFlight = Math.max(0, state.inFlight - 1);
+      if (state.inFlight === 0 && state.count === 0 && failedLogins.get(key) === state) failedLogins.delete(key);
     }
   };
   res.on('finish', release);
@@ -157,13 +165,13 @@ function recordLoginFailure() {}
 // this successful attempt stops counting against the shared address. Otherwise a busy office
 // would lock itself out simply by logging in normally.
 function clearLoginFailures(req) {
-  for (const key of req.loginRateLimitKeys || []) {
+  for (const [key, state] of req.loginRateLimitStates || []) {
     if (key.startsWith('acct:')) {
-      failedLogins.delete(key);
+      // Clear settled failures while retaining every other password check still in flight.
+      state.count = Math.max(0, state.inFlight - 1);
       continue;
     }
-    const state = failedLogins.get(key);
-    if (state) state.count = Math.max(0, state.count - 1);
+    state.count = Math.max(0, state.count - 1);
   }
 }
 

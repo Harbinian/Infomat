@@ -579,16 +579,18 @@ function makeDataMapMysqlRepository(pool) {
       return await getFieldWithLinks(fieldId);
     },
 
-    async getFieldsByContext(contextId) {
+    async getFieldsByContext(contextId, { maxRows = null } = {}) {
+      const bounded = Number.isSafeInteger(maxRows) && maxRows >= 0;
       const fieldRows = await rows(
         pool,
         `SELECT f.*, o.object_name_cn AS data_object, o.object_key
          FROM data_map_fields f
          LEFT JOIN data_map_objects o ON f.object_id = o.id
          WHERE f.context_id=?
-         ORDER BY f.id`,
+         ORDER BY f.id${bounded ? ` LIMIT ${maxRows + 1}` : ''}`,
         [contextId]
       );
+      if (bounded && fieldRows.length > maxRows) throw Object.assign(new Error('导出规模超过上限'), { code: 'EXPORT_LIMIT_EXCEEDED', statusCode: 413 });
       const links = await getLinksForFields(fieldRows.map(row => row.id));
       return fieldRows.map(row => publicField(row, links.get(Number(row.id)) || []));
     },
@@ -808,26 +810,55 @@ function makeDataMapMysqlRepository(pool) {
     // unchanged; with it the row budget is enforced before the caller builds a workbook, and a
     // departed client stops the reads instead of letting them run to completion in the background.
     async exportFieldLedger(scope = {}, { signal = null, maxRows = null } = {}) {
-      const departmentId = scope.departmentId ? Number(scope.departmentId) : null;
+      // Use one cancellable lease for the export. A disconnected client destroys its in-flight
+      // read, rather than waiting for the next context boundary before noticing the departure.
+      if (typeof pool.getConnection === 'function') {
+        const connection = await pool.getConnection({ signal });
+        const onAbort = () => connection.destroy();
+        if (signal) signal.addEventListener('abort', onAbort, { once: true });
+        try {
+          return await makeDataMapMysqlRepository(connection).exportFieldLedger(scope, { signal, maxRows });
+        } finally {
+          if (signal) signal.removeEventListener('abort', onAbort);
+          connection.release();
+        }
+      }
+      const { identityInteger, sameIdentityInteger } = require('./sessionSubject');
+      const departmentId = scope.departmentId == null ? null : identityInteger(scope.departmentId);
+      if (scope.departmentId != null && departmentId === null) throw Object.assign(new Error('部门标识无法精确表示'), { code: 'EXPORT_SCOPE_INVALID', statusCode: 403 });
       const limit = Number.isInteger(maxRows) && maxRows > 0 ? maxRows : null;
       const stopped = () => {
-        if (signal && signal.aborted) throw Object.assign(new Error('导出已取消'), { code: 'EXPORT_ABORTED', statusCode: 499 });
+        if (signal && signal.aborted) throw signal.reason instanceof Error ? signal.reason : Object.assign(new Error('导出已取消'), { code: 'EXPORT_ABORTED', statusCode: 499 });
       };
       stopped();
-      const contexts = (await this.listContexts()).filter(context =>
-        !departmentId || Number(context.dept_id || 0) === departmentId
-      );
+      let contexts;
+      if (limit !== null) {
+        const where = departmentId ? ' WHERE c.dept_id=?' : '';
+        const params = departmentId ? [departmentId] : [];
+        const probe = await rows(pool, `SELECT f.id FROM data_map_fields f JOIN data_map_contexts c ON c.id=f.context_id${where} LIMIT ${limit + 1}`, params);
+        stopped();
+        if (probe.length > limit) throw Object.assign(new Error(`导出规模超过上限 ${limit} 行`), { code: 'EXPORT_LIMIT_EXCEEDED', statusCode: 413 });
+        contexts = (await rows(pool, `SELECT c.* FROM data_map_contexts c WHERE ${departmentId ? 'c.dept_id=? AND ' : ''}EXISTS (SELECT 1 FROM data_map_fields f WHERE f.context_id=c.id) ORDER BY c.updated_at DESC,c.id DESC LIMIT ${limit + 1}`, params)).map(publicContext);
+        if (contexts.length > limit) throw Object.assign(new Error('导出规模超过上限'), { code: 'EXPORT_LIMIT_EXCEEDED', statusCode: 413 });
+      } else contexts = (await this.listContexts()).filter(context => !departmentId || sameIdentityInteger(context.dept_id, departmentId));
       const fields = [];
       for (const context of contexts) {
         stopped();
-        const contextFields = await this.getFieldsByContext(context.id);
+        const contextFields = await this.getFieldsByContext(context.id, { maxRows: limit === null ? null : limit - fields.length });
         for (const field of contextFields) {
+          stopped();
           if (limit !== null && fields.length >= limit) {
             throw Object.assign(new Error(`导出规模超过上限 ${limit} 行`), { code: 'EXPORT_LIMIT_EXCEEDED', statusCode: 413, limit });
           }
           const identity = await this.getFieldIdentity(field.id);
+          stopped();
           fields.push({
             ...field,
+            identity,
+            authoritative_system_name: identity ? identity.authoritative_system_name : null,
+            maintain_dept_id: identity ? identity.maintain_dept_id : null,
+            authority_system_options: identity ? identity.authority_system_options : null,
+            confirmed_by: identity ? identity.confirmed_by : null,
             context_id: context.id,
             context_key: context.context_key,
             context_title: context.title,
@@ -837,13 +868,14 @@ function makeDataMapMysqlRepository(pool) {
             l3_name: context.l3_name,
             system_name: field.system_name || consumerSystemsFromLinks(field.system_links || [])[0] || '',
             authoritative_system: identity ? identity.authoritative_system : '',
-            maintain_dept: '',
+            maintain_dept: identity ? identity.maintain_dept_id : '',
             confirmed: identity ? identity.confirmed : 0,
-            confirmer: '',
+            confirmer: identity ? identity.confirmed_by : '',
             confirmed_at: identity ? identity.confirmed_at : null
           });
         }
       }
+      stopped();
       return { fields, identities: fields };
     }
   };

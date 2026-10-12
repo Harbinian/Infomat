@@ -40,15 +40,28 @@ function activeExportCount() {
 
 // Client departure has to stop the work, not just the response. `close` fires when the connection
 // goes away; a response that already finished is not a departure.
-function createAbortScope(req, res) {
+function createAbortScope(req, res, { timeoutMs = EXPORT_LIMITS.timeoutMs } = {}) {
   const controller = new AbortController();
-  const abort = () => { if (!res.writableEnded) controller.abort(); };
+  const abort = () => { if (!res.writableEnded) controller.abort(fail('ABORTED', 499, '导出已取消')); };
   req.on('aborted', abort);
   res.on('close', abort);
+  const timer = setTimeout(() => controller.abort(fail('TIMEOUT', 503, '导出超过时间上限，请稍后重试')), timeoutMs);
+  if (req.aborted || res.destroyed) abort();
   return {
     signal: controller.signal,
     get aborted() { return controller.signal.aborted; },
-    dispose() { req.off('aborted', abort); res.off('close', abort); }
+    check() { if (controller.signal.aborted) throw controller.signal.reason; },
+    async run(operation) {
+      if (controller.signal.aborted) throw controller.signal.reason;
+      let onAbort;
+      try {
+        return await Promise.race([Promise.resolve().then(operation), new Promise((_, reject) => {
+          onAbort = () => reject(controller.signal.reason);
+          controller.signal.addEventListener('abort', onAbort, { once: true });
+        })]);
+      } finally { controller.signal.removeEventListener('abort', onAbort); }
+    },
+    dispose() { clearTimeout(timer); req.off('aborted', abort); res.off('close', abort); }
   };
 }
 
