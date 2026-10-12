@@ -7,7 +7,7 @@ export function writePath(entity, key, value) {
   parts.slice(0, -1).forEach(part => { cursor = cursor[part] ||= {}; });
   cursor[parts.at(-1)] = clone(value);
 }
-export const KIND_LABELS = { process: '流程', behavior: '环节', data: '数据对象', 'data-field': '对象字段', form: '表单／记录', 'form-area': '表单区域', 'form-item': '表单字段', term: '术语', relation: '环节流转', 'data-link': '数据与环节关系', 'data-source': '数据来源', 'form-link': '表单与环节关系', 'field-source': '字段取值来源', 'lifecycle-route': '生命周期路径', 'lifecycle-event': '生命周期事件' };
+export const KIND_LABELS = { process: '流程', 'export-meta': '编制信息', behavior: '环节', data: '数据对象', 'data-field': '对象字段', form: '表单／记录', 'form-area': '表单区域', 'form-item': '表单字段', term: '术语', relation: '环节流转', 'data-link': '数据与环节关系', 'data-source': '数据来源', 'form-link': '表单与环节关系', 'field-source': '字段取值来源', 'lifecycle-route': '生命周期路径', 'lifecycle-event': '生命周期事件' };
 export function catalog(document) {
   const entries = [];
   function add(kind, entity, refKey, labelKey, path, collection = null, parent = null, parentRef = '', extra = {}) {
@@ -15,6 +15,7 @@ export function catalog(document) {
     entries.push({ kind, ref: entity[refKey], parentRef, label: entity[labelKey] || KIND_LABELS[kind], path, entity, collection, parent, refKey, ...extra });
   }
   add('process', document?.process, 'process_ref', 'process_name', '/process');
+  add('export-meta', document?.export_meta, 'package_ref', 'display_name', '/export_meta');
   array(document?.behaviors).forEach((entity, i) => add('behavior', entity, 'behavior_ref', 'behavior_name', `/behaviors/${i}`, document.behaviors));
   array(document?.flow_relations).forEach((entity, i) => add('relation', entity, 'relation_ref', 'condition', `/flow_relations/${i}`, document.flow_relations));
   array(document?.terms).forEach((entity, i) => add('term', entity, 'term_ref', 'term_name', `/terms/${i}`, document.terms));
@@ -47,7 +48,7 @@ export function catalog(document) {
   });
   const counts = new Map();
   entries.forEach(item => { if (item.ref) counts.set(item.ref, (counts.get(item.ref) || 0) + 1); });
-  const extra = [document?.export_meta?.package_ref];
+  const extra = [];
   for(const [key,refKey] of Object.entries({reference_materials:'material_ref',internal_process_calls:'call_ref',work_roles:'archive_ref',unresolved_actor_roles:'record_ref',unresolved_join_modes:'record_ref',legacy_cross_department_records:'record_ref'}))array(document?.migration?.[key]).forEach(item=>extra.push(item[refKey]));
   extra.filter(Boolean).forEach(ref=>counts.set(ref,(counts.get(ref)||0)+1));
   return entries.map(item => ({ ...item, ambiguous: !item.ref || counts.get(item.ref) !== 1 }));
@@ -144,6 +145,7 @@ export function fields(document, target, enums = {}, modules = {}) {
   const ref = (key,label,type,nullable=false,owner='') => ({key,label,editor:'select',reference:true,nullable,options:references(type,nullable,owner)});
   const types = enums.fieldType || enums.field_types || enums.fieldTypes || ['文本','长文本','数字','日期','日期时间','金额','枚举','布尔','部门','人员','文件编号','签名','图片','附件','二维码'];
   const definitions = {
+    'export-meta':[spec('initiating_department','发起部门'),spec('compiler','编制人')],
     process:[spec('process_name','流程名称'),spec('owning_department','归属部门'),spec('purpose','目的','textarea'),spec('scope','适用范围','textarea'),spec('capability_domain','能力域','text',null,{nullable:true}),spec('business_capability','业务能力','text',null,{nullable:true}),spec('classification_status','分类状态','select',['unclassified','needs_review','confirmed'])],
     behavior:[spec('behavior_name','环节名称'),spec('node_type','环节类型','select',['','action','decision','parallel_split','parallel_join']),spec('behavior_description','具体动作说明','textarea'),spec('actor_assignment_mode','执行主体确定方式','select',['fixed_department','company_wide','dynamic_from_data']),spec('current_actor_role','执行部门与岗位'),ref('actor_department_data_ref','用于确定部门的前序数据','data',true),spec('actor_position_rule','岗位或责任人确定规则','textarea'),spec('trigger','流程启动条件','textarea'),spec('precondition','其他开始条件','textarea'),spec('timing','办理时限','text',null,{nullable:true}),spec('completion_standard','完成标准','textarea'),spec('input_description','补充输入说明','textarea'),spec('output_description','补充输出说明','textarea'),spec('countersign_all_required','要求全部会签','boolean'),spec('countersign_target_departments','会签目标部门','tags')],
     relation:[spec('relation_type','流转类型','select',['','sequence','condition','loop','parallel']),ref('from_behavior_ref','起点环节','behavior',true),ref('to_behavior_ref','终点环节','behavior',true),spec('condition','条件说明','textarea')],
@@ -226,7 +228,7 @@ export function createAddition(document, kind, parentRef, ref, modules = {}) {
 export function deletionPlan(document,target,modules={}) {
   const current=resolve(document,target);
   if(current.status!=='valid') return {ok:false,message:'对象标识缺失、歧义或父级归属不符，不能删除',impacts:[]};
-  if(current.kind==='process') return {ok:false,message:'流程对象不能删除，请从文件菜单新建流程',impacts:[]};
+  if(['process','export-meta'].includes(current.kind)) return {ok:false,message:'流程及编制信息不能删除，请从文件菜单新建流程',impacts:[]};
   const impacts=modules.GraphEditCommands?.analyzeDeletion(document,current.kind,current.ref) || [];
   const references=modules.ElementReferences?.buildCatalog(document)?.references || [];
   references.filter(item=>item.ref===current.ref && !item.external && !item.path.startsWith(`${current.path}/`)).forEach(item=>impacts.push({label:item.relationLabel || '引用',path:item.path,ref:item.ref}));
