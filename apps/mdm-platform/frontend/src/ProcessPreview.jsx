@@ -93,6 +93,7 @@ export function ProcessPreview({ api, draft, setDraft }) {
   const [work, setWork] = useState(null), [workCursor, setWorkCursor] = useState(''), [workTrail, setWorkTrail] = useState([]);
   const [selected, setSelected] = useState(() => draft?.caseId || new URLSearchParams(location.search).get('case') || '');
   const [error, setError] = useState(''), [notice, setNotice] = useState('');
+  const [feature, setFeature] = useState(null);
   const [busy, setBusy] = useState(false), [loading, setLoading] = useState(false);
   const [departments, setDepartments] = useState([]), [people, setPeople] = useState(null), [showDiagram, setShowDiagram] = useState(false);
   const generation = useRef(0), active = useRef(null), draftRef = useRef(draft), busyRef = useRef(false);
@@ -104,6 +105,10 @@ export function ProcessPreview({ api, draft, setDraft }) {
     active.current?.abort(); const controller = new AbortController(); active.current = controller;
     const token = ++generation.current; setLoading(true); setError('');
     try {
+      const status = await api.request(ROOT + '/status', { signal: controller.signal });
+      if (token !== generation.current) return;
+      setFeature(status);
+      if (!status.enabled) { setList(null); setDetail(null); setOverview(null); setWork(null); return; }
       const rows = await api.request(ROOT + '/cases?limit=200', { signal: controller.signal });
       const data = id ? await api.request(ROOT + '/cases/' + encodeURIComponent(id), { signal: controller.signal }) : null;
       if (token !== generation.current) return;
@@ -245,7 +250,8 @@ export function ProcessPreview({ api, draft, setDraft }) {
   return <div className="process-preview">
     <section className="card"><p>接收3001下载的V8或V7文件，核对本修订事实。预览核对记录不是正式审核或发布结论；需要修改时回3001修订，再向原案例上传。</p>
       <div className="import-actions"><button disabled={busy || loading} onClick={() => load()}>刷新案例与当前修订</button>{list?.allowed_actions?.includes('create_case') && <button disabled={busy || loading} onClick={() => start('create')}>新建流程预览案例</button>}</div>
-      <label>选择流程案例<select aria-label="选择流程案例" value={selected} disabled={busy || loading} onChange={e => selectCase(e.target.value)}><option value="">请选择案例</option>{(list?.items || []).map(c => <option key={c.id} value={c.id}>{c.process_name} · 修订{c.current_revision_no} · {label(c.status)}</option>)}</select></label>
+      {feature?.enabled === false && <StatusPanel title="流程预览与核对尚未开启">请联系维护人员核对启用范围。{draft && '当前输入仍保留在页面中。'}</StatusPanel>}
+      {feature?.enabled && <label>选择流程案例<select aria-label="选择流程案例" value={selected} disabled={busy || loading} onChange={e => selectCase(e.target.value)}><option value="">请选择案例</option>{(list?.items || []).map(c => <option key={c.id} value={c.id}>{c.process_name} · 修订{c.current_revision_no} · {label(c.status)}</option>)}</select></label>}
       {list && <p>当前返回{list.items?.length || 0}条（最多200条）；待本部门办理{list.my_action_count || 0}项。</p>}
       {list?.items?.length === 0 && <p>当前范围暂无案例。有权限的人员可上传文件建立案例。</p>}
       {list?.allowed_actions?.includes('department_overview') && <button disabled={busy || loading} onClick={() => loadOverview()}>查看本部门流程全貌</button>}
@@ -261,7 +267,7 @@ export function ProcessPreview({ api, draft, setDraft }) {
       <p>输入仅保留在当前页面内存中，提交成功前不会写入核对记录。</p>
       {stale && <StatusPanel kind="error" title="来源已变化，当前输入仍保留">请复制保留意见后明确放弃本次编辑，再按最新修订重新核对。系统不会把旧意见自动应用到新修订。</StatusPanel>}
       {draft.resultUnknown && <StatusPanel title="本次提交结果需核对">输入已保留。先读取当前记录核对结果，再决定是否重试。<button disabled={busy || loading} onClick={reconcile}>核对本次提交结果</button></StatusPanel>}
-      <form onSubmit={submit}><fieldset disabled={busy || loading || Boolean(stale) || draft.resultUnknown}>
+      <form onSubmit={submit}><fieldset disabled={busy || loading || feature?.enabled !== true || Boolean(stale) || draft.resultUnknown}>
         {['create', 'revision'].includes(draft.kind) ? <><label>流程JSON文件<input aria-label="流程JSON文件" type="file" accept=".json,application/json" onChange={readFile} /></label><p>{draft.fileName || '尚未选择文件'} {draft.document?.schema_version}</p>{draft.document && <p>流程：{draft.document.process?.process_name}</p>}{draft.comparison && <><h3>新修订影响</h3><p>{Object.entries(draft.comparison.comparison?.counts || {}).map(([k, v]) => `${({ added:'新增', removed:'移除', reopened:'重新核对', carried_forward:'沿用' })[k] || k} ${v}项`).join('；')}</p><p>受影响部门：{draft.comparison.comparison?.affected_departments?.join('、') || '无新增影响部门'}</p><JsonDetails title="完整比较、提示与卡口" value={draft.comparison} /></>}</>
           : draft.kind === 'issueReply' ? <><p>问题{draft.issue_id}：{draft.issue_title}{draft.todo_id && `；关联办公室任务${draft.todo_id}`}</p><label>问题答复<textarea aria-label="问题答复" required rows={4} maxLength={4000} value={draft.content} onChange={e => update({ content: e.target.value })} /></label><p>答复进入原问题历史，关联任务保留同一答复依据。保存答复不表示任务办结或问题关闭。</p></>
           : ['transfer', 'coordinate', 'author'].includes(draft.kind) ? <>

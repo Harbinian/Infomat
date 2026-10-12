@@ -1,5 +1,9 @@
 // Live projection of authorized actions, never a second todo store or cached source grant.
+const {sessionSubject,identityInteger}=require('./sessionSubject');
 module.exports=async function(pool,session){
+  const subject=sessionSubject(session);
+  const personId=subject.kind==='person'?identityInteger(subject.personId):null;
+  if(personId===null)return [];
   const [ready]=await pool.execute('SELECT migration_key FROM schema_migrations WHERE migration_key=?',[require('./analysisClosureSchema').MIGRATION_KEY]);
   if(!ready.length)return [];
   const {makeDataMapDefinitionRepository}=require('./dataMapDefinitionRepository');
@@ -7,7 +11,7 @@ module.exports=async function(pool,session){
   const [issues]=await pool.execute(`SELECT CAST(b.issue_id AS CHAR) issue_id FROM data_map_analysis_issue_bindings b JOIN departments d ON d.id=b.owner_department_id
     JOIN process_governance_issues i ON i.issue_id=b.issue_id WHERE i.display_status NOT IN ('closed','completed','not_in_scope') AND
     (d.final_responsible_person_id=? OR EXISTS(SELECT 1 FROM data_map_analysis_issue_closure_events e WHERE e.issue_id=b.issue_id
-      AND JSON_UNQUOTE(JSON_EXTRACT(e.snapshot_json,'$.reviewer.person_id'))=?)) ORDER BY b.issue_id`,[session.personId,String(session.personId)]);
+      AND JSON_UNQUOTE(JSON_EXTRACT(e.snapshot_json,'$.reviewer.person_id'))=?)) ORDER BY b.issue_id`,[personId,String(personId)]);
   for(const row of issues){
     try{
       const c=await repo.getAnalysisIssueClosure(session,row.issue_id);
