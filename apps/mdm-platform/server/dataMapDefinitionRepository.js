@@ -49,6 +49,17 @@ function makeDataMapDefinitionRepository(pool) {
     } finally { db.release(); }
   }
   async function actor(db, session, permission) {
+    if (session?.identityKind === 'system_admin') {
+      if (!session.accountId || !session.authVersion) throw failure('DEFINITION_AUTH_REQUIRED',401);
+      const identity = require('./identityMysqlRepository').makeIdentityMysqlRepository(db);
+      const validated = await identity.validateSession(session);
+      if (!validated.valid || validated.user.identityKind !== 'system_admin' || validated.user.must_change_password) throw failure('DEFINITION_AUTH_REQUIRED',401);
+      const current = await require('./systemAdminIdentity').getSystemAdmin(db, validated.user.identityRef, {locked:true});
+      if (!current || current.must_change_password || String(current.authVersion) !== id(session.authVersion)) throw failure('DEFINITION_AUTH_REQUIRED',401);
+      const {permSet} = await identity.getUserEffectivePermissions(current.identityRef);
+      if (permission) throw failure('DEFINITION_ACCESS_DENIED',403);
+      return {personId:null, departmentId:null, permissions:permSet, readOnly:true};
+    }
     if (!session?.personId || !session?.accountId || !session?.authVersion) throw failure('DEFINITION_AUTH_REQUIRED',401);
     const personId = id(session.personId);
     const [[account]]=await db.execute('SELECT CAST(person_id AS CHAR) AS person_id,CAST(auth_version AS CHAR) AS auth_version,account_status,must_change_password FROM user_accounts WHERE account_id=? FOR UPDATE',[id(session.accountId)]);

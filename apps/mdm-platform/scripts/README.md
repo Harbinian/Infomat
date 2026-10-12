@@ -2,6 +2,12 @@
 
 本文件按用途说明当前命令；命令表依据本应用`package.json`核对。阶段进展、验证结论和已废止配置保留在文末历史快照，不能代替当前脚本或目标状态。代码路径以应用目录为基准。
 
+`node --test scripts/test-workbench-availability.js frontend/tests/preview-availability.test.js`使用合成会话、随机回环HTTP服务、SQL和DOM替身，检查管理员个人待办边界、人员ID完整性、预览开关状态及关闭时的请求顺序；不读取私有配置、不连接真实数据库。前端测试也由在`frontend/`目录运行的`npm test`收集。
+
+`node scripts/test-workbench-availability-browser.js --build <artifacts内的前端构建目录> --output <artifacts内的新证据目录>`以合成HTTP响应核对实际构建页面，使用Edge100%、1699×828 CSS像素，输出截图和验证记录；不登录真实账号、不连接数据库，不使用3000端口。
+
+`node --test scripts/test-system-admin-definition-reads.js`使用合成SQL核对独立管理员读取设计交接时的账号状态、密码代次、现有全局读取权限及事务内账号锁，同时检查治理写入被拒绝；不读取私有配置、不连接真实数据库。结构指纹检查由其他专项覆盖，本脚本只替换该检查外壳，身份及权限逻辑使用实际实现。
+
 ## 执行边界
 
 - 运行、结构维护及数据写入使用不同入口。`inspect`、`dry-run`及`smoke`名称本身不证明无副作用；先核对脚本加载的配置、目标、连接和写入。

@@ -284,6 +284,14 @@ function formalAllowedDecisions(actions, detail) {
     : ['approve', 'needs_changes', 'reject'];
 }
 
+// Read availability before the disabled-feature gate; this does not grant case access.
+router.get('/status', requireAuth, (req, res) => {
+  res.set('Cache-Control', 'no-store').json(previewBoundary({
+    enabled: process.env.PROCESS_V7_PREVIEW_ENABLED === '1',
+    formal_enabled: process.env.PROCESS_V7_PREVIEW_ENABLED === '1' && process.env.PROCESS_V7_FORMAL_ENABLED === '1'
+  }));
+});
+
 router.use((req, res, next) => {
   if (process.env.PROCESS_V7_PREVIEW_ENABLED !== '1') {
     return res.status(503).json({

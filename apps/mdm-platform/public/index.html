@@ -2620,6 +2620,13 @@ function updateNativeDiagramButtons() {
   ['nativeProcessDiagramButton', 'nativeDataDiagramButton'].forEach(function(id) { if ($(id)) $(id).disabled = disabled; });
 }
 async function loadNativeDiagramCases() {
+  const status=await api('/api/process-v7-preview/status');
+  if (!status.enabled) {
+    $('nativeDiagramCase').innerHTML='<option value="">流程预览与核对尚未开启</option>';
+    $('nativeDiagramSourceNotice').textContent='流程预览与核对尚未开启，请联系维护人员核对启用范围。';
+    updateNativeDiagramButtons();
+    return;
+  }
   const result=await api('/api/process-v7-preview/cases?limit=100');
   const rows=result.items||result.cases||[];
   const select=$('nativeDiagramCase'), previous=select.value;
@@ -2961,6 +2968,8 @@ async function downloadNativeDiagram() {
     }
 
     async function loadV7PreviewReviewView(_filters, route) {
+      var status = await api('/api/process-v7-preview/status');
+      if (!status.enabled) return { disabled: true, list: { items: [], allowed_actions: [] }, detail: null };
       var listPayload = await api('/api/process-v7-preview/cases?limit=100');
       var caseId = Number(route && route.v7CaseId || state.pgSelectedV7PreviewCaseId || 0);
       var detail = null;
@@ -3216,6 +3225,16 @@ async function downloadNativeDiagram() {
     }
 
     function renderV7PreviewReviewView(payload) {
+      if (payload && payload.disabled) {
+        captureV7Edits();
+        ['pgV7PreviewCaseCount', 'pgV7PreviewMyActionCount', 'pgV7PreviewCompleteCount', 'pgV7PreviewRevisionNo'].forEach(function(id) { if ($(id)) $(id).textContent = '—'; });
+        if ($('pgCreateV7PreviewBtn')) $('pgCreateV7PreviewBtn').hidden = true;
+        if ($('pgV7PreviewCaseRows')) $('pgV7PreviewCaseRows').innerHTML = '<tr><td colspan="7" class="empty">流程预览与核对尚未开启，请联系维护人员核对启用范围。</td></tr>';
+        if ($('pgV7PreviewDetail')) $('pgV7PreviewDetail').hidden = true;
+        renderV7EditNotice();
+        return;
+      }
+      if ($('pgV7PreviewDetail')) $('pgV7PreviewDetail').hidden = false;
       var listPayload = payload && payload.list || { items: [] };
       var rows = listPayload.items || [];
       if ($('pgV7PreviewCaseCount')) $('pgV7PreviewCaseCount').textContent = Number(listPayload.total || rows.length);

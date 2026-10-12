@@ -68,8 +68,12 @@ export function NativeDiagrams({ api, onQueryChange }) {
     const controller = new AbortController();
     if (directVersion) return () => controller.abort();
     setList({ busy: true });
-    api.request('/api/process-v7-preview/cases?limit=100', { signal: controller.signal }).then(result => {
-      if (!controller.signal.aborted) setList({ rows: result.items || result.cases || [] });
+    (async () => {
+      const status = await api.request('/api/process-v7-preview/status', { signal: controller.signal });
+      if (!status.enabled) return { disabled: true, items: [] };
+      return api.request('/api/process-v7-preview/cases?limit=100', { signal: controller.signal });
+    })().then(result => {
+      if (!controller.signal.aborted) setList({ disabled: result.disabled, rows: result.items || result.cases || [] });
     }).catch(error => { if (!controller.signal.aborted) setList({ error }); });
     return () => controller.abort();
   }, [api, revision, directVersion]);
@@ -95,7 +99,7 @@ export function NativeDiagrams({ api, onQueryChange }) {
       }).catch(error => { if (!controller.signal.aborted) setState({ error }); });
       return () => controller.abort();
     }
-    if (list.busy || list.error || !caseId) return () => controller.abort();
+    if (list.busy || list.error || list.disabled || !caseId) return () => controller.abort();
     if (!list.rows.some(row => String(row.id) === caseId)) { setState({ error: new Error('所选流程不在本次可见列表中，请重新选择。') }); return () => controller.abort(); }
     setState(previous => ({ ...previous, busy: true }));
     (async () => {
@@ -126,7 +130,7 @@ export function NativeDiagrams({ api, onQueryChange }) {
     return () => controller.abort();
   }, [api, caseId, versionId, list, directVersion, directRevision]);
   // Render only the selected response. Replacing a chart also invalidates an unfinished PNG.
-  const doc = (directVersion || (!list.busy && !list.error)) && state.caseId === caseId && state.versionId === versionId ? state.doc : null;
+  const doc = (directVersion || (!list.busy && !list.error && !list.disabled)) && state.caseId === caseId && state.versionId === versionId ? state.doc : null;
   useEffect(() => {
     let active = true, observer;
     setFocus(null); setRendered({}); setDownloadState({}); downloadToken.current = null;
@@ -171,15 +175,16 @@ export function NativeDiagrams({ api, onQueryChange }) {
     <p>按当前有权查看的流程记录绘图。默认优先读取当前已发布版本，否则标明预览修订；也可独立选择历史正式版本。内容修订仍回到 3001 办理。</p>
     <VersionSearch api={api} onQueryChange={onQueryChange} onChoose={id => choose({ caseId: '', versionId: id, dataRef: '' })} />
     {directVersion ? <p data-direct-version>正在按固定版本 #{versionId} 独立查阅，无需先选择案例。历史版本不代表当前有效制度。<button type="button" className="secondary" onClick={() => choose({ caseId: '', versionId: '', dataRef: '' })}>返回案例选图</button></p> : <p className="muted">本次列出接口返回的最多 100 个案例；不代表全部流程。图形查阅和下载不会提交台账输入。</p>}
-    {!directVersion && (list.busy ? <p role="status">正在读取流程列表…</p> : !list.error && <label className="identity-field">图形流程<select aria-label="图形流程" value={caseId} onChange={event => choose({ caseId: event.target.value, versionId: '', dataRef: '' })}>
+    {!directVersion && list.disabled && <p role="status">流程预览与核对尚未开启。可按已有正式版本独立查阅图形。</p>}
+    {!directVersion && (list.busy ? <p role="status">正在读取流程列表…</p> : !list.error && !list.disabled && <label className="identity-field">图形流程<select aria-label="图形流程" value={caseId} onChange={event => choose({ caseId: event.target.value, versionId: '', dataRef: '' })}>
       <option value="">请选择流程</option>{list.rows.map(row => <option key={row.id} value={row.id}>{row.process_name} · 修订 {row.current_revision_no}</option>)}
     </select></label>)}
-    {caseId && <label className="identity-field">图形版本<select aria-label="图形版本" value={versionId} onChange={event => choose({ versionId: event.target.value, dataRef: '' })}>
+    {caseId && !list.disabled && <label className="identity-field">图形版本<select aria-label="图形版本" value={versionId} onChange={event => choose({ versionId: event.target.value, dataRef: '' })}>
       <option value="">自动选择当前来源</option>
       {versionId && !state.versions?.some(row => String(row.id) === versionId) && <option value={versionId}>待核对版本 {versionId}</option>}
       {(state.caseId === caseId ? state.versions || [] : []).map(row => <option key={row.id} value={row.id}>正式版本 {row.id} · {row.edition || row.version_no} · {({ published: '已发布', superseded: '历史已发布', retired: '已退役（仅查阅）' })[row.status] || row.status}</option>)}
     </select></label>}
-    {!directVersion && list.rows?.length === 0 && <p>当前可见范围暂无流程。</p>}
+    {!directVersion && !list.disabled && list.rows?.length === 0 && <p>当前可见范围暂无流程。</p>}
     {state.busy && <p role="status">正在读取流程内容…</p>}
     {error && <p role="alert">{error.message} 请刷新图形重试；读取失败不表示没有记录。</p>}
     {doc && <>

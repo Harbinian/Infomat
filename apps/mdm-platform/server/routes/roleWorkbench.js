@@ -502,6 +502,7 @@ router.get('/', requireAuth, (req, res) => {
     const roleCodes = identity.roleCodes;
     const { roles, roleGroups } = buildRoleGroupsCached(roleCodes);
     const ownedRoles = roles.filter(role => role.owned);
+    const administrator = roleCodes.includes('admin') || req.session.identityKind === 'system_admin';
     const permSet = identity.permSet;
     const canViewAll = permSet.has('governance:read-global');
     const canDecideEscalated = permSet.has('governance:decide-escalation');
@@ -509,7 +510,7 @@ router.get('/', requireAuth, (req, res) => {
     const cacheKey = workbenchResponseCacheKey({ mode, identity, roleCodes, permSet });
     const body = await getOrBuildWorkbenchResponse(cacheKey, async () => {
       const [officeWorkItems, processDataGovernance, v7WorkItems] = await Promise.all([
-        useMysqlIdentityReadModel() ? require('./offices').getOfficeRepository().personalWorkItems(req.session) : [],
+        useMysqlIdentityReadModel() && !administrator ? require('./offices').getOfficeRepository().personalWorkItems(req.session) : [],
         loadProcessDataGovernanceWorkItems(identity),
         useMysqlProcessGovernanceReadModel() ? require('./processPreviewReview').listProcessWorkbenchItems({
           userId: identity.user.id, personId: identity.user.personId, departmentId: identity.user.departmentId,
@@ -596,7 +597,7 @@ router.get('/', requireAuth, (req, res) => {
       };
     });
     // Per-issue authority is revalidated outside the legacy 15-second response cache.
-    const officeRepo=useMysqlIdentityReadModel()?require('./offices').getOfficeRepository():null;
+    const officeRepo=useMysqlIdentityReadModel()&&!administrator?require('./offices').getOfficeRepository():null;
     const closureItems=officeRepo?.closureWorkItems?await officeRepo.closureWorkItems(req.session):[];
     const liveActions=closureItems.length?buildNextActions([...closureItems,...body.workItems.filter(i=>i.type!=='guidance')],ownedRoles):body.nextActions;
     const response=closureItems.length?{...body,workItems:[...closureItems,...body.workItems],
