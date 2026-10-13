@@ -84,6 +84,10 @@ test('trace binds exact input, raw output, limits and persisted findings', async
 test('manifest rejects real providers, extra processes, unversioned adapters and missing deterministic coverage', () => {
   const p = ai.createPayload('10', 'synthetic', 'scope'); const manifest = { ...p, inputs: [{ input_key: 'source', snapshot: { kind: 'v7_source', ref_id: '10' } }] };
   assert(ai.enabledManifest(manifest));
+  const legacy = clone(manifest); legacy.parser_versions.v7_deterministic = 'v7-deterministic-v1';
+  legacy.steps.find(step => step.parser_key === 'v7_deterministic').check_ids = require('../server/v7AnalysisRules').LEGACY_CHECKS;
+  assert(ai.enabledManifest(legacy));
+  const unknown = clone(manifest); unknown.parser_versions.v7_deterministic = 'v7-deterministic-v99'; assert.equal(ai.enabledManifest(unknown), false);
   for (const change of [m => m.ai_metadata.provider = 'real', m => m.inputs.push({ input_key: 'other', snapshot: { kind: 'v7_source' } }), m => m.parser_versions.ai_offline = 'v9', m => m.steps[0].check_ids = []]) { const m = clone(manifest); change(m); assert.equal(ai.enabledManifest(m), false); }
 });
 module.exports = { fixture };

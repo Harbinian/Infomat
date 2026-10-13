@@ -3,7 +3,7 @@ const { json, digest } = require('./dataMapDefinitionValues');
 const VERSION = 'handoff-deterministic-v1', PARSER = 'handoff_deterministic';
 const labels = { identity: '对象身份', identifier: '唯一及组合标识', fields: '字段映射', format: '格式', enum: '枚举', unit: '单位', version: '版次', conditions: '交付与接收说明', confirmation: '关系确认', scope: '适用范围', chain: '主链覆盖', coverage: '未覆盖范围说明' };
 const CHECKS = Object.keys(labels).map(k => 'handoff.' + k);
-const catalog = CHECKS.map(rule_id => ({ rule_id, rule_version: VERSION, title: labels[rule_id.slice(8)], prerequisite: '固定设计交接、台账版本与显式V7映射', not_applicable: '不证明真实接收，不从名称、文件名或历史主链推断关系' }));
+const catalog = CHECKS.map(rule_id => ({ rule_id, rule_version: VERSION, title: labels[rule_id.slice(8)], prerequisite: '固定设计交接、台账版本与显式原生V8或受支持V7映射', not_applicable: '不证明真实接收，不从名称、文件名或历史主链推断关系' }));
 function enabledManifest(m) {
   return !m.ai_metadata && m.rule_version === VERSION && Object.keys(m.parser_versions).length === 1 && m.parser_versions[PARSER] === VERSION &&
     m.inputs.every(i => i.snapshot.kind === 'handoff') && m.steps.every(s => s.parser_key === PARSER && s.input_keys.length === 1 && s.check_ids.every(c => CHECKS.includes(c)));

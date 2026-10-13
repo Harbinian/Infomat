@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { StatusPanel } from './components.jsx';
+import { ProcessChecks } from './ProcessChecks.jsx';
 
 const ROOT = '/api/process-v7-preview/cases';
 const statusNames = { draft: '正式草稿', submitted: '待正式审核', under_review: '正式审核中', needs_changes: '需要修改', rejected: '审核拒绝', approved: '审核通过', published: '已发布', superseded: '历史已发布版本', pending: '待审核', review_complete: '预览核对完成', under_review_preview: '预览核对中' };
@@ -346,6 +347,7 @@ export function ProcessFormal({ api, draft, setDraft }) {
       </fieldset></form>
     </section>}
     {detail && <section className="card"><div className="section-heading"><h2>{detail.case.process_name}</h2><span className="badge">{detail.revision.document.schema_version}</span></div>
+      <ProcessChecks checks={detail.content_checks} allowLocate={false} />
       <p>归口部门：{detail.case.owning_department_name || '待明确'} · 当前预览修订 {detail.case.current_revision_no}</p>
       <p className="formal-digest">当前来源摘要：{detail.case.current_content_hash}</p>
       <h3>当前任务与待处理事项</h3>

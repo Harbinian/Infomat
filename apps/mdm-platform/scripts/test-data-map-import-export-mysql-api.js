@@ -46,6 +46,12 @@ function makeFakeDataMapRepository() {
 
   return {
     state,
+    // DTO/routing fixture only. Real rollback/concurrency uses the owned MySQL test.
+    async importFieldsBatch({contextId,rows,fileName},session) {
+      for (const row of rows) await this.createField(row,session.userId);
+      await this.recordImportBatch({source_type:'excel',file_name:fileName,context_id:contextId,imported_by:session.userId,row_count:rows.length,status:'imported',note:'字段台账导入'});
+      return {imported:rows.length,context_id:contextId,mapping_id:contextId};
+    },
     async getContext(id) {
       state.calls.push(['getContext', Number(id)]);
       return state.contexts.find(context => context.id === Number(id)) || null;

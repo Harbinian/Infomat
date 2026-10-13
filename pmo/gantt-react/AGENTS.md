@@ -64,7 +64,7 @@ Vite 开发服务同时提供流程地图驾驶舱和 `/echarts.min.js`。不得
 - **受控行**：`DLV-###` 编号只来自正本文件本身，不由任务投影生成。
 - **计划投影行**：来自任务 `deliverable` 自由文本，用 `projectionKey`（`task:<编号>`）标识。它**会随任务增删变化，不得写入磁盘或跨会话引用**，也不占用 DLV 命名空间。
 
-绑定只认显式锚点：任务侧 `受控交付物编号`，或正本 frontmatter 的 `normalizedWbs` / `taskId`。文本相似度只用于在对账中给建议（`suggestDeliverableBinding`），**不参与合并** —— 历史实现靠 OR 链兜底，曾把共享「项目治理」4 字的任务错误合并到 DLV-003。
+绑定只认显式锚点：任务侧 `受控交付物编号`，或正本 frontmatter 的 `normalizedWbs` / `taskId`。文本相似度只用于在对账中给建议（`suggestDeliverableBinding`），**不参与合并**。任务与交付物名称中的共同文字不能替代显式锚点。
 
 ### 行动项
 

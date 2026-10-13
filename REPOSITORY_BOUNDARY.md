@@ -1,14 +1,13 @@
 # Infomat 仓库职责边界
 
-> 状态：执行规则  
-> 生效日期：2026-06-07  
+> 状态：仓库维护规则
 > 目的：把 Infomat 从“什么都能放的混合仓库”收口为“有明确职责边界的信息化治理工作仓库”。
 
 ## 1. 仓库定位
 
 Infomat 是一个信息化治理工作仓库，不是单一源码仓库。它允许同时保存资料、可运行应用、项目管理页面和自动化脚本，但每类资产必须有清晰归属。
 
-2026-09-11用户明确撤销全部`docs/`文件的真源身份；本文件下方历史入口和旧派生关系只用于资产定位，不作为治理依据。3001编制未审核单流程材料，用户主动下载并上传3000，由3000治理、核对、审核并形成正式版本，之后生成程序文件。业务事实与责任来自用户指定的外部原始材料及明确业务确认；程序文件是结果，不反向定义流程。人员Excel的Markdown转换副本、组织/角色说明和旧制度同样不是真源。
+业务真源、当前工作主线及应用交接边界按根 [AGENTS.md](AGENTS.md)。本文件判断资产收纳和维护位置，历史资料及现有技术消费关系不提供业务治理依据。
 
 当前仓库承担六类职责：
 
@@ -18,7 +17,7 @@ Infomat 是一个信息化治理工作仓库，不是单一源码仓库。它允
 | 可运行系统 | MDM 平台、文档结构化输出辅助服务、信息表收集服务及其测试和维护脚本 | `apps/` |
 | PMO / 项目管理展示工具 | 流程地图驾驶舱、甘特图、项目管理页面、交付物工作台 | `pmo/` |
 | 仓库级脚本工具 | 跨资料、跨页面、跨 app 的解析、注入、生成、校验脚本 | `scripts/` |
-| AI 协作工作区 | Codex 自动加载入口、按需执行手册、上下文架构、长期项目上下文、仓库偏好、Agent 技能和计划 | `AGENTS.md`、`CODEX.md`、`docs/architecture/context-management.md`、`MEMORY.md`、`.codex/config.toml`、`.agents/`、`docs/plans/`、`docs/superpowers/` |
+| AI 协作工作区 | 当前指令、按需执行说明、上下文架构、仓库偏好和项目技能；历史上下文按需追溯 | `AGENTS.md`、`CODEX.md`、`docs/architecture/context-management.md`、`.codex/config.toml`、`.agents/`；历史上下文在 `MEMORY.md` |
 | 历史方案归档 | 旧设计、旧计划、历史输出物、阶段性审查记录 | `docs/superpowers/`、`docs/archives/` |
 
 ## 2. 放入规则
@@ -42,7 +41,7 @@ Infomat 是一个信息化治理工作仓库，不是单一源码仓库。它允
 
 ### 受控派生消费文件例外
 
-`docs/adr/0004-controlled-derived-consumer-files.md` 以 `Proposed` 状态提出窄范围例外：主线直接读取的派生文件只有同时具备明确真源、固定生成命令、稳定路径、直接消费方和一致性检查时，才可以继续进入版本控制。获准维护当前消费链时，在同一版本工作中核对来源、生成器和受影响的消费文件；历史快照不因源副本变化自动重造。暂存、提交和推送仍须用户授权。
+[ADR-0004](docs/adr/0004-controlled-derived-consumer-files.md) 保持 `Proposed`，记录受控派生消费文件的例外提议。已有获准维护的消费文件需具备明确来源、固定生成命令、稳定路径、直接消费方和一致性检查，在同一项变更中核对来源、生成器及受影响的消费文件。该提议不能单独作为新增纳管对象的授权；历史快照不因源副本变化自动重造。暂存、提交和推送仍须用户授权。
 
 该 ADR 尚未 `Accepted`。它不授权把临时输出、缓存、日志、截图、运行状态或一次性预览纳入版本控制，也不授权删除、移动或取消跟踪历史文件。
 
@@ -56,9 +55,9 @@ Infomat 是一个信息化治理工作仓库，不是单一源码仓库。它允
 | 流程治理输入 | 用户指定外部原始材料、业务说明及确认，人工上传3000的单流程JSON | `docs/norms/`及驾驶舱保留历史消费关系，不作为当前治理输入或业务确认 |
 | 工作角色只读快照 | `docs/work-role-data.json` | 只由 `scripts/build-work-role-data.mjs` 生成，不手工维护、不包含人员名单 |
 | PMO 流程地图展示 | `pmo/procedure-management/dashboard.html` 内嵌 `#sankey-data` | 不绕过 `scripts/parse-sankey-data.mjs` 手工重造数据 |
-| PMO 项目计划 | `pmo/信息化项目_计划管控真源.md` 和 `pmo/信息化项目_WBS结构真源.md` | 不把 XLSX 备份当默认维护入口 |
-| MDM 平台源码 | `apps/mdm-platform/server/`、`public/`、`scripts/` | 不把流程治理资料直接写进平台源码 |
-| MDM 正式运行态数据库 | 固定MySQL实例，连接配置由`scripts/infomat-services.config.json`和本机私有环境文件提供 | 不把`apps/mdm-platform/data/*.db`误认为当前正式运行数据库；数据库文件和凭据均不得提交 |
+| PMO 项目计划 | [PMO README](pmo/README.md) 路由到当前计划维护入口及生成器 | 不把 XLSX 备份或展示快照当默认维护入口 |
+| MDM 平台源码 | `apps/mdm-platform/server/`、`frontend/`、`public/`、`scripts/` | 不把流程治理资料直接写进平台源码 |
+| MDM MySQL 运行配置 | [应用 README](apps/mdm-platform/README.md)、`scripts/infomat-services.config.json`及本机私有配置路径 | 配置不证明目标实例正在运行；`apps/mdm-platform/data/*.db`仅为历史或测试数据，数据库文件和凭据均不得提交 |
 
 ## 4. 变更规则
 
@@ -98,4 +97,4 @@ Infomat 是一个信息化治理工作仓库，不是单一源码仓库。它允
 
 根 `AGENTS.md` 是自动加载的任务路由 Interface；`CODEX.md` 是仓库变更任务按需读取的执行 Implementation。具体读取内容由根任务路由和主责目录入口决定，不在本文件复制固定全量顺序或局部入口清单。
 
-本文件只判断仓库收纳、生成物和历史资产边界。若任务描述跨越多个资产类型，先确认主责资产，再执行；不要因为一个脚本能访问多个目录，就把这些目录视为同一类资产。上下文分层、预算和检查方法见 `docs/architecture/context-management.md`。
+本文件只判断仓库收纳、生成物和历史资产边界。若任务描述跨越多个资产类型，先确认主责资产，再执行；不要因为一个脚本能访问多个目录，就把这些目录视为同一类资产。上下文分层、预算和检查方法见 [上下文管理说明](docs/architecture/context-management.md)，历史原文按需从 [归档索引](docs/archives/README.md) 追溯。

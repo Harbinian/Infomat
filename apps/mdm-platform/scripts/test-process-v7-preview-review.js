@@ -21,7 +21,10 @@ const {
 function normalizedQuery(sql) {
   // These fakes verify predicates, locks and write order; real MySQL/Edge verifies timestamps.
   return String(sql).trim().replace(/\s+/g, ' ')
-    .replace(/, UNIX_TIMESTAMP\([a-z_.]+\) AS [a-z_]+_epoch/g, '');
+    .replace(/, UNIX_TIMESTAMP\([a-z_.]+\) AS [a-z_]+_epoch/g, '')
+    .replace(/, CAST\([a-z_.]+ AS CHAR\) AS [a-z_]+/g, '')
+    .replace(/CAST\(id AS CHAR\) AS id/g, 'id')
+    .replace(/CAST\(\? AS SIGNED\)/g, '?');
 }
 
 function legacyAuthoringTableAbsent(sql) {
@@ -35,6 +38,10 @@ function sampleDocument() {
   document.process.process_ref = 'process_v7_preview_test';
   document.process.process_name = '产品制造大纲编制与审批';
   document.process.owning_department = '质量管理部';
+  document.export_meta.initiating_department = '质量管理部';
+  document.export_meta.compiler = '合成编制人员';
+  document.process.purpose = '编制并核对合成制造大纲';
+  document.process.scope = '合成制造大纲测试范围';
   document.behaviors = [{
     behavior_ref: 'behavior_compile',
     node_type: 'action',
@@ -44,7 +51,7 @@ function sampleDocument() {
     actor_assignment_mode: 'fixed_department',
     actor_department_data_ref: null,
     actor_position_rule: '',
-    trigger: '',
+    trigger: '收到编制任务时',
     precondition: '',
     input_description: '',
     timing: null,
@@ -174,6 +181,26 @@ const identities = {
   formerCreator: { userId: 15, personId: 15, departmentId: 3, roles: ['department_contact'], permissions: ['governance:read-department'] }
 };
 
+// Explicit current identity rows for legacy SQL fixtures. This does not bypass
+// repository authorization; unknown subjects/queries still fail. Real locking
+// behavior is covered by test-b02-preview-writes-mysql.js.
+function qualifiedConnection(connection) {
+  const roles = ['department_contact', 'department_mdm_reviewer', 'mdm_lead', 'admin'];
+  return new Proxy(connection, { get(target, key) {
+    if (key === 'execute') return async (sql, params = []) => {
+      const person = Object.values(identities).find(p => String(p.personId) === String(params[0]));
+      if (/FROM person p\s+LEFT JOIN user_accounts/.test(sql)) return [person ? [{ person_id: String(person.personId), account_id: String(person.personId + 100), auth_version: '1',
+        current_department_id: String(person.departmentId), department_name: ['质量管理部', '工程技术部', '财务部'][person.departmentId - 1], person_name: 'synthetic', account_status: 'active', status: 'active', must_change_password: 0 }] : []];
+      if (/SELECT pr.role_id/.test(sql)) return [(person?.roles || []).map(code => ({ role_id: roles.indexOf(code) + 1 }))];
+      if (/SELECT parent_role_id/.test(sql)) return [[{ parent_role_id: null }]];
+      if (/FROM role_permissions rp/.test(sql)) return [[...new Set(Object.values(identities).filter(p => p.roles.some(code => params.some(value => String(value) === String(roles.indexOf(code) + 1)))).flatMap(p => p.permissions))].map(perm_code => ({ perm_code, effect: 'allow' }))];
+      if (/FROM person_roles pr/.test(sql)) return [(person?.roles || []).map(code => ({ code }))];
+      return connection.execute(sql, params);
+    };
+    const value = target[key]; return typeof value === 'function' ? value.bind(target) : value;
+  } });
+}
+
 function makeRepository(projected, sourceDocument = sampleDocument()) {
   const calls = [];
   const caseRow = {
@@ -300,7 +327,7 @@ async function request(baseUrl, identityKey, routePath, options = {}) {
 async function main() {
   const serverEntrySource = fs.readFileSync(path.join(__dirname, '..', 'server', 'index.js'), 'utf8');
   assert.ok(serverEntrySource.includes("express.json({ limit: '2mb' })"), 'main server must accept representative V7 files');
-  assert.ok(serverEntrySource.includes("registerRouteIfExists('/api/process-v7-preview', 'processV7PreviewReview')"), 'main server must register isolated V7 preview routes');
+  assert.ok(serverEntrySource.includes("registerRouteIfExists('/api/process-v7-preview', 'processPreviewReview')"), 'main server must retain the preview API with its native implementation');
 
   const departments = [
     { id: 1, name: '质量管理部', code: 'QUALITY' },
@@ -414,7 +441,7 @@ async function main() {
     }
   };
   const ownerWriteRepository = makeProcessV7PreviewReviewRepository({
-    async getConnection() { return ownerWriteConnection; }
+    async getConnection() { return qualifiedConnection(ownerWriteConnection); }
   });
   process.env.PROCESS_V7_PREVIEW_ENABLED = '1';
   process.env.PROCESS_V7_TRIAL_PROCESS_REF = lockedOwnerProjection.processRef;
@@ -427,7 +454,7 @@ async function main() {
       blockingIssues: [{ code: 'FORGED_BLOCKER' }]
     },
     { expectedRevisionNo: 1, expectedContentHash: lockedOwnerProjection.contentHash },
-    { userId: 14, personId: 14 }
+    { userId: 14, personId: 14, accountId: 114, authVersion: 1 }
   );
   assert.strictEqual(insertedOwnerItem.behavior_ref, 'behavior_process_review', '归口分派必须从锁定修订重新生成核对项');
   assert.deepStrictEqual(JSON.parse(ownerCaseUpdateParams[3]), [], '调用方伪造的阻断项不得写入案例');
@@ -552,7 +579,7 @@ async function main() {
     }
   };
   const scopeWriteRepository = makeProcessV7PreviewReviewRepository({
-    async getConnection() { return scopeWriteConnection; }
+    async getConnection() { return qualifiedConnection(scopeWriteConnection); }
   });
   process.env.PROCESS_V7_PREVIEW_ENABLED = '1';
   process.env.PROCESS_V7_TRIAL_PROCESS_REF = lockedScopeProjection.processRef;
@@ -568,10 +595,10 @@ async function main() {
     },
     1,
     lockedScopeProjection.contentHash,
-    { userId: 14, personId: 14 }
+    { userId: 14, personId: 14, accountId: 114, authVersion: 1 }
   );
   assert.strictEqual(insertedScopeItem.behavior_ref, 'behavior_compile', '采用修订归口部门时必须从锁定正文重新生成核对项');
-  assert.strictEqual(scopeCaseUpdateParams[0], 2, '采用的归口部门必须来自锁后重新投影');
+  assert.strictEqual(scopeCaseUpdateParams[0], '2', '采用的归口部门必须来自锁后重新投影，内部身份参数保持十进制字符串');
   assert.strictEqual(scopeCaseUpdateParams[1], '工程技术部');
   assert.deepStrictEqual(JSON.parse(scopeCaseUpdateParams[3]), [], '调用方伪造的范围阻断项不得写入案例');
   const scopeCaseLockIndex = scopeWriteQueries.findIndex(sql => sql === 'SELECT * FROM process_v7_preview_cases WHERE id=? FOR UPDATE');
@@ -630,7 +657,7 @@ async function main() {
     }
   };
   const invalidOwnerRepository = makeProcessV7PreviewReviewRepository({
-    async getConnection() { return invalidOwnerConnection; }
+    async getConnection() { return qualifiedConnection(invalidOwnerConnection); }
   });
   process.env.PROCESS_V7_PREVIEW_ENABLED = '1';
   process.env.PROCESS_V7_TRIAL_PROCESS_REF = invalidLockedOwnerProjection.processRef;
@@ -642,7 +669,7 @@ async function main() {
       { ...projected, owningDepartment: departments[1], blockingIssues: [] },
       1,
       invalidLockedOwnerProjection.contentHash,
-      { userId: 14, personId: 14 }
+      { userId: 14, personId: 14, accountId: 114, authVersion: 1 }
     ),
     error => error && error.statusCode === 422 && error.code === 'V7_PREVIEW_OWNER_INVALID'
   );
@@ -774,7 +801,7 @@ async function main() {
     }
   };
   const lockedRevisionRepository = makeProcessV7PreviewReviewRepository({
-    async getConnection() { return lockedRevisionConnection; }
+    async getConnection() { return qualifiedConnection(lockedRevisionConnection); }
   });
   process.env.PROCESS_V7_PREVIEW_ENABLED = '1';
   process.env.PROCESS_V7_TRIAL_PROCESS_REF = lockedRevisionProjection.processRef;
@@ -793,7 +820,7 @@ async function main() {
       expectedRevisionNo: 1,
       expectedContentHash: lockedRevisionProjection.contentHash
     },
-    { userId: 10, personId: 10, departmentId: 1 }
+    { userId: 10, personId: 10, accountId: 110, authVersion: 1, departmentId: 1 }
   );
   assert.strictEqual(insertedRevisionParams[5], candidateRevisionProjection.contentHash, '新修订摘要必须从事务内重新投影的正文生成');
   assert.strictEqual(insertedRevisionParams[3], candidateRevisionDocument.schema_version, '接收修订必须保存实际格式版本');
@@ -870,7 +897,7 @@ async function main() {
     }
   };
   const decisionRepository = makeProcessV7PreviewReviewRepository({
-    async getConnection() { return decisionConnection; }
+    async getConnection() { return qualifiedConnection(decisionConnection); }
   });
   await assert.rejects(
     decisionRepository.decideItem(
@@ -880,7 +907,7 @@ async function main() {
       '伪造为归口部门决定。',
       1,
       lockedRevisionProjection.contentHash,
-      { userId: 12, personId: 12, departmentId: 2 }
+      { userId: 12, personId: 12, accountId: 112, authVersion: 1, departmentId: 2 }
     ),
     error => error && error.statusCode === 403 && error.code === 'V7_PREVIEW_SCOPE_DENIED'
   );
@@ -893,7 +920,7 @@ async function main() {
     '工程技术部已经核对。',
     1,
     lockedRevisionProjection.contentHash,
-    { userId: 12, personId: 12, departmentId: 2 }
+    { userId: 12, personId: 12, accountId: 112, authVersion: 1, departmentId: 2 }
   );
   assert.ok(decisionWrite && decisionWrite.sql.includes('counterparty_status'), '锁后推导为外部门时只能更新外部门决定列');
   assert.strictEqual(decidedItem.counterparty_status, 'confirmed');
@@ -928,7 +955,7 @@ async function main() {
     }
   };
   const lockedScopeRepository = makeProcessV7PreviewReviewRepository({
-    async getConnection() { return lockedScopeConnection; }
+    async getConnection() { return qualifiedConnection(lockedScopeConnection); }
   });
   process.env.PROCESS_V7_PREVIEW_ENABLED = '0';
   process.env.PROCESS_V7_TRIAL_PROCESS_REF = projected.processRef;
@@ -936,7 +963,7 @@ async function main() {
     lockedScopeRepository.createCase(
       projected,
       { sourceFileName: '开关拒绝.json' },
-      { userId: 10, personId: 10 }
+      { userId: 10, personId: 10, accountId: 110, authVersion: 1 }
     ),
     error => error && error.statusCode === 503 && error.code === 'V7_PREVIEW_DISABLED'
   );
@@ -952,7 +979,7 @@ async function main() {
         expectedRevisionNo: 1,
         expectedContentHash: projected.contentHash
       },
-      { userId: 10, personId: 10 }
+      { userId: 10, personId: 10, accountId: 110, authVersion: 1 }
     ),
     error => error && error.statusCode === 422 && error.code === 'V7_PROCESS_REF_INVALID'
   );
@@ -967,7 +994,7 @@ async function main() {
         expectedRevisionNo: 1,
         expectedContentHash: projected.contentHash
       },
-      { userId: 10, personId: 10 }
+      { userId: 10, personId: 10, accountId: 110, authVersion: 1 }
     ),
     error => error && error.statusCode === 422 && error.code === 'V7_PROCESS_REF_INVALID'
   );
@@ -981,7 +1008,7 @@ async function main() {
       '试图直接绕过流程标识有效性。',
       1,
       projected.contentHash,
-      { userId: 12, personId: 12, departmentId: 2 }
+      { userId: 12, personId: 12, accountId: 112, authVersion: 1, departmentId: 2 }
     ),
     error => error && error.statusCode === 422 && error.code === 'V7_PROCESS_REF_INVALID'
   );
@@ -994,7 +1021,7 @@ async function main() {
       projected,
       { mode: 'create', document_no: 'V7-TEST-001', document_title: '产品制造大纲编制与审批' },
       { expectedRevisionNo: 1, expectedContentHash: projected.contentHash },
-      { userId: 14, personId: 14 }
+      { userId: 14, personId: 14, accountId: 114, authVersion: 1 }
     ),
     error => error && error.statusCode === 503 && error.code === 'V7_FORMAL_DISABLED'
   );
@@ -1048,7 +1075,7 @@ async function main() {
     }
   };
   const blockingPromotionRepository = makeProcessV7PreviewReviewRepository({
-    async getConnection() { return blockingPromotionConnection; }
+    async getConnection() { return qualifiedConnection(blockingPromotionConnection); }
   });
   process.env.PROCESS_V7_PREVIEW_ENABLED = '1';
   process.env.PROCESS_V7_FORMAL_ENABLED = '1';
@@ -1059,7 +1086,7 @@ async function main() {
       unresolvedProjection,
       { mode: 'create', document_no: 'V7-TEST-001', document_title: '产品制造大纲编制与审批' },
       { expectedRevisionNo: 1, expectedContentHash: unresolvedProjection.contentHash },
-      { userId: 14, personId: 14 }
+      { userId: 14, personId: 14, accountId: 114, authVersion: 1 }
     ),
     error => error && error.statusCode === 409 && error.code === 'V7_PREVIEW_BLOCKING_ISSUES'
   );
@@ -1692,7 +1719,8 @@ async function main() {
     });
     assert.strictEqual(blockingPromotion.response.status, 409);
     assert.strictEqual(blockingPromotion.body.code, 'V7_PREVIEW_BLOCKING_ISSUES');
-    assert.deepStrictEqual(blockingPromotion.body.details, [{ code: 'ACTOR_DEPARTMENT_UNRESOLVED' }]);
+    assert.ok(blockingPromotion.body.details.some(issue => issue.code === 'ACTOR_DEPARTMENT_UNRESOLVED'));
+    assert.ok(blockingPromotion.body.details.some(issue => issue.code === 'CONTENT_INCOMPLETE'));
     assert.strictEqual(reviewCompleteRepository.calls.length, callsBeforeBlockingPromotion, '当前部门重新投影发现阻断项时不得提升');
     reviewCompleteRepository.listDepartments = originalReviewCompleteDepartments;
 

@@ -11,6 +11,19 @@ assert.ok(process.argv.includes('--output') && output.startsWith(path.resolve(__
 assert.ok(!fs.existsSync(output), 'preserve earlier evidence'); fs.mkdirSync(output, { recursive: true });
 const root = '/api/process-v7-preview';
 const binding = c => ({ expected_revision_no: c.current_revision_no, expected_content_hash: c.current_content_hash });
+function completeSyntheticSource() {
+  const d = require('../../structured-output-service/server').createEmptyProcessGovernanceV7Document();
+  Object.assign(d.export_meta, { package_ref: 'package_stage05_synthetic', initiating_department: '合成甲部', compiler: '合成编制人员' });
+  Object.assign(d.process, { process_ref: 'process_stage05_synthetic', process_name: '合成材料核对流程', owning_department: '合成甲部',
+    purpose: '核对合成材料及记录', scope: '仅适用于本机合成功能验证' });
+  d.behaviors = ['prepare', 'check', 'receive'].map((ref, index) => ({ behavior_ref: 'behavior_' + ref, node_type: 'action',
+    behavior_name: ['经办人员填写合成核对记录', '核对人员核对合成内容', '接收人员接收合成结果'][index], behavior_description: '逐项核对合成材料并填写核对记录。',
+    current_actor_role: (index ? '合成乙部' : '合成甲部') + '经办人', actor_assignment_mode: 'fixed_department', actor_department_data_ref: null,
+    actor_position_rule: '', trigger: '收到待核对材料', precondition: '', input_description: '合成材料', timing: null, completion_standard: '已核对并记录合成依据。',
+    output_description: '合成核对记录', countersign_all_required: false, countersign_target_departments: [] }));
+  d.flow_relations = [0, 1].map(i => ({ relation_ref: 'relation_' + i, relation_type: 'sequence', from_behavior_ref: d.behaviors[i].behavior_ref, to_behavior_ref: d.behaviors[i + 1].behavior_ref, condition: '' }));
+  return d;
+}
 async function main() {
   await withStage05Fixture(async ({ fixture, expect, request, pool }) => {
     const browser = await runtime().chromium.launch({ channel: 'msedge', headless: true });
@@ -487,6 +500,6 @@ async function main() {
       await page.screenshot({ path: path.join(output, 'failure.png'), fullPage: true }).catch(() => {});
       fs.writeFileSync(path.join(output, 'failure.json'), JSON.stringify({ message: e.message, stack: e.stack, checks, pageErrors, failures }, null, 2)); throw e;
     } finally { await browser.close(); }
-  }, { evidenceDir: output });
+  }, { evidenceDir: output, document: completeSyntheticSource() });
 }
 main().catch(e => { console.error(e); process.exitCode = 1; });

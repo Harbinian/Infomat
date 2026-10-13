@@ -358,10 +358,22 @@ function validatedPreview(body, departments, options = {}) {
   const document = body && (body.document || body.data || body.content);
   const preview = validateAndProjectProcess(document, departments, options);
   if (preview.errors.length) {
-    throw httpError(422, '流程JSON文件不符合预览核对要求', 'V7_PREVIEW_CONTENT_INVALID', { details: preview.errors });
+    throw httpError(422, '流程JSON文件不符合预览核对要求', 'V7_PREVIEW_CONTENT_INVALID', { details: preview.errors, content_checks: preview.contentChecks });
   }
   return preview;
 }
+
+// Read-only diagnosis before upload. Uses current authorized departments; no case writes.
+router.post('/checks', requireAuth, (req, res) => runAction(res, async () => {
+  const actor = await currentActor(req);
+  if (![...actor.permissions].some(permission => ['governance:assign-work', 'governance:draft-department', 'governance:read-global', 'governance:read-department'].includes(permission)) && !actor.roleCodes.has('admin')) {
+    throw httpError(403, '当前身份无权检查流程材料', 'V7_PREVIEW_SCOPE_DENIED');
+  }
+  const repo = await repository();
+  const preview = validateAndProjectProcess(req.body?.document, await repo.listDepartments());
+  res.json(previewBoundary({ content_checks: preview.contentChecks, warnings: preview.warnings,
+    blocking_issues: preview.blockingIssues, valid: preview.errors.length === 0 }));
+}));
 
 router.get('/department-overview', requireAuth, (req, res) => runAction(res, async () => {
   const actor = await currentActor(req), repo = await repository();
@@ -445,6 +457,7 @@ async function describeCaseForActor(repo, actor, detail) {
     ...detail,
     items,
     warnings: preview.warnings || [],
+    content_checks: preview.contentChecks,
     blocking_issues: preview.blockingIssues || [],
     allowed_actions: caseAllowedActions(actor, { ...detail.case, blocking_issues: preview.blockingIssues || [] }),
     formal_allowed_actions: formalActions,

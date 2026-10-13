@@ -1,161 +1,196 @@
 // Safe shared browser contract. UMD supports Express, Vite and the retained page.
 (function(root,factory){ const value=factory(); root.MdmProtocol=value; if(typeof module==='object'&&module.exports)module.exports=value; })(typeof globalThis!=='undefined'?globalThis:this,function(){
+  // Two-level navigation: each navigable page declares its parent group; groups
+  // and pages are ordered along the actual governance business flow, so the
+  // retained `navigation` sequence already carries the flattened display order.
+  const navigationGroups=Object.freeze([
+    { "code": "myWork", "title": "我的工作" },
+    { "code": "processGovernance", "title": "流程治理" },
+    { "code": "dataGovernance", "title": "数据治理" },
+    { "code": "outcomes", "title": "成果查阅" },
+    { "code": "management", "title": "管理与辅助" }
+  ].map(Object.freeze));
   const pages=Object.freeze([
   {
-    "href": "/app/role-guide",
-    "title": "角色与责任",
-    "serverPath": "/role-guide",
-    "navigation": 9
+    "href": "/app/workbench",
+    "title": "我的工作台",
+    "serverPath": "/workbench",
+    "navigation": 0,
+    "group": "myWork"
   },
   {
     "href": "/app/todos",
     "title": "待办收到",
     "serverPath": "/todos",
-    "navigation": 11
-  },
-  {
-    "href": "/app/data-map",
-    "title": "数据地图台账",
-    "serverPath": "/data-map",
-    "navigation": 10
-  },
-  {
-    "href": "/app/quality",
-    "title": "数据质量",
-    "serverPath": "/quality",
-    "navigation": 12
-  },
-  {
-    "href": "/app/publications",
-    "title": "主数据发布",
-    "serverPath": "/publications",
-    "navigation": 6
-  },
-  {
-    "href": "/app/terms",
-    "title": "术语词典",
-    "serverPath": "/terms",
-    "navigation": 1
-  },
-  {
-    "href": "/app/conflicts",
-    "title": "冲突管理",
-    "serverPath": "/conflicts",
-    "navigation": 2
-  },
-  {
-    "href": "/app/accounts",
-    "title": "账号与授权办理",
-    "serverPath": "/accounts",
-    "navigation": 3
-  },
-  {
-    "href": "/app/access-audit",
-    "title": "访问审计",
-    "serverPath": "/access-audit",
-    "navigation": 4
-  },
-  {
-    "href": "/app/organization",
-    "title": "组织架构",
-    "serverPath": "/organization",
-    "navigation": 5
-  },
-  {
-    "href": "/app/roster",
-    "title": "花名册",
-    "serverPath": "/roster",
-    "navigation": 7
-  },
-  {
-    "href": "/app/roles",
-    "title": "角色详细管理",
-    "serverPath": "/roles",
-    "navigation": 8
-  },
-  {
-    "href": "/app/dashboard",
-    "title": "统计看板",
-    "serverPath": "/dashboard",
-    "navigation": 13
+    "navigation": 1,
+    "group": "myWork"
   },
   {
     "href": "/app/offices",
     "title": "办公室工作台",
     "serverPath": "/offices",
-    "navigation": 14
+    "navigation": 2,
+    "group": "myWork"
   },
   {
-    "href": "/app/data-governance",
-    "title": "正式数据治理工作包",
-    "serverPath": "/data-governance",
-    "navigation": 20
-  },
-  {
-    "href": "/app/process-formal",
-    "title": "流程正式流转",
-    "serverPath": "/process-formal",
-    "navigation": 21
+    "href": "/app/identity",
+    "title": "当前身份",
+    "serverPath": "/identity",
+    "navigation": 3,
+    "group": "myWork"
   },
   {
     "href": "/app/process-preview",
     "title": "流程预览与核对",
     "serverPath": "/process-preview",
-    "navigation": 22
+    "navigation": 4,
+    "group": "processGovernance"
+  },
+  {
+    "href": "/app/process-formal",
+    "title": "流程正式流转",
+    "serverPath": "/process-formal",
+    "navigation": 5,
+    "group": "processGovernance"
+  },
+  {
+    "href": "/app/v7-mappings",
+    "title": "固定来源映射",
+    "serverPath": "/v7-mappings",
+    "navigation": 6,
+    "group": "processGovernance"
+  },
+  {
+    "href": "/app/design-handoffs",
+    "title": "设计交接",
+    "serverPath": "/design-handoffs",
+    "navigation": 7,
+    "group": "processGovernance"
   },
   {
     "href": "/app/analysis",
     "title": "分析检查台",
     "serverPath": "/analysis",
-    "navigation": 24
+    "navigation": 8,
+    "group": "processGovernance"
+  },
+  {
+    "href": "/app/data-governance",
+    "title": "正式数据治理工作包",
+    "serverPath": "/data-governance",
+    "navigation": 9,
+    "group": "dataGovernance"
+  },
+  {
+    "href": "/app/data-map",
+    "title": "数据地图台账",
+    "serverPath": "/data-map",
+    "navigation": 10,
+    "group": "outcomes"
+  },
+  {
+    "href": "/app/publications",
+    "title": "主数据发布",
+    "serverPath": "/publications",
+    "navigation": 11,
+    "group": "outcomes"
+  },
+  {
+    "href": "/app/organization",
+    "title": "组织架构",
+    "serverPath": "/organization",
+    "navigation": 12,
+    "group": "management"
+  },
+  {
+    "href": "/app/roster",
+    "title": "花名册",
+    "serverPath": "/roster",
+    "navigation": 13,
+    "group": "management"
+  },
+  {
+    "href": "/app/roles",
+    "title": "角色详细管理",
+    "serverPath": "/roles",
+    "navigation": 14,
+    "group": "management"
+  },
+  {
+    "href": "/app/role-guide",
+    "title": "角色与责任",
+    "serverPath": "/role-guide",
+    "navigation": 15,
+    "group": "management"
+  },
+  {
+    "href": "/app/terms",
+    "title": "术语词典",
+    "serverPath": "/terms",
+    "navigation": 16,
+    "group": "management"
+  },
+  {
+    "href": "/app/conflicts",
+    "title": "冲突管理",
+    "serverPath": "/conflicts",
+    "navigation": 17,
+    "group": "management"
+  },
+  {
+    "href": "/app/quality",
+    "title": "数据质量",
+    "serverPath": "/quality",
+    "navigation": 18,
+    "group": "management"
+  },
+  {
+    "href": "/app/accounts",
+    "title": "账号与授权办理",
+    "serverPath": "/accounts",
+    "navigation": 19,
+    "group": "management"
+  },
+  {
+    "href": "/app/access-audit",
+    "title": "访问审计",
+    "serverPath": "/access-audit",
+    "navigation": 20,
+    "group": "management"
+  },
+  {
+    "href": "/app/dashboard",
+    "title": "统计看板",
+    "serverPath": "/dashboard",
+    "navigation": 21,
+    "group": "management"
+  },
+  {
+    "href": "/app/template-import",
+    "title": "模板导入",
+    "serverPath": "/template-import",
+    "navigation": 22,
+    "group": "management"
+  },
+  {
+    "href": "/app/objects",
+    "title": "对象与字段",
+    "serverPath": "/objects",
+    "navigation": 23,
+    "group": "management"
+  },
+  {
+    "href": "/app/fact-checks",
+    "title": "事实核对",
+    "serverPath": "/fact-checks",
+    "navigation": 24,
+    "group": "management"
   },
   {
     "href": "/app/",
     "title": "我的工作台",
     "serverPath": "/",
     "navigation": null
-  },
-  {
-    "href": "/app/workbench",
-    "title": "我的工作台",
-    "serverPath": "/workbench",
-    "navigation": 0
-  },
-  {
-    "href": "/app/identity",
-    "title": "当前身份",
-    "serverPath": "/identity",
-    "navigation": 15
-  },
-  {
-    "href": "/app/template-import",
-    "title": "模板导入",
-    "serverPath": "/template-import",
-    "navigation": 16
-  },
-  {
-    "href": "/app/objects",
-    "title": "对象与字段",
-    "serverPath": "/objects",
-    "navigation": 17
-  },
-  {
-    "href": "/app/fact-checks",
-    "title": "事实核对",
-    "serverPath": "/fact-checks",
-    "navigation": 18
-  },
-  {
-    "href": "/app/design-handoffs",
-    "title": "设计交接",
-    "serverPath": "/design-handoffs",
-    "navigation": 19
-  },
-  {
-    "href": "/app/v7-mappings",
-    "title": "固定来源映射",
-    "serverPath": "/v7-mappings",
-    "navigation": 23
   }
 ].map(Object.freeze));
   function aborted() { return new DOMException('Request replaced', 'AbortError'); }
@@ -353,5 +388,5 @@ function targetHref(target) {
   if (/^[A-Za-z][A-Za-z0-9]*$/.test(target)) return '/#/' + target;
   return null;
 }
-  return Object.freeze({pages,createRequestSession,createRequestClient,RequestError,errorReceipt,isApiWrite,targetHref});
+  return Object.freeze({pages,navigationGroups,createRequestSession,createRequestClient,RequestError,errorReceipt,isApiWrite,targetHref});
 });

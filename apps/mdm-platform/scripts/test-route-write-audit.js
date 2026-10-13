@@ -45,5 +45,5 @@ for(const url of ['/quality-cases/:id/comment','/mapping-todos/:id/comment']) {
   assert.ok(find('processGovernance.js','POST',url)[0].permissions.some(p=>p.startsWith('governance:')&&!p.includes('read-')),'read access alone cannot authorize comments');
 }
 assert.ok(find('conflicts.js','POST','/:id/coordination')[0].guards.includes('canManageGeneralConflict'));
-for(const [file,url] of [['processV7PreviewReview.js','/cases/:id/revisions/preview']])assert.equal(find(file,'POST',url)[0].category,'validationOnly');
+for(const [file,url] of [['processPreviewReview.js','/cases/:id/revisions/preview']])assert.equal(find(file,'POST',url)[0].category,'validationOnly');
 console.log(JSON.stringify({result:'ROUTE_WRITE_TRACE_PASS',counts:audit.counts,formalRegistrations:audit.formalRegistrations,staticDeclarations:audit.staticDeclarations}));

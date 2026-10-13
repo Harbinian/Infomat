@@ -1,12 +1,11 @@
 # Infomat 目录职责与修改规则
 
-> 状态：执行规则  
-> 生效日期：2026-06-07  
-> 目的：明确每个目录的责任、入口/真源、可修改规则和禁止事项。
+> 状态：目录维护规则
+> 目的：明确每个目录的责任、维护入口、可修改规则和禁止事项。
 
 ## 1. 根目录
 
-2026-09-11用户决定优先适用：所有`docs/`文件都不是当前真源，不作为治理基础。3001编制、人工下载/上传、3000治理并形成正式版本，再生成程序文件。以下表格保留资产位置和既有实现关系；历史“真源”标签不能覆盖该决定，不能据旧文档补造业务、任命或审批规则。
+业务真源及当前工作主线按根 [AGENTS.md](AGENTS.md)。以下表格定位目录责任和技术维护入口，不根据旧文件确定业务、任命或审批规则。
 
 | 路径 | 责任 | 可修改规则 | 禁止事项 |
 |---|---|---|---|
@@ -20,7 +19,7 @@
 | `MAINLINE_MAP.md` | 主线数据流关系 | 定义资料、PMO、MDM、脚本的链路 | 不写平台实现细节 |
 | `.codex/config.toml` | 仓库内 Codex 展示与推理偏好 | 只保存非敏感的仓库级偏好，并继承根目录执行规则 | 不保存 Secret、主机连接、个人路径、运行状态或业务事实 |
 
-根目录不应继续新增临时 YAML、截图、压缩包、解包目录或一次性调查文本。历史散放的根目录 PMO YAML 已归档到 `pmo/archive/page-snapshots/2026-06-05-playwright-yaml/`。原根目录 `temp_survey.txt` 已登记后迁入 `docs/HardwareResearch/06B厂房接入民机非密园区网需求调查表_抽取文本.txt`，后续同类基础设施调查材料应直接进入对应资料目录。
+根目录不新增临时 YAML、截图、压缩包、解包目录或一次性调查文本。历史页面快照按需从 `pmo/archive/page-snapshots/` 查找；基础设施调查资料进入 `docs/HardwareResearch/`。迁移经过保留在历史记录中，不作为当前目录说明的正文。
 
 目录级 `AGENTS.md` 只放在有独立真源、生成副作用、运行命令、验证口径或禁止事项的关键目录。纯报告、归档、样例和说明性架构目录默认使用 README。以下机器可读注册块是全部局部入口的唯一清单；检查脚本、根入口和其他说明文档不得另建清单。
 
@@ -45,16 +44,16 @@ scripts/AGENTS.md
 
 ## 2. 可运行系统
 
-| 路径 | 责任 | 入口/接口 | 可修改规则 | 禁止事项 |
+| 路径 | 责任 | 维护入口 | 可修改规则 | 禁止事项 |
 |---|---|---|---|---|
 | `apps/` | 可运行应用集合 | 子目录 README | 新应用必须有独立 README、运行命令和数据边界 | 不放业务资料原件 |
 | `apps/mdm-platform/` | MDM 平台源码 | `package.json`、`server/`、`public/`、`scripts/` | 平台功能、平台测试、平台维护脚本在此修改 | 不放 PMO 甘特图、流程制度原文、历史方案 |
-| `apps/structured-output-service/` | 局域网单流程治理编制工具 | `package.json`、`server.js`、`public/`、`scripts/` | 默认监听`0.0.0.0:3001`供公司局域网用户直接访问；本工作区按V8候选技术规则导出单流程未审核JSON，兼容导入v1至v8及已支持历史文件；服务部署和业务验收另行核对；页面内编辑会话区分未应用修改与未下载修改，并在切换、下载和替换前保护用户输入；可只读读取流程映射、花名册和 `docs/work-role-data.json` 做候选提示 | 不保存用户内容和图坐标，不写回 `docs/norms/`、花名册或工作角色副本，不调用3000，不依赖DeepSeek、MDM-AI助手或认证网关，不替代受控发布流程 |
+| `apps/structured-output-service/` | 局域网单流程治理编制工具 | `AGENTS.md`、README、`package.json`、`server.js`、`public/`、`scripts/` | 维护单流程编制、页面输入保护及受支持历史文件兼容；只读目录副本用于录入提示；版本、运行方式和验收门槛由应用入口维护 | 不保存用户内容和图坐标，不写回资料副本，不调用3000或共享数据库，不据目录提示确认组织及责任 |
 | `apps/information-collection-service/` | 内部信息表收集服务 | `package.json`、`server/`、`public/`、`scripts/`、`docs/` | 4000 管理端设计并发布收集任务，4001 填报端保存本人草稿和答卷；只读复用 `person`、`user_accounts`、`departments`，业务数据写入 `collection_*` 表，附件写入仓库外受控目录 | 不修改 MDM 身份、角色或治理业务表；不自动继承 3000 权限；不向浏览器持久化答案或附件 |
 | `apps/slack-bot/` | Slack 问答机器人（Claude Code CLI 无头模式的 Slack 入口） | `AGENTS.md`、`README.md`、`src/`、`compose.yaml`、`Dockerfile`、`sync.sh` | 只读档读 `repo-sync` 同步出的卷镜像（`:ro`），写入档仅对 `BOT_WRITE_USERS` 开放且直写宿主机仓库；凭据只存 `.env`，不进镜像；权限按提问者判定 | 不把 token 或密钥写入会被提交或被构建的文件；不绕过提问者粒度的权限判定；不让只读档拿到写工具或可写挂载；不把机器人输出当业务结论或治理决定 |
 | `apps/mdm-platform/server/` | MDM 后端实现 | Express 路由、当前MySQL运行schema与历史/测试SQLite兼容实现 | 修改时同步平台测试 | 不直接依赖 PMO 页面内嵌数据 |
 | `apps/mdm-platform/public/` | MDM 旧前端及共享本地资产 | 既有页面和本地图形资源 | 保留未迁移模块及资源路径兼容 | 不放 PMO 驾驶舱截图 |
-| `apps/mdm-platform/frontend/` | MDM 新前端 | React + Vite 源码、独立锁文件及构建配置 | P01提供同源访问骨架；后续按模块迁移，dist为被忽略的公开构建产物 | 不共用 PMO 业务代码、配置或5173服务，不公开业务材料及服务端源码 |
+| `apps/mdm-platform/frontend/` | MDM React 前端 | React + Vite 源码、独立锁文件及构建配置 | 维护页面及同源访问；旧路径兼容范围按应用入口核对；dist为被忽略的公开构建产物 | 不共用 PMO 业务代码、配置或5173服务，不公开业务材料及服务端源码 |
 | `apps/mdm-platform/scripts/` | 平台内脚本和测试 | 平台数据库、平台路由 | 脚本应说明是否写数据库，测试应使用隔离库 | 不放仓库级 parser |
 | `apps/mdm-platform/data/` | 历史和测试用本地数据目录 | 历史/测试SQLite文件 | 只用于受控兼容验证或隔离测试，不作为正式运行入口 | 不作为仓库真源，不提交数据库，不替代当前MySQL运行配置 |
 
@@ -100,7 +99,7 @@ scripts/AGENTS.md
 
 ## 6. 派生文件、本地状态与历史资料
 
-受控派生消费文件按 `docs/adr/0004-controlled-derived-consumer-files.md` 的 `Proposed` 清单维护：文件必须有固定真源、生成命令、直接消费方和一致性检查，且不得手工修改。该状态不授权处理历史文件。其他可再生成内容默认属于本地生成物。
+已有受控派生消费文件按 [仓库职责边界](REPOSITORY_BOUNDARY.md) 维护，不手工改写生成结果。[ADR-0004](docs/adr/0004-controlled-derived-consumer-files.md) 仍为 `Proposed`，不单独授权新增纳管、移动或删除历史文件。其他可再生成内容默认属于本地生成物。
 
 | 路径 | 当前状态 | 规则 |
 |---|---|---|

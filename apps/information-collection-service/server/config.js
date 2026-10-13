@@ -26,7 +26,7 @@ function configFromEnv(env = process.env) {
       host: env.MYSQL_HOST || '127.0.0.1',
       port: numberFromEnv(env.MYSQL_PORT, 3306),
       user: env.MYSQL_USER || 'root',
-      password: env.MYSQL_PASSWORD || '',
+      password: env.COLLECTION_MYSQL_PASSWORD || env.MYSQL_PASSWORD || '',
       database: env.MYSQL_DATABASE || 'infomat_mdm',
       waitForConnections: true,
       connectionLimit: numberFromEnv(env.MYSQL_CONNECTION_LIMIT, 10),

@@ -3,6 +3,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const { configFromEnv, publicConfig } = require('../server/config');
 const { CREATE_STATEMENTS, REQUIRED_IDENTITY_COLUMNS } = require('../server/schema');
 const { FIELD_TYPES, SCHEMA_VERSION, digestSchema, validateAnswers, validateFormSchema } = require('../server/validation');
 const { aggregateStatistics, canonicalizeEntityAnswers, makeService, taskStatus } = require('../server/service');
@@ -99,6 +100,18 @@ function testStatisticsAndStatus() {
   assert.equal(taskStatus({ status: 'scheduled', open_at: new Date(Date.now() - 1000), due_at: null }), 'open');
   assert.equal(taskStatus({ status: 'open', open_at: new Date(Date.now() - 1000), due_at: new Date(Date.now() - 1) }), 'closed');
   assert.equal(taskStatus({ status: 'cancelled', open_at: new Date(), due_at: null }), 'cancelled');
+}
+
+function testCredentialConfiguration() {
+  const dedicated = 'collection-test-credential';
+  const shared = 'other-account-test-credential';
+  const config = configFromEnv({ COLLECTION_MYSQL_PASSWORD: dedicated, MYSQL_PASSWORD: shared });
+  assert.equal(config.mysql.password, dedicated, 'Collection connection must use its own account credential');
+  assert.equal(configFromEnv({ MYSQL_PASSWORD: shared }).mysql.password, shared, 'Existing same-account configuration remains supported');
+  assert.equal(configFromEnv({}).mysql.password, '');
+  const diagnostics = JSON.stringify(publicConfig(config));
+  assert.ok(!diagnostics.includes(dedicated) && !diagnostics.includes(shared), 'Public configuration must not expose either credential');
+  assert.equal(publicConfig(config).mysql.password, '***');
 }
 
 function testSchemaBoundary() {
@@ -281,6 +294,7 @@ async function main() {
   testValidation();
   testDetailGridPaste();
   testStatisticsAndStatus();
+  testCredentialConfiguration();
   testSchemaBoundary();
   testStaticContracts();
   await testDeleteDraftBoundary();

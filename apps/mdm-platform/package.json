@@ -4,6 +4,11 @@
   "description": "MDM Platform",
   "main": "server/index.js",
   "scripts": {
+    "test:architecture-seams": "node -r ./scripts/testHelpers/blockRealMysql.js --test scripts/test-architecture-seams.js",
+    "test:native-office-versions": "node scripts/test-native-office-versions.js",
+    "check:native-process-consistency": "node scripts/check-native-process-consistency.js",
+    "test:v8-transition": "node scripts/check-native-process-consistency.js && node -r ./scripts/testHelpers/blockRealMysql.js --test scripts/test-v8-transition.js",
+    "test:v8-integration": "node scripts/test-p25-candidate-integration.js --native-v8",
     "manage:system-admin": "node scripts/manage-system-admin.js",
     "bootstrap:system-admin": "node scripts/bootstrap-system-admin.js",
     "test:system-admin": "node scripts/test-system-admin.js",
@@ -11,6 +16,7 @@
     "test:process-v7-authoring": "node scripts/test-process-v7-authoring.js",
     "test:process-v7-authoring-issues": "node scripts/test-process-v7-authoring-issues.js",
     "test:upgrade-integration": "node scripts/test-analysis-runs.js --p24 --p13 --p14 --p16 --p17 --p15",
+    "test:p25-candidate-integration": "node scripts/test-p25-candidate-integration.js",
     "test:issue-pool-list-scope": "node scripts/test-issue-pool-list-scope.js",
     "import:historical-review": "node scripts/import-historical-review.js",
     "test:historical-review": "node scripts/test-historical-review.js",
@@ -18,6 +24,7 @@
     "test:publications-browser": "node scripts/test-publications-browser.js",
     "test:data-map-create-browser": "node scripts/test-data-map-create-browser.js",
     "test:field-import-browser": "node scripts/test-field-import-browser.js",
+    "test:legacy-import-concurrency": "node scripts/test-legacy-import-concurrency.js",
     "test:field-identity-browser": "node scripts/test-field-identity-browser.js",
     "test:field-export-browser": "node scripts/test-field-export-browser.js",
     "test:native-diagrams-browser": "node scripts/test-native-diagrams-browser.js",
@@ -41,9 +48,12 @@
     "test:analysis-workbench": "node scripts/test-analysis-runs.js --p14 --p15",
     "test:handoff-analysis-rules": "node scripts/test-handoff-analysis-rules.js",
     "test:handoff-analysis": "node scripts/test-design-handoffs.js --p12",
+    "test:fixed-handoff-set": "node scripts/test-fixed-handoff-set.js",
     "test:v7-analysis-rules": "node -r ./scripts/testHelpers/blockRealMysql.js --test scripts/test-v7-analysis-rules.js",
     "test:v7-analysis-worker": "node scripts/test-v7-analysis-worker.js",
+    "test:analysis-format-admission": "node scripts/test-analysis-format-admission.js",
     "test:analysis-worker": "node scripts/test-analysis-worker.js",
+    "test:analysis-dependency-readiness": "node scripts/test-analysis-dependency-readiness.js",
     "migrate:analysis-queue": "node scripts/manage-analysis-queue.js",
     "analysis:worker": "node scripts/analysis-worker.js",
     "test:data-map-management": "node scripts/test-data-map-management.js",
@@ -56,6 +66,7 @@
     "migrate:data-map-definitions:dry-run": "node scripts/manage-data-map-definitions.js --dry-run",
     "migrate:data-map-definitions:apply": "node scripts/manage-data-map-definitions.js --apply",
     "test:data-map-definitions-mysql": "node scripts/test-data-map-definitions-mysql.js",
+    "test:object-identity-preview": "node scripts/test-object-identity-preview.js",
     "migrate:data-map-legacy-compatibility": "node scripts/manage-data-map-legacy-compatibility.js",
     "test:data-map-legacy-compatibility": "node scripts/test-data-map-legacy-compatibility.js",
     "build:frontend": "npm --prefix frontend run build",
@@ -250,7 +261,7 @@
     "saxes": "5.0.1"
   },
   "devDependencies": {
-    "nodemon": "^3.0.2",
-    "acorn": "8.19.0"
+    "acorn": "8.19.0",
+    "nodemon": "^3.0.2"
   }
 }

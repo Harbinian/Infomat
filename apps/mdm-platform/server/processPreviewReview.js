@@ -1,8 +1,10 @@
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const { identityInteger, sameIdentityInteger } = require('./sessionSubject');
 const Ajv2020 = require('ajv/dist/2020');
 const { validateProcessGovernanceV7, validateProcessGovernanceV8 } = require('../../../scripts/process-governance/v7-validator');
+const { collectContentChecks, contentBlockingIssues } = require('./processContentChecks');
 
 const V7 = 'process-governance-v7';
 const CONTRACTS_DIR = path.resolve(__dirname, '../../../docs/contracts');
@@ -128,26 +130,31 @@ function caseStatusFromItems(items, hasOwner = true, blockingIssues = [], scopeD
 
 function validateAndProjectProcess(document, departments, options = {}) {
   if (!document || typeof document !== 'object' || Array.isArray(document)) {
-    return { errors: [{ field: 'document', message: 'V7文件内容必须是JSON对象' }], warnings: [], blockingIssues: [], items: [] };
+    const errors = [{ field: 'document', message: '流程JSON文件内容必须是JSON对象' }];
+    return { errors, contentChecks: collectContentChecks(document, errors), warnings: [],
+      blockingIssues: [{ code: 'CONTENT_TECHNICAL_INVALID', message: '当前正文有技术错误，不能继续正式流转。' }], items: [] };
   }
   const validation = document.schema_version === 'process-governance-v8'
     ? validateProcessGovernanceV8(document, { schemaValidator: validateV8 })
     : validateProcessGovernanceV7(document, { schemaValidator: validateV7 });
   if (!validation.valid) {
+    const errors = validation.errors.map(error => ({ ...error,
+      field: String(error.path || '/').replace(/^\//, '').replace(/\//g, '.') || 'document' }));
     return {
-      errors: validation.errors.map(error => ({
-        ...error,
-        field: String(error.path || '/').replace(/^\//, '').replace(/\//g, '.') || 'document'
-      })),
+      errors,
+      contentChecks: collectContentChecks(document, errors),
       warnings: [],
-      blockingIssues: [],
+      blockingIssues: [{ code: 'CONTENT_TECHNICAL_INVALID', message: '当前正文有技术错误，不能继续正式流转。' }],
       items: []
     };
   }
 
   const process = document.process || {};
   const warnings = [];
-  const blockingIssues = [];
+  const contentChecks = collectContentChecks(document, [], undefined, {
+    departments: list(departments).map(item => text(item.name)), owningDepartmentName: text(options.owningDepartmentName)
+  });
+  const blockingIssues = contentBlockingIssues(contentChecks);
   const declaredOwningName = text(process.owning_department);
   const assignedOwningName = text(options.owningDepartmentName);
   const owningName = assignedOwningName || declaredOwningName;
@@ -155,8 +162,11 @@ function validateAndProjectProcess(document, departments, options = {}) {
   if (!owningName) {
     warnings.push({ code: 'OWNING_DEPARTMENT_PENDING', message: '归口部门尚未明确，需要由MDM工作组组长分派后再生成跨部门核对项。' });
   } else if (!owningDepartment) {
+    const errors = [{ field: 'process.owning_department', message: '归口部门不在3000当前有效部门中' }];
+    blockingIssues.push({ code: 'CONTENT_TECHNICAL_INVALID', message: '当前正文的归口部门无效，不能继续正式流转。' });
     return {
-      errors: [{ field: 'process.owning_department', message: '归口部门不在3000当前有效部门中' }],
+      errors,
+      contentChecks: collectContentChecks(document, errors),
       warnings,
       blockingIssues,
       items: []
@@ -177,7 +187,6 @@ function validateAndProjectProcess(document, departments, options = {}) {
   for (const behavior of list(document.behaviors)) {
     if (text(behavior.actor_assignment_mode) !== 'fixed_department') continue;
     const executionDepartment = actorDepartment(behavior.current_actor_role, departments);
-    if (!text(behavior.current_actor_role) || text(behavior.current_actor_role) === '全公司') continue;
     if (!executionDepartment) {
       const issue = {
         code: 'ACTOR_DEPARTMENT_UNRESOLVED',
@@ -188,7 +197,7 @@ function validateAndProjectProcess(document, departments, options = {}) {
       blockingIssues.push(issue);
       continue;
     }
-    if (!owningDepartment || Number(executionDepartment.id) === Number(owningDepartment.id)) continue;
+    if (!owningDepartment || sameIdentityInteger(executionDepartment.id, owningDepartment.id)) continue;
 
     const snapshot = {
       digest_version: REVIEW_ITEM_DIGEST_VERSION,
@@ -207,9 +216,9 @@ function validateAndProjectProcess(document, departments, options = {}) {
       stable_item_key: contentHash([text(behavior.behavior_ref), text(executionDepartment.code)]),
       behavior_ref: text(behavior.behavior_ref),
       behavior_name: text(behavior.behavior_name),
-      origin_department_id: Number(owningDepartment.id),
+      origin_department_id: identityInteger(owningDepartment.id),
       origin_department_name: text(owningDepartment.name),
-      target_department_id: Number(executionDepartment.id),
+      target_department_id: identityInteger(executionDepartment.id),
       target_department_name: text(executionDepartment.name),
       actor_role: text(behavior.current_actor_role),
       actor_position: actorPosition(behavior.current_actor_role, executionDepartment.name),
@@ -224,13 +233,14 @@ function validateAndProjectProcess(document, departments, options = {}) {
   if (owningDepartment && !items.length && !blockingIssues.some(issue => issue.code === 'ACTOR_DEPARTMENT_UNRESOLVED')) {
     const issue = {
       code: 'ZERO_CROSS_DEPARTMENT_SCOPE_PENDING',
-      message: '当前V7没有识别到固定跨部门行为；这不等于业务上确认不涉及跨部门。'
+      message: '当前流程没有识别到固定跨部门行为；这不等于业务上确认不涉及跨部门。'
     };
     warnings.push(issue);
     blockingIssues.push(issue);
   }
   return {
     errors: [],
+    contentChecks,
     warnings,
     blockingIssues,
     items,

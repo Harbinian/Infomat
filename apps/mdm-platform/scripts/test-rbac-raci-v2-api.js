@@ -98,6 +98,18 @@ async function main() {
     roleAssignments: []
   };
   accountsRouter.setRepositoryFactory(async () => ({
+    // This isolated fake has no database. Explicitly consume the HTTP binding;
+    // real transaction-time qualification remains covered by the MySQL tests.
+    forPersonMaintenance(context) {
+      assert.strictEqual(context.kind, 'person');
+      assert.strictEqual(typeof context.personId, 'number');
+      assert.strictEqual(typeof context.accountId, 'number');
+      assert.strictEqual(typeof context.authVersion, 'number');
+      assert.strictEqual(context.personId, 42);
+      assert.strictEqual(context.accountId, 142);
+      assert.strictEqual(context.authVersion, 7);
+      return this;
+    },
     async listAccounts() {
       calls.push(['listAccounts']);
       return [account];

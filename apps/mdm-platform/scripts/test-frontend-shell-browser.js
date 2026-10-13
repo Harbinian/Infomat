@@ -88,6 +88,42 @@ async function main() {
       checks.push('real login/me/MySQL session cookie and CSRF rejection');
       await noOverflow('desktop identity without horizontal overflow');
       await page.screenshot({ path: path.join(output, 'identity-desktop.png') });
+
+      // Sidebar two-level hierarchy. Desktop only (Edge 100%); no narrow-screen adaptation.
+      const sidebar = page.locator('.sidebar');
+      assert.equal(await sidebar.locator('.nav-group').count(), 5, 'five business-flow parents');
+      assert.deepEqual(await sidebar.locator('.nav-group-toggle > span:first-child').allInnerTexts(), ['我的工作', '流程治理', '数据治理', '成果查阅', '管理与辅助']);
+      assert.equal(await sidebar.locator('.nav-group-toggle[aria-expanded="true"]').count(), 5, 'parents expanded by default');
+      let currentEntry = sidebar.locator('a[aria-current="page"]');
+      assert.equal(await currentEntry.count(), 1, 'exactly one selected module');
+      assert.equal(await currentEntry.innerText(), '当前身份');
+      // Collapsing a parent hides its children; expanding restores them.
+      const managementGroup = sidebar.locator('[data-nav-group="management"]');
+      await managementGroup.locator('.nav-group-toggle').click();
+      assert.equal(await managementGroup.locator('.nav-group-toggle').getAttribute('aria-expanded'), 'false');
+      assert.equal(await managementGroup.locator('.nav-children').isVisible(), false);
+      await managementGroup.locator('.nav-group-toggle').click();
+      assert.equal(await managementGroup.getByRole('link', { name: '角色详细管理', exact: true }).isVisible(), true);
+      // Entering another parent updates the selected module.
+      await sidebar.getByRole('link', { name: '我的工作台', exact: true }).click(); await waitHeading('我的工作台');
+      currentEntry = sidebar.locator('a[aria-current="page"]');
+      assert.equal(await currentEntry.count(), 1);
+      assert.equal(await currentEntry.innerText(), '我的工作台');
+      // Collapsing the current parent and navigating back reopens it automatically.
+      const myWorkGroup = sidebar.locator('[data-nav-group="myWork"]');
+      await myWorkGroup.locator('.nav-group-toggle').click();
+      assert.equal(await myWorkGroup.locator('.nav-children').isVisible(), false);
+      await page.goBack(); await waitHeading('当前身份');
+      assert.equal(await sidebar.locator('[data-nav-group="myWork"] .nav-group-toggle').getAttribute('aria-expanded'), 'true', 'current parent reopens after navigation');
+      assert.equal(await sidebar.locator('a[aria-current="page"]').innerText(), '当前身份');
+      await page.screenshot({ path: path.join(output, 'sidebar-hierarchy-desktop.png') });
+      // Same desktop-only checks hold at another desktop width (still no narrow-screen support).
+      await page.setViewportSize({ width: 1440, height: 900 });
+      assert.equal(await sidebar.locator('.nav-group').count(), 5);
+      await noOverflow('1440x900 sidebar without horizontal overflow');
+      await page.setViewportSize({ width: 1699, height: 828 });
+      checks.push('sidebar two-level hierarchy, collapse/expand and navigation accuracy');
+
       await page.reload(); await waitHeading('当前身份');
       await page.getByRole('link', { name: '我的工作台', exact: true }).click();
       await waitHeading('我的工作台');
@@ -178,6 +214,6 @@ async function main() {
       fs.writeFileSync(path.join(output, 'failure.json'), JSON.stringify({ message: error.message, checks, pageErrors, consoleErrors, errorResponses }, null, 2));
       throw error;
     } finally { await browser.close(); }
-  }, { evidenceDir: output, previewOnly: true });
+  }, { evidenceDir: output, previewOnly: true, randomDatabase: true });
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });

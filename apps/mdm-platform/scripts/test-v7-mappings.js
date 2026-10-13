@@ -17,6 +17,17 @@ function addObjects(d){
     fields:[{field_ref:'field_'+k,field_name:'编号',field_type:'文本',definition:'对应对象 '+k+' 的编号'}],behavior_links:[],source_relations:[],
     lifecycle:{applicability:'pending_confirmation',entry_state:{business_validity:'pending_confirmation',custody:'pending_confirmation',identifiability_applicability:'pending_confirmation',identifiability:'pending_confirmation'},routes:[],analysis:{analyzer_version:'',source_fingerprint:'',status:'not_analyzed'},decision_reason:'',decision_notes:''}}));return d;
 }
+function nativeV8(v7){
+  // Use the native factory, then author decision/use evidence in the V8 contract.
+  const d=require('../../structured-output-service/server').createEmptyProcessGovernanceDocument();
+  d.process={...v7.process,process_ref:'p07_native_v8',process_name:'P07原生V8判断依据流程'};
+  d.terms=structuredClone(v7.terms);d.behaviors=structuredClone(v7.behaviors);d.flow_relations=structuredClone(v7.flow_relations);
+  addObjects(d);
+  d.behaviors.push({...d.behaviors[0],behavior_ref:'decision_basis',node_type:'decision',behavior_name:'材料是否合格',current_actor_role:'全公司',actor_assignment_mode:'company_wide'});
+  d.flow_relations.push({relation_ref:'relation_decision',relation_type:'sequence',from_behavior_ref:'behavior_receive',to_behavior_ref:'decision_basis',condition:''});
+  d.data_objects[0].behavior_links=[{link_ref:'link_decision_basis',behavior_ref:'decision_basis',operation:'use',updated_field_refs:[]}];
+  return d;
+}
 async function main(){await withStage05Fixture(async({pool,fixture,expect,request,backup,restore})=>{
   const get=(p='',who='lead',status=200)=>expect(who,root+p,'GET',undefined,status);
   const post=(p,b,who='lead',status=200)=>expect(who,root+p,'POST',b,status);
@@ -52,6 +63,7 @@ async function main(){await withStage05Fixture(async({pool,fixture,expect,reques
     await check('invalid JSON and invalid V7 persist explicit failure; raw-byte digest is distinct from parsed content',async()=>{
       for(const [value,state] of [[Buffer.from('{broken'),'parse_failed'],[{},'validation_failed']]){const r=await upload(value);assert.equal(r.validation_status,state);const d=await get('/sources/'+r.source_id);assert.equal(d.nodes.length,0);assert.equal(d.can_confirm,false);await map(r.source_id,{},'lead',409);}
       source=await upload(document);assert.equal(source.validation_status,'valid');const detail=await get('/sources/'+source.source_id);assert.equal(detail.raw_sha256,crypto.createHash('sha256').update(JSON.stringify(document)).digest('hex'));assert.equal(detail.content_digest,contentHash(document));assert.notEqual(detail.raw_sha256,detail.content_digest);assert.equal(detail.mappings.length,0);assert.equal(detail.nodes.length,2);
+      assert.equal(detail.schema_version,'process-governance-v7');assert.equal(detail.digest_algorithm,'sha256-v7-stable-json-v1');
       assert.equal((await upload(document)).source_id,source.source_id);
       const whitespace=await upload(Buffer.from(JSON.stringify(document,null,2)));assert.notEqual(whitespace.source_id,source.source_id);assert.equal((await get('/sources/'+whitespace.source_id)).content_digest,detail.content_digest);
     });
@@ -112,7 +124,7 @@ async function main(){await withStage05Fixture(async({pool,fixture,expect,reques
     });
     const protectedTables=['process_v7_preview_cases','process_v7_preview_revisions','process_v7_preview_review_items','process_v7_preview_events','process_v7_promotions','process_design_documents','process_design_drafts','process_design_versions','process_design_review_tasks'];
     const snapshots=async()=>Object.fromEntries(await Promise.all(protectedTables.map(async t=>[t,crypto.createHash('sha256').update(JSON.stringify((await pool.execute('SELECT * FROM '+t+' ORDER BY id'))[0])).digest('hex')])));
-    const protectedBefore=await snapshots();
+    let protectedBefore=await snapshots();
     await check('source digest mutation blocks writes and unresolved actor department cannot be manually confirmed',async()=>{
       const [[original]]=await pool.execute('SELECT content_json FROM process_v7_preview_revisions WHERE id=?',[revisionId]);await pool.execute('UPDATE process_v7_preview_revisions SET content_json=? WHERE id=?',[JSON.stringify({...document,terms:[]}),revisionId]);assert((await get('/sources/'+preview.source_id)).stale);await map(preview.source_id,{...base,expected_revision:1},'lead',409);await pool.execute('UPDATE process_v7_preview_revisions SET content_json=? WHERE id=?',[original.content_json,revisionId]);
       const unresolved=structuredClone(document);unresolved.behaviors[0].current_actor_role='不存在的合成部门人员';const r=await upload(unresolved),d=await get('/sources/'+r.source_id);assert(d.current_validation.blocking_issues.some(i=>i.code==='ACTOR_DEPARTMENT_UNRESOLVED'));await map(r.source_id,{...base,source_digest:contentHash(unresolved),status:'confirmed'},'lead',409);await map(r.source_id,{...base,source_digest:contentHash(unresolved)});
@@ -124,20 +136,96 @@ async function main(){await withStage05Fixture(async({pool,fixture,expect,reques
       await pool.execute("UPDATE data_map_v7_mapping_versions SET snapshot_json=JSON_SET(snapshot_json,'$.basis','SYNTHETIC_CORRUPTION') WHERE mapping_id=?",[fieldMap.mapping_id]);await get('/sources/'+source.source_id,'lead',409);restore(dump);assert.deepEqual(await get('/sources/'+source.source_id),before);assert.deepEqual(await snapshots(),protectedBefore);
       fs.writeFileSync(path.join(output,'backup-restore.json'),JSON.stringify({sha256:crypto.createHash('sha256').update(dump).digest('hex'),restored:true,backup_persisted:false}));
     });
+    const v8=nativeV8(document);let v8Source,v8Preview,v8Published;
+    await check('native V8 multipart and preview keep format, body, refs, digest, object/field versions and history',async()=>{
+      const c=await pw.request.newContext({baseURL:fixture.baseURL});try{
+        await c.post('/api/org/login',{data:{loginName:'SYNTHETIC_lead',password:fixture.loginPassword}});
+        const token=(await(await c.get('/api/csrf-token')).json()).csrfToken;
+        const bytes=Buffer.from(JSON.stringify(v8,null,2)),r=await c.post(root+'/uploads',{headers:{'X-CSRF-Token':token},multipart:{request_id:uuid(),file:{name:'native-v8.json',mimeType:'application/json',buffer:bytes}}});
+        assert.equal(r.status(),200);v8Source=await r.json();assert.equal(v8Source.validation_status,'valid');
+        const d=await get('/sources/'+v8Source.source_id);assert.equal(d.schema_version,'process-governance-v8');assert.equal(d.digest_algorithm,'sha256-v7-stable-json-v1');assert.equal(d.raw_sha256,crypto.createHash('sha256').update(bytes).digest('hex'));
+      }finally{await c.dispose();}
+      const p=await expect('contact','/api/process-v7-preview/cases','POST',{document:v8,source_file_name:'native-v8-preview.json'},201);
+      v8Preview=await post('/sources',{request_id:uuid(),source_kind:'preview_revision',case_id:String(p.case.id),revision_id:String(p.revision.id)});
+      const proof=[];
+      for(const s of [v8Source,v8Preview]){
+        const d=await get('/sources/'+s.source_id);assert.equal(d.schema_version,v8.schema_version);assert.equal(d.content_digest,contentHash(v8));assert(d.can_confirm);
+        const [[stored]]=await pool.execute('SELECT content_json FROM data_map_v7_sources WHERE source_id=?',[s.source_id]);assert.deepEqual(typeof stored.content_json==='string'?JSON.parse(stored.content_json):stored.content_json,v8);
+        const mb={...base,source_digest:contentHash(v8),status:'confirmed'};const om=await map(s.source_id,mb),anf=await map(s.source_id,{...mb,local_field_ref:'field_a',field_version_id:field.version_id});
+        const e=await get('/sources/'+s.source_id+'/evidence?object=data_a');assert.equal(e.schema_version,v8.schema_version);assert.deepEqual(e.evidence,v8.data_objects[0]);
+        const fe=await get('/sources/'+s.source_id+'/evidence?object=data_a&field=field_a');assert.deepEqual(fe.evidence,v8.data_objects[0].fields[0]);
+        const h=await get('/sources/'+s.source_id+'/mappings/'+anf.mapping_id+'/history');assert.equal(h.items[0].parent_mapping_version_id,om.mapping_version_id);assert.equal(h.items[0].object_version_id,obj.version_id);assert.equal(h.items[0].field_version_id,field.version_id);assert.equal(h.items[0].schema_version,v8.schema_version);assert.equal(h.items[0].source_digest,d.content_digest);
+        proof.push({source_id:s.source_id,source_ref:d.source_ref,schema_version:d.schema_version,content_digest:d.content_digest,digest_algorithm:d.digest_algorithm,mapping:anf,evidence:fe});
+      }
+      // Prepare native published V8 through existing formal APIs to prove native P07 published-reference support.
+      const bound={expected_revision_no:p.case.current_revision_no,expected_content_hash:p.case.current_content_hash};
+      for(const who of ['reviewA','reviewB'])for(const item of p.items)await expect(who,'/api/process-v7-preview/items/'+item.id+'/decision','POST',{...bound,decision:'confirmed',basis:'P07合成V8核对'});
+      const promoted=await expect('lead','/api/process-v7-preview/cases/'+p.case.id+'/promote','POST',{...bound,target:{mode:'create',document_no:'P07-V8-SYNTHETIC',document_title:'P07原生V8合成流程'}},201);
+      const formal={expected_revision_no:promoted.draft.revision_no,expected_content_hash:promoted.draft.content_hash};const submitted=await expect('contact','/api/process-design/drafts/'+promoted.draft.id+'/submit','POST',formal);
+      await expect('reviewA','/api/process-design/review-tasks/'+submitted.reviewTask.id+'/decision','POST',{...formal,decision:'approve',note:'P07合成V8审核'});
+      const published=await expect('lead','/api/process-design/drafts/'+promoted.draft.id+'/publish','POST',formal);v8Published=String(published.process_version_id);
+      const publishedSource=await post('/sources',{request_id:uuid(),source_kind:'published_version',process_version_id:v8Published});assert.equal((await get('/sources/'+publishedSource.source_id)).schema_version,'process-governance-v8');
+      fs.writeFileSync(path.join(output,'native-v8-proof.json'),JSON.stringify({proof,published_v8_id:v8Published,published_v8_p07_supported:true,document:v8},null,2));
+    });
+    await check('invalid native V8 stays isolated; old V8 history stays readable and preview format drift blocks writes',async()=>{
+      const invalid=structuredClone(v8);invalid.data_objects[0].behavior_links[0].operation='create';
+      const failed=await upload(invalid);assert.equal(failed.validation_status,'validation_failed');const f=await get('/sources/'+failed.source_id);assert.equal(f.nodes.length,0);assert.equal(f.can_confirm,false);await map(failed.source_id,{...base,source_digest:contentHash(invalid)},'lead',409);
+      const d=await get('/sources/'+v8Preview.source_id),old=structuredClone(d);
+      const [[original]]=await pool.execute('SELECT content_json,content_hash FROM process_v7_preview_revisions WHERE id=?',[d.source_ref.revision_id]);
+      const changed=structuredClone(document);changed.process.process_ref=v8.process.process_ref;
+      await pool.execute('UPDATE process_v7_preview_revisions SET content_json=?,content_hash=? WHERE id=?',[JSON.stringify(changed),contentHash(changed),d.source_ref.revision_id]);
+      try{const stale=await get('/sources/'+v8Preview.source_id);assert(stale.stale,'preview body format drift must invalidate the fixed binding');assert.equal(stale.schema_version,'process-governance-v8');assert(stale.mappings.every(m=>m.needs_recheck));await map(v8Preview.source_id,{...base,source_digest:contentHash(v8),expected_revision:1},'lead',409);}
+      finally{await pool.execute('UPDATE process_v7_preview_revisions SET content_json=?,content_hash=? WHERE id=?',[typeof original.content_json==='string'?original.content_json:JSON.stringify(original.content_json),original.content_hash,d.source_ref.revision_id]);}
+      assert.deepEqual(await get('/sources/'+v8Preview.source_id),old);
+      // Legacy mapping snapshots have no schema_version; reads project from the source,
+      // and never rewrite the stored snapshot or its digest to add a format field.
+      const [[snapshot]]=await pool.execute('SELECT snapshot_json,snapshot_digest FROM data_map_v7_mapping_versions WHERE mapping_version_id=?',[d.mappings[0].mapping_version_id]);
+      assert(!Object.hasOwn(typeof snapshot.snapshot_json==='string'?JSON.parse(snapshot.snapshot_json):snapshot.snapshot_json,'schema_version'));
+      await get('/sources/'+v8Preview.source_id+'/mappings/'+d.mappings[0].mapping_id+'/history');assert.deepEqual((await pool.execute('SELECT snapshot_json,snapshot_digest FROM data_map_v7_mapping_versions WHERE mapping_version_id=?',[d.mappings[0].mapping_version_id]))[0][0],snapshot);
+    });
+    await check('missing markers/partial columns are 503 without DDL; request receipt failure rolls the whole mapping back',async()=>{
+      const marker=require('../server/v7MappingSchema').MIGRATION_KEY;
+      await pool.execute('DELETE FROM schema_migrations WHERE migration_key=?',[marker]);
+      try{await get('/sources','lead',503);await map(v8Source.source_id,{...base,source_digest:contentHash(v8),expected_revision:1},'lead',503);}finally{await pool.execute('INSERT INTO schema_migrations(migration_key) VALUES (?)',[marker]);}
+      for(const [table,column] of [['data_map_v7_sources','validation_json'],['data_map_v7_mapping_versions','snapshot_digest']]){
+        await pool.execute('ALTER TABLE '+table+' RENAME COLUMN '+column+' TO synthetic_missing_column');
+        try{await get('/sources/'+v8Source.source_id,'lead',503);await map(v8Source.source_id,{...base,source_digest:contentHash(v8),expected_revision:1},'lead',503);const [[r]]=await pool.execute('SELECT COUNT(*) n FROM information_schema.columns WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND COLUMN_NAME=?',[table,column]);assert.equal(Number(r.n),0);}
+        finally{await pool.execute('ALTER TABLE '+table+' RENAME COLUMN synthetic_missing_column TO '+column);}
+      }
+      const before=await get('/sources/'+v8Source.source_id),[[count]]=await pool.execute('SELECT COUNT(*) n FROM data_map_definition_requests');
+      await pool.query("CREATE TRIGGER p07_receipt_failure BEFORE UPDATE ON data_map_definition_requests FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='SYNTHETIC_RECEIPT_FAILURE'");
+      try{await map(v8Source.source_id,{...base,source_digest:contentHash(v8),expected_revision:1},'lead',503);}finally{await pool.query('DROP TRIGGER p07_receipt_failure');}
+      assert.deepEqual(await get('/sources/'+v8Source.source_id),before);assert.deepEqual((await pool.execute('SELECT COUNT(*) n FROM data_map_definition_requests'))[0][0],count);
+    });
+    await check('current source/target scope, parent race and old idempotent receipts are rechecked without drifting history',async()=>{
+      const body={...base,source_digest:contentHash(v8),expected_revision:1,status:'confirmed',request_id:uuid()};
+      const receipt=await post('/sources/'+v8Source.source_id+'/mappings',body);
+      await map(v8Source.source_id,{...body,request_id:uuid(),expected_revision:2});assert.deepEqual(await post('/sources/'+v8Source.source_id+'/mappings',body),receipt);
+      const race=await Promise.all([
+        request('lead',root+'/sources/'+v8Source.source_id+'/mappings','POST',{...body,request_id:uuid(),expected_revision:3}),
+        request('lead',root+'/sources/'+v8Source.source_id+'/mappings','POST',{...body,request_id:uuid(),expected_revision:1,local_field_ref:'field_a',field_version_id:field.version_id})
+      ]);assert(race.every(r=>r.status===200||r.status===409));
+      const d=await get('/sources/'+v8Source.source_id),parent=d.mappings.find(m=>!m.local_field_ref),child=d.mappings.find(m=>m.local_field_ref);assert.equal(child.needs_recheck,child.parent_mapping_version_id!==parent.mapping_version_id);
+      await pool.execute('UPDATE person SET current_department_id=93 WHERE person_id=82');try{await post('/sources/'+v8Source.source_id+'/mappings',body,'lead',403);}finally{await pool.execute('UPDATE person SET current_department_id=91 WHERE person_id=82');}
+      const pd=await get('/sources/'+v8Preview.source_id);
+      await pool.execute('UPDATE process_v7_preview_cases SET owning_department_id=93 WHERE id=?',[pd.source_ref.case_id]);try{await get('/sources/'+v8Preview.source_id,'contact',403);assert((await get('/sources')).items.some(s=>s.source_id===v8Preview.source_id));assert((await get('/sources/'+v8Preview.source_id)).stale);}finally{await pool.execute('UPDATE process_v7_preview_cases SET owning_department_id=91 WHERE id=?',[pd.source_ref.case_id]);}
+      await pool.execute('UPDATE data_map_objects SET owner_dept_id=93 WHERE id=?',[obj.entity_id]);try{assert.equal((await get('/sources/'+v8Source.source_id,'contact')).mappings.length,0);await get('/sources/'+v8Source.source_id+'/mappings/'+child.mapping_id+'/history','contact',403);}finally{await pool.execute('UPDATE data_map_objects SET owner_dept_id=91 WHERE id=?',[obj.entity_id]);}
+    });
+    protectedBefore=await snapshots();
     if(!process.argv.includes('--no-browser')){
       const net=require('node:net');let port;for(let i=0;i<20;i++){const s=net.createServer(),p=crypto.randomInt(42000,49000);if(await new Promise(r=>{s.once('error',()=>r(false));s.listen(p,'127.0.0.1',()=>r(true));})){await new Promise(r=>s.close(r));port=p;break;}}assert(port);
       browserServer=await pw.chromium.launchServer({channel:'msedge',headless:true,host:'127.0.0.1',port});browser=await pw.chromium.connect(browserServer.wsEndpoint());
       const context=await browser.newContext({viewport:{width:1699,height:828},deviceScaleFactor:1});page=await context.newPage();page.setDefaultTimeout(12000);
       const pageErrors=[],consoleErrors=[];page.on('pageerror',e=>pageErrors.push(e.message));page.on('console',e=>{if(e.type()==='error')consoleErrors.push(e.text());});
-      const button=n=>page.getByRole('button',{name:n,exact:true}),label=n=>page.getByLabel(n,{exact:true});const idle=()=>page.waitForFunction(()=>!document.body.textContent.includes('正在处理 V7 映射…'));
-      const login=async()=>{await page.locator('#login-name').fill('SYNTHETIC_lead');await page.locator('#login-password').fill(fixture.loginPassword);await button('登录').click();await page.getByRole('heading',{name:'固定 V7 来源与台账映射',exact:true}).waitFor();await idle();};
+      const button=n=>page.getByRole('button',{name:n,exact:true}),label=n=>page.getByLabel(n,{exact:true});const idle=()=>page.waitForFunction(()=>!document.body.textContent.includes('正在处理来源映射…'));
+      const login=async()=>{await page.locator('#login-name').fill('SYNTHETIC_lead');await page.locator('#login-password').fill(fixture.loginPassword);await button('登录').click();await page.getByRole('heading',{name:'固定来源与台账映射',exact:true}).waitFor();await idle();};
       const dismiss=async fn=>{const d=page.waitForEvent('dialog');const a=fn();await(await d).dismiss();await a;};
       const overflow=async()=>{assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);assert.equal(await page.evaluate(()=>visualViewport.scale),1);};
       const shot=async name=>{await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:path.join(output,name),fullPage:true});};
       const uiDoc=structuredClone(document);uiDoc.process.process_name='页面合成来源';const bytes=Buffer.from(JSON.stringify(uiDoc));const filePath=path.join(output,'synthetic-v7.json');fs.writeFileSync(filePath,bytes);const rawBefore=crypto.createHash('sha256').update(bytes).digest('hex');
       let uiSource;
       await check('Edge upload, explicit object mapping, candidate distinction, field mapping and exact evidence jumps',async()=>{
-        await page.goto(fixture.baseURL+'/app/v7-mappings');await login();await button('登记 V7 固定来源').click();await label('V7 JSON 文件').setInputFiles(filePath);await button('登记并校验来源').click();await idle();uiSource=(await get('/sources')).items.find(i=>i.raw_sha256===rawBefore)||{source_id:new URL(page.url()).searchParams.get('source')};
+        await page.goto(fixture.baseURL+'/app/v7-mappings');await login();await button('登记固定来源').click();await label('V8/V7 JSON 文件').setInputFiles(filePath);await button('登记并校验来源').click();await idle();uiSource=(await get('/sources')).items.find(i=>i.raw_sha256===rawBefore)||{source_id:new URL(page.url()).searchParams.get('source')};
         await button('建立对象映射').first().click();assert(await label('台账对象固定版本 ID').evaluate(e=>e===document.activeElement));await label('台账对象固定版本 ID').fill(obj.version_id);await button('读取台账版本').click();await idle();await label('映射核对依据').fill('页面对象依据：合成对象登记表 A 区');await button('人工确认映射').click();await idle();
         await button('建立字段映射').first().click();await label('台账字段固定版本 ID').fill(field.version_id);await button('读取台账版本').click();await idle();await label('映射核对依据').fill('页面字段依据：合成登记表编号列。'+('中文长文核对。'.repeat(30)));
         await dismiss(()=>page.getByRole('link',{name:'当前身份',exact:true}).click());await dismiss(()=>page.reload().catch(()=>{}));assert((await label('映射核对依据').inputValue()).startsWith('页面字段依据'));
@@ -156,6 +244,28 @@ async function main(){await withStage05Fixture(async({pool,fixture,expect,reques
         let release;const gate=new Promise(r=>{release=r;});await page.route('**'+root+'/sources/'+source.source_id,async route=>{const response=await route.fetch();await gate;await route.fulfill({response}).catch(()=>{});},{times:1});await page.locator('.v7-source-choice').filter({hasText:'来源 '+source.source_id+' ·'}).click();await page.locator('.v7-source-choice').filter({hasText:'来源 '+uiSource.source_id+' ·'}).click();await idle();release();await page.unrouteAll({behavior:'wait'});assert(await page.getByRole('heading',{name:'来源 '+uiSource.source_id+'：独立上传材料',exact:true}).isVisible());
         assert.deepEqual(pageErrors,[]);assert.deepEqual(consoleErrors.filter(e=>!/Failed to load resource:.*(401|403|409|503|net::ERR_FAILED)/.test(e)),[]);assert.equal(crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex'),rawBefore);assert.deepEqual(await snapshots(),protectedBefore);
       });
+      await check('Edge native V8 upload/object/field/history and committed-but-lost responses reuse exact receipts',async()=>{
+        const file=path.join(output,'synthetic-v8.json');fs.writeFileSync(file,JSON.stringify(v8,null,2));
+        const accept=async fn=>{const d=page.waitForEvent('dialog');const a=fn();await(await d).accept();await a;};
+        await button('登记固定来源').click();assert(await page.getByText('独立上传、预览固定修订和已发布固定版本均支持原生 V8', {exact:false}).count());
+        await label('V8/V7 JSON 文件').setInputFiles(file);
+        await page.route('**'+root+'/uploads',async route=>{await route.fetch();await route.abort();},{times:1});await button('登记并校验来源').click();await idle();assert((await label('V8/V7 JSON 文件').locator('..').textContent()).includes('synthetic-v8.json'));
+        await button('登记并校验来源').click();await idle();assert.equal(new URL(page.url()).searchParams.get('source'),v8Source.source_id);
+        assert(await page.getByText('格式 process-governance-v8',{exact:false}).count());
+        const before=await get('/sources/'+v8Source.source_id),om=before.mappings.find(m=>!m.local_field_ref&&m.local_object_ref==='data_a');
+        await button('修订对象映射').first().click();await button('读取台账版本').click();await idle();await label('映射核对依据').fill('V8合成判断数据依据：use，仅核对对应关系');
+        await page.route('**'+root+'/sources/'+v8Source.source_id+'/mappings',async route=>{await route.fetch();await route.abort();},{times:1});await button('人工确认映射').click();await idle();assert.equal(await label('映射核对依据').inputValue(),'V8合成判断数据依据：use，仅核对对应关系');
+        await button('人工确认映射').click();await idle();assert.equal((await get('/sources/'+v8Source.source_id)).mappings.find(m=>m.mapping_id===om.mapping_id).revision_no,om.revision_no+1);
+        await button('修订字段映射').first().click();await button('读取台账版本').click();await idle();await label('映射核对依据').fill('V8字段合成依据：固定版本编号列');await button('人工确认映射').click();await idle();
+        assert((await get('/sources/'+v8Source.source_id)).mappings.find(m=>m.local_field_ref==='field_a').effective_confirmed);
+        await button('查看对象来源证据').first().click();await idle();assert(await page.locator('#v7-evidence').getByText('"operation": "use"',{exact:false}).count());
+        await button('查看映射历史').first().click();await idle();await shot('native-v8-mapped-desktop.png');await overflow();
+        // Preview fixed V8 is accepted through the same page; published V8 is accepted with the exact fixed version.
+        await button('登记固定来源').click();await accept(()=>label('来源类型').selectOption('preview_revision'));
+        const d=await get('/sources/'+v8Preview.source_id);await label('预览案例 ID').fill(d.source_ref.case_id);await label('固定修订 ID').fill(d.source_ref.revision_id);await button('登记并校验来源').click();await idle();assert.equal(new URL(page.url()).searchParams.get('source'),v8Preview.source_id);
+        await button('登记固定来源').click();await accept(()=>label('来源类型').selectOption('published_version'));await label('已发布流程版本 ID').fill(v8Published);await button('登记并校验来源').click();await idle();assert((await page.locator('body').innerText()).includes('process-governance-v8'));
+        await shot('published-v8-native-desktop.png');await overflow();assert.deepEqual(await snapshots(),protectedBefore);
+      });
       fs.writeFileSync(path.join(output,'browser-results.json'),JSON.stringify({browser:'Microsoft Edge',zoom:1,viewports:[[1699,828]],pageErrors,consoleErrors,human_acceptance:false},null,2));
     }
     await check('numeric source pagination does not skip multi-digit IDs; parser depth is bounded',async()=>{
@@ -165,11 +275,25 @@ async function main(){await withStage05Fixture(async({pool,fixture,expect,reques
       const count=Number((await pool.execute('SELECT COUNT(*) n FROM data_map_v7_sources'))[0][0].n);assert.equal(all.length,count);assert.equal(new Set(all).size,count);assert.deepEqual(all,[...all].sort((a,b)=>Number(a)-Number(b)));
       await assert.rejects(upload(Buffer.from('['.repeat(70)+'0'+']'.repeat(70)),'deep.json',activeSession),e=>e.statusCode===413);
     });
+    await check('BIGINT source/mapping/version IDs above JS safe integer stay exact decimal strings',async()=>{
+      for(const t of ['data_map_v7_sources','data_map_v7_mappings','data_map_v7_mapping_versions'])await pool.execute('ALTER TABLE '+t+' AUTO_INCREMENT=9007199254740993');
+      const doc=nativeV8(document);doc.process.process_ref='p07_bigint_native';
+      const s=await upload(doc,'bigint-v8.json',{...session,authVersion:process.argv.includes('--no-browser')?1:2});assert.equal(s.source_id,'9007199254740993');
+      // Browser re-login replaced its API session; acquire a fresh independent CSRF
+      // token instead of using the fixture client's pre-login cached token.
+      const c=await pw.request.newContext({baseURL:fixture.baseURL});let m;try{
+        await c.post('/api/org/login',{data:{loginName:'SYNTHETIC_lead',password:fixture.loginPassword}});const token=(await(await c.get('/api/csrf-token')).json()).csrfToken;
+        const r=await c.post(root+'/sources/'+s.source_id+'/mappings',{headers:{'X-CSRF-Token':token},data:{...base,request_id:uuid(),source_digest:contentHash(doc),status:'confirmed'}});assert.equal(r.status(),200);m=await r.json();
+      }finally{await c.dispose();}
+      assert.equal(m.mapping_id,'9007199254740993');assert.equal(m.mapping_version_id,'9007199254740993');
+      const d=await get('/sources/'+s.source_id),h=await get('/sources/'+s.source_id+'/mappings/'+m.mapping_id+'/history');assert.equal(d.source_ref.batch_id,s.source_id);assert.equal(h.items[0].mapping_version_id,m.mapping_version_id);assert.equal(h.items[0].source_id,s.source_id);
+      fs.writeFileSync(path.join(output,'bigint-proof.json'),JSON.stringify({source:s,mapping:m,history:h},null,2));
+    });
     fs.writeFileSync(path.join(output,'results.json'),JSON.stringify({passed:true,checks,step:'P07',formal_environment:false,human_acceptance:false},null,2));
   }catch(e){if(page)await page.screenshot({path:path.join(output,'failure.png'),fullPage:true}).catch(()=>{});fs.writeFileSync(path.join(output,'failure.json'),JSON.stringify({message:e.message,checks},null,2));throw e;}
   finally{
     async function bounded(p){let timer;try{return await Promise.race([p,new Promise((_,r)=>{timer=setTimeout(()=>r(Error('close timeout')),10000);})]);}finally{clearTimeout(timer);}}
     const cleanup={owned_browser_pid:browserServer?.process().pid||null};if(browser)await bounded(browser.close()).catch(()=>{});if(browserServer){try{await bounded(browserServer.close());cleanup.graceful=true;}catch{await bounded(browserServer.kill());cleanup.forced_owned_only=true;}assert(browserServer.process().exitCode!==null||browserServer.process().signalCode!==null);}fs.writeFileSync(path.join(output,'browser-cleanup.json'),JSON.stringify(cleanup));
   }
-},{evidenceDir:output});}
+},{evidenceDir:output,randomDatabase:true});}
 main().catch(e=>{console.error(e);if(e.inspection)console.error(JSON.stringify(e.inspection,null,2));process.exitCode=1;});

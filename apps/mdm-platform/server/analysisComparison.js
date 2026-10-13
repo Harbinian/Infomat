@@ -1,6 +1,6 @@
 // Pure comparison of integrity-checked, authorized P09 snapshots. No writes.
 const { digest, json } = require('./dataMapDefinitionValues');
-const ALGORITHM = 'analysis-diff-v1';
+const ALGORITHM = 'analysis-diff-v2';
 const labels = { added: '新增', persistent: '持续', evidence_changed: '证据变化', not_detected: '本轮未再检出', incomparable: '不可比较', manual_match: '待人工匹配' };
 const sort = values => values.slice().sort((a, b) => json(a).localeCompare(json(b)));
 const identity = input => input?.snapshot?.identity ? json({ kind: input.snapshot.kind, identity: input.snapshot.identity }) : null;
@@ -26,7 +26,12 @@ function covered(indexed, row) {
 function evidence(indexed, row) {
   const selected = row.finding.evidence_keys.map(k => row.step.attempt.evidence.find(e => e.evidence_key === k));
   if (!selected.length || selected.some(e => !e)) return null;
-  return digest(sort(selected.map(e => ({ subject: identity(indexed.inputs.get(e.input_key)), fixed_reference: e.fixed_reference,
+  const fixed = e => {
+    const reference = { ...e.fixed_reference }, input = indexed.inputs.get(e.input_key);
+    if (reference.kind === 'v7_source' && require('./v7AnalysisRules').inputFormat({ snapshot: input.snapshot, ...(Object.hasOwn(indexed.run.documents || {}, e.input_key) ? { document: indexed.run.documents[e.input_key] } : {}) }).format_state === 'native_v7') delete reference.schema_version;
+    return reference;
+  };
+  return digest(sort(selected.map(e => ({ subject: identity(indexed.inputs.get(e.input_key)), fixed_reference: fixed(e),
     locator_kind: e.locator_kind, locator: e.locator, locator_validation: e.locator_validation, note: e.note }))));
 }
 function subjectRemoved(indexed, row) {
@@ -43,11 +48,26 @@ function subjectRemoved(indexed, row) {
 function compareAnalysisSnapshots(before, after) {
   const a = index(before), b = index(after);
   const reasons = [];
+  const rules = require('./v7AnalysisRules');
+  const formats = indexed => indexed.run.manifest.inputs.filter(i => i.snapshot.kind === 'v7_source').map(i => ({ identity: identity(i),
+    ...rules.inputFormat({ snapshot: i.snapshot, ...(Object.hasOwn(indexed.run.documents || {}, i.input_key) ? { document: indexed.run.documents[i.input_key] } : {}) }, indexed.run.manifest.parser_versions[rules.PARSER]) }));
+  const leftFormats = formats(a), rightFormats = formats(b);
+  const deterministic = [a, b].some(i => i.steps.some(s => s.definition.parser_key === rules.PARSER));
+  if (leftFormats.some(i => i.identity && rightFormats.some(j => j.identity === i.identity && j.schema_version !== i.schema_version))) reasons.push('SOURCE_FORMAT_CHANGED');
+  if (deterministic && [...leftFormats, ...rightFormats].some(i => i.format_state === 'unsupported')) reasons.push('SOURCE_FORMAT_UNSUPPORTED');
+  if (deterministic && [...leftFormats, ...rightFormats].some(i => !['native_v7', 'native_v8', 'unsupported'].includes(i.format_state))) reasons.push('SOURCE_FORMAT_UNRESOLVED');
+  // Only the original eight checks have mapped V7 semantics across versions.
+  // New content coverage cannot be equated to a historical eight-check run.
+  const nativeV7 = [...leftFormats, ...rightFormats].length > 0 && [...leftFormats, ...rightFormats].every(i => i.format_state === 'native_v7');
+  const mappedV7 = deterministic && nativeV7 && [before, after].every(r => rules.knownVersion(r.manifest.parser_versions[rules.PARSER]) &&
+    r.manifest.steps.filter(s => s.parser_key === rules.PARSER).every(s => s.input_keys.length === 1 && s.check_ids.every(id => rules.LEGACY_CHECKS.includes(id))));
+  const versionEquivalent = (x, y) => x === y || mappedV7 && rules.knownVersion(x) && rules.knownVersion(y);
+  const parserVersions = m => Object.fromEntries(Object.entries(m.parser_versions).map(([k, v]) => [k, mappedV7 && k === rules.PARSER && rules.knownVersion(v) ? rules.LEGACY_VERSION : v]));
   if (![before, after].every(r => ['succeeded', 'partial', 'failed', 'cancelled'].includes(r.status))) reasons.push('RUN_NOT_TERMINAL');
   if ([before, after].some(r => ['failed', 'cancelled'].includes(r.status))) reasons.push('RUN_INCOMPLETE');
   if (before.scope_department_id !== after.scope_department_id) reasons.push('DEPARTMENT_SCOPE_CHANGED');
-  if (before.manifest.rule_version !== after.manifest.rule_version) reasons.push('RULE_SEMANTICS_UNMAPPED');
-  if (json(before.manifest.parser_versions) !== json(after.manifest.parser_versions)) reasons.push('PARSER_VERSION_CHANGED');
+  if (!versionEquivalent(before.manifest.rule_version, after.manifest.rule_version)) reasons.push('RULE_SEMANTICS_UNMAPPED');
+  if (json(parserVersions(before.manifest)) !== json(parserVersions(after.manifest))) reasons.push('PARSER_VERSION_CHANGED');
   if (json(before.manifest.ai_metadata) !== json(after.manifest.ai_metadata)) reasons.push('AI_CONFIGURATION_CHANGED');
   if (json(sort(before.manifest.check_scope.check_ids)) !== json(sort(after.manifest.check_scope.check_ids)) ||
       json(sort(a.steps.map(s => s.signature))) !== json(sort(b.steps.map(s => s.signature)))) reasons.push('CHECK_SCOPE_CHANGED');
@@ -73,7 +93,7 @@ function compareAnalysisSnapshots(before, after) {
       before: old.map(r => ({ finding_id: r.finding.finding_id, attempt_id: r.step.attempt.attempt_id, evidence_keys: r.finding.evidence_keys })),
       after: current.map(r => ({ finding_id: r.finding.finding_id, attempt_id: r.step.attempt.attempt_id, evidence_keys: r.finding.evidence_keys })) });
   }
-  return { algorithm: ALGORITHM, before_run_id: before.run_id, after_run_id: after.run_id,
+  return { algorithm: ALGORITHM, semantic_mapping: mappedV7 ? 'v7-deterministic-v1-v2-native-v7-only' : null, input_formats: { before: leftFormats, after: rightFormats }, before_run_id: before.run_id, after_run_id: after.run_id,
     before_manifest_digest: before.manifest_digest, after_manifest_digest: after.manifest_digest,
     comparison_complete: reasons.length === 0 && rows.every(r => !['incomparable', 'manual_match'].includes(r.status)) &&
       [a, b].every(i => i.steps.every(s => s.attempt?.status === 'succeeded' && s.attempt.coverage?.missing.length === 0)),
@@ -81,7 +101,7 @@ function compareAnalysisSnapshots(before, after) {
       ...(s.attempt?.coverage || { expected: s.definition.check_ids, checked: [], missing: s.definition.check_ids }) })),
     after: b.steps.map(s => ({ step_key: s.definition.step_key, status: s.attempt?.status || 'queued',
       ...(s.attempt?.coverage || { expected: s.definition.check_ids, checked: [], missing: s.definition.check_ids }) })) },
-    comparability_reasons: reasons, rows, counts: Object.fromEntries(Object.keys(labels).map(s => [s, rows.filter(r => r.status === s).length])),
+    comparability_reasons: [...reasons, ...([a, b].some(i => i.steps.some(s => s.attempt?.status !== 'succeeded' || s.attempt?.coverage?.missing.length)) ? ['CHECK_COVERAGE_INCOMPLETE'] : [])], rows, counts: Object.fromEntries(Object.keys(labels).map(s => [s, rows.filter(r => r.status === s).length])),
     implies_remediation: false, changes_governance: false };
 }
 module.exports = { compareAnalysisSnapshots, ALGORITHM, labels };

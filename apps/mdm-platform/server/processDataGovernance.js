@@ -346,10 +346,12 @@ function addBusinessDays(start, amount) {
 }
 
 module.exports = {
-  COMPLETE_DETAIL_STATUSES,
+  get COMPLETE_DETAIL_STATUSES() { return new Set(COMPLETE_DETAIL_STATUSES); },
+  isCompleteDetailStatus: value => COMPLETE_DETAIL_STATUSES.has(value),
   DETAIL_STATUSES,
   DETAIL_TYPES,
-  HIGH_RISK_ACTIONS,
+  get HIGH_RISK_ACTIONS() { return new Set(HIGH_RISK_ACTIONS); },
+  isHighRiskAction: value => HIGH_RISK_ACTIONS.has(value),
   RULE_VERSION,
   addBusinessDays,
   buildGovernanceCandidates,

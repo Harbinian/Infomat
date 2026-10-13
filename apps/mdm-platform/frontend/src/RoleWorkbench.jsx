@@ -1,15 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { StatusPanel } from './components.jsx';
 import './role-workbench.css';
+import {protocol} from './protocol.js';
 
 // Keep complete legacy targets, including item/version identifiers. No inferred routing.
-function targetHref(target) {
-  if (typeof target !== 'string' || /[\\\s]/.test(target)) return null;
-  if (/^#\/[A-Za-z][A-Za-z0-9]*(?:\?[^#]*)?$/.test(target)) return '/' + target;
-  if (/^\/app\/analysis#run=[1-9][0-9]*&finding=[1-9][0-9]*$/.test(target)) return target;
-  if (/^[A-Za-z][A-Za-z0-9]*$/.test(target)) return '/#/' + target;
-  return null;
-}
+const targetHref = protocol.targetHref;
 function Entry({ target, children, onNavigate }) {
   const href = targetHref(target);
   return href ? <a href={href} onClick={onNavigate}>{children || '进入办理'}</a> : <span className="muted">暂无可用办理入口</span>;

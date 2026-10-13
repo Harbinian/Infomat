@@ -2,6 +2,8 @@
 
 本应用为内部员工提供可追溯的信息收集入口：4000 负责设计表单、发布任务、查看完成情况和导出；4001 负责本人填报、服务器草稿、提交和截止前修改。
 
+当前业务范围包含多个主表分区、多个独立明细表、明细逐行录入和从 Excel 粘贴连续单元格。操作入口为4000表单设计中的“新增主表分区”“新增明细表”，4001负责明细填报和粘贴。范围已由用户确认；当前暂缓开发与正式启用，见[范围及启用状态](docs/Scope-Deviations.md)。
+
 ## 系统边界
 
 - 身份来源：只读复用 `infomat_mdm` 的 `person -> user_accounts` 链路。
@@ -12,7 +14,9 @@
 
 ## 首次部署
 
-1. 将 `MYSQL_PASSWORD` 放入仓库已忽略的 `scripts/infomat-services.local.env` 或受控运行环境。
+以下命令从仓库根目录执行；应用专用命令使用`--prefix apps/information-collection-service`。迁移、开户和启停分别核对目标及授权。
+
+1. 将信息收集数据库账号`mdm_user`对应的`COLLECTION_MYSQL_PASSWORD`放入仓库已忽略的`scripts/infomat-services.local.env`或受控运行环境。服务优先使用此变量；`MYSQL_PASSWORD`仅保留为旧单账号配置的兼容入口，不能把其他账号的密码当成`mdm_user`的密码。不得在文档、命令参数或日志中填写密码。
 2. 执行 `npm run migrate:information-collection:dry-run`。运维人员确认目标为 `infomat_mdm`、身份结构通过且只计划创建 `collection_*` 表。
 3. 执行 `npm run migrate:information-collection:apply`。
 4. 显式设置首位管理员工号，然后执行：

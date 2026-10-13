@@ -18,10 +18,10 @@ function enabledManifest(m) {
   const sources = m.inputs.filter(i => i.snapshot.kind === 'v7_source');
   if (sources.length !== 1 || m.inputs.length > 4 || m.inputs.some(i => i.snapshot.kind !== 'v7_source' && !(i.snapshot.kind === 'template' && ['excel_material', 'word_material', 'pdf_material'].includes(i.snapshot.source_kind)))) return false;
   const deterministic = require('./v7AnalysisRules');
-  if (json(m.parser_versions) !== json({ [PARSER]: VERSION, [deterministic.PARSER]: deterministic.VERSION }) || m.steps.length !== 2) return false;
+  if (!deterministic.knownVersion(m.parser_versions[deterministic.PARSER]) || json(m.parser_versions) !== json({ [PARSER]: VERSION, [deterministic.PARSER]: m.parser_versions[deterministic.PARSER] }) || m.steps.length !== 2) return false;
   const a = m.steps.find(s => s.parser_key === PARSER), d = m.steps.find(s => s.parser_key === deterministic.PARSER);
   return !!a && !!d && sameSet(a.input_keys, m.inputs.map(i => i.input_key)) && sameSet(a.check_ids, CHECKS) &&
-    sameSet(d.input_keys, [sources[0].input_key]) && sameSet(d.check_ids, deterministic.CHECKS);
+    sameSet(d.input_keys, [sources[0].input_key]) && sameSet(d.check_ids, deterministic.checksForVersion(m.parser_versions[deterministic.PARSER]));
 }
 function createPayload(sourceId, requestId, description, materials = []) {
   const d = require('./v7AnalysisRules');

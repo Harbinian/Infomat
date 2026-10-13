@@ -1,7 +1,7 @@
 // Persistence boundary. Enrolled P10 runs require the internal fenced transaction.
 const { failure, id, parse, json, digest, lastId } = require('./dataMapDefinitionValues');
 const { MIGRATION_KEY } = require('./analysisRunSchema');
-const { columns } = require('./analysisInputReferences');
+const { columns, snapshotMatches } = require('./analysisInputReferences');
 const code = (name, status = 400) => failure('DEFINITION_ANALYSIS_' + name, status);
 const keys = (v, allowed) => { if (!v || typeof v !== 'object' || Array.isArray(v) || Object.keys(v).some(k => !allowed.includes(k))) throw code('PROPERTY_INVALID'); };
 const text = (v, max = 255) => { if (typeof v !== 'string' || !v.trim() || v.length > max) throw code('TEXT_INVALID'); return v.trim(); };
@@ -28,6 +28,7 @@ module.exports = function (helpers) {
   const resolve = require('./analysisInputReferences')(helpers);
   const tx = fn => transaction(async db => {
     if (!(await db.execute('SELECT migration_key FROM schema_migrations WHERE migration_key=?', [MIGRATION_KEY]))[0].length) throw code('MIGRATION_REQUIRED', 503);
+    await require('./analysisDependencyReadiness').assertAnalysisStorage(db, { queue: false });
     return fn(db);
   });
   async function input(db, who, item) {
@@ -40,15 +41,15 @@ module.exports = function (helpers) {
     scope(who, run.scope_department_id);
     const manifest = parse(run.manifest_json);
     if (digest(manifest) !== run.manifest_digest) throw code('INTEGRITY_CONFLICT', 409);
-    const [rows] = await db.execute(`SELECT *,${cast(Object.values(columns))} FROM data_map_analysis_inputs WHERE run_id=? ORDER BY input_key FOR SHARE`, [run.run_id]);
+    const [rows] = await db.execute(`SELECT input_key,snapshot_json,snapshot_digest,${cast(Object.values(columns))} FROM data_map_analysis_inputs WHERE run_id=? ORDER BY input_key FOR SHARE`, [run.run_id]);
     if (rows.length !== manifest.inputs.length) throw code('INTEGRITY_CONFLICT', 409);
     const inputs = new Map();
     for (const row of rows) {
       const snapshot = checkedSnapshot(row), expected = manifest.inputs.find(i => i.input_key === row.input_key);
       if (!expected || json(expected.snapshot) !== json(snapshot) || Object.entries(columns).some(([kind, column]) => row[column] !== (kind === snapshot.kind ? snapshot.ref_id : null))) throw code('INTEGRITY_CONFLICT', 409);
       const resolved = await resolve(db, who, snapshot.kind, snapshot.ref_id);
-      if (json(resolved.snapshot) !== json(snapshot)) throw code('REFERENCE_CHANGED', 409);
-      inputs.set(row.input_key, resolved);
+      if (!snapshotMatches(resolved.snapshot, snapshot, resolved.document)) throw code('REFERENCE_CHANGED', 409);
+      inputs.set(row.input_key, { ...resolved, snapshot });
     }
     const [steps] = await db.execute('SELECT step_key,status,attempt_no FROM data_map_analysis_steps WHERE run_id=? ORDER BY step_key FOR SHARE', [run.run_id]);
     if (json(steps.map(s => s.step_key).sort()) !== json(manifest.steps.map(s => s.step_key).sort())) throw code('INTEGRITY_CONFLICT', 409);
@@ -136,6 +137,10 @@ module.exports = function (helpers) {
       });
       unique(steps.map(s => s.step_key));
       if (json([...new Set(steps.flatMap(s => s.check_ids))].sort()) !== json(checkScope.check_ids) || inputs.some(i => !steps.some(s => s.input_keys.includes(i.input_key)))) throw code('STEP_SCOPE_INVALID');
+      // Bind native format only for the selected deterministic consumer. Other
+      // adapters' snapshots/linked material contracts keep their original shape.
+      const deterministicInputs = new Set(steps.filter(s => s.parser_key === require('./v7AnalysisRules').PARSER).flatMap(s => s.input_keys));
+      for (const i of inputs) if (i.snapshot.kind === 'v7_source' && deterministicInputs.has(i.input_key)) i.snapshot.schema_version = typeof i.document?.schema_version === 'string' ? i.document.schema_version : null;
       let ai = null;
       if (payload.ai_metadata != null) {
         keys(payload.ai_metadata, ['provider', 'model', 'model_version', 'prompt_version', 'prompt_sha256', 'adapter_version']);
@@ -148,6 +153,7 @@ module.exports = function (helpers) {
       const manifest = { schema_version: 'analysis-input-v1', inputs: sorted(inputs.map(({ input_key, snapshot }) => ({ input_key, snapshot }))), check_scope: checkScope,
         parser_versions: parsers, rule_version: text(payload.rule_version, 128), steps: sorted(steps), ai_metadata: ai };
       return request(db, who, 'analysis_create', payload, async () => {
+        require('./v7AnalysisRules').assertSourceFormats(manifest, inputs);
         await db.execute("INSERT INTO data_map_analysis_runs(rerun_of_run_id,manifest_json,manifest_digest,status,revision_no,created_by_person_id,scope_department_id,created_at) VALUES (?,?,?,'queued',1,?,?,UTC_TIMESTAMP(3))", [parentId, json(manifest), digest(manifest), who.personId, who.departmentId]);
         const runId = await lastId(db);
         for (const i of inputs) await db.execute(`INSERT INTO data_map_analysis_inputs(run_id,input_key,${Object.values(columns).join(',')},snapshot_json,snapshot_digest) VALUES (?,?,?,?,?,?,?,?,?)`, [runId, i.input_key, ...Object.keys(columns).map(k => k === i.snapshot.kind ? i.snapshot.ref_id : null), json(i.snapshot), digest(i.snapshot)]);
@@ -156,13 +162,13 @@ module.exports = function (helpers) {
       });
     }); },
     getAnalysisRun(session, runId) { return tx(async db => {
-      const { run } = await load(db, await actor(db, session), runId);
+      const { run, inputs } = await load(db, await actor(db, session), runId);
       const attempts = await results(db, run);
       const coverage = run.manifest.steps.map(s => {
         const latest = attempts.filter(a => a.step_key === s.step_key).at(-1);
         return { step_key: s.step_key, ...(latest?.coverage || { expected: s.check_ids, checked: [], missing: s.check_ids }) };
       });
-      return { ...run, coverage, attempts };
+      return { ...run, coverage, attempts, input_formats: [...inputs].filter(([, i]) => i.snapshot.kind === 'v7_source').map(([input_key, i]) => ({ input_key, ...require('./v7AnalysisRules').inputFormat(i, run.manifest.parser_versions.v7_deterministic) })) };
     }); },
     beginAnalysisAttempt(session, payload) { return tx(async db => {
       keys(payload, ['request_id', 'run_id', 'expected_revision', 'step_key']);

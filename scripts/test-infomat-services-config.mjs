@@ -131,8 +131,16 @@ assert.ok(scriptsReadme.includes('Docker 容器 `infomat-input-baseline-review-m
 assert.ok(scriptsReadme.includes('npm run repair:infomat-mysql'), 'scripts README should document the MySQL repair path');
 
 const mdmReadme = fs.readFileSync(path.join(repoRoot, 'apps', 'mdm-platform', 'README.md'), 'utf8');
-assert.ok(mdmReadme.includes('npm run start:infomat-services') && mdmReadme.includes('3000独立运维'), 'MDM README should document the fixed root starter');
-assert.ok(mdmReadme.includes('$env:MYSQL_PORT = "3307"'), 'MDM README should show the fixed MySQL port for schema rebuilds');
+const mdmRuntimeGuidePath = path.join(repoRoot, 'apps', 'mdm-platform', 'docs', 'Current-Runtime-Maintenance.md');
+assert.ok(mdmReadme.includes('docs/Current-Runtime-Maintenance.md') && fs.existsSync(mdmRuntimeGuidePath), 'MDM README must route readers to the current runtime conditions');
+const mdmRuntimeGuide = fs.readFileSync(mdmRuntimeGuidePath, 'utf8');
+for (const variable of ['MYSQL_HOST', 'MYSQL_PORT', 'MYSQL_USER', 'MYSQL_PASSWORD', 'MYSQL_DATABASE']) {
+  assert.ok(mdmRuntimeGuide.includes(`\`${variable}\``), `MDM runtime guide must document required ${variable}`);
+}
+const mdmPackage = JSON.parse(fs.readFileSync(path.join(repoRoot, 'apps', 'mdm-platform', 'package.json'), 'utf8'));
+for (const command of ['service:start', 'service:check']) {
+  assert.ok(mdmPackage.scripts[command] && mdmReadme.includes(`npm.cmd run ${command}`), `MDM-only operations must use the existing ${command} entry`);
+}
 
 const roleUsageGuide = fs.readFileSync(path.join(repoRoot, 'apps', 'mdm-platform', 'docs', 'role-based-usage-guide.md'), 'utf8');
 assert.equal(/裸跑|临时改 `MYSQL_PORT`|不要临时传 `MYSQL_PORT`|连到了 3306/.test([

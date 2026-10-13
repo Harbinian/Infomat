@@ -23,7 +23,7 @@ if (Test-Path $localEnvPath) {
   }
 }
 
-if (-not $env:MYSQL_PASSWORD) { throw 'MYSQL_PASSWORD is required in the ignored local environment file or current process environment.' }
+if (-not $env:COLLECTION_MYSQL_PASSWORD -and -not $env:MYSQL_PASSWORD) { throw 'COLLECTION_MYSQL_PASSWORD for mdm_user is required in the ignored local environment file or current process environment. MYSQL_PASSWORD is a legacy fallback for the same account only.' }
 
 $env:MYSQL_HOST = [string]$config.mysql.host
 $env:MYSQL_PORT = [string]$config.mysql.port

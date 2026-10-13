@@ -6,10 +6,10 @@ const mysql = require('mysql2/promise');
 const { isolatedEnvironment } = require('./isolatedProcess');
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-async function withFreshMysql(action, { stage = '04' } = {}) {
+async function withFreshMysql(action, { stage = '04', randomDatabase = false } = {}) {
   assert.match(stage, /^\d{2}$/);
-  const database = `stage${stage}_isolated`;
   const owner = crypto.randomUUID();
+  const database = `stage${stage}_isolated${randomDatabase ? '_' + owner.replaceAll('-', '') : ''}`;
   const password = crypto.randomBytes(24).toString('hex');
   const env = isolatedEnvironment({ MYSQL_ROOT_PASSWORD: password });
   const docker = args => execFileSync('docker', args, {env, encoding:'utf8', windowsHide:true, stdio:['ignore','pipe','pipe'],timeout:30000}).trim();

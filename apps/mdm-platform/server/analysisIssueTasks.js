@@ -50,11 +50,11 @@ module.exports = ({ tx, actor, request, issue, linkedFindings, currentInputs, ru
       for (const link of links) await currentInputs(db,await runs(db).getAnalysisRun(session,link.run_id));
       return request(db,who,'analysis_issue_dispatch',payload,async () => {
         if (payload.expected_revision !== result.binding.revision_no || payload.expected_issue_digest !== result.binding.issue_digest) throw fail('REVISION_CONFLICT',409);
-        const [previous] = await db.execute('SELECT todo_id,round_no FROM data_map_analysis_issue_tasks WHERE issue_id=? AND purpose=? ORDER BY round_no FOR UPDATE', [id(payload.issue_id),payload.purpose]);
+        const [previous] = await db.execute('SELECT CAST(todo_id AS CHAR) todo_id,round_no FROM data_map_analysis_issue_tasks WHERE issue_id=? AND purpose=? ORDER BY round_no FOR UPDATE', [id(payload.issue_id),payload.purpose]);
         if (previous.some(t => t.round_no === payload.round_no)) throw fail('ACTION_ALREADY_DISPATCHED',409);
         if (payload.round_no !== (previous.at(-1)?.round_no || 0) + 1) throw fail('ROUND_CONFLICT',409);
         if (previous.length) {
-          const [[last]] = await db.execute('SELECT status FROM mdm_todos WHERE id=? FOR UPDATE',[previous.at(-1).todo_id]);
+          const [[last]] = await db.execute('SELECT status FROM mdm_todos WHERE id=CAST(? AS SIGNED) FOR UPDATE',[previous.at(-1).todo_id]);
           if (last.status !== 'done') throw fail('PREVIOUS_ACTION_PENDING',409);
         }
         const instruction = payload.instruction.trim();
