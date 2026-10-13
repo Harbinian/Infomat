@@ -44,12 +44,40 @@ const mysql = require('mysql2/promise');
 const sqlCalls = [];
 let databaseFailure = null;
 let endedPools = 0;
+let syntheticIdentityReady = false;
+let syntheticOfficeAccountStatus = 'active';
+async function syntheticExecute(sql, params = []) {
+  sqlCalls.push({ sql: sql.replace(/\s+/g, ' ').trim(), params });
+  assert.match(sql.trim(), /^SELECT\b/i, 'runtime must not execute DDL, seeds or migrations');
+  if (databaseFailure) throw Object.assign(new Error('synthetic failure; do not expose raw SQL'), { code: databaseFailure });
+  // Office repositories revalidate the person/account and effective roles themselves.
+  // Model that actual read contract rather than bypassing it with a default actor.
+  if (syntheticIdentityReady) {
+    // The exact-identity reader binds the person id as a decimal string against CAST(? AS SIGNED);
+    // model that contract, not the older bare `=?` form.
+    if (/FROM person p\s+LEFT JOIN user_accounts/.test(sql) && /WHERE p\.person_id=CAST\(\? AS SIGNED\)/.test(sql)) {
+      assert.deepEqual(params, ['81']);
+      return [[{person_id:81,account_id:181,employee_no:'SYNTHETIC_81',person_name:'隔离合成用户',
+        current_department_id:91,department_name:departments[0].name,status:'active',employment_status:'active',
+        account_status:syntheticOfficeAccountStatus,auth_version:1,must_change_password:0}]];
+    }
+    if (/FROM person_roles pr/.test(sql)) {
+      // Exact-identity binding again: the person id travels as a decimal string.
+      assert.equal(params[0],'81');
+      return [[{role_id:1,code:role,name:role,scopeType:role==='admin'?'global':'department',scopeDepartmentId:role==='admin'?null:91,
+        authorizationBasis:'synthetic runtime boundary only',effectiveFrom:'2026-01-01'}]];
+    }
+    if (/SELECT parent_role_id, CAST\(parent_role_id AS CHAR\) AS parent_role_id FROM roles/.test(sql)) return [[{parent_role_id:null}]];
+    if (/FROM role_permissions rp/.test(sql)) return [getAccessModel().roles.find(item=>item.code===role).permissions.map(perm_code=>({perm_code,effect:'allow',field_constraints:null}))];
+  }
+  return [[]];
+}
 mysql.createPool = () => ({
-  async execute(sql, params = []) {
-    sqlCalls.push({ sql: sql.replace(/\s+/g, ' ').trim(), params });
-    assert.match(sql.trim(), /^SELECT\b/i, 'runtime must not execute DDL, seeds or migrations');
-    if (databaseFailure) throw Object.assign(new Error('synthetic failure; do not expose raw SQL'), { code: databaseFailure });
-    return [[]];
+  execute: syntheticExecute,
+  // The preview and office repositories take a pooled connection and open a bounded transaction
+  // around their reads; model that contract on the same SELECT-only execute.
+  async getConnection() {
+    return { execute: syntheticExecute, async beginTransaction() {}, async commit() {}, async rollback() {}, release() {} };
   },
   async end() { endedPools += 1; }
 });
@@ -144,8 +172,10 @@ async function main() {
   async function request(url, method = 'GET', body) {
     const response = await fetch(base + url, { method, headers: { 'Content-Type': 'application/json', Cookie: cookie, ...(csrf ? { 'X-CSRF-Token': csrf } : {}) }, body: body === undefined ? undefined : JSON.stringify(body) });
     if (response.headers.get('set-cookie')) cookie = response.headers.get('set-cookie').split(';')[0];
-    const result = await response.json();
-    return { status: response.status, body: result };
+    const raw = await response.text();
+    const contentType = response.headers.get('content-type') || '';
+    const result = contentType.includes('application/json') ? JSON.parse(raw) : raw;
+    return { status: response.status, body: result, contentType };
   }
   try {
     assert.equal((await request('/api/org/departments')).status, 401);
@@ -159,20 +189,35 @@ async function main() {
     auth.setIdentityRepositoryFactory(() => identity);
     org.setIdentityRepositoryFactory(() => identity);
     workbench.setIdentityRepositoryFactory(() => identity);
+    syntheticIdentityReady = true;
     assert.equal((await request('/api/org/login', 'POST', { loginName: 'SYNTHETIC_81', password })).status, 200);
     csrf = (await request('/api/csrf-token')).body.csrfToken;
     assert.equal((await request('/api/org/me')).body.personId, 81);
     assert.equal((await request('/api/org/departments')).body[0].id, 91);
 
-    for (const route of ['/api/systems', '/api/capabilities', '/api/processes', '/api/views/sankey', '/api/org-units', '/api/positions', '/api/persons', '/api/product-families', '/api/products', '/api/class-nodes', '/api/attributes', '/api/external', '/api/integration', '/api/quality/dashboard']) {
+    // org-units is no longer registered. Verify its actual 404/non-JSON boundary;
+    // do not resurrect a retired route just to keep the former 410 detector green.
+    const retiredOrg = await request('/api/org-units');
+    assert.equal(retiredOrg.status, 404);
+    assert.match(retiredOrg.contentType, /^text\/html/);
+    assert.match(retiredOrg.body, /Cannot GET \/api\/org-units/);
+    for (const route of ['/api/systems', '/api/capabilities', '/api/processes', '/api/views/sankey', '/api/positions', '/api/persons', '/api/product-families', '/api/products', '/api/class-nodes', '/api/attributes', '/api/external', '/api/integration', '/api/quality/dashboard']) {
       const result = await request(route);
-      assert.equal(result.status, 410, route);
-      assert.equal(result.body.code, 'LEGACY_SQLITE_ROUTE_ISOLATED');
+      assert.equal(result.status, 404, route + ' must remain unregistered');
+      assert.match(result.contentType, /^text\/html/, route);
+      assert.match(result.body, /Cannot GET/, route);
     }
-    for (const route of ['/api/role-workbench?mode=todo', '/api/page-workflows?tab=processGovernance', '/api/process-governance/current', '/api/process-design/drafts', '/api/todos']) {
+    for (const route of ['/api/role-workbench?mode=todo', '/api/page-workflows?tab=processGovernance', '/api/process-governance/current', '/api/process-design/versions', '/api/todos']) {
       const result = await request(route);
       assert.equal(result.status, 200, `${route}: ${JSON.stringify(result.body)}`);
     }
+    const office = await request('/api/offices/workbench');
+    assert.equal(office.status,200);
+    assert.deepEqual(office.body.offices,[], 'no office membership may be inferred from a role');
+    syntheticOfficeAccountStatus = 'disabled';
+    assert.equal((await request('/api/offices/workbench')).status,403,'office must reject its independently revalidated inactive account');
+    syntheticOfficeAccountStatus = 'active';
+    assert.equal((await request('/api/offices/workbench')).status,200);
     const preview = await request('/api/process-v7-preview/cases');
     assert.equal(preview.status, 503);
     assert.equal(preview.body.code, 'V7_PREVIEW_DISABLED');
@@ -185,7 +230,11 @@ async function main() {
     const deniedTodo = await request('/api/todos', 'POST', { content: 'must not write' });
     assert.equal(deniedTodo.status, 403);
     assert.match(deniedTodo.body.error, /任务分派权限/);
-    assert.equal((await request('/api/process-design/drafts', 'POST', {})).status, 403);
+    for (const method of ['GET','POST']) {
+      const retiredDraft = await request('/api/process-design/drafts', method, method==='POST'?{}:undefined);
+      assert.equal(retiredDraft.status,404,'retired unbound draft '+method+' must stay absent');
+      assert.match(retiredDraft.contentType,/^text\/html/);
+    }
     role = 'department_contact';
     // Disconnect after a successful read: no alternate storage or empty result.
     databaseFailure = 'ECONNREFUSED';

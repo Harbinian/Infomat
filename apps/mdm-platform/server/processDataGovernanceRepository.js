@@ -10,6 +10,8 @@ const {
   text
 } = require('./processDataGovernance');
 const { assertProcessDataGovernanceWritable, isProcessDataGovernanceReadOnly } = require('./processDataGovernanceScope');
+const { sessionSubject, identityInteger, sameIdentityInteger } = require('./sessionSubject');
+const { readPersonAuthority } = require('./identityMysqlRepository');
 
 function parseJson(value, fallback = null) {
   if (value == null || value === '') return fallback;
@@ -35,13 +37,24 @@ async function one(executor, sql, params = []) {
 async function withTransaction(executor, action) {
   if (!executor || typeof executor.getConnection !== 'function') return await action(executor);
   const connection = await executor.getConnection();
+  let committing = false;
   try {
     await connection.beginTransaction();
     const result = await action(connection);
-    await connection.commit();
+    committing = true;
+    try {
+      await connection.commit();
+    } catch (error) {
+      // Same meaning as the legacy write path's unresolved-commit answer: the write may or may
+      // not have landed, so the caller must look the receipt up and must not retry blindly.
+      // The code keeps this module's prefix because every code in this repository has it.
+      throw repositoryError(503, 'PROCESS_DATA_GOVERNANCE_COMMIT_UNKNOWN',
+        '提交回执不明，请保留原请求并核对记录，不能自动重试');
+    }
     return result;
   } catch (error) {
-    await connection.rollback().catch(() => {});
+    // A commit whose result is unknown is not rolled back: that would be a second guess.
+    if (!committing) await connection.rollback().catch(() => {});
     throw error;
   } finally {
     connection.release();
@@ -58,10 +71,48 @@ function repositoryError(statusCode, code, message, extra = {}) {
 
 function actorValue(actor = {}) {
   return {
-    personId: Number(actor.personId || actor.userId || 0) || null,
-    departmentId: Number(actor.departmentId || 0) || null,
+    personId: identityInteger(sessionSubject(actor).personId),
+    departmentId: identityInteger(actor.departmentId),
     roleCode: text(actor.roleCode) || null
   };
+}
+
+// Called after the operation's original business locks, on its own transaction
+// connection. Route sets describe the UI; they are never write authorization.
+async function currentWriteActor(connection, actor, mode = 'mdm') {
+  const subject = sessionSubject(actor);
+  const personId = identityInteger(subject.personId);
+  const accountId = identityInteger(subject.accountId);
+  if (subject.kind === 'system_admin') {
+    throw repositoryError(403, 'PROCESS_DATA_GOVERNANCE_ADMIN_READ_ONLY', '管理员对治理材料只读，不能执行数据生命周期治理写操作');
+  }
+  if (!personId || !accountId || !identityInteger(subject.authVersion)) {
+    throw repositoryError(403, 'PROCESS_DATA_GOVERNANCE_ACCESS_CHANGED', '账号或授权已变化，请重新登录核对');
+  }
+  await connection.execute('SELECT account_id FROM user_accounts WHERE account_id=CAST(? AS SIGNED) FOR UPDATE', [accountId]);
+  await connection.execute('SELECT person_id FROM person WHERE person_id=CAST(? AS SIGNED) FOR UPDATE', [personId]);
+  await connection.execute('SELECT person_id FROM person_roles WHERE person_id=CAST(? AS SIGNED) FOR UPDATE', [personId]);
+  const authority = await readPersonAuthority(connection, actor, personId, { currentRead: true });
+  if (!authority.valid) throw repositoryError(403, 'PROCESS_DATA_GOVERNANCE_ACCESS_CHANGED', '账号或授权已变化，请重新登录核对');
+  if (authority.readOnly) throw repositoryError(403, 'PROCESS_DATA_GOVERNANCE_ADMIN_READ_ONLY', '管理员对治理材料只读，不能执行数据生命周期治理写操作');
+  const { permissions, roleCodes } = authority;
+  const departmentId = identityInteger(authority.user.current_department_id);
+  if (mode === 'fact') {
+    const inDepartment = code => authority.roles.some(role => role.code === code &&
+      role.scopeType === 'department' && sameIdentityInteger(role.scopeDepartmentId, departmentId));
+    if (!departmentId || !((inDepartment('department_contact') && permissions.has('governance:draft-department')) ||
+      (inDepartment('department_mdm_reviewer') && permissions.has('governance:review-department')))) {
+      throw repositoryError(403, 'PROCESS_DATA_GOVERNANCE_FACT_RESPONSE_DENIED', '只有问题指定部门的主对接人或部门MDM审核员可以答复业务事实');
+    }
+  } else if (!roleCodes.has('mdm_lead') || !permissions.has('governance:assign-work') || !permissions.has('governance:structure-gate')) {
+    throw repositoryError(403, 'PROCESS_DATA_GOVERNANCE_MDM_ONLY', '数据对象归类、匹配、关键字段和生命周期规则只能由MDM工作组处理');
+  }
+  if (mode === 'complete' && !permissions.has('governance:publish')) {
+    throw repositoryError(403, 'PROCESS_DATA_GOVERNANCE_COMPLETE_DENIED', '只有具备发布职责的MDM工作组组长可以完成工作包审核');
+  }
+  const roleCode = roleCodes.has('mdm_lead') ? 'mdm_lead' : roleCodes.has('data_quality_auditor') ? 'data_quality_auditor'
+    : roleCodes.has('department_mdm_reviewer') ? 'department_mdm_reviewer' : roleCodes.has('department_contact') ? 'department_contact' : null;
+  return { ...actor, personId, userId: personId, departmentId, roleCodes, permissions, roleCode };
 }
 
 function publicTask(row) {
@@ -149,8 +200,8 @@ function publicFactRequest(row) {
     status: row.status,
     answer_text: row.answer_text || null,
     evidence_ref: row.evidence_ref || null,
-    requested_by_person_id: row.requested_by_person_id == null ? null : Number(row.requested_by_person_id),
-    answered_by_person_id: row.answered_by_person_id == null ? null : Number(row.answered_by_person_id),
+    requested_by_person_id: identityInteger(row.requested_by_person_id),
+    answered_by_person_id: identityInteger(row.answered_by_person_id),
     created_at: row.created_at,
     answered_at: row.answered_at || null,
     closed_at: row.closed_at || null,
@@ -167,7 +218,7 @@ function publicReview(row) {
     decision: row.decision,
     basis_text: row.basis_text,
     package_revision_no: Number(row.package_revision_no),
-    actor_person_id: row.actor_person_id == null ? null : Number(row.actor_person_id),
+    actor_person_id: identityInteger(row.actor_person_id),
     actor_role_code: row.actor_role_code,
     replaces_review_id: row.replaces_review_id == null ? null : Number(row.replaces_review_id),
     created_at: row.created_at
@@ -179,8 +230,8 @@ function versionDocument(row) {
   if (!document || typeof document !== 'object' || Array.isArray(document)) {
     throw repositoryError(409, 'PROCESS_DATA_GOVERNANCE_SOURCE_UNREADABLE', '固定流程版本缺少可读取的结构化内容');
   }
-  if (text(row.schema_version) !== 'process-governance-v7' || text(document.schema_version) !== 'process-governance-v7') {
-    throw repositoryError(409, 'PROCESS_DATA_GOVERNANCE_SOURCE_VERSION_UNSUPPORTED', '数据治理只支持已发布的原生V7流程版本');
+  if (!require('./processNativeFormats').supports(text(row.schema_version)) || text(document.schema_version) !== text(row.schema_version)) {
+    throw repositoryError(409, 'PROCESS_DATA_GOVERNANCE_SOURCE_VERSION_UNSUPPORTED', '数据治理支持已发布的原生V8及受支持V7流程版本，正文格式须与版本一致');
   }
   if (!text(row.content_hash) || digest(document) !== text(row.content_hash)) throw repositoryError(409, 'PROCESS_DATA_GOVERNANCE_SOURCE_CHANGED', '正式流程版本的内容摘要校验失败，请先核查来源完整性');
   return document;
@@ -200,7 +251,7 @@ function assertSourceBinding(packageRow, versionRow) {
 
 async function getVersion(executor, processVersionId, lock = false) {
   return await one(executor, `
-    SELECT v.*, d.process_ref, d.document_title AS master_document_title
+    SELECT v.*, CAST(v.department_id AS CHAR) AS department_id, d.process_ref, d.document_title AS master_document_title
     FROM process_design_versions v
     LEFT JOIN process_design_documents d ON d.id=v.document_id
     WHERE v.id=?
@@ -230,6 +281,11 @@ async function insertEvent(executor, packageId, eventType, actor, options = {}) 
 
 async function queueProcessDataGovernanceCreationTask(executor, processVersionId, actor = {}) {
   assertProcessDataGovernanceWritable();
+  // The existing caller supplies the queue transaction. A pool/autocommit caller
+  // has no retained qualification locks; keep that unowned branch suspended.
+  if (!executor || typeof executor.getConnection === 'function') {
+    throw repositoryError(503, 'PROCESS_DATA_GOVERNANCE_TRANSACTION_REQUIRED', '创建任务需要调用方提供原事务连接');
+  }
   const versionId = Number(processVersionId);
   if (!Number.isInteger(versionId) || versionId < 1) {
     throw repositoryError(422, 'PROCESS_DATA_GOVERNANCE_VERSION_REQUIRED', '流程版本标识必须是正整数');
@@ -239,6 +295,7 @@ async function queueProcessDataGovernanceCreationTask(executor, processVersionId
     throw repositoryError(409, 'PROCESS_DATA_GOVERNANCE_VERSION_NOT_FIXED', '只能为不可变的已发布流程版本建立治理工作包');
   }
   versionDocument(version);
+  actor = await currentWriteActor(executor, actor);
   const safeActor = actorValue(actor);
   await executor.execute(`
     INSERT INTO process_data_governance_creation_tasks
@@ -298,11 +355,14 @@ function makeProcessDataGovernanceRepository(pool) {
   async function materializeCreationTask(processVersionId, actor = {}) {
     assertProcessDataGovernanceWritable();
     const versionId = Number(processVersionId);
+    let qualifiedAttempt = false;
     try {
       return await withTransaction(pool, async connection => {
         const task = await one(connection, 'SELECT * FROM process_data_governance_creation_tasks WHERE process_version_id=? FOR UPDATE', [versionId]);
         if (!task) throw repositoryError(404, 'PROCESS_DATA_GOVERNANCE_TASK_NOT_FOUND', '工作包创建任务不存在');
         const version = await getVersion(connection, versionId, true);
+        actor = await currentWriteActor(connection, actor);
+        qualifiedAttempt = true;
         if (!version || !['published', 'superseded'].includes(text(version.status))) {
           throw repositoryError(409, 'PROCESS_DATA_GOVERNANCE_VERSION_NOT_FIXED', '来源流程版本不是不可变的已发布版本');
         }
@@ -363,11 +423,17 @@ function makeProcessDataGovernanceRepository(pool) {
         };
       });
     } catch (error) {
-      await pool.execute(`
-        UPDATE process_data_governance_creation_tasks
-        SET status='failed', last_error_code=?, last_error_message=?, next_retry_at=DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 15 MINUTE)
-        WHERE process_version_id=? AND status<>'completed'
-      `, [text(error.code) || 'MATERIALIZE_FAILED', text(error.message).slice(0, 1000), versionId]).catch(() => {});
+      // Preserve the original operational failure receipt after rollback. A
+      // rejected principal never creates diagnostics or changes task state.
+      // This bookkeeping retains the original autocommit ownership; it is not
+      // a new business transaction or permission grant.
+      if (qualifiedAttempt) {
+        await pool.execute(`
+          UPDATE process_data_governance_creation_tasks
+          SET status='failed', last_error_code=?, last_error_message=?, next_retry_at=DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 15 MINUTE)
+          WHERE process_version_id=? AND status<>'completed'
+        `, [text(error.code) || 'MATERIALIZE_FAILED', text(error.message).slice(0, 1000), versionId]).catch(() => {});
+      }
       throw error;
     }
   }
@@ -386,8 +452,8 @@ function makeProcessDataGovernanceRepository(pool) {
       FROM process_design_versions v
       LEFT JOIN departments d ON d.id=v.department_id
       LEFT JOIN process_data_governance_work_packages p ON p.process_version_id=v.id
-      WHERE v.status IN ('published', 'superseded') AND v.schema_version='process-governance-v7'
-        AND JSON_UNQUOTE(JSON_EXTRACT(IF(JSON_VALID(v.process_content_json), v.process_content_json, 'null'), '$.schema_version'))='process-governance-v7'
+      WHERE v.status IN ('published', 'superseded') AND v.schema_version IN ('process-governance-v8','process-governance-v7')
+        AND JSON_UNQUOTE(JSON_EXTRACT(IF(JSON_VALID(v.process_content_json), v.process_content_json, 'null'), '$.schema_version'))=v.schema_version
       ORDER BY v.published_at DESC, v.id DESC
     `);
     return result.map(row => ({
@@ -428,7 +494,7 @@ function makeProcessDataGovernanceRepository(pool) {
     const statuses = options.all ? ['open', 'answered', 'closed', 'cancelled'] : ['open'];
     const placeholders = statuses.map(() => '?').join(',');
     const result = await rows(pool, `
-      SELECT fr.*, gd.detail_ref, d.name AS target_department_name,
+      SELECT fr.*, CAST(fr.requested_by_person_id AS CHAR) AS requested_by_person_id, CAST(fr.answered_by_person_id AS CHAR) AS answered_by_person_id, gd.detail_ref, d.name AS target_department_name,
              p.process_version_id, p.package_ref, p.revision_no AS package_revision_no,
              v.document_no, v.document_title,
              COALESCE(JSON_UNQUOTE(JSON_EXTRACT(v.process_content_json, '$.process.process_name')), v.document_title) AS process_name
@@ -457,14 +523,14 @@ function makeProcessDataGovernanceRepository(pool) {
         WHERE gd.work_package_id=? ORDER BY gd.detail_type, gd.detail_ref
       `, [packageId]),
       rows(pool, `
-        SELECT fr.*, gd.detail_ref, d.name AS target_department_name
+        SELECT fr.*, CAST(fr.requested_by_person_id AS CHAR) AS requested_by_person_id, CAST(fr.answered_by_person_id AS CHAR) AS answered_by_person_id, gd.detail_ref, d.name AS target_department_name
         FROM process_data_governance_fact_requests fr
         JOIN process_data_governance_details gd ON gd.id=fr.detail_id
         LEFT JOIN departments d ON d.id=fr.target_department_id
         WHERE fr.work_package_id=? ORDER BY fr.id DESC
       `, [packageId]),
-      rows(pool, 'SELECT * FROM process_data_governance_reviews WHERE work_package_id=? ORDER BY id DESC', [packageId]),
-      rows(pool, 'SELECT * FROM process_data_governance_events WHERE work_package_id=? ORDER BY id DESC LIMIT 200', [packageId])
+      rows(pool, 'SELECT r.*, CAST(r.actor_person_id AS CHAR) AS actor_person_id FROM process_data_governance_reviews r WHERE work_package_id=? ORDER BY id DESC', [packageId]),
+      rows(pool, 'SELECT e.*, CAST(e.actor_person_id AS CHAR) AS actor_person_id FROM process_data_governance_events e WHERE work_package_id=? ORDER BY id DESC LIMIT 200', [packageId])
     ]);
     const details = detailRows.map(row => {
       const item = publicDetail(row);
@@ -505,7 +571,7 @@ function makeProcessDataGovernanceRepository(pool) {
       reviews: reviewRows.map(publicReview),
       events: eventRows.map(row => ({
         id: Number(row.id), event_type: row.event_type, detail_id: row.detail_id == null ? null : Number(row.detail_id),
-        fact_request_id: row.fact_request_id == null ? null : Number(row.fact_request_id), actor_person_id: row.actor_person_id == null ? null : Number(row.actor_person_id),
+        fact_request_id: row.fact_request_id == null ? null : Number(row.fact_request_id), actor_person_id: identityInteger(row.actor_person_id),
         actor_department_id: row.actor_department_id == null ? null : Number(row.actor_department_id), actor_role_code: row.actor_role_code || null,
         basis_text: row.basis_text || null, payload: parseJson(row.payload_json, null), created_at: row.created_at
       }))
@@ -528,6 +594,7 @@ function makeProcessDataGovernanceRepository(pool) {
       `);
       const sourceIndex = buildSourceIndex(document);
       const existingDetails = await rows(connection, 'SELECT detail_ref FROM process_data_governance_details WHERE work_package_id=?', [packageId]);
+      actor = await currentWriteActor(connection, actor);
       const existingDetailRefs = new Set(existingDetails.map(item => text(item.detail_ref)));
       let created = 0;
       for (const candidate of candidates) {
@@ -609,6 +676,7 @@ function makeProcessDataGovernanceRepository(pool) {
         throw repositoryError(409, 'PROCESS_DATA_GOVERNANCE_FACT_REQUEST_UNRESOLVED', '该明细仍有未关闭的业务事实问题，不能先行形成治理结论');
       }
       const responsibleDepartmentId = Number(payload.responsible_department_id || 0) || packageDataRow.owning_department_id || null;
+      actor = await currentWriteActor(connection, actor);
       await connection.execute(`
         UPDATE process_data_governance_details
         SET governance_json=?, status=?, responsible_department_id=?, revision_no=revision_no+1,
@@ -658,6 +726,7 @@ function makeProcessDataGovernanceRepository(pool) {
       `, [detailId]);
       if (existing) throw repositoryError(409, 'PROCESS_DATA_GOVERNANCE_FACT_REQUEST_EXISTS', '该明细已有未关闭的业务事实问题');
       const nextRevision = Number(expectedRevision) + 1;
+      actor = await currentWriteActor(connection, actor);
       const result = await rows(connection, `
         INSERT INTO process_data_governance_fact_requests
           (request_ref, work_package_id, detail_id, target_department_id,
@@ -679,14 +748,14 @@ function makeProcessDataGovernanceRepository(pool) {
       });
       return {
         package: publicPackage(await packageRow(connection, packageId)),
-        fact_request: publicFactRequest(await one(connection, 'SELECT * FROM process_data_governance_fact_requests WHERE id=?', [requestId]))
+        fact_request: publicFactRequest(await one(connection, 'SELECT fr.*, CAST(fr.requested_by_person_id AS CHAR) AS requested_by_person_id, CAST(fr.answered_by_person_id AS CHAR) AS answered_by_person_id FROM process_data_governance_fact_requests fr WHERE id=?', [requestId]))
       };
     });
   }
 
   async function getFactRequest(requestId, lock = false, executor = pool) {
     return await one(executor, `
-      SELECT fr.*, gd.detail_ref, gd.detail_type, gd.source_ref, p.process_version_id, p.revision_no AS package_revision_no,
+      SELECT fr.*, CAST(fr.requested_by_person_id AS CHAR) AS requested_by_person_id, CAST(fr.answered_by_person_id AS CHAR) AS answered_by_person_id, gd.detail_ref, gd.detail_type, gd.source_ref, p.process_version_id, p.revision_no AS package_revision_no,
              d.name AS target_department_name
       FROM process_data_governance_fact_requests fr
       JOIN process_data_governance_details gd ON gd.id=fr.detail_id
@@ -742,7 +811,8 @@ function makeProcessDataGovernanceRepository(pool) {
       const packageDataRow = await assertPackageRevision(connection, Number(fact.work_package_id), expectedRevision);
       await assertPackageSourceBinding(connection, packageDataRow);
       if (text(fact.status) !== 'open') throw repositoryError(409, 'PROCESS_DATA_GOVERNANCE_FACT_NOT_OPEN', '该业务事实问题当前不能答复');
-      if (Number(actor.departmentId) !== Number(fact.target_department_id)) {
+      actor = await currentWriteActor(connection, actor, 'fact');
+      if (!sameIdentityInteger(actor.departmentId, fact.target_department_id)) {
         throw repositoryError(403, 'PROCESS_DATA_GOVERNANCE_FACT_DEPARTMENT_DENIED', '只能答复发给本人所属部门的事实问题');
       }
       await connection.execute(`
@@ -776,6 +846,7 @@ function makeProcessDataGovernanceRepository(pool) {
       const packageDataRow = await assertPackageRevision(connection, Number(fact.work_package_id), expectedRevision);
       await assertPackageSourceBinding(connection, packageDataRow);
       if (text(fact.status) !== 'answered') throw repositoryError(409, 'PROCESS_DATA_GOVERNANCE_FACT_NOT_ANSWERED', '业务部门尚未答复，不能关闭事实问题');
+      actor = await currentWriteActor(connection, actor);
       await connection.execute(`
         UPDATE process_data_governance_fact_requests
         SET status='closed', closed_by_person_id=?, closed_at=CURRENT_TIMESTAMP WHERE id=?
@@ -820,6 +891,7 @@ function makeProcessDataGovernanceRepository(pool) {
         });
       }
       const nextRevision = Number(packageDataRow.revision_no) + 1;
+      actor = await currentWriteActor(connection, actor, 'complete');
       const safeActor = actorValue(actor);
       const reviewResult = await rows(connection, `
         INSERT INTO process_data_governance_reviews
@@ -836,7 +908,7 @@ function makeProcessDataGovernanceRepository(pool) {
       });
       return {
         package: publicPackage(await packageRow(connection, packageId)),
-        review: publicReview(await one(connection, 'SELECT * FROM process_data_governance_reviews WHERE id=?', [reviewResult.insertId]))
+        review: publicReview(await one(connection, 'SELECT r.*, CAST(r.actor_person_id AS CHAR) AS actor_person_id FROM process_data_governance_reviews r WHERE id=?', [reviewResult.insertId]))
       };
     });
   }

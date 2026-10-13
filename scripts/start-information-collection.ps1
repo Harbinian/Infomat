@@ -19,8 +19,8 @@ if (Test-Path $localEnvPath) {
   }
 }
 
-if (-not $env:MYSQL_PASSWORD) {
-  throw 'MYSQL_PASSWORD is required in scripts/infomat-services.local.env or the current process environment.'
+if (-not $env:COLLECTION_MYSQL_PASSWORD -and -not $env:MYSQL_PASSWORD) {
+  throw 'COLLECTION_MYSQL_PASSWORD for mdm_user is required in scripts/infomat-services.local.env or the current process environment. MYSQL_PASSWORD is a legacy fallback for the same account only.'
 }
 
 $ports = @([int]$config.admin.port, [int]$config.respondent.port)

@@ -3,7 +3,7 @@ import { StatusPanel } from './components.jsx';
 import './identity-directory.css';
 
 // Both views use one scoped HTTP response; database snapshot semantics stay unchanged.
-export function Quality({ api, onLegacy }) {
+export function Quality({ api, onNavigate }) {
   const [revision, setRevision] = useState(0);
   const [state, setState] = useState({ busy: true });
   useEffect(() => {
@@ -20,7 +20,7 @@ export function Quality({ api, onLegacy }) {
       <div className="section-heading"><h1>数据质量</h1><button className="secondary" onClick={() => setRevision(value => value + 1)}>刷新确认进度</button></div>
       <p>查看当前身份可见的字段身份确认进度，以及各对象名称分组的确认情况。</p>
       <p className="muted">统计仅覆盖已有字段身份记录，未建立身份记录的字段不在分母中。“已确认”沿用原字段身份记录状态，不表示数据值质量合格，也不代表新模板对象或权威来源已正式认定。</p>
-      <a href="/#/quality" onClick={event => onLegacy(event, '/#/quality')}>打开原数据质量入口</a>
+
     </section>
     {state.busy ? <StatusPanel kind="loading" title="正在读取确认进度…" /> : state.error ? <StatusPanel kind="error" title={state.error.status === 403 ? '无权查看确认进度' : '确认进度暂不可用'}>{state.error.message} 请核对当前身份或点击“刷新确认进度”重试；读取失败不表示没有记录。</StatusPanel> : <>
       <section className="card"><h2>总体确认进度</h2>

@@ -1,5 +1,6 @@
 const crypto = require('node:crypto');
-const { makeIdentityMysqlRepository } = require('./identityMysqlRepository');
+const {sessionSubject} = require('./sessionSubject');
+const {readPersonAuthority} = require('./identityMysqlRepository');
 const { MIGRATION_KEY } = require('./dataMapDefinitionSchema');
 const { failure, id, kind, json, digest, parse, rows, snapshot, lastId, insertVersion } = require('./dataMapDefinitionValues');
 
@@ -40,7 +41,7 @@ function makeDataMapDefinitionRepository(pool) {
       const [marker] = await db.execute('SELECT migration_key FROM schema_migrations WHERE migration_key=?',[MIGRATION_KEY]);
       if (!marker.length) throw failure('DEFINITION_MIGRATION_REQUIRED',503);
       await db.beginTransaction();
-      const result = await action(db); await db.commit(); return result;
+      const result = await require('./analysisDependencyReadiness').inspectionScope(db, () => action(db)); await db.commit(); return result;
     } catch (error) {
       await db.rollback();
       if (['ER_LOCK_DEADLOCK','ER_LOCK_WAIT_TIMEOUT','ER_DUP_ENTRY'].includes(error.code)) throw failure('DEFINITION_CONFLICT',409);
@@ -49,28 +50,43 @@ function makeDataMapDefinitionRepository(pool) {
     } finally { db.release(); }
   }
   async function actor(db, session, permission) {
-    if (!session?.personId || !session?.accountId || !session?.authVersion) throw failure('DEFINITION_AUTH_REQUIRED',401);
-    const personId = id(session.personId);
+    if (session?.identityKind === 'system_admin') {
+      if (!session.accountId || !session.authVersion) throw failure('DEFINITION_AUTH_REQUIRED',401);
+      const identity = require('./identityMysqlRepository').makeIdentityMysqlRepository(db);
+      const validated = await identity.validateSession(session);
+      if (!validated.valid || validated.user.identityKind !== 'system_admin' || validated.user.must_change_password) throw failure('DEFINITION_AUTH_REQUIRED',401);
+      const current = await require('./systemAdminIdentity').getSystemAdmin(db, validated.user.identityRef, {locked:true});
+      if (!current || current.must_change_password || String(current.authVersion) !== id(session.authVersion)) throw failure('DEFINITION_AUTH_REQUIRED',401);
+      const {permSet} = await identity.getUserEffectivePermissions(current.identityRef);
+      if (permission) throw failure('DEFINITION_ACCESS_DENIED',403);
+      return {personId:null, departmentId:null, permissions:permSet, readOnly:true};
+    }
+    const subject=sessionSubject(session);
+    if (subject.kind !== 'person' || !session?.personId || !subject.accountId || !subject.authVersion) throw failure('DEFINITION_AUTH_REQUIRED',401);
+    const personId = id(subject.personId);
     const [[account]]=await db.execute('SELECT CAST(person_id AS CHAR) AS person_id,CAST(auth_version AS CHAR) AS auth_version,account_status,must_change_password FROM user_accounts WHERE account_id=? FOR UPDATE',[id(session.accountId)]);
     const [[person]]=await db.execute('SELECT CAST(current_department_id AS CHAR) AS department_id,status FROM person WHERE person_id=? FOR UPDATE',[personId]);
     if (!account || !person || account.account_status!=='active' || account.must_change_password || person.status!=='active' || account.person_id!==personId || account.auth_version!==id(session.authVersion)) throw failure('DEFINITION_AUTH_REQUIRED',401);
     await db.execute('SELECT person_id FROM person_roles WHERE person_id=? FOR UPDATE',[personId]);
-    const identity = makeIdentityMysqlRepository(db);
-    const validated = await identity.validateSession(session);
-    if (!validated.valid || validated.user.must_change_password) throw failure('DEFINITION_AUTH_REQUIRED',401);
-    const { permSet } = await identity.getUserEffectivePermissions(personId);
-    const roles = await identity.getUserRoleCodes(personId);
-    if (permission && (roles.some(r=>r.code==='admin') || !permSet.has(permission))) throw failure('DEFINITION_ACCESS_DENIED',403);
-    return { personId, departmentId:person.department_id, permissions:permSet, readOnly:roles.some(r=>r.code==='admin') };
+    // Bypass any earlier RR snapshot and hold current qualifications on this
+    // same transaction connection, after the existing identity locks.
+    const authority = await readPersonAuthority(db,session,personId,{currentRead:true});
+    if (!authority.valid) throw failure('DEFINITION_AUTH_REQUIRED',401);
+    const {permissions:permSet,readOnly} = authority;
+    if (permission && (readOnly || !permSet.has(permission))) throw failure('DEFINITION_ACCESS_DENIED',403);
+    return { personId, departmentId:person.department_id, permissions:permSet, readOnly };
   }
   function scope(actor, departmentId, write = false) {
     if (!write && actor.permissions.has('governance:read-global')) return;
     if (!departmentId || String(departmentId) !== actor.departmentId || (!write && !actor.permissions.has('governance:read-department'))) throw failure('DEFINITION_ACCESS_DENIED',403);
   }
   async function entityScope(db, type, entityId, lock = false) {
-    const source = await snapshot(db,type,entityId,lock);
+    // Scope is authorization input. Read current physical rows even when the
+    // caller only reads history; retain their full snapshot representation.
+    const reader = lock ? db : {execute:(sql,params)=>db.execute(`${sql} FOR SHARE`,params)};
+    const source = await snapshot(reader,type,entityId,lock);
     if (type === 'object') return { source, departmentId:source.row.owner_dept_id };
-    const context = (await rows(db,'data_map_contexts','id=?',[source.row.context_id],lock))[0];
+    const context = (await rows(reader,'data_map_contexts','id=?',[source.row.context_id],lock))[0];
     return { source, departmentId:context?.dept_id };
   }
   async function version(db, versionId, lock = false) {
@@ -234,7 +250,7 @@ function makeDataMapDefinitionRepository(pool) {
     ...require('./historicalReviews')({transaction,actor,scope,request}),
     ...require('./dataMapManagement')({transaction,actor,scope,entityScope,current,unchanged,version,request,save:saveDefinitionInTransaction,event}),
     ...require('./dataMapFacts')({transaction,actor,scope,entityScope,current,unchanged,version,request,event}),
-    ...require('./v7Mappings')({transaction,actor,scope,entityScope,version,request}),
+    ...require('./definitionConsumers').createDefinitionConsumers({transaction,actor,scope,entityScope,version,request}),
     async templateImportActor(session) {
       return transaction(async db => {
         const who = await actor(db,session,'governance:draft-department');
@@ -320,7 +336,7 @@ function makeDataMapDefinitionRepository(pool) {
         const [[batch]]=await db.execute(`SELECT f.*,CAST(f.batch_id AS CHAR) AS batch_id,CAST(f.byte_length AS CHAR) AS byte_length,
           CAST(f.scope_department_id AS CHAR) AS scope_department_id,CAST(f.imported_by_person_id AS CHAR) AS imported_by_person_id,
           b.file_name AS original_name,DATE_FORMAT(b.imported_at,'%Y-%m-%dT%H:%i:%s.%fZ') AS imported_at
-          FROM data_map_source_files f JOIN data_map_import_batches b ON b.id=f.batch_id WHERE f.batch_id=?`,[id(batchId)]);
+          FROM data_map_source_files f JOIN data_map_import_batches b ON b.id=f.batch_id WHERE f.batch_id=? FOR SHARE`,[id(batchId)]);
         if (!batch) throw failure('DEFINITION_SOURCE_NOT_FOUND',404);scope(who,batch.scope_department_id);
         const [cells]=await db.execute('SELECT CAST(cell_id AS CHAR) AS cell_id,sheet_name,cell_address,raw_type,CAST(raw_value_json AS CHAR) AS raw_value_json FROM data_map_source_cells WHERE batch_id=? ORDER BY cell_id',[batchId]);
         const [mappings]=await db.execute(`SELECT CAST(m.mapping_id AS CHAR) AS mapping_id,m.sheet_name,m.record_type,m.local_id,m.source_row,

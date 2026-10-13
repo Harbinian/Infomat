@@ -3,6 +3,7 @@ const {requireAuth,requirePermission} = require('../auth');
 const {dataMapRepository} = require('../dataMapMysqlRepository');
 const router=express.Router();
 const run=action=>(req,res)=>Promise.resolve().then(async()=>action(req,res,(await dataMapRepository()).definitions())).catch(error=>{
+  if (require('../mysqlRuntimeSchema').sendMysqlUnavailable(res,error)) return;
   const known=String(error.code||'').startsWith('DEFINITION_'),status=known?error.statusCode||400:503;
   res.status(status).json({error:status===503?'台账依赖暂不可用，请稍后重试。':'操作未完成，请核对填写内容、权限、状态和修订号。',code:known?error.code:'DEFINITION_SCHEMA_UNAVAILABLE'});
 });

@@ -23,6 +23,7 @@ async function main() {
     const otherIdentity = (await pool.query('SELECT * FROM data_map_field_identities WHERE field_id=922'))[0];
     await pool.execute("INSERT INTO data_map_field_identities(field_id,authoritative_system_name,owner_user_id,owner_person_id,confirmed,status) VALUES(924,'历史人员映射待核实',83,NULL,0,'needs_review')");
     const unresolvedIdentity = (await pool.query('SELECT * FROM data_map_field_identities WHERE field_id=924'))[0];
+    await pool.execute("INSERT INTO person_roles(person_id,role_id,scope_type,scope_department_id,authorization_basis,effective_from) SELECT 88,role_id,'department',91,'synthetic field identity regression',CURRENT_DATE FROM roles WHERE role_code='department_contact'");
     const row = async () => (await pool.query('SELECT * FROM data_map_field_identities WHERE field_id=921'))[0][0];
     const browser = await runtime().chromium.launch({ channel: 'msedge', headless: true });
     const context = await browser.newContext({ viewport: { width: 1699, height: 828 }, deviceScaleFactor: 1 });
@@ -81,6 +82,9 @@ async function main() {
       const beforeSave = await row(); await save(); const saved = await row();
       assert.equal(saved.authoritative_system_name, '合成新系统'); assert.equal(saved.authoritative_system_code, 'NEW');
       assert.equal(saved.confirmed, 0); assert.equal(saved.status, 'needs_review');
+      await expect('adminMulti','/api/field-identities/921','PUT',{authoritative_system:'管理员叠加编制角色不得写入'},403);
+      await expect('adminMulti','/api/field-identities/921/confirm','POST',{},403);
+      assert.deepEqual(await row(),saved);
       for (const key of ['id','field_id','maintain_dept_id','owner_user_id','owner_person_id','confirmed_by','confirmed_by_person_id','confirmed_at']) assert.deepEqual(saved[key], beforeSave[key]);
       assert.equal(await page.getByLabel('上下文标题', { exact: true }).inputValue(), '保留相邻上下文输入');
       checks.push('real maintenance preserves stable IDs/ownership/prior confirmation metadata, resets confirmation only; context switches/refresh/reload/navigation protect inputs');
@@ -88,7 +92,15 @@ async function main() {
       page.once('dialog', d => d.accept()); await relogin('reviewA');
       assert.equal(await button('维护黄金源信息').count(), 0);
       await button('办理部门确认').click(); assert.equal(await page.getByLabel('权威系统名称', { exact: true }).getAttribute('readonly'), '');
+      const browserConfirmBase = await expect('reviewA', '/api/field-identities/field/921', 'GET');
+      let browserConfirmBody;
+      await page.route('**/api/field-identities/921/confirm', route => {
+        browserConfirmBody = route.request().postDataJSON();
+        assert.deepEqual(browserConfirmBody.expected_identity, browserConfirmBase);
+        return route.continue();
+      }, {times:1});
       await button('确认已保存的黄金源').click(); await page.locator('[data-field-identity-success]').waitFor(); await identityReady();
+      assert.ok(browserConfirmBody); assert.equal(browserConfirmBody.authoritative_system, browserConfirmBase.authoritative_system_name);
       const confirmed = await row(); assert.equal(confirmed.confirmed, 1); assert.equal(confirmed.confirmed_by, 84); assert.equal(confirmed.authoritative_system_name, '合成新系统');
       const progress = await expect('reviewA', '/api/quality/field-identities/progress', 'GET'); assert.equal(progress.overall.confirmed, 1);
       await relogin('contact');
@@ -110,6 +122,26 @@ async function main() {
       assert.match(await page.locator('[data-field-identity-error]').innerText(), /原记录已变化/); assert.equal(writes(), beforeConflict);
       await refresh(); assert.match(await detail().innerText(), /另一办理人已变更/); assert.equal(await page.getByLabel('权威系统名称', { exact: true }).inputValue(), '并发前草稿');
       assert.equal(await button('保存黄金源信息（待核实）').isDisabled(), true); await discard();
+      // Intervene after the UI preflight GET, before the actual locked write.
+      await edit('读写间变化保留');
+      const preflightSnapshot = await expect('contact', '/api/field-identities/field/921', 'GET');
+      let sentSnapshot;
+      await page.route('**/api/field-identities/921', async route => {
+        const body = route.request().postDataJSON();
+        assert.deepEqual(body.expected_identity, preflightSnapshot);
+        sentSnapshot = body.expected_identity;
+        await pool.execute("UPDATE data_map_field_identities SET note='快照读取后的合成变化' WHERE field_id=921");
+        await route.continue();
+      }, { times: 1 });
+      const auditCount = async () => (await pool.query("SELECT COUNT(*) n FROM data_map_change_sets WHERE entity_type='data_map_field_identity'"))[0][0].n;
+      const countBeforeRace = await auditCount();
+      await button('保存黄金源信息（待核实）').click(); await page.locator('[data-field-identity-error]').waitFor();
+      assert.ok(sentSnapshot); assert.match(await page.locator('[data-field-identity-error]').innerText(), /内容已变化或请求冲突/);
+      assert.equal((await row()).authoritative_system_name, preflightSnapshot.authoritative_system_name);
+      assert.equal(await auditCount(), countBeforeRace);
+      assert.equal(await page.getByLabel('权威系统名称', { exact: true }).inputValue(), '读写间变化保留');
+      assert.equal(await button('保存黄金源信息（待核实）').isDisabled(), true); await refresh(); await discard();
+      checks.push('real frontend sends saved snapshot; a change after preflight is rejected under lock without audit/write or input loss');
       for (const status of [403,409,503]) {
         await edit('错误保留' + status);
         await page.route('**/api/field-identities/921', r => r.fulfill({ status, json: { error: 'sensitive SQL' } }), { times: 1 });
@@ -167,10 +199,8 @@ async function main() {
       await page.screenshot({ path: path.join(output, 'desktop.png'), fullPage: true });
       await page.locator('[aria-labelledby="field-identity-heading"]').screenshot({ path: path.join(output, 'identity-detail.png') });
       await button('刷新字段身份').focus(); await page.keyboard.press('Enter'); await identityReady();
-      await page.getByRole('link', { name: '打开原数据地图入口', exact: true }).click(); await page.waitForURL('**/#/dataMap');
-      await page.locator('#dataMapContextSelect option[value="911"]').waitFor({ state: 'attached' }); await page.locator('#dataMapContextSelect').selectOption('911');
-      await page.waitForFunction(() => document.querySelector('#dataMap')?.textContent.includes('合成甲字段'));
-      checks.push('read failures clear stale detail, invalid response blocked, cross-identity draft hidden, unseen target not fetched, keyboard/desktop geometry and old entry preserved');
+
+      checks.push('read failures clear stale detail, invalid response blocked, cross-identity draft hidden, unseen target not fetched, keyboard/desktop geometry and retired entry absent');
       // Prior expiry tests invalidated the fixture's original HTTP client session.
       const freshClients = {};
       request = async (who, url, method = 'GET', body) => {
@@ -181,7 +211,7 @@ async function main() {
         return { status:response.status, body:result };
       };
       expect = async (who,url,method,body,status=200) => { const result = await request(who,url,method,body); assert.equal(result.status,status,`${who} ${method} ${url}: ${JSON.stringify(result.body)}`); return result.body; };
-      for (const who of ['contact','reviewA','reviewB','admin']) {
+      for (const who of ['contact','reviewA','reviewB','admin','adminMulti']) {
         await expect(who,'/api/org/login','POST',{loginName:'SYNTHETIC_'+who,password:fixture.loginPassword}); await expect(who,'/api/csrf-token','GET');
       }
       await page.goto(fixture.baseURL + '/app/data-map?context=911&identityField=921'); await ready(); await identityReady(); await relogin('contact');
@@ -218,8 +248,45 @@ async function main() {
       const snapshot = await expect('contact', '/api/field-identities/field/921', 'GET');
       const simultaneous = await Promise.all(['并发甲','并发乙'].map(authoritative_system => request('contact', '/api/field-identities/921', 'PUT', { authoritative_system, expected_identity: snapshot })));
       assert.deepEqual(simultaneous.map(r => r.status).sort(), [200,409]);
+      const legacyWrites = await Promise.all(['旧调用甲','旧调用乙'].map(authoritative_system => request('contact', '/api/field-identities/921', 'PUT', { authoritative_system })));
+      assert.deepEqual(legacyWrites.map(r => r.status), [200,200]);
+      const legacyCurrent = await expect('contact', '/api/field-identities/field/921', 'GET');
+      assert.ok(['旧调用甲','旧调用乙'].includes(legacyCurrent.authoritative_system));
+      assert.equal(legacyCurrent.owner_user_id, 83); assert.equal(legacyCurrent.owner_person_id, 84);
+      await pool.execute("UPDATE data_map_field_identities SET note='旧调用确认前改变' WHERE field_id=921");
+      await expect('reviewA', '/api/field-identities/921/confirm', 'POST', { authoritative_system: legacyCurrent.authoritative_system });
+      assert.equal((await row()).note, '旧调用确认前改变');
+      await expect('contact', '/api/field-identities/921', 'PUT', { authoritative_system: '重新待核实' });
+      // Empty legacy confirmation explicitly confirms the currently locked saved state.
+      const confirmationPair = await Promise.all([1,2].map(() => request('reviewA', '/api/field-identities/921/confirm', 'POST', {})));
+      assert.deepEqual(confirmationPair.map(r => r.status).sort(), [200,409]);
+      await expect('contact', '/api/field-identities/921', 'PUT', { authoritative_system: '快照确认测试' });
+      const confirmBase = await expect('reviewA', '/api/field-identities/field/921', 'GET');
+      await pool.execute('UPDATE data_map_field_identities SET owner_person_id=83 WHERE field_id=921');
+      const changedResponsibility = await row(), beforeRejectedConfirm = await auditCount();
+      await expect('reviewA', '/api/field-identities/921/confirm', 'POST', { expected_identity: confirmBase }, 409);
+      assert.deepEqual(await row(), changedResponsibility); assert.equal(await auditCount(), beforeRejectedConfirm);
+      const raceBase = await expect('reviewA', '/api/field-identities/field/921', 'GET');
+      const mixedRace = await Promise.all([
+        request('reviewA', '/api/field-identities/921/confirm', 'POST', { expected_identity: raceBase }),
+        request('contact', '/api/field-identities/921', 'PUT', { authoritative_system: '确认维护竞争', expected_identity: raceBase })
+      ]);
+      assert.deepEqual(mixedRace.map(r => r.status).sort(), [200,409]);
+      await expect('contact', '/api/field-identities/921', 'PUT', { authoritative_system: '等待核对' });
+      checks.push('optional snapshot compatibility: legacy writes serialize and both succeed; confirmation uses current saved state; snapshot rejects responsibility changes and maintenance/confirmation races');
       await expect('reviewA', '/api/field-identities/921/confirm', 'POST', { authoritative_system: '不匹配的系统' }, 409);
       await expect('reviewA', '/api/field-identities/921/confirm', 'POST', { authoritative_system_name: '不匹配的旧调用字段' }, 409);
+      const countVersionLogs = async () => (await pool.query("SELECT COUNT(*) n FROM data_map_version_log WHERE entity_type='data_map_field_identity'"))[0][0].n;
+      for(const action of ['maintain','confirm']) for(const table of ['data_map_change_sets','data_map_version_log']) {
+        const unchanged = await row(), headers = await auditCount(), logs = await countVersionLogs();
+        const faultPool = {async getConnection(){const connection=await pool.getConnection();return new Proxy(connection,{get(target,key){
+          if(key==='execute')return(sql,params)=>{if(sql.startsWith('INSERT INTO '+table))throw new Error('SYNTHETIC_AUDIT_INSERT_FAILURE');return target.execute(sql,params);};
+          const value=target[key];return typeof value==='function'?value.bind(target):value;
+        }});}};
+        await assert.rejects(require('../server/fieldIdentityGovernance').makeFieldIdentityGovernance(faultPool).mutate(921,{authoritative_system:unchanged.authoritative_system_name},{personId:action==='confirm'?84:83,departmentId:91,contextId:911},action),/SYNTHETIC_AUDIT_INSERT_FAILURE/);
+        assert.deepEqual(await row(),unchanged); assert.equal(await auditCount(),headers); assert.equal(await countVersionLogs(),logs);
+      }
+      checks.push('both maintenance and confirmation roll back identity, audit header and version logs on either audit insert failure');
       const confirmedSnapshot = await expect('reviewA', '/api/field-identities/field/921', 'GET');
       await expect('reviewA', '/api/field-identities/921/confirm', 'POST', { authoritative_system: confirmedSnapshot.authoritative_system, expected_identity: confirmedSnapshot });
       await expect('reviewA', '/api/field-identities/921/confirm', 'POST', {}, 409);
@@ -278,6 +345,63 @@ async function main() {
       await page.reload(); await ready(); await identityReady(); assert.equal(await target().inputValue(),'923');
       assert.equal(await page.locator('[data-field-identity-history]').count(),0);
       checks.push('missing real audit table returns 503 and rolls back writes; delayed history cannot cross fields; history UI pagination/reload preserve target without stale history');
+      const ownTarget = JSON.parse(fs.readFileSync(path.join(output, 'owned-target.json')));
+      // The injected pool is the owned fixture; these config values never select an existing DB.
+      const readyEnv = { NODE_ENV:'test', HOST:'127.0.0.1', MDM_ACCESS_MODE:'http-local', MDM_SESSION_STORE:'mysql', SESSION_SECRET:require('node:crypto').randomBytes(32).toString('hex'),
+        MDM_IDENTITY_READ_MODEL:'mysql', PROCESS_GOVERNANCE_READ_MODEL:'mysql', MYSQL_HOST:'127.0.0.1', MYSQL_PORT:String(ownTarget.mysqlPort), MYSQL_DATABASE:ownTarget.database, MYSQL_USER:'root', MYSQL_PASSWORD:'injected-owned-pool-only' };
+      const readiness = overrides => require('../server/readiness').createReadiness({ env:{...readyEnv,...overrides}, pool, version:'P25-synthetic' }).check();
+      // Cumulative term-source readiness now has its own explicit migration gate.
+      // Prove that dependency is unavailable, then prepare only this owned fixture.
+      assert.equal((await readiness()).ready, false);
+      assert.equal((await require('../server/todoTermSourceMigration').manageTodoTermSource(pool,'apply')).state,'applied');
+      assert.equal((await readiness()).ready, true);
+      assert.equal((await fetch(fixture.baseURL+'/api/ready')).status,200);
+      const readinessObservations = [];
+      for (const table of ['data_map_change_sets','data_map_version_log','data_map_field_system_links']) {
+        await pool.query(`RENAME TABLE ${table} TO p25_owned_unavailable`);
+        try {
+          const observed = await readiness(); readinessObservations.push({ missing_table:table, observed });
+          fs.writeFileSync(path.join(output,'readiness-observations.json'),JSON.stringify(readinessObservations,null,2));
+          assert.equal(observed.ready, false, table + ' is required by field identity');
+          assert.equal(observed.reason, 'MYSQL_OR_SCHEMA_UNAVAILABLE');
+          if(table==='data_map_change_sets') {
+            await page.waitForTimeout(3100); // Expire the real endpoint's existing readiness cache.
+            assert.equal((await fetch(fixture.baseURL+'/api/ready')).status,503);
+            assert.equal((await fetch(fixture.baseURL+'/api/health')).status,200);
+          }
+        } finally { await pool.query(`RENAME TABLE p25_owned_unavailable TO ${table}`); }
+      }
+      await pool.query('ALTER TABLE data_map_version_log RENAME COLUMN new_value TO p25_owned_old_value');
+      const partialBefore=await expect('contact','/api/field-identities/field/923','GET'), partialHeaders=await auditCount();
+      try { assert.equal((await readiness()).ready, false); await expect('contact','/api/field-identities/923','PUT',{authoritative_system:'部分结构不得写入'},503); assert.deepEqual(await expect('contact','/api/field-identities/field/923','GET'),partialBefore); assert.equal(await auditCount(),partialHeaders); }
+      finally { await pool.query('ALTER TABLE data_map_version_log RENAME COLUMN p25_owned_old_value TO new_value'); }
+      assert.equal((await readiness()).ready, true);
+      await page.waitForTimeout(1100);
+      assert.equal((await fetch(fixture.baseURL+'/api/ready')).status,200);
+      const marker = require('../server/processV7PreviewReviewMigration').MIGRATION_KEY;
+      const [markerRows] = await pool.execute('SELECT * FROM schema_migrations WHERE migration_key=?',[marker]);
+      await pool.execute('DELETE FROM schema_migrations WHERE migration_key=?',[marker]);
+      try {
+        assert.equal((await readiness()).ready, true);
+        assert.equal((await readiness({PROCESS_V7_PREVIEW_ENABLED:'1'})).ready, false);
+      } finally { for(const record of markerRows) await pool.query('INSERT INTO schema_migrations SET ?',record); }
+      // No new marker/flag is invented for the always-available legacy identity API.
+      const scopedActor = {personId:83,departmentId:91,contextId:911};
+      const governance = require('../server/fieldIdentityGovernance').makeFieldIdentityGovernance(pool);
+      const unchangedIdentity = await row();
+      await pool.execute('UPDATE data_map_fields SET context_id=913 WHERE id=921');
+      try { await assert.rejects(governance.mutate(921,{authoritative_system:'不应跨上下文写入'},scopedActor,'maintain'),{statusCode:409}); assert.deepEqual(await row(),unchangedIdentity); }
+      finally { await pool.execute('UPDATE data_map_fields SET context_id=911,updated_at=? WHERE id=921',[originalFields.find(row=>row.id===921).updated_at]); }
+      await pool.execute('UPDATE data_map_contexts SET dept_id=92 WHERE id=911');
+      try { await assert.rejects(governance.mutate(921,{authoritative_system:'不应跨部门写入'},scopedActor,'maintain'),{statusCode:409}); assert.deepEqual(await row(),unchangedIdentity); }
+      finally { await pool.execute('UPDATE data_map_contexts SET dept_id=91,updated_at=? WHERE id=911',[originalContexts.find(row=>row.id===911).updated_at]); }
+      await expect('adminMulti','/api/field-identities/921','PUT',{},403);
+      await expect('adminMulti','/api/field-identities/921/confirm','POST',{},403);
+      await relogin('adminMulti');
+      assert.equal(await button('维护黄金源信息').count(),0); assert.equal(await button('办理部门确认').count(),0);
+      await button('查阅维护与确认记录').click(); await page.locator('[data-field-identity-history]').waitFor();
+      await page.locator('[aria-labelledby="field-identity-heading"]').screenshot({path:path.join(output,'mixed-admin-read-only.png')});
+      checks.push('selected readiness detects missing tables/partial audit columns; closed optional preview ignores its marker, enabled preview refuses missing marker; locked field scope changes and mixed admin roles reject writes');
       assert.deepEqual((await pool.query('SELECT * FROM data_map_fields ORDER BY id'))[0], originalFields);
       assert.deepEqual((await pool.query('SELECT * FROM data_map_contexts ORDER BY id'))[0], originalContexts);
       assert.deepEqual((await pool.query('SELECT * FROM data_map_field_identities WHERE field_id=922'))[0], otherIdentity);
@@ -289,6 +413,6 @@ async function main() {
       fs.writeFileSync(path.join(output, 'failure.json'), JSON.stringify({ error: error.message, stack: error.stack, errors, text: await page.locator('body').innerText() }, null, 2));
       await page.screenshot({ path: path.join(output, 'failure.png'), fullPage: true, timeout: 5000 }).catch(() => {}); throw error;
     } finally { await browser.close(); }
-  }, { evidenceDir: output });
+  }, { evidenceDir: output, randomDatabase: true });
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });

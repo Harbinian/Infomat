@@ -51,7 +51,7 @@ async function main() {
       assert.ok(permissionDescription);
       await contactCard.locator('dt:text-is("允许动作") + dd').getByText(permissionDescription, { exact: false }).waitFor();
       await page.getByRole('link', { name: contactRole.firstEntry.label }).click();
-      await page.waitForFunction(expected => location.hash === expected, contactRole.firstEntry.target);
+      await page.waitForURL(url => url.pathname + url.search + url.hash === require('../shared/browserProtocol').targetHref(contactRole.firstEntry.target));
       await page.goBack(); await ready();
       assert.equal(await page.getByRole('button', { name: /保存|授予|发布/ }).count(), 0);
       const selection = page.getByLabel('查看角色');
@@ -62,12 +62,8 @@ async function main() {
       assert.equal(await selection.inputValue(), 'mdm_lead');
       await selection.selectOption('admin'); await page.goBack(); await ready();
       assert.equal(await selection.inputValue(), 'mdm_lead');
-      await page.getByRole('link', { name: '查看原角色与责任入口' }).click();
-      await page.waitForURL('**/#/roleGuide');
-      await page.locator('#roleGuideRaci table tbody tr').first().waitFor();
-      assert.equal(await page.locator('#roleGuideRaci table tbody tr').count(), model.activities.length);
-      await page.goBack(); await ready();
-      checks.push('real fixed model, effective identity, role actions/tabs/RACI/todos, first entry, role switch, old active guide, refresh/back');
+
+      checks.push('real fixed model, effective identity, role actions/tabs/RACI/todos, first entry, role switch, refresh/back');
       await page.screenshot({ path: path.join(output, 'desktop.png'), fullPage: true });
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
       assert.equal(await page.evaluate(() => visualViewport.scale), 1);

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { StatusPanel } from './components.jsx';
+import { ProcessChecks } from './ProcessChecks.jsx';
 
 const ROOT = '/api/process-v7-preview/cases';
 const statusNames = { draft: '正式草稿', submitted: '待正式审核', under_review: '正式审核中', needs_changes: '需要修改', rejected: '审核拒绝', approved: '审核通过', published: '已发布', superseded: '历史已发布版本', pending: '待审核', review_complete: '预览核对完成', under_review_preview: '预览核对中' };
@@ -314,12 +315,11 @@ export function ProcessFormal({ api, draft, setDraft }) {
     } catch (e) { if (token === generation.current && e.name !== 'AbortError') setError(failureText(e)); }
     finally { busyRef.current = false; setBusy(false); }
   }
-  const legacy = '/#/processGovernance?workspace=v7Preview&v7Case=' + encodeURIComponent(selected);
   const protectLink = e => { if (busyRef.current || !abandon()) e.preventDefault(); };
   return <div className="process-preview process-formal">
     <section className="card"><h2>按当前修订办理正式流转</h2><p>先完成案例核对，再由有权人员提升、提交、审核和发布。正式正文沿用上传修订；需要修改时，返回同一案例上传3001修订。</p>
       <label>选择流程案例<select aria-label="选择流程案例" disabled={busy || loading} value={selected} onChange={e => select(e.target.value)}><option value="">请选择案例</option>{(list?.items || []).map(c => <option key={c.id} value={c.id}>{c.process_name} · 修订{c.current_revision_no}</option>)}</select></label>
-      <div className="import-actions"><button disabled={busy || loading} onClick={() => load()}>刷新正式办理状态</button><a href={legacy} onClick={protectLink}>进入原案例完整入口</a></div>
+      <div className="import-actions"><button disabled={busy || loading} onClick={() => load()}>刷新正式办理状态</button></div>
       {list && <p className="muted">当前返回{list.items?.length || 0}个可访问案例，最多显示200个。</p>}
       {list && !list.items?.length && <p>当前范围暂无案例。</p>}
     </section>
@@ -346,6 +346,7 @@ export function ProcessFormal({ api, draft, setDraft }) {
       </fieldset></form>
     </section>}
     {detail && <section className="card"><div className="section-heading"><h2>{detail.case.process_name}</h2><span className="badge">{detail.revision.document.schema_version}</span></div>
+      <ProcessChecks checks={detail.content_checks} allowLocate={false} />
       <p>归口部门：{detail.case.owning_department_name || '待明确'} · 当前预览修订 {detail.case.current_revision_no}</p>
       <p className="formal-digest">当前来源摘要：{detail.case.current_content_hash}</p>
       <h3>当前任务与待处理事项</h3>
@@ -377,7 +378,6 @@ export function ProcessFormal({ api, draft, setDraft }) {
       {version && <><StatusPanel kind={version.content_hash_verified ? 'empty' : 'error'} title={version.content_hash_verified ? '正式版本摘要校验通过' : '正式版本摘要未核实'}>固定版本 {version.process_version_id} · {version.schema_version} · 来源修订 {version.source_revision_no}</StatusPanel><JsonDetails title="已发布版本原生正文" value={version.document} /></>}
       <JsonDetails title="当前预览修订原文（不代表正式发布）" value={detail.revision.document} />
       <details><summary>案例操作历史（最多200条）</summary>{(detail.events || []).map((e, i) => <p key={e.id || i}>{e.created_at} · 人员标识 {e.actor_person_id || e.actor_user_id || '未提供'} · {e.actor_department_name || '未提供部门'} · {e.event_type} · {e.basis_text || ''}</p>)}</details>
-      <p>正式图形和未在本页覆盖的历史内容仍通过原案例完整入口核对。</p>
     </section>}
   </div>;
 }

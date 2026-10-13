@@ -3,6 +3,8 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const mysql = require('mysql2/promise');
+const { logRequestFailure, securityLog } = require('../securityLog');
+const { createRegisteredPool } = require('../mysqlPoolRegistry');
 const router = express.Router();
 function legacyDb() { return require('../db'); }
 const {
@@ -41,7 +43,7 @@ function runDbAction(res, action) {
     return action();
   } catch (error) {
     if (sendMysqlUnavailable(res, error)) return;
-    console.error(error);
+    logRequestFailure(res, error);
     return res.status(500).json({ error: '服务器错误' });
   }
 }
@@ -50,7 +52,7 @@ function runAsyncAction(res, action) {
   return action().catch(error => {
     if (error.code === 'DEFINITION_ANALYSIS_ISSUE_LEGACY_ACTION_BLOCKED') return res.status(404).json({ error: '资源不存在或此入口不可访问。', code: 'DEFINITION_ANALYSIS_RESOURCE_UNAVAILABLE' });
     if (sendMysqlUnavailable(res, error)) return;
-    console.error(error);
+    logRequestFailure(res, error);
     return res.status(500).json({ error: '服务器错误' });
   });
 }
@@ -81,7 +83,7 @@ async function inputBaselineReviewRepository() {
   }
   if (!inputBaselineReviewRepoPromise) {
     inputBaselineReviewRepoPromise = (async () => {
-      const pool = mysql.createPool(mysqlConfigFromEnv());
+      const pool = createRegisteredPool(process.env, 'processGovernance');
       const repo = makeProcessInputBaselineReviewRepository(pool);
       await checkRuntimeSchema(pool, 'inputBaseline');
       return repo;
@@ -120,7 +122,7 @@ async function processGovernanceRepository() {
   }
   if (!processGovernanceRepoPromise) {
     processGovernanceRepoPromise = (async () => {
-      const pool = mysql.createPool(mysqlConfigFromEnv());
+      const pool = createRegisteredPool(process.env, 'inputBaseline');
       const repo = makeProcessGovernanceMysqlRepository(pool);
       await checkRuntimeSchema(pool, 'processGovernance');
       return repo;
@@ -138,7 +140,7 @@ async function processGovernanceRepositoryOrSendUnavailable(res) {
   try {
     return await processGovernanceRepository();
   } catch (error) {
-    console.error(error);
+    logRequestFailure(res, error);
     res.status(503).json({ error: '流程治理 MySQL 读模型不可用' });
     return null;
   }
@@ -163,7 +165,7 @@ async function issuePoolRepository() {
       if (!useMysqlProcessGovernanceReadModel()) {
         throw new Error('Process governance issue pool requires PROCESS_GOVERNANCE_READ_MODEL=mysql');
       }
-      const pool = mysql.createPool(mysqlConfigFromEnv());
+      const pool = createRegisteredPool(process.env, 'issuePool');
       const repo = makeProcessGovernanceIssuePoolRepository(pool);
       await checkRuntimeSchema(pool, 'issuePool');
       return repo;
@@ -181,7 +183,7 @@ async function issuePoolRepositoryOrSendUnavailable(res) {
   try {
     return await issuePoolRepository();
   } catch (error) {
-    console.error(error);
+    logRequestFailure(res, error);
     res.status(503).json({ error: '流程治理问题池不可用' });
     return null;
   }
@@ -197,14 +199,13 @@ function resetIssuePoolRepositoryFactory() {
   issuePoolRepoPromise = null;
 }
 
-async function inputBaselineReviewRepositoryOrNull() {
+async function inputBaselineReviewRepositoryOrNull(res) {
   if (!inputBaselineReviewRepositoryFactory && !useInputBaselineReviewMysqlStore()) return null;
   try {
     return await inputBaselineReviewRepository();
   } catch (error) {
-    if (process.env.MDM_DB_QUIET !== '1') {
-      console.warn(`input baseline review MySQL unavailable: ${error.message}`);
-    }
+    // R06: the degraded path records the classification only, never the driver's own text.
+    securityLog(res).write({ event: 'dependency_degraded', code: 'INPUT_BASELINE_READ_UNAVAILABLE' });
     if (useMysqlProcessGovernanceReadModel()) throw error;
     return null;
   }
@@ -784,7 +785,7 @@ function issuePoolStatusError(statusCode, message) {
 async function applyCrossDeptHandoffPointAction(req, detail, actionName) {
   const point = (detail.points || []).find(item => Number(item.point_id) === Number(req.params.pointId));
   if (!point || point.point_type !== 'handoff_acceptance') return null;
-  throw issuePoolStatusError(410, '旧版跨部门承接办理已停用，请使用V7流程治理');
+  throw issuePoolStatusError(410, '旧版跨部门承接办理已停用，请使用流程治理入口');
 }
 
 function issuePoolRelatedDepartments(detail) {
@@ -1101,7 +1102,7 @@ router.get('/snapshots', requireAuth, (req, res) => {
       try {
         repo = await processGovernanceRepository();
       } catch (error) {
-        console.error(error);
+        logRequestFailure(res, error);
         return res.status(503).json({ error: '流程治理 MySQL 读模型不可用' });
       }
       return res.json(await repo.listSnapshots());
@@ -1125,7 +1126,7 @@ router.get('/current', requireAuth, (req, res) => {
       try {
         repo = await processGovernanceRepository();
       } catch (error) {
-        console.error(error);
+        logRequestFailure(res, error);
         return res.status(503).json({ error: '流程治理 MySQL 读模型不可用' });
       }
       return res.json(await repo.getCurrentSnapshot());
@@ -1156,7 +1157,7 @@ router.get('/sankey', requireAuth, (req, res) => {
       try {
         repo = await processGovernanceRepository();
       } catch (error) {
-        console.error(error);
+        logRequestFailure(res, error);
         return res.status(503).json({ error: '流程治理 MySQL 读模型不可用' });
       }
       return res.json(await repo.getActiveSankey());
@@ -1241,7 +1242,7 @@ router.get('/a1', requireAuth, (req, res) => {
       try {
         repo = await processGovernanceRepository();
       } catch (error) {
-        console.error(error);
+        logRequestFailure(res, error);
         return res.status(503).json({ error: '流程治理 MySQL 读模型不可用' });
       }
       return res.json({ items: await repo.getA1Items(req.query) });
@@ -2536,7 +2537,7 @@ router.get('/input-baseline-review/runs', requireAuth, (req, res) => {
   return runAsyncAction(res, async () => {
     const artifactRuns = listReviewRuns();
     const byRunId = new Map(artifactRuns.map(item => [item.run_id, item]));
-    const repo = await inputBaselineReviewRepositoryOrNull();
+    const repo = await inputBaselineReviewRepositoryOrNull(res);
     if (repo) {
       const storedRuns = await repo.listRuns();
       for (const item of storedRuns) {
@@ -2568,7 +2569,7 @@ router.get('/input-baseline-review/runs/:runId/review-items', requireAuth, (req,
     };
     const departmentName = await currentInputBaselineReviewDepartmentName(req);
     const filters = scopedInputBaselineReviewFilters(requestedFilters, departmentName);
-    const repo = await inputBaselineReviewRepositoryOrNull();
+    const repo = await inputBaselineReviewRepositoryOrNull(res);
     if (repo) {
       try {
         const runDir = reviewRunDir(req.params.runId);
@@ -2585,9 +2586,7 @@ router.get('/input-baseline-review/runs/:runId/review-items', requireAuth, (req,
         }
       } catch (error) {
         if (!bundle) throw error;
-        if (process.env.MDM_DB_QUIET !== '1') {
-          console.warn(`input baseline review MySQL read failed; falling back to artifact run ${req.params.runId}: ${error.message}`);
-        }
+        securityLog(res).write({ event: 'dependency_degraded', code: 'INPUT_BASELINE_READ_FALLBACK' });
       }
     }
     if (!bundle) return res.status(404).json({ error: '问题识别批次不存在' });
@@ -2613,7 +2612,7 @@ router.put('/input-baseline-review/runs/:runId/review-items/:stableKey/review', 
     try {
       repo = await inputBaselineReviewRepository();
     } catch (error) {
-      console.error(error);
+      logRequestFailure(res, error);
       return res.status(503).json({ error: '输入基线问题复核 MySQL 不可用' });
     }
 

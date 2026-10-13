@@ -87,10 +87,10 @@ department Sankey HTML, `docs/norms/流程治理/`, `_quality-report.md`, `READM
 `CLAUDE.md`, `_extracted/`, scripts and ECharts assets unless the user explicitly
 requests an audit of generated outputs.
 
-Visio may be deferred without extraction:
+Use the external original directory designated by the user. `docs/norms` is a historical copy and must not become the default business source. Visio may be deferred without extraction:
 
 ```powershell
-node .agents/skills/process-evidence-mapping/scripts/extract-evidence-chunks.mjs --input docs/norms --out artifacts/evidence-index/<run-id>/chunks.jsonl --defer-ext .vsd,.vsdx --defer-reason "本轮不读取Visio内容；仅登记来源，不形成结构化候选。"
+node .agents/skills/process-evidence-mapping/scripts/extract-evidence-chunks.mjs --input "<external-source-directory>" --out artifacts/evidence-index/<run-id>/chunks.jsonl --defer-ext .vsd,.vsdx --defer-reason "本轮不读取Visio内容；仅登记来源，不形成结构化候选。"
 ```
 
 Deferred files remain in `source_index.jsonl` with

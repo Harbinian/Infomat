@@ -47,10 +47,10 @@ async function main() {
       assert.equal(await page.locator('[data-next-action]').count(), Math.min(3, payload.nextActions.length));
       for (const action of payload.nextActions.slice(0, 3)) assert.ok((await page.locator('[data-next-actions]').textContent()).includes(action.title));
       const target = page.locator('[data-next-action] a').first();
-      assert.equal(await target.getAttribute('href'), '/' + payload.nextActions[0].target);
-      await target.click(); await page.waitForURL('**/#/processGovernance**');
+      assert.equal(await target.getAttribute('href'), require('../shared/browserProtocol').targetHref(payload.nextActions[0].target));
+      await target.click(); await page.waitForURL('**/app/process-preview?**');
       await page.goBack(); await idle(); await page.reload(); await idle();
-      checks.push('native V8 tasks and source roles from real API, preserved full legacy item target, browser back and reload');
+      checks.push('native V8 tasks and source roles from real API, preserved identifiers in current item target, browser back and reload');
       await button('全量职责').click(); await idle(); await noOverflow();
       await page.screenshot({ path: path.join(output, 'desktop.png'), fullPage: true });
       await noOverflow();
@@ -74,7 +74,7 @@ async function main() {
       await expect('reviewA', `/api/offices/tasks/${officeTask.id}/assign`, 'POST', { assignee_person_id: 87, expected_revision: officeTask.revision_no });
       await refresh();
       await page.getByRole('link', { name: '办理办公室任务', exact: true }).first().waitFor();
-      assert.equal(await page.getByRole('link', { name: '办理办公室任务', exact: true }).first().getAttribute('href'), '/#/officeWorkbench?office_id=701');
+      assert.equal(await page.getByRole('link', { name: '办理办公室任务', exact: true }).first().getAttribute('href'), '/app/offices?office_id=701');
       await expect('multi', `/api/offices/tasks/${officeTask.id}/complete`, 'POST', { expected_revision: 2, note: '合成办理完成，不代表正式审核通过' });
       await refresh(); assert.equal(await page.getByRole('link', { name: '办理办公室任务', exact: true }).count(), 0);
       checks.push('real office assignment appears in personal workbench and disappears after task completion');

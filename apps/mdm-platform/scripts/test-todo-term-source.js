@@ -13,7 +13,7 @@ assert.ok(output.startsWith(path.resolve(__dirname, '../../../artifacts') + path
 fs.mkdirSync(output, { recursive: true });
 const checks = [];
 async function main() {
-  await withStage05Fixture(async ({ pool, fixture, expect, backup, restore }) => {
+  await withStage05Fixture(async ({ pool, fixture, expect, request, backup, restore }) => {
     const connection = await pool.getConnection();
     try {
       await pool.execute("INSERT INTO mdm_todos(id,to_dept_id,type,related_mapping_id,content) VALUES(9001,91,'terminology',501,'合成历史术语待办')");
@@ -53,6 +53,7 @@ async function main() {
     await pool.execute("INSERT INTO process_mapping_records(id,mapping_key,record_type,first_snapshot_id,latest_snapshot_id,dept_name,l3_name,status) VALUES(501,'synthetic_term_source_a','l3',1,1,'合成甲部','合成甲流程','active'),(502,'synthetic_term_source_b','l3',1,1,'合成乙部','合成乙流程','active')");
     await pool.execute("INSERT INTO terminology_terms(id,term,term_type_code,definition,process_mapping_record_id,created_by,created_by_person_id) VALUES(701,'合成关联术语','noun','明确术语来源',501,83,83),(702,'合成乙部受限术语','noun','不得跨部门披露',502,85,85),(703,'合成待删除术语','noun','删除后引用仍保留',501,83,83)");
     const body = (overrides = {}) => ({ type: 'terminology', related_term_id: '701', to_dept_id: '91', content: '核对合成术语定义', request_id: crypto.randomUUID(), ...overrides });
+    await require('./testHelpers/termTodoReliabilityVerification')({pool,fixture,expect,request,body,checks,output});
     await pool.execute("INSERT INTO person_roles(person_id,role_id,scope_type,authorization_basis,effective_from) SELECT 88,role_id,'global','synthetic composite admin test',CURRENT_DATE FROM roles WHERE role_code='mdm_lead'");
     const composite = await expect('adminMulti','/api/org/me','GET');
     assert.ok(composite.permissions.includes('governance:assign-work') && composite.permissions.includes('identity:manage-account'));
@@ -69,6 +70,7 @@ async function main() {
     const responses = await Promise.all([expect('lead','/api/todos','POST',payload), expect('lead','/api/todos','POST',payload)]);
     assert.equal(responses[0].id, responses[1].id);
     const linkedId = responses[0].id;
+    for (const who of ['admin','adminMulti']) await expect(who,`/api/todos/${linkedId}`,'DELETE',undefined,403);
     assert.equal((await pool.query('SELECT * FROM mdm_todo_events WHERE todo_id=?',[linkedId]))[0].length, 1);
     assert.equal((await expect('contact','/api/todos','GET')).find(r => r.id === linkedId).related_term_id, '701');
     await expect('lead','/api/todos','POST',{...payload,content:'另一项内容'},409);
@@ -83,9 +85,11 @@ async function main() {
     const deletable = await expect('lead','/api/todos','POST',deletionRequest);
     await expect('lead',`/api/todos/${deletable.id}`,'DELETE');
     await expect('lead','/api/todos','POST',deletionRequest,409);
-    const deletedSourceTodo = await expect('lead','/api/todos','POST',body({related_term_id:'703'}));
+    const deletedSourceRequest = body({related_term_id:'703'});
+    const deletedSourceTodo = await expect('lead','/api/todos','POST',deletedSourceRequest);
     await expect('contact','/api/terminology/703','DELETE');
     assert.equal((await expect('lead','/api/todos','GET')).find(r=>r.id===deletedSourceTodo.id).related_term_id,'703');
+    assert.equal((await expect('lead','/api/todos','POST',deletedSourceRequest,404)).code,'TODO_TERM_UNAVAILABLE');
     const limited = await expect('lead','/api/todos','POST',body({related_term_id:'702'}));
     assert.ok((await expect('contact','/api/todos','GET')).some(r=>r.id===limited.id));
     assert.ok(!(await expect('contact','/api/terminology','GET')).some(r=>r.id===702));
@@ -93,12 +97,20 @@ async function main() {
     try { await assert.rejects(manageTodoTermSource(db,'rollback'),/TODO_TERM_ROLLBACK_HAS_HISTORY/); } finally { db.release(); }
     checks.push('real concurrent idempotency, different payload 409, audit failure atomic rollback, deletion tombstone refusal, source deletion preserves ID, recipient scope unchanged, used migration rollback refused');
 
+    const historyTables=['mdm_todos','mdm_todo_events','mdm_version_log','terminology_terms','schema_migrations'];
+    async function snapshots(){return Promise.all(historyTables.map(async table=>{const [rows]=await pool.query(`SELECT * FROM ${table} ORDER BY ${table==='schema_migrations'?'migration_key':'id'}`);return {table,count:rows.length,sha256:crypto.createHash('sha256').update(JSON.stringify(rows)).digest('hex')};}));}
+    const recoveryBefore=await snapshots();const syntheticBackup=backup();restore(syntheticBackup);assert.deepEqual(await snapshots(),recoveryBefore);
+    fs.writeFileSync(path.join(output,'synthetic-recovery.json'),JSON.stringify({passed:true,tables:recoveryBefore,backupPersisted:false},null,2));
+    const [columns]=await pool.query("SELECT TABLE_NAME,COLUMN_NAME,COLUMN_TYPE,IS_NULLABLE,COLUMN_DEFAULT,EXTRA FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN('mdm_todos','mdm_todo_events','mdm_version_log','terminology_terms','terminology_term_types','process_mapping_records','schema_migrations') ORDER BY TABLE_NAME,ORDINAL_POSITION");
+    fs.writeFileSync(path.join(output,'target-columns.json'),JSON.stringify(columns,null,2));
+    checks.push('owned synthetic memory backup/restore preserves todo/source IDs, request log, deletion metadata/events and migration marker byte digests; exact metadata recorded');
+
     const browser = await runtime().chromium.launch({channel:'msedge',headless:true});
     const context = await browser.newContext({viewport:{width:1699,height:828},deviceScaleFactor:1,timezoneId:'Asia/Shanghai'});
     const page = await context.newPage(); page.setDefaultTimeout(15000);
     const pageErrors=[], consoleErrors=[], writes=[];
     page.on('pageerror',e=>pageErrors.push(e.message)); page.on('console',m=>{if(m.type()==='error')consoleErrors.push(m.text());});
-    page.on('request',r=>{if(r.url().includes('/api/todos') && r.method()!=='GET')writes.push({method:r.method(),url:r.url()});});
+    page.on('request',r=>{if(r.url().includes('/api/todos') && r.method()!=='GET')writes.push({method:r.method(),url:r.url(),body:r.postDataJSON()});});
     const watchdog=setTimeout(()=>browser.close().catch(()=>{}),240000);
     const button=name=>page.getByRole('button',{name,exact:true});
     const termsReady=()=>page.locator('[data-terms-ready]').waitFor();
@@ -113,7 +125,7 @@ async function main() {
       await startTodo();assert.equal(await page.getByLabel('接收部门',{exact:true}).inputValue(),'91');
       await button('刷新术语').click();await termsReady();assert.ok((await page.getByLabel('待办办理内容',{exact:true}).inputValue()).startsWith('合成中文'));
       page.once('dialog',d=>d.dismiss());await page.getByRole('link',{name:'查看术语待办',exact:true}).click();assert.ok(page.url().includes('/app/terms'));
-      for(const status of [403,409]){await page.route('**/api/todos',route=>route.fulfill({status,json:{error:'合成拒绝'}}),{times:1});await button('确认提交').click();await page.getByText(status===403?'当前身份无权执行此操作，请核对权限或联系负责人。':'内容已变化或请求冲突，请重新核对后再操作。当前输入仍保留。',{exact:true}).waitFor();assert.ok((await page.getByLabel('待办办理内容',{exact:true}).inputValue()).startsWith('合成中文'));}
+      for(const status of [403,409]){await page.route('**/api/todos',route=>route.fulfill({status,json:{error:'合成拒绝'}}),{times:1});await button('确认提交').click();await page.getByText(status===403?'当前身份无权执行此操作，请核对权限或联系负责人。':'内容已变化或请求冲突，请重新核对后再操作。当前输入仍保留。',{exact:true}).waitFor();assert.ok((await page.getByLabel('待办办理内容',{exact:true}).inputValue()).startsWith('合成中文'));if(status===409){await cancel();await startTodo();}}
       await page.route('**/api/todos',route=>route.fulfill({status:503,json:{error:'合成暂不可用'}}),{times:1});await button('确认提交').click();await page.getByText('写入结果不明，已阻止重复提交',{exact:true}).waitFor();assert.equal(await button('确认提交').isDisabled(),true);await cancel();
       await startTodo();await page.route('**/api/todos',route=>route.fulfill({json:{}}),{times:1});await button('确认提交').click();await page.getByText('写入结果不明，已阻止重复提交',{exact:true}).waitFor();assert.ok((await page.getByLabel('待办办理内容',{exact:true}).inputValue()).startsWith('合成中文'));await cancel();
       await startTodo();await page.screenshot({path:path.join(output,'create-desktop.png'),fullPage:true});
@@ -138,7 +150,8 @@ async function main() {
       await button('退出登录').click();await login('lead');await detail().waitFor();await startTodo();
       await page.getByLabel('待办办理内容',{exact:true}).fill('合成丢失回执');
       await page.route('**/api/todos',async route=>{await route.fetch();await route.abort('failed');},{times:1});await button('确认提交').click();await page.getByText('写入结果不明，已阻止重复提交',{exact:true}).waitFor();
-      assert.equal(await button('确认提交').isDisabled(),true);assert.equal((await expect('lead','/api/todos','GET')).filter(r=>r.content==='合成丢失回执').length,1);await cancel();
+      assert.equal(await button('确认提交').isDisabled(),true);assert.equal((await expect('lead','/api/todos','GET')).filter(r=>r.content==='合成丢失回执').length,1);
+      await require('./testHelpers/termTodoBrowserVerification')({page,pool,expect,fixture,writes,output,checks,startTodo,cancel,detail,button});
       await startTodo();await pool.execute("UPDATE terminology_terms SET definition='合成并发变更' WHERE id=701");const beforeWrites=writes.length;
       await button('确认提交').click();await page.getByText('原记录已变化，当前输入保留',{exact:true}).waitFor();assert.equal(writes.length,beforeWrites);await cancel();
       checks.push('committed create with lost response is not replayed; changed source snapshot blocks stale form without clearing input');
@@ -149,6 +162,6 @@ async function main() {
       fs.writeFileSync(path.join(output,'failure.json'),JSON.stringify({error:error.message,stack:error.stack,checks,pageErrors},null,2));
       await page.screenshot({path:path.join(output,'failure.png'),fullPage:true,timeout:5000}).catch(()=>{});throw error;
     } finally { clearTimeout(watchdog);await browser.close(); }
-  },{evidenceDir:output});
+  },{evidenceDir:output,randomDatabase:true});
 }
-main().catch(error=>{console.error(error);process.exitCode=1;});
+main().catch(error=>{fs.writeFileSync(path.join(output,'run-failure.json'),JSON.stringify({error:error.message,stack:error.stack,checks},null,2));console.error(error);process.exitCode=1;});

@@ -130,10 +130,10 @@ module.exports = async function ({ repo, lead, pool, fixture, source, check, sav
       await page.goto(fixture.baseURL + '/app/analysis'); await page.locator('#login-name').fill('SYNTHETIC_lead'); await page.locator('#login-password').fill(fixture.loginPassword); await button('登录').click(); await idle();
       await label('分析对象').selectOption('ai_offline'); await idle(); await label('固定来源').selectOption(source.source_id); await label('本轮范围说明').fill('P19 页面创建离线校验');
       await page.route('**/api/analysis/runs', async route => route.request().method() === 'POST' ? route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'UNAVAILABLE' }) }) : route.continue());
-      await button('创建并排队分析').click(); await wait(async () => !await button('创建并排队分析').isDisabled()); assert.equal(await label('本轮范围说明').inputValue(), 'P19 页面创建离线校验'); await page.unroute('**/api/analysis/runs');
-      await startWorker(); await button('创建并排队分析').click(); await idle(); const id = new URL(page.url()).hash.match(/(?:#|&)run=(\d+)/)[1];
+      await button('创建并排队分析').click(); await button('核对同一请求结果').waitFor(); await idle(); assert(await button('创建并排队分析').isDisabled()); assert.equal(await label('本轮范围说明').inputValue(), 'P19 页面创建离线校验'); await page.unroute('**/api/analysis/runs');
+      await startWorker(); await button('核对同一请求结果').click(); await idle(); const id = new URL(page.url()).hash.match(/(?:#|&)run=(\d+)/)[1];
       await wait(async () => (await repo.getAnalysisRun(lead, id)).status === 'partial'); await button('刷新分析记录').click(); await idle();
-      await page.getByRole('note').waitFor(); await wait(async () => (await page.getByRole('heading', { name: '运行 ' + id + ' · 部分完成', exact: true }).count()) === 1);
+      await page.getByRole('note').filter({ hasText: '本轮仅使用离线替身' }).waitFor(); await wait(async () => (await page.getByRole('heading', { name: '运行 ' + id + ' · 部分完成', exact: true }).count()) === 1);
       assert.match(await page.locator('body').innerText(), /本轮仅使用离线替身/); assert.match(await page.locator('body').innerText(), /未覆盖/);
       await page.screenshot({ path: path.join(output, 'p19-offline-desktop.png'), fullPage: true }); await stopWorker();
       await label('当前运行').selectOption(accepted); await idle();

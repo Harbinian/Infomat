@@ -27,8 +27,8 @@ export function ExcelEvidence({ api, draft, setDraft, batchId, canWrite, onRegis
     {error&&<StatusPanel kind="error" title="Excel 操作未完成，输入保留">{error.message} {error.code}</StatusPanel>}
     <form onSubmit={upload}><fieldset disabled={busy||!canWrite||!!draft?.review||!!draft?.task||!!draft?.closure||!!draft?.pdf||!!draft?.word}>
       <label className="management-input">Excel 文件<input ref={fileInput} aria-label="Excel 文件" type="file" accept=".xlsx" onChange={e=>edit('file',e.target.files[0]||null)}/></label>{d.file&&<p>待登记：{d.file.name}</p>}
-      <details><summary>显式关联固定对象、字段或 V7 来源（可留空）</summary><p>只登记你明确给出的对应关系，不按名称匹配。修改关联需重新登记为独立证据批次，历史批次保留。</p>
-        <label className="management-input">关联类型<select aria-label="Excel 关联类型" value={d.kind} onChange={e=>edit('kind',e.target.value)}><option value="definition">对象或字段固定版本</option><option value="mapping">V7 映射固定版本</option><option value="v7_source">V7 固定来源</option></select></label>
+      <details><summary>显式关联固定对象、字段或 流程固定来源（可留空）</summary><p>只登记你明确给出的对应关系，不按名称匹配。修改关联需重新登记为独立证据批次，历史批次保留。</p>
+        <label className="management-input">关联类型<select aria-label="Excel 关联类型" value={d.kind} onChange={e=>edit('kind',e.target.value)}><option value="definition">对象或字段固定版本</option><option value="mapping">来源映射固定版本</option><option value="v7_source">流程固定来源</option></select></label>
         {[['ref','固定版本或来源 ID'],['sheet','关联工作表名称'],['address','关联单元格地址'],['basis','关联依据']].map(([k,title])=><label className="management-input" key={k}>{title}<input aria-label={'Excel '+title} value={d[k]} maxLength={k==='basis'?1000:128} onChange={e=>edit(k,e.target.value)}/></label>)}
       </details><button type="submit" className="primary">登记 Excel 证据</button>
     </fieldset></form>

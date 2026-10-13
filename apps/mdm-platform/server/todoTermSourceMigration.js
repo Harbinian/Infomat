@@ -1,14 +1,26 @@
 const MIGRATION_KEY = '2026-09-28-todo-term-source-v1';
 
-async function inspectTodoTermSource(db) {
+async function inspectTodoTermSource(db, { countRows = true } = {}) {
   const [[table]] = await db.execute("SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='mdm_todos'");
   if (!table || table.ENGINE !== 'InnoDB') throw new Error('TODO_TERM_SCHEMA_BASE_REQUIRED');
   const [[column]] = await db.execute("SELECT COLUMN_TYPE,IS_NULLABLE,COLUMN_DEFAULT,EXTRA FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='mdm_todos' AND COLUMN_NAME='related_term_id'");
   const [[record]] = await db.execute('SELECT migration_key FROM schema_migrations WHERE migration_key=?', [MIGRATION_KEY]);
   const matching = column && /^bigint(?:\(20\))?$/i.test(column.COLUMN_TYPE) && column.IS_NULLABLE === 'YES' && column.COLUMN_DEFAULT === null && !column.EXTRA;
   if ((column && !matching) || (!column && record)) return { state: 'drift', recorded: Boolean(record) };
+  if (!countRows) return { state: !column ? 'absent' : record ? 'applied' : 'unrecorded', recorded: Boolean(record) };
   const [[counts]] = await db.execute(`SELECT COUNT(*) AS rows_count${column ? ',COUNT(related_term_id) AS linked_count' : ''} FROM mdm_todos`);
   return { state: !column ? 'absent' : record ? 'applied' : 'unrecorded', recorded: Boolean(record), rows: Number(counts.rows_count), linked: Number(counts.linked_count || 0) };
+}
+
+async function assertTodoTermSourceReady(db) {
+  let applied = false;
+  try { applied = (await inspectTodoTermSource(db, { countRows: false })).state === 'applied'; }
+  catch (error) { if (error.message !== 'TODO_TERM_SCHEMA_BASE_REQUIRED') throw error; }
+  if (!applied) {
+    throw Object.assign(new Error('术语待办结构或迁移标记不可用，请核对显式维护记录'), {
+      code: 'MYSQL_RUNTIME_SCHEMA_UNAVAILABLE', statusCode: 503
+    });
+  }
 }
 
 // Explicit maintenance only. MySQL DDL commits independently. A matching column
@@ -40,4 +52,4 @@ async function manageTodoTermSource(db, action) {
   } finally { await db.execute("SELECT RELEASE_LOCK(CONCAT('todo-term-migration:',LEFT(SHA2(DATABASE(),256),40)))").catch(() => {}); }
 }
 
-module.exports = { MIGRATION_KEY, inspectTodoTermSource, manageTodoTermSource };
+module.exports = { MIGRATION_KEY, inspectTodoTermSource, manageTodoTermSource, assertTodoTermSourceReady };

@@ -8,7 +8,7 @@ const stateLabel = task => task.status === 'done' ? '已办结' : task.assignee_
 function completion(task) {
   if (!task.completion_json) return '未记录办理结果';
   try { return (typeof task.completion_json === 'string' ? JSON.parse(task.completion_json) : task.completion_json).note || '未记录办理结果'; }
-  catch { return '办理结果暂不可读，请使用原入口核对。'; }
+  catch { return '办理结果暂不可读，请刷新办公室任务后核对。'; }
 }
 function mayAct(data, task, mode) {
   const office = data?.offices.find(o => same(o.id, task.office_id));
@@ -16,7 +16,7 @@ function mayAct(data, task, mode) {
   return mode === 'assign' ? data.can_assign : data.can_complete && same(task.assignee_person_id, data.actor_person_id);
 }
 
-export function OfficeWorkbench({ api, draft, setDraft, onLegacy }) {
+export function OfficeWorkbench({ api, draft, setDraft, onNavigate }) {
   const [officeId, setOfficeId] = useState(() => draft?.officeId || new URLSearchParams(location.search).get('office_id') || '');
   const [data, setData] = useState(null);
   const [filter, setFilter] = useState('');
@@ -94,7 +94,7 @@ export function OfficeWorkbench({ api, draft, setDraft, onLegacy }) {
   return <div className="process-preview office-workbench">
     <section className="card">
       <h2>办公室任务办理</h2><p>任务交到办公室后，由明确的负责人分配给成员。成员填写结果并办结；任务办结不等于问题关闭或正式审核通过。</p>
-      <div className="import-actions"><button className="secondary" onClick={() => load()} disabled={loading || saving}>刷新办公室任务</button><a href={'/#/officeWorkbench' + (officeId ? '?office_id=' + encodeURIComponent(officeId) : '')} onClick={onLegacy}>使用原办公室入口</a></div>
+      <div className="import-actions"><button className="secondary" onClick={() => load()} disabled={loading || saving}>刷新办公室任务</button></div>
       <div><label htmlFor="office-field-1">办公室</label><select id="office-field-1" value={officeId} disabled={!data || saving} onChange={e => switchOffice(e.target.value)}>{!data && <option value={officeId}>正在核对办公室</option>}{data?.offices.length === 0 && <option value="">暂无办公室</option>}{data?.offices.map(o => <option key={o.id} value={o.id}>{o.department_name || '归口部门待明确'} / {o.name}{o.status !== 'active' ? '（未启用）' : ''}</option>)}</select></div>
       {selected && <p>归口部门：{selected.department_name || '待明确'}；办公室负责人：{selected.manager_name || '尚未指定'}；状态：{selected.status === 'active' ? '启用' : '未启用'}</p>}
       {data?.can_route && data.offices.some(o => o.status === 'active' && o.department_id) && <button className="primary" disabled={saving} onClick={() => start('create')}>交办到办公室</button>}
@@ -132,7 +132,7 @@ export function OfficeWorkbench({ api, draft, setDraft, onLegacy }) {
           <h3>任务 {t.id} · {stateLabel(t)}</h3><p>{t.content}</p><p>办理人：{t.assignee_name || '等待负责人分配'}；截止日期：{t.due_date || '未设定'}；紧急程度：{{high:'紧急',medium:'普通',low:'较低'}[t.urgency] || '待核对'}</p>
           {t.process_version_id && <p>{t.process_name} · 正式版 {t.process_edition}（固定版本 {t.process_version_id}）<br />流程归口：{t.owning_department_name || '待明确'}；业务行为：{t.behavior_name || t.behavior_ref || '整个流程'}</p>}
           {t.analysis_task && <details><summary>问题办理说明</summary><p>{t.analysis_task.instruction}</p><p>问题 {t.analysis_task.issue_id} · 修订 {t.analysis_task.source_revision} · 轮次 {t.analysis_task.round_no}；任务办结不会关闭问题。</p></details>}
-          {t.analysis_task?.compiler_replies?.length > 0 && <details open><summary>流程编制者答复</summary>{t.analysis_task.compiler_replies.map(r => <p key={r.id}>{new Date(r.created_at).toLocaleString()} · {r.actor_name}：{r.content}</p>)}<p>编制者答复是办理依据，请按任务分配填写办理结果；问题仍须独立复核。</p></details>}
+          {t.analysis_task?.compiler_replies?.length > 0 && <details open><summary>流程编制者答复</summary><p>最多展示最近50条答复，历史保留。</p>{t.analysis_task.compiler_replies.map(r => <p key={r.id}>{new Date(r.created_at).toLocaleString()} · {r.actor_name}：{r.content}</p>)}<p>编制者答复是办理依据，请按任务分配填写办理结果；问题仍须独立复核。</p></details>}
           <div className="import-actions">{mayAct(data,t,'assign') && <button className="secondary" disabled={saving} onClick={() => start('assign',t)}>{t.assignee_person_id ? '重新分配' : '分配人员'} {t.id}</button>}{mayAct(data,t,'complete') && <button className="primary" disabled={saving} onClick={() => start('complete',t)}>填写结果并办结 {t.id}</button>}</div>
           {t.status === 'done' && <><p>{completion(t)}</p><p>办结时间：{t.done_epoch ? new Date(Number(t.done_epoch)*1000).toLocaleString() : '未记录'}</p></>}
         </article>)}

@@ -1,0 +1,33 @@
+name: infomat-3000
+services:
+  mdm:
+    image: ${MDM_DOCKER_IMAGE:?Set the verified local image tag}
+    pull_policy: never
+    container_name: infomat-mdm-3000
+    restart: unless-stopped
+    init: true
+    read_only: true
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      MDM_EXPECTED_SOURCE_DIGEST: ${MDM_EXPECTED_SOURCE_DIGEST:?Set the approved source digest}
+      PROCESS_V7_PREVIEW_ENABLED: ${PROCESS_V7_PREVIEW_ENABLED:-0}
+    volumes:
+      - type: bind
+        source: ${MDM_DOCKER_SECRET_FILE:?Set the ACL-protected runtime configuration file}
+        target: /run/secrets/mdm-runtime.json
+        read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=134217728
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 768m
+    cpus: 2
+    stop_grace_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

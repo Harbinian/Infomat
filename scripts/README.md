@@ -1,6 +1,6 @@
 # scripts 目录说明
 
-## V8 候选兼容说明（2026-09-22）
+## 当前V8与历史版本兼容
 
 共享纯校验模块 `process-governance/v7-validator.js` 同时导出 V7 与 V8 入口，由 3001 和 3000 按文件版本分派。V8 仅放行 decision + use，V7 历史语义不变。模块不写文件、不连接数据库。验证命令：`node apps/structured-output-service/scripts/test-v8-decision-data.js`；3000 接收隔离回归见其 README 的 V8 章节。
 
@@ -38,7 +38,7 @@
 | `start-infomat-services.ps1` | 固定启动MDM、PMO和项目MySQL | 固定配置、本机私有env、Docker容器`infomat-input-baseline-review-mysql` | 按固定环境启动服务，不修改仓库真源 |
 | `smoke-infomat-services.mjs` | 固定配置下检查MDM和PMO是否可用，并核对V7预览及旧编制入口不再注册 | 固定配置、本机私有env、运行中的服务 | 只读检查，输出会隐藏密码 |
 | `test-infomat-services-config.mjs` | 防止启动配置再次漂移 | 固定配置、启动脚本、冒烟脚本、`.gitignore` | 只读校验 |
-| `information-collection.config.json` | 固定信息表收集服务的监听地址、端口、数据库目标和附件限制 | 非敏感固定配置 | 不保存数据库密码、会话密钥或扫描命令 |
+| `information-collection.config.json` | 固定信息表收集服务的监听地址、端口、数据库目标和附件限制 | 非敏感固定配置；`mdm_user`密码通过`COLLECTION_MYSQL_PASSWORD`提供 | 不保存数据库密码、会话密钥或扫描命令 |
 | `start-information-collection.ps1` | 校验端口、身份结构和信息收集表后启动 4000/4001 | 固定配置、被 Git 忽略的本机环境文件、现有 MySQL | 启动本机服务；不修改 MDM 身份和治理业务表 |
 | `smoke-information-collection.mjs` | 检查两个端口健康状态、登录边界和独立 Cookie 名 | 运行中的 4000/4001 | 只读烟测，不输出凭据 |
 | `invoke-information-collection-migration.ps1` | 执行信息表收集 schema 的 dry-run、apply 或 check | 固定配置、本机数据库凭据、现有身份表 | dry-run/check 只读；apply 仅创建或升级 `collection_*` 表 |

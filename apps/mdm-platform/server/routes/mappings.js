@@ -1,6 +1,8 @@
 const { sendMysqlUnavailable } = require('../mysqlRuntimeSchema');
 const express = require('express');
 const mysql = require('mysql2/promise');
+const { logRequestFailure } = require('../securityLog');
+const { createRegisteredPool } = require('../mysqlPoolRegistry');
 const router = express.Router();
 const {
   requireAuth,
@@ -22,7 +24,7 @@ async function governanceRepository() {
   if (governanceRepositoryFactory) return await governanceRepositoryFactory();
   if (!governanceRepositoryPromise) {
     governanceRepositoryPromise = Promise.resolve(
-      makeGovernanceAccessMysqlRepository(mysql.createPool(mysqlConfigFromEnv()))
+      makeGovernanceAccessMysqlRepository(createRegisteredPool(process.env, 'governanceAccess'))
     );
   }
   return await governanceRepositoryPromise;
@@ -35,7 +37,7 @@ function handleDbError(res, error) {
   if (code.startsWith('ER_DUP_ENTRY') || code.startsWith('ER_NO_REFERENCED_ROW') || message.includes('constraint')) {
     return res.status(400).json({ error: '数据不符合约束' });
   }
-  console.error(error);
+  logRequestFailure(res, error);
   return res.status(500).json({ error: '服务器错误' });
 }
 

@@ -1,6 +1,7 @@
 const { sendMysqlUnavailable } = require('../mysqlRuntimeSchema');
 const { listPendingTodos, listEscalatedConflicts } = require('../workbenchMysqlSources');
 const express = require('express');
+const { logRequestFailure } = require('../securityLog');
 const router = express.Router();
 function legacyDb() { return require('../db'); }
 const {
@@ -200,7 +201,7 @@ function runDbAction(res, action) {
     return action();
   } catch (error) {
     if (sendMysqlUnavailable(res, error)) return;
-    console.error(error);
+    logRequestFailure(res, error);
     return res.status(500).json({ error: '服务器错误' });
   }
 }
@@ -208,7 +209,7 @@ function runDbAction(res, action) {
 function runAction(res, action) {
   return action().catch(error => {
     if (sendMysqlUnavailable(res, error)) return;
-    console.error(error);
+    logRequestFailure(res, error);
     return res.status(500).json({ error: '服务器错误' });
   });
 }

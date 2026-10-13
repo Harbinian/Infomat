@@ -1,0 +1,35 @@
+{
+  "schema_version": "process-governance-v7",
+  "export_meta": {
+    "package_ref": "package_e958e83651f95ac7",
+    "exported_at": "2026-10-05T22:24:31.165Z",
+    "initiating_department": "",
+    "compiler": ""
+  },
+  "process": {
+    "process_ref": "process_c3020c935108884b",
+    "process_name": "",
+    "owning_department": "",
+    "purpose": "",
+    "scope": "",
+    "capability_domain": null,
+    "business_capability": null,
+    "classification_status": "unclassified"
+  },
+  "behaviors": [],
+  "flow_relations": [],
+  "data_objects": [],
+  "forms": [],
+  "terms": [],
+  "migration": {
+    "source_schema_version": "process-governance-v7",
+    "source_process_ref": null,
+    "source_process_count": 1,
+    "legacy_cross_department_records": [],
+    "reference_materials": [],
+    "internal_process_calls": [],
+    "work_roles": [],
+    "unresolved_actor_roles": [],
+    "unresolved_join_modes": []
+  }
+}

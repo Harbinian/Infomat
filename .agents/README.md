@@ -10,6 +10,7 @@
 
 | 路径 | 作用 |
 |---|---|
+| [deepseek-3000-remediation-prompts.md](deepseek-3000-remediation-prompts.md) | DeepSeek 受限整改提示词：总控规则、R01–R13任务包、启动与续接；全部实施任务完成后统一验证，默认不操作现行3000或正式数据库；仅在用户明确启动时使用 |
 | `skills/business-behavior-mapping/` | BBM/A1 业务行为映射兼容技能 |
 | `skills/department-capability-mapping/` | DCM 部门能力流程系统映射兼容技能 |
 | `skills/process-evidence-mapping/` | 从可提取文字及带来源定位的待复核视觉转录生成并校验 `document-structured-output-v2` 证据草稿；不可读来源保留缺口，只暂停依赖成果，不自动确认或发布 |

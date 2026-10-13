@@ -1,0 +1,19 @@
+{
+  "name": "infomat-slack-bot",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Slack 只读问答机器人：把 Claude Code CLI 接进 Slack，回答仓库制度与流程问题",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node --env-file=.env src/index.js",
+    "check": "node --check src/index.js"
+  },
+  "engines": {
+    "node": ">=20.6"
+  },
+  "dependencies": {
+    "@slack/bolt": "^5.1.0",
+    "undici": "^8.11.2"
+  }
+}

@@ -1,0 +1,23 @@
+# Additional protection; the release helper first creates an allowlisted context.
+**/.git
+**/.env*
+**/private
+**/uploads
+**/recordings
+**/artifacts
+**/output
+**/data
+**/frontend/node_modules
+**/node_modules
+!apps/structured-output-service/node_modules/
+!apps/structured-output-service/node_modules/cytoscape/
+!apps/structured-output-service/node_modules/cytoscape/dist/
+!apps/structured-output-service/node_modules/cytoscape/dist/cytoscape.min.js
+!apps/structured-output-service/node_modules/cytoscape/LICENSE
+!apps/structured-output-service/node_modules/cytoscape/package.json
+**/*.sql
+**/*.db
+**/*.sqlite
+**/*.dpapi
+**/*.wav
+**/*.mp3

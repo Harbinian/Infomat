@@ -36,9 +36,8 @@ async function main(){await withStage05Fixture(async({fixture,pool,expect})=>{
   await page.goForward();await ready();assert.deepEqual(await ids(),[]);
   await select('待办状态','');await select('待办类型','');
   await page.getByRole('link',{name:'进入办公室工作台',exact:true}).click();await page.waitForURL('**/app/offices');await page.goBack();await ready();
-  await page.getByRole('link',{name:'打开原待办入口',exact:true}).click();await page.waitForURL('**/#/todos');await page.locator('#todoRows').getByText('合成确认待办',{exact:true}).waitFor();
-  await page.goBack();await ready();await button('刷新待办').focus();await page.keyboard.press('Enter');await ready();
-  checks.push('combined filters, empty result, URL persistence, reload, history, keyboard and original/office entries');
+  assert.equal(await page.locator('a[href*="/#/"]').count(),0);await button('刷新待办').focus();await page.keyboard.press('Enter');await ready();
+  checks.push('combined filters, empty result, URL persistence, reload, history, keyboard and current office entry');
   for(const status of [403,409,503]){await page.route('**/api/todos?*',route=>route.fulfill({status,json:{}}),{times:1});await button('刷新待办').click();await page.locator('[data-todo-state="error"]').waitFor();assert.equal((await ids()).length,0);await refresh();}
   await context.setOffline(true);await button('刷新待办').click();await page.locator('[data-todo-state="error"]').waitFor();await context.setOffline(false);await refresh();
   let release,entered;const blocked=new Promise(r=>{release=r;}),arrived=new Promise(r=>{entered=r;});
@@ -90,8 +89,8 @@ async function main(){await withStage05Fixture(async({fixture,pool,expect})=>{
   assert.equal((await expect('outsider','/api/versions/entity/t%C3%B3do/9911','GET')).logs.length,0);
   const [untouched]=await pool.query('SELECT * FROM mdm_todos WHERE id<>9911 ORDER BY id');assert.deepEqual(untouched,before.filter(row=>row.id!==9911));
   await page.reload();await ready();assert.ok(!(await ids()).includes('9911'));
-  await page.getByRole('link',{name:'打开原待办入口',exact:true}).click();await page.waitForURL('**/#/todos');await page.locator('#todoRows').getByText('合成确认待办',{exact:true}).waitFor();assert.equal(await page.locator('#todoRows').getByText('其他办理人员已修改',{exact:true}).count(),0);await page.goBack();await ready();
-  checks.push('real delete and preserved snapshot/history/actor audit, audit failure rollback, scoped archive reads, unchanged adjacent records and legacy consistency');
+  assert.equal(await page.locator('a[href*="/#/"]').count(),0);
+  checks.push('real delete and preserved snapshot/history/actor audit, audit failure rollback, scoped archive reads, unchanged adjacent records and current page consistency');
   await page.route('**/api/todos/9913',async route=>{await route.fetch();await route.abort('failed');},{times:1});
   await startDelete(9913);await confirmDelete();await deletionError();assert.equal(await button('确认删除此待办').count(),0);await refresh();assert.ok(!(await ids()).includes('9913'));
   const [lostEvents]=await pool.query("SELECT * FROM mdm_version_log WHERE entity_type='todo' AND entity_id=9913 AND operation='delete'");assert.equal(lostEvents.length,1);
@@ -141,8 +140,8 @@ async function main(){await withStage05Fixture(async({fixture,pool,expect})=>{
   assert.equal((await completionEvents(9921)).length,1);assert.equal(Number((await completionEvents(9921))[0].actor_person_id),83);
   assert.deepEqual((await pool.query('SELECT * FROM mdm_todos WHERE id<>9921 ORDER BY id'))[0],neighbors);
   await select('待办状态','done');await page.locator('[data-todo-id="9921"]').waitFor();assert.equal(await button('完成待办 #9921').count(),0);await page.reload();await ready();assert.ok((await ids()).includes('9921'));
-  await page.getByRole('link',{name:'打开原待办入口',exact:true}).click();await page.waitForURL('**/#/todos');await page.locator('#todoRows tr').filter({hasText:'合成另一办理人已修改'}).getByText('已完成',{exact:true}).waitFor();await page.goBack();await ready();await select('待办状态','pending');
-  checks.push('real completion actor/time/event, unchanged neighbors, pending/done filters, reload and original page consistency');
+  assert.equal(await page.locator('a[href*="/#/"]').count(),0);await select('待办状态','pending');
+  checks.push('real completion actor/time/event, unchanged neighbors, pending/done filters, reload and current page consistency');
   await page.route('**/api/todos/9922/done',async route=>{await route.fetch();await route.abort('failed');},{times:1});await startComplete(9922);await confirmComplete();await completionError();assert.equal(await button('确认完成此待办').count(),0);const afterLost=completionWrites();await refresh();assert.ok(!(await ids()).includes('9922'));assert.equal(completionWrites(),afterLost);assert.equal((await completionEvents(9922)).length,1);
   let releaseComplete,enteredComplete;const heldComplete=new Promise(r=>{releaseComplete=r;}),arrivedComplete=new Promise(r=>{enteredComplete=r;});
   await page.route('**/api/todos',async route=>{const response=await route.fetch();enteredComplete();await heldComplete;await route.fulfill({response}).catch(()=>{});},{times:1});
@@ -175,5 +174,5 @@ async function main(){await withStage05Fixture(async({fixture,pool,expect})=>{
   assert.deepEqual(pageErrors,[]);const unexpectedConsole=consoleErrors.filter(x=>!/Failed to load resource|net::ERR_|status of (401|403|409|503)/.test(x));assert.deepEqual(unexpectedConsole,[]);
   fs.writeFileSync(path.join(output,'results.json'),JSON.stringify({passed:true,checks,pageErrors,unexpectedConsole,writes},null,2));
  }catch(error){fs.writeFileSync(path.join(output,'failure.json'),JSON.stringify({error:error.message,pageErrors,text:await page.locator('body').innerText()},null,2));await page.screenshot({path:path.join(output,'failure.png'),fullPage:true});throw error;}finally{await browser.close();}
-},{evidenceDir:output});}
+},{evidenceDir:output,randomDatabase:true});}
 main().catch(error=>{console.error(error);process.exitCode=1;});

@@ -1,0 +1,1326 @@
+const { supports: supportsNativeProcess } = require('./processNativeFormats');
+const crypto = require('crypto');
+const authoring = require('./processV7Authoring');
+const { sessionSubject, identityInteger, sameIdentityInteger } = require('./sessionSubject');
+const { readPersonAuthority } = require('./identityMysqlRepository');
+const {
+  caseStatusFromItems,
+  itemStatus,
+  mergeReviewItems,
+  unresolvedBlockingIssues,
+  validateAndProjectProcess
+} = require('./processPreviewReview');
+const {
+  assertV7FormalEnabled,
+  assertV7PreviewEnabled,
+  assertV7TrialProcessRef,
+  assertV7TrialScopeConfigured
+} = require('./processV7TrialScope');
+
+function text(value) {
+  return String(value == null ? '' : value).trim();
+}
+
+// Keep identity parameters on one MySQL protocol type when prepared statements
+// alternate between safe numbers and BIGINT strings. API scalars stay unchanged.
+function identitySqlValue(value) {
+  const integer = identityInteger(value);
+  return integer == null ? null : String(integer);
+}
+
+function parseJson(value, fallback = null) {
+  if (value == null || value === '') return fallback;
+  if (typeof value === 'object') return value;
+  try {
+    return JSON.parse(value);
+  } catch (_error) {
+    return fallback;
+  }
+}
+
+function assertPreviewFeatureEnabled() {
+  assertV7PreviewEnabled();
+  assertV7TrialScopeConfigured();
+}
+
+function assertPreviewWriteScope(processRef) {
+  assertPreviewFeatureEnabled();
+  assertV7TrialProcessRef(processRef);
+}
+
+function assertPromotionFeatureEnabled() {
+  assertPreviewFeatureEnabled();
+  assertV7FormalEnabled();
+}
+
+function assertPromotionWriteScope(processRef) {
+  assertPromotionFeatureEnabled();
+  assertV7TrialProcessRef(processRef);
+}
+
+async function rows(executor, sql, params = []) {
+  const [result] = await executor.execute(sql, params);
+  const previewTable = sql.match(/FROM process_v7_preview_(cases|revisions|review_items|events)\b/i)?.[1];
+  // SQL casts prevent driver rounding; normalize only identity columns back to
+  // safe numbers so internal audit payloads keep their original scalar types.
+  return previewTable ? result.map(row => previewIdentities(row, previewTable)) : result;
+}
+
+async function one(executor, sql, params = []) {
+  const result = await rows(executor, sql, params);
+  return result[0] || null;
+}
+
+const PREVIEW_TIMESTAMPS = {
+  cases: ['created_at', 'updated_at', 'scope_decided_at'],
+  revisions: ['created_at'],
+  review_items: ['created_at', 'updated_at', 'origin_decided_at', 'counterparty_decided_at'],
+  events: ['created_at']
+};
+const PREVIEW_IDENTITIES = {
+  cases: ['owning_department_id', 'scope_decided_by_user_id', 'scope_decided_by_person_id', 'created_by_user_id', 'created_by_person_id'],
+  revisions: ['uploaded_by_user_id', 'uploaded_by_person_id'],
+  review_items: ['origin_department_id', 'target_department_id', 'origin_decided_by_user_id', 'origin_decided_by_person_id', 'counterparty_decided_by_user_id', 'counterparty_decided_by_person_id'],
+  events: ['actor_user_id', 'actor_person_id', 'actor_department_id']
+};
+
+function previewColumns(table, alias = '') {
+  const prefix = alias ? `${alias}.` : '';
+  return `${prefix}*, ` + [
+    ...PREVIEW_TIMESTAMPS[table].map(column => `UNIX_TIMESTAMP(${prefix}${column}) AS ${column}_epoch`),
+    ...PREVIEW_IDENTITIES[table].map(column => `CAST(${prefix}${column} AS CHAR) AS ${column}`)
+  ].join(', ');
+}
+
+function previewIdentities(row, table) {
+  const result = previewTimestamps(row);
+  for (const column of PREVIEW_IDENTITIES[table]) {
+    if (column in result) result[column] = identityInteger(result[column]);
+  }
+  return result;
+}
+
+function previewTimestamps(row) {
+  const result = { ...row };
+  // MySQL TIMESTAMP epochs preserve the recorded instant across server/Node time zones.
+  for (const key of Object.keys(result).filter(key => key.endsWith('_at_epoch'))) {
+    result[key.slice(0, -6)] = result[key] == null ? null : new Date(Number(result[key]) * 1000).toISOString();
+    delete result[key];
+  }
+  return result;
+}
+
+async function withTransaction(pool, action) {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    const result = await action(connection);
+    await connection.commit();
+    return result;
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
+function publicCase(row) {
+  if (!row) return null;
+  return {
+    ...previewIdentities(row, 'cases'),
+    id: Number(row.id),
+    owning_department_id: identityInteger(row.owning_department_id),
+    current_revision_no: Number(row.current_revision_no || 0),
+    current_revision_id: row.current_revision_id == null ? null : Number(row.current_revision_id),
+    blocking_issues: parseJson(row.blocking_issues_json, Array.isArray(row.blocking_issues) ? row.blocking_issues : []),
+    preview_only: true,
+    publishable: false,
+    formal_process_version_id: null
+  };
+}
+
+function publicRevision(row, includeDocument = false) {
+  if (!row) return null;
+  const result = {
+    ...previewIdentities(row, 'revisions'),
+    id: Number(row.id),
+    case_id: Number(row.case_id),
+    revision_no: Number(row.revision_no)
+  };
+  if (includeDocument) result.document = parseJson(row.content_json, {});
+  delete result.content_json;
+  return result;
+}
+
+function publicItem(row) {
+  if (!row) return null;
+  return {
+    ...previewIdentities(row, 'review_items'),
+    id: Number(row.id),
+    case_id: Number(row.case_id),
+    revision_id: Number(row.revision_id),
+    revision_no: Number(row.revision_no),
+    origin_department_id: identityInteger(row.origin_department_id),
+    target_department_id: identityInteger(row.target_department_id),
+    carried_from_item_id: row.carried_from_item_id == null ? null : Number(row.carried_from_item_id),
+    is_current: Boolean(row.is_current),
+    item_snapshot: parseJson(row.item_snapshot_json, {})
+  };
+}
+
+function publicEvent(row) {
+  if (!row) return null;
+  return {
+    ...previewIdentities(row, 'events'),
+    id: Number(row.id),
+    case_id: Number(row.case_id),
+    revision_id: row.revision_id == null ? null : Number(row.revision_id),
+    item_id: row.item_id == null ? null : Number(row.item_id),
+    payload: parseJson(row.payload_json, null)
+  };
+}
+
+async function insertEvent(executor, event) {
+  await executor.execute(`
+    INSERT INTO process_v7_preview_events
+      (case_id, revision_id, item_id, event_type,
+       actor_user_id, actor_person_id, actor_department_id, actor_department_name,
+       actor_role_code, decision, basis_text, payload_json)
+    VALUES (?, ?, ?, ?, CAST(? AS SIGNED), CAST(? AS SIGNED), CAST(? AS SIGNED), ?, ?, ?, ?, ?)
+  `, [
+    event.caseId,
+    event.revisionId || null,
+    event.itemId || null,
+    event.eventType,
+    identitySqlValue(event.actor && event.actor.userId),
+    identitySqlValue(event.actor && event.actor.personId),
+    identitySqlValue(event.actor && event.actor.departmentId),
+    event.actor && event.actor.departmentName || null,
+    event.actor && event.actor.roleCode || null,
+    event.decision || null,
+    event.basis || null,
+    event.payload ? JSON.stringify(event.payload) : null
+  ]);
+}
+
+async function insertReviewItems(executor, caseId, revisionId, revisionNo, items, actor) {
+  const inserted = [];
+  for (const item of items) {
+    const [result] = await executor.execute(`
+      INSERT INTO process_v7_preview_review_items
+        (case_id, revision_id, revision_no, stable_item_key, behavior_ref, behavior_name,
+         origin_department_id, origin_department_name, target_department_id, target_department_name,
+         actor_role, actor_position, item_digest, item_snapshot_json,
+         origin_status, origin_basis, origin_decided_by_user_id, origin_decided_by_person_id, origin_decided_at,
+         counterparty_status, counterparty_basis, counterparty_decided_by_user_id,
+         counterparty_decided_by_person_id, counterparty_decided_at,
+         status, carry_state, carried_from_item_id, is_current)
+      VALUES (?, ?, ?, ?, ?, ?, CAST(? AS SIGNED), ?, CAST(? AS SIGNED), ?, ?, ?, ?, ?,
+              ?, ?, CAST(? AS SIGNED), CAST(? AS SIGNED), FROM_UNIXTIME(?), ?, ?, CAST(? AS SIGNED), CAST(? AS SIGNED), FROM_UNIXTIME(?), ?, ?, ?, 1)
+    `, [
+      caseId,
+      revisionId,
+      revisionNo,
+      item.stable_item_key,
+      item.behavior_ref,
+      item.behavior_name,
+      identitySqlValue(item.origin_department_id),
+      item.origin_department_name,
+      identitySqlValue(item.target_department_id),
+      item.target_department_name,
+      item.actor_role || null,
+      item.actor_position || null,
+      item.item_digest,
+      JSON.stringify(item.item_snapshot || {}),
+      item.origin_status || 'pending',
+      item.origin_basis || null,
+      identitySqlValue(item.origin_decided_by_user_id),
+      identitySqlValue(item.origin_decided_by_person_id),
+      item.origin_decided_at ? new Date(item.origin_decided_at).getTime() / 1000 : null,
+      item.counterparty_status || 'pending',
+      item.counterparty_basis || null,
+      identitySqlValue(item.counterparty_decided_by_user_id),
+      identitySqlValue(item.counterparty_decided_by_person_id),
+      item.counterparty_decided_at ? new Date(item.counterparty_decided_at).getTime() / 1000 : null,
+      item.status || itemStatus(item),
+      item.carry_state || 'new',
+      item.carried_from_item_id || null
+    ]);
+    const row = await one(executor, `SELECT ${previewColumns('review_items')} FROM process_v7_preview_review_items WHERE id=?`, [result.insertId]);
+    inserted.push(publicItem(row));
+    if (item.carry_state === 'carried_forward' || item.carry_state === 'reopened') {
+      await insertEvent(executor, {
+        caseId,
+        revisionId,
+        itemId: result.insertId,
+        eventType: item.carry_state === 'carried_forward' ? 'review_result_carried_forward' : 'review_item_reopened',
+        actor,
+        payload: { carried_from_item_id: item.carried_from_item_id || null, stable_item_key: item.stable_item_key }
+      });
+    }
+  }
+  return inserted;
+}
+
+async function getCaseDetailFrom(executor, caseId) {
+  const caseRow = await one(executor, `SELECT ${previewColumns('cases')} FROM process_v7_preview_cases WHERE id=?`, [caseId]);
+  if (!caseRow) return null;
+  const revision = caseRow.current_revision_id
+    ? await one(executor, `SELECT ${previewColumns('revisions')} FROM process_v7_preview_revisions WHERE id=?`, [caseRow.current_revision_id])
+    : null;
+  const items = await rows(executor, `
+    SELECT ${previewColumns('review_items')} FROM process_v7_preview_review_items
+    WHERE case_id=? AND is_current=1
+    ORDER BY target_department_name, behavior_name, id
+  `, [caseId]);
+  const events = await rows(executor, `
+    SELECT ${previewColumns('events')} FROM process_v7_preview_events
+    WHERE case_id=?
+    ORDER BY id DESC
+    LIMIT 200
+  `, [caseId]);
+  let formalPromotion = null;
+  try {
+    const promotion = await one(executor, `
+      SELECT *, CAST(promoted_by_user_id AS CHAR) AS promoted_by_user_id, CAST(promoted_by_person_id AS CHAR) AS promoted_by_person_id FROM process_v7_promotions
+      WHERE preview_case_id=?
+      ORDER BY id DESC
+      LIMIT 1
+    `, [caseId]);
+    if (promotion) {
+      formalPromotion = await promotionResult(executor, promotion, true);
+      const reviewTask = await one(executor, `
+        SELECT *
+        FROM process_design_review_tasks
+        WHERE draft_id=?
+        ORDER BY id DESC
+        LIMIT 1
+      `, [promotion.draft_id]);
+      const currentVersion = formalPromotion.document && formalPromotion.document.current_version_id
+        ? await one(executor, 'SELECT *, CAST(department_id AS CHAR) AS department_id FROM process_design_versions WHERE id=?', [formalPromotion.document.current_version_id])
+        : null;
+      formalPromotion.review_task = reviewTask ? {
+        ...reviewTask,
+        id: Number(reviewTask.id),
+        draft_id: Number(reviewTask.draft_id),
+        draft_revision_no: reviewTask.draft_revision_no == null ? null : Number(reviewTask.draft_revision_no)
+      } : null;
+      formalPromotion.current_version = publicFormalVersionMetadata(currentVersion);
+    }
+  } catch (error) {
+    if (!error || error.code !== 'ER_NO_SUCH_TABLE' || process.env.PROCESS_V7_FORMAL_ENABLED === '1') throw error;
+  }
+  return {
+    case: publicCase(caseRow),
+    revision: publicRevision(revision, true),
+    items: items.map(publicItem),
+    events: events.map(publicEvent),
+    formal_promotion: formalPromotion
+  };
+}
+
+function repositoryError(statusCode, code, message, extra = {}) {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  error.code = code;
+  Object.assign(error, extra);
+  return error;
+}
+
+// Called after the operation's original business locks, on its transaction
+// connection. Current locking SELECTs bypass any earlier repeatable-read view.
+// Caller-supplied roles, permissions and department never authorize a write.
+async function currentPreviewActor(connection, actor) {
+  const subject = sessionSubject(actor);
+  if (subject.kind === 'system_admin') {
+    throw repositoryError(403, 'V7_PREVIEW_ADMIN_READ_ONLY', '管理员对治理材料只读，不能执行流程预览核对写操作');
+  }
+  const authority = await readPersonAuthority(connection, actor, subject.personId, { currentRead: true });
+  if (!authority.valid) throw repositoryError(401, 'SESSION_AUTHORIZATION_CHANGED', '当前账号或人员资格已变化，请重新登录');
+  if (authority.readOnly) throw repositoryError(403, 'V7_PREVIEW_ADMIN_READ_ONLY', '管理员对治理材料只读，不能执行流程预览核对写操作');
+  const roleCodes = authority.roleCodes;
+  return { ...actor, userId: authority.user.personId, personId: authority.user.personId,
+    departmentId: authority.user.current_department_id, departmentName: authority.user.departmentName,
+    permissions: authority.permissions, roleCodes,
+    roleCode: ['mdm_lead', 'department_mdm_reviewer', 'department_contact'].find(code => roleCodes.has(code)) || null };
+}
+
+function assertCreateScope(actor, owner) {
+  if (!actor.permissions.has('governance:draft-department') && !actor.permissions.has('governance:assign-work')) {
+    throw repositoryError(403, 'V7_PREVIEW_SCOPE_DENIED', '无权建立流程预览核对案例');
+  }
+  if (!owner && !actor.permissions.has('governance:assign-work')) {
+    throw repositoryError(422, 'V7_PREVIEW_OWNER_PENDING_REQUIRES_LEAD', '流程尚未明确归口部门，请由MDM工作组组长建立案例并分派');
+  }
+  if (owner && !actor.permissions.has('governance:assign-work') && !sameIdentityInteger(owner.id, actor.departmentId)) {
+    throw repositoryError(403, 'V7_PREVIEW_SCOPE_DENIED', '部门主对接人只能上传本人部门归口的流程JSON文件');
+  }
+}
+
+function assertLeadWrite(actor, { roleRequired = false, promotion = false } = {}) {
+  if (!actor.permissions.has('governance:assign-work') || (roleRequired && !actor.roleCodes.has('mdm_lead'))) {
+    throw repositoryError(403, promotion ? 'V7_FORMAL_SCOPE_DENIED' : 'V7_PREVIEW_SCOPE_DENIED', '只有MDM工作组组长可以执行当前操作');
+  }
+}
+
+async function lockCurrentPreviewWriteState(connection, caseId, meta = {}) {
+  const lockedCase = await one(connection, `SELECT ${previewColumns('cases')} FROM process_v7_preview_cases WHERE id=? FOR UPDATE`, [caseId]);
+  if (!lockedCase) throw repositoryError(404, 'V7_PREVIEW_CASE_NOT_FOUND', '流程预览核对案例不存在');
+  assertPreviewWriteScope(lockedCase.process_ref);
+
+  const lockedRevision = await one(connection, `
+    SELECT ${previewColumns('revisions')} FROM process_v7_preview_revisions
+    WHERE id=? AND case_id=?
+    FOR SHARE
+  `, [lockedCase.current_revision_id, lockedCase.id]);
+  if (!lockedRevision) {
+    throw repositoryError(409, 'V7_PREVIEW_REVISION_MISSING', '当前流程修订不存在，请刷新后重试');
+  }
+
+  const currentItems = (await rows(connection, `
+    SELECT ${previewColumns('review_items')} FROM process_v7_preview_review_items
+    WHERE case_id=? AND is_current=1
+    ORDER BY id
+    FOR UPDATE
+  `, [lockedCase.id])).map(publicItem);
+  const activeDepartments = (await rows(connection, `
+    SELECT CAST(id AS CHAR) AS id, name, code
+    FROM departments
+    WHERE status='active'
+    ORDER BY sort_order, id
+    FOR SHARE
+  `)).map(row => ({ ...row, id: identityInteger(row.id) }));
+
+  if (
+    Number(meta.expectedRevisionNo) !== Number(lockedCase.current_revision_no) ||
+    Number(lockedRevision.revision_no) !== Number(lockedCase.current_revision_no)
+  ) {
+    throw repositoryError(409, 'V7_PREVIEW_REVISION_CONFLICT', '当前案例已经上传新修订，请刷新后重试', {
+      actual_revision_no: Number(lockedCase.current_revision_no)
+    });
+  }
+  if (
+    text(meta.expectedContentHash) !== text(lockedCase.current_content_hash) ||
+    text(lockedRevision.content_hash) !== text(lockedCase.current_content_hash)
+  ) {
+    throw repositoryError(409, 'V7_PREVIEW_CONTENT_HASH_CONFLICT', '当前案例内容摘要已经变化，请刷新后重试');
+  }
+  return { lockedCase, lockedRevision, currentItems, activeDepartments };
+}
+
+function projectLockedPreview(state, options = {}) {
+  const preview = validateAndProjectProcess(
+    parseJson(state.lockedRevision.content_json, {}),
+    state.activeDepartments,
+    options
+  );
+  if (preview.errors.length) {
+    const error = repositoryError(422, 'V7_PREVIEW_CONTENT_INVALID', '当前流程修订不再符合预览核对要求');
+    error.payload = { error: error.message, code: error.code, details: preview.errors };
+    throw error;
+  }
+  if (
+    text(preview.processRef) !== text(state.lockedCase.process_ref) ||
+    text(preview.contentHash) !== text(state.lockedCase.current_content_hash) ||
+    text(preview.contentHash) !== text(state.lockedRevision.content_hash)
+  ) {
+    throw repositoryError(409, 'V7_PREVIEW_CONTENT_HASH_CONFLICT', '当前修订正文与案例绑定不一致，请刷新后重试');
+  }
+  return preview;
+}
+
+function projectCandidatePreview(document, state, options = {}) {
+  const preview = validateAndProjectProcess(document, state.activeDepartments, options);
+  if (preview.errors.length) {
+    const error = repositoryError(422, 'V7_PREVIEW_CONTENT_INVALID', '新修订不符合流程预览核对要求');
+    error.payload = { error: error.message, code: error.code, details: preview.errors };
+    throw error;
+  }
+  if (text(preview.processRef) !== text(state.lockedCase.process_ref)) {
+    throw repositoryError(422, 'V7_PREVIEW_PROCESS_REF_MISMATCH', '新修订的流程稳定引用与当前案例不一致');
+  }
+  assertV7TrialProcessRef(preview.processRef);
+  return preview;
+}
+
+function editionToNumber(edition) {
+  const value = text(edition).toUpperCase();
+  if (!/^[A-Z]+$/.test(value)) return 0;
+  return value.split('').reduce((sum, character) => sum * 26 + character.charCodeAt(0) - 64, 0);
+}
+
+function numberToEdition(number) {
+  let value = Number(number || 0);
+  if (!Number.isInteger(value) || value < 1) return 'A';
+  let result = '';
+  while (value > 0) {
+    value -= 1;
+    result = String.fromCharCode(65 + value % 26) + result;
+    value = Math.floor(value / 26);
+  }
+  return result;
+}
+
+function nextEdition(currentEdition) {
+  return numberToEdition(editionToNumber(currentEdition) + 1);
+}
+
+function publicFormalDocument(row) {
+  return row ? {
+    ...row,
+    id: Number(row.id),
+    owning_department_id: identityInteger(row.owning_department_id),
+    created_by: identityInteger(row.created_by),
+    updated_by: identityInteger(row.updated_by),
+    current_version_id: row.current_version_id == null ? null : Number(row.current_version_id)
+  } : null;
+}
+
+function publicFormalDraft(row) {
+  if (!row) return null;
+  const { process_content_json: _processContentJson, ...metadata } = row;
+  return {
+    ...metadata,
+    id: Number(row.id),
+    document_id: Number(row.document_id),
+    department_id: identityInteger(row.department_id),
+    created_by: identityInteger(row.created_by),
+    content_updated_by: identityInteger(row.content_updated_by),
+    submitted_by: identityInteger(row.submitted_by),
+    published_by: identityInteger(row.published_by),
+    base_version_id: row.base_version_id == null ? null : Number(row.base_version_id),
+    revision_no: Number(row.revision_no || 0)
+  };
+}
+
+function publicFormalVersionMetadata(row) {
+  return row ? {
+    id: Number(row.id),
+    draft_id: Number(row.draft_id),
+    document_id: Number(row.document_id),
+    document_no: row.document_no,
+    document_title: row.document_title,
+    edition: row.edition,
+    version_no: row.version_no,
+    department_id: identityInteger(row.department_id),
+    schema_version: row.schema_version,
+    content_hash: row.content_hash,
+    source_revision_no: Number(row.source_revision_no || 0),
+    status: row.status,
+    published_at: row.published_at,
+    effective_at: row.effective_at,
+    supersedes_version_id: row.supersedes_version_id == null ? null : Number(row.supersedes_version_id)
+  } : null;
+}
+
+async function promotionResult(executor, promotionRow, idempotent) {
+  const document = await one(executor, 'SELECT *, CAST(owning_department_id AS CHAR) AS owning_department_id, CAST(created_by AS CHAR) AS created_by, CAST(updated_by AS CHAR) AS updated_by FROM process_design_documents WHERE id=?', [promotionRow.document_id]);
+  const draft = await one(executor, 'SELECT *, CAST(department_id AS CHAR) AS department_id, CAST(created_by AS CHAR) AS created_by, CAST(content_updated_by AS CHAR) AS content_updated_by, CAST(submitted_by AS CHAR) AS submitted_by, CAST(published_by AS CHAR) AS published_by FROM process_design_drafts WHERE id=?', [promotionRow.draft_id]);
+  return {
+    idempotent,
+    promotion: {
+      ...promotionRow,
+      id: Number(promotionRow.id),
+      preview_case_id: Number(promotionRow.preview_case_id),
+      preview_revision_id: Number(promotionRow.preview_revision_id),
+      preview_revision_no: Number(promotionRow.preview_revision_no),
+      promoted_by_user_id: identityInteger(promotionRow.promoted_by_user_id),
+      promoted_by_person_id: identityInteger(promotionRow.promoted_by_person_id),
+      document_id: Number(promotionRow.document_id),
+      draft_id: Number(promotionRow.draft_id)
+    },
+    document: publicFormalDocument(document),
+    draft: publicFormalDraft(draft)
+  };
+}
+
+function makeProcessPreviewReviewRepository(pool) {
+  return {
+    async listDepartments() {
+      return (await rows(pool, `
+        SELECT CAST(id AS CHAR) AS id, name, code
+        FROM departments
+        WHERE status='active'
+        ORDER BY sort_order, id
+      `)).map(row => ({ ...row, id: identityInteger(row.id) }));
+    },
+
+    async getCase(caseId) {
+      return publicCase(await one(pool, `SELECT ${previewColumns('cases')} FROM process_v7_preview_cases WHERE id=?`, [caseId]));
+    },
+
+    async getItem(itemId) {
+      return publicItem(await one(pool, `SELECT ${previewColumns('review_items')} FROM process_v7_preview_review_items WHERE id=?`, [itemId]));
+    },
+
+    async findFormalDocumentByNumber(documentNo) {
+      return publicFormalDocument(await one(pool, `
+        SELECT *, CAST(owning_department_id AS CHAR) AS owning_department_id, CAST(created_by AS CHAR) AS created_by, CAST(updated_by AS CHAR) AS updated_by FROM process_design_documents
+        WHERE document_no=?
+        LIMIT 1
+      `, [text(documentNo)]));
+    },
+
+    async listCases(actor, options = {}) {
+      const limit = Math.min(Math.max(Number(options.limit || 100), 1), 200);
+      const departmentId = identityInteger(actor.departmentId) || 0;
+      const canReadGlobal = actor.canReadGlobal ? 1 : 0;
+      const scopedDepartment = [...(actor.permissions || [])].some(p => ['governance:read-department', 'governance:read-assigned-context', 'governance:read-escalated-context'].includes(p)) ? String(departmentId) : '0';
+      const assignedClause = authoring.enabled() ? ' OR EXISTS (SELECT 1 FROM process_v7_authoring a WHERE a.case_id=c.id AND a.compiler_person_id=CAST(? AS SIGNED) AND c.owning_department_id=CAST(? AS SIGNED))' : '';
+      const result = await rows(pool, `
+        SELECT ${previewColumns('cases', 'c')},
+          (SELECT COUNT(*) FROM process_v7_preview_review_items i
+           WHERE i.case_id=c.id AND i.is_current=1) AS review_item_count,
+          (SELECT COUNT(*) FROM process_v7_preview_review_items i
+           WHERE i.case_id=c.id AND i.is_current=1 AND i.status='confirmed') AS confirmed_item_count
+        FROM process_v7_preview_cases c
+        WHERE (?='' OR c.process_ref=?) AND (?=1
+          OR c.owning_department_id=CAST(? AS SIGNED)
+          OR EXISTS (
+            SELECT 1 FROM process_v7_preview_review_items i
+            WHERE i.case_id=c.id AND i.is_current=1
+              AND (i.origin_department_id=CAST(? AS SIGNED) OR i.target_department_id=CAST(? AS SIGNED))
+          ) ${assignedClause})
+        ORDER BY c.updated_at DESC, c.id DESC
+        LIMIT ${limit}
+      `, [text(options.processRef), text(options.processRef), canReadGlobal, scopedDepartment, scopedDepartment, scopedDepartment, ...(authoring.enabled() ? [identitySqlValue(actor.personId), String(departmentId)] : [])]);
+      let myActionCount = 0;
+      if (actor.canReviewDepartment && departmentId) {
+        const action = await one(pool, `
+          SELECT COUNT(*) AS count
+          FROM process_v7_preview_review_items i
+          JOIN process_v7_preview_cases c ON c.id=i.case_id
+          WHERE i.is_current=1 AND c.status<>'closed'
+            AND ((i.origin_department_id=CAST(? AS SIGNED) AND i.origin_status IN ('pending','pending_evidence'))
+              OR (i.target_department_id=CAST(? AS SIGNED) AND i.counterparty_status IN ('pending','pending_evidence')))
+        `, [String(departmentId), String(departmentId)]);
+        myActionCount = Number(action && action.count || 0);
+      }
+      return {
+        items: result.map(row => ({
+          ...publicCase(row),
+          review_item_count: Number(row.review_item_count || 0),
+          confirmed_item_count: Number(row.confirmed_item_count || 0)
+        })),
+        total: result.length,
+        my_action_count: myActionCount
+      };
+    },
+
+    async getCaseDetail(caseId) {
+      return await getCaseDetailFrom(pool, caseId);
+    },
+
+    async canReadAssigned(caseId, actor) { return authoring.canReadAssigned(pool, caseId, actor); },
+    async departmentOverview(actor, before) {
+      if (!authoring.enabled()) throw repositoryError(503, 'V7_AUTHORING_DISABLED', '编制归属尚未启用');
+      const current = await authoring.activeActor(pool, actor);
+      if (!authoring.isContact(current, { owning_department_id: actor.departmentId })) throw repositoryError(403, 'V7_AUTHORING_SCOPE_DENIED', '仅本部门主对接人可读取部门编制全貌');
+      const cursor = before == null || before === '' ? null : String(before);
+      if (cursor != null && (!/^[1-9]\d{0,18}$/.test(cursor) || BigInt(cursor) > 9223372036854775807n)) throw repositoryError(422, 'V7_AUTHORING_CURSOR_INVALID', '分页游标无效');
+      const data = await rows(pool, `SELECT c.id,c.process_name,c.status,c.current_revision_no,c.blocking_issues_json,
+        a.compiler_person_id,p.person_name AS compiler_name,a.started_at,
+        (SELECT d.status FROM process_v7_promotions pr JOIN process_design_drafts d ON d.id=pr.draft_id WHERE pr.preview_case_id=c.id ORDER BY pr.id DESC LIMIT 1) AS formal_status,
+        (SELECT COUNT(*) FROM process_v7_preview_review_items i WHERE i.case_id=c.id AND i.is_current=1 AND i.status<>'confirmed') AS pending_item_count,
+        (SELECT CASE WHEN t.status IN ('needs_changes','rejected') THEN t.decision_note ELSE NULL END FROM process_design_review_tasks t JOIN process_v7_promotions pr ON pr.draft_id=t.draft_id WHERE pr.preview_case_id=c.id ORDER BY pr.id DESC,t.id DESC LIMIT 1) AS return_reason
+        FROM process_v7_preview_cases c LEFT JOIN process_v7_authoring a ON a.case_id=c.id LEFT JOIN person p ON p.person_id=a.compiler_person_id
+        WHERE c.owning_department_id=? AND (? IS NULL OR c.id<CAST(? AS SIGNED)) ORDER BY c.id DESC LIMIT 21`, [current.current_department_id, cursor, cursor]);
+      return { items: data.slice(0,20).map(r => ({ ...r, id: String(r.id), compiler_person_id: r.compiler_person_id == null ? null : String(r.compiler_person_id), blocking_issues: parseJson(r.blocking_issues_json, []), blocking_issues_json: undefined })), next_cursor: data.length > 20 ? String(data[19].id) : null,
+        coverage: 'current_department_cases', snapshot: false };
+    },
+    async describeAuthoring(caseRow, actor) { return authoring.describe(pool, caseRow, actor); },
+    async authoringIssues(caseId, actor, after) {
+      assertPreviewFeatureEnabled();
+      try { return await withTransaction(pool, db => require('./processV7AuthoringIssues').list(db, caseId, actor, after)); }
+      catch (error) {
+        if (['ER_NO_SUCH_TABLE', 'ER_BAD_FIELD_ERROR'].includes(error.code)) throw repositoryError(503, 'V7_AUTHORING_ISSUE_MIGRATION_REQUIRED', '关联问题所需的存储结构尚未准备');
+        throw error;
+      }
+    },
+    async replyAuthoringIssue(caseId, issueId, body, actor) {
+      assertPreviewFeatureEnabled();
+      try { return await withTransaction(pool, db => require('./processV7AuthoringIssues').reply(db, caseId, issueId, body, actor)); }
+      catch (error) {
+        if (['ER_NO_SUCH_TABLE', 'ER_BAD_FIELD_ERROR'].includes(error.code)) throw repositoryError(503, 'V7_AUTHORING_ISSUE_MIGRATION_REQUIRED', '关联问题所需的存储结构尚未准备');
+        throw error;
+      }
+    },
+    async authoringCandidates(caseRow, actor) { return authoring.candidates(pool, caseRow, actor); },
+    async recordAuthoring(caseId, body, actor) {
+      assertPreviewFeatureEnabled();
+      return withTransaction(pool, async connection => {
+        // Idempotent replay remains valid after a later revision; fresh writes bind current source.
+        const locked = await one(connection, 'SELECT * FROM process_v7_preview_cases WHERE id=? FOR UPDATE', [caseId]);
+        if (!locked) throw repositoryError(404, 'V7_PREVIEW_CASE_NOT_FOUND', '案例不存在');
+        assertPreviewWriteScope(locked.process_ref);
+        const result = await authoring.record(connection, locked, body, actor);
+        if (!result.idempotent && (Number(body.expected_revision_no) !== Number(locked.current_revision_no) || text(body.expected_content_hash) !== text(locked.current_content_hash))) {
+          throw repositoryError(409, 'V7_PREVIEW_REVISION_CONFLICT', '来源已变化，请重新核对');
+        }
+        return { ...result, authoring: await authoring.describe(connection, locked, actor) };
+      });
+    },
+
+    async createCase(preview, meta, actor) {
+      assertPreviewWriteScope(preview.processRef);
+      try {
+        return await withTransaction(pool, async connection => {
+        assertPreviewWriteScope(preview.processRef);
+        const existing = await one(connection, `
+          SELECT ${previewColumns('cases')} FROM process_v7_preview_cases
+          WHERE process_ref=? AND status<>'closed'
+          ORDER BY id DESC LIMIT 1 FOR UPDATE
+        `, [preview.processRef]);
+        const activeDepartments = (await rows(connection, `SELECT CAST(id AS CHAR) AS id, name, code FROM departments WHERE status='active' ORDER BY sort_order, id FOR SHARE`)).map(row => ({ ...row, id: identityInteger(row.id) }));
+        actor = await currentPreviewActor(connection, actor);
+        preview = validateAndProjectProcess(preview.document, activeDepartments);
+        if (preview.errors.length) throw repositoryError(422, 'V7_PREVIEW_CONTENT_INVALID', '新案例不符合流程预览核对要求', {
+          payload: { error: '新案例不符合流程预览核对要求', code: 'V7_PREVIEW_CONTENT_INVALID', details: preview.errors }
+        });
+        assertCreateScope(actor, preview.owningDepartment);
+        if (existing) {
+          assertCreateScope(actor, existing.owning_department_id ? { id: existing.owning_department_id } : null);
+          if (text(existing.current_content_hash) === preview.contentHash) {
+            const detail = await getCaseDetailFrom(connection, existing.id);
+            return { ...detail, idempotent: true };
+          }
+          const error = new Error('该流程已有流程预览核对案例，请在原案例上传新修订');
+          error.statusCode = 409;
+          error.code = 'V7_PREVIEW_CASE_EXISTS';
+          error.case_id = Number(existing.id);
+          throw error;
+        }
+        const caseRef = `v7_preview_${crypto.randomUUID()}`;
+        const owner = preview.owningDepartment;
+        const initialStatus = caseStatusFromItems(preview.items, Boolean(owner), preview.blockingIssues);
+        const [caseResult] = await connection.execute(`
+          INSERT INTO process_v7_preview_cases
+            (case_ref, process_ref, process_name, owning_department_id, owning_department_name,
+               status, current_revision_no, current_content_hash, blocking_issues_json,
+             created_by_user_id, created_by_person_id)
+          VALUES (?, ?, ?, CAST(? AS SIGNED), ?, ?, 1, ?, ?, CAST(? AS SIGNED), CAST(? AS SIGNED))
+        `, [
+          caseRef,
+          preview.processRef,
+          preview.processName,
+          identitySqlValue(owner && owner.id),
+          owner && owner.name || null,
+          initialStatus,
+          preview.contentHash,
+          JSON.stringify(preview.blockingIssues || []),
+          identitySqlValue(actor.userId),
+          identitySqlValue(actor.personId)
+        ]);
+        const caseId = caseResult.insertId;
+        await authoring.initialize(connection, { id: caseId, owning_department_id: owner && owner.id }, actor);
+        const [revisionResult] = await connection.execute(`
+          INSERT INTO process_v7_preview_revisions
+            (case_id, revision_no, source_file_name, source_schema_version, source_exported_at,
+             content_hash, content_json, uploaded_by_user_id, uploaded_by_person_id)
+          VALUES (?, 1, ?, ?, ?, ?, ?, CAST(? AS SIGNED), CAST(? AS SIGNED))
+        `, [
+          caseId,
+          meta.sourceFileName,
+          preview.document.schema_version,
+          text(preview.document && preview.document.export_meta && preview.document.export_meta.exported_at) || null,
+          preview.contentHash,
+          JSON.stringify(preview.document),
+          identitySqlValue(actor.userId),
+          identitySqlValue(actor.personId)
+        ]);
+        await connection.execute('UPDATE process_v7_preview_cases SET current_revision_id=? WHERE id=?', [revisionResult.insertId, caseId]);
+        const insertedItems = await insertReviewItems(connection, caseId, revisionResult.insertId, 1, preview.items, actor);
+        await insertEvent(connection, {
+          caseId,
+          revisionId: revisionResult.insertId,
+          eventType: 'preview_case_created',
+          actor,
+          payload: { source_file_name: meta.sourceFileName, content_hash: preview.contentHash, warning_count: preview.warnings.length }
+        });
+        return {
+          case: publicCase(await one(connection, `SELECT ${previewColumns('cases')} FROM process_v7_preview_cases WHERE id=?`, [caseId])),
+          revision: publicRevision(await one(connection, `SELECT ${previewColumns('revisions')} FROM process_v7_preview_revisions WHERE id=?`, [revisionResult.insertId])),
+          items: insertedItems,
+          idempotent: false
+        };
+        });
+      } catch (error) {
+        if (error && error.code === 'ER_DUP_ENTRY' && /uq_process_v7_preview_active_process/.test(String(error.message || ''))) {
+          return withTransaction(pool, async connection => {
+          const existing = await one(connection, `
+            SELECT ${previewColumns('cases')} FROM process_v7_preview_cases
+            WHERE process_ref=? AND status<>'closed'
+            ORDER BY id DESC LIMIT 1 FOR UPDATE
+          `, [preview.processRef]);
+          actor = await currentPreviewActor(connection, actor);
+          assertCreateScope(actor, preview.owningDepartment);
+          if (existing) assertCreateScope(actor, existing.owning_department_id ? { id: existing.owning_department_id } : null);
+          if (existing && text(existing.current_content_hash) === preview.contentHash) {
+            return { ...(await getCaseDetailFrom(connection, existing.id)), idempotent: true };
+          }
+          const conflict = new Error('该流程已有流程预览核对案例，请在原案例上传新修订');
+          conflict.statusCode = 409;
+          conflict.code = 'V7_PREVIEW_CASE_EXISTS';
+          conflict.case_id = existing ? Number(existing.id) : null;
+          throw conflict;
+          });
+        }
+        throw error;
+      }
+    },
+
+    async assignOwner(caseRow, department, _preview, meta, actor) {
+      assertPreviewFeatureEnabled();
+      return await withTransaction(pool, async connection => {
+        const state = await lockCurrentPreviewWriteState(connection, caseRow.id, meta);
+        const { lockedCase: locked } = state;
+        actor = await currentPreviewActor(connection, actor);
+        assertLeadWrite(actor);
+        if (locked.owning_department_id) {
+          throw repositoryError(409, 'V7_PREVIEW_OWNER_ALREADY_ASSIGNED', '归口部门已经明确，本期不允许在预览核对中改派');
+        }
+        const lockedDepartment = state.activeDepartments.find(item => sameIdentityInteger(item.id, department && department.id));
+        if (!lockedDepartment) {
+          throw repositoryError(422, 'V7_PREVIEW_OWNER_INVALID', '请选3000当前有效部门');
+        }
+        const preview = projectLockedPreview(state, { owningDepartmentName: lockedDepartment.name });
+        await connection.execute('UPDATE process_v7_preview_review_items SET is_current=0 WHERE case_id=? AND is_current=1', [locked.id]);
+        const insertedItems = await insertReviewItems(
+          connection,
+          locked.id,
+          locked.current_revision_id,
+          locked.current_revision_no,
+          preview.items,
+          actor
+        );
+        const status = caseStatusFromItems(insertedItems, true, preview.blockingIssues);
+        await connection.execute(`
+          UPDATE process_v7_preview_cases
+          SET owning_department_id=CAST(? AS SIGNED), owning_department_name=?, status=?, blocking_issues_json=?,
+              scope_decision=NULL, scope_decision_basis=NULL,
+              scope_decided_by_user_id=NULL, scope_decided_by_person_id=NULL, scope_decided_at=NULL,
+              updated_at=CURRENT_TIMESTAMP
+          WHERE id=?
+        `, [identitySqlValue(lockedDepartment.id), lockedDepartment.name, status, JSON.stringify(preview.blockingIssues || []), locked.id]);
+        await insertEvent(connection, {
+          caseId: locked.id,
+          revisionId: locked.current_revision_id,
+          eventType: 'owning_department_assigned',
+          actor,
+          payload: { owning_department_id: lockedDepartment.id, owning_department_name: lockedDepartment.name }
+        });
+        return publicCase(await one(connection, `SELECT ${previewColumns('cases')} FROM process_v7_preview_cases WHERE id=?`, [locked.id]));
+      });
+    },
+
+    async addRevision(caseRow, preview, meta, actor) {
+      assertPreviewWriteScope(preview && preview.processRef);
+      return await withTransaction(pool, async connection => {
+        const state = await lockCurrentPreviewWriteState(connection, caseRow.id, meta);
+        const { lockedCase: locked } = state;
+        const managed = await authoring.assertCompiler(connection, locked, actor, { start: true });
+        actor = await currentPreviewActor(connection, actor);
+        if (!managed && !actor.permissions.has('governance:assign-work') &&
+          !(actor.permissions.has('governance:draft-department') && sameIdentityInteger(locked.owning_department_id, actor.departmentId))) {
+          throw repositoryError(403, 'V7_PREVIEW_SCOPE_DENIED', '只有归口部门主对接人或MDM工作组组长可以上传新修订');
+        }
+        projectLockedPreview(state, { owningDepartmentName: locked.owning_department_name });
+        const candidatePreview = projectCandidatePreview(preview && preview.document, state, {
+          owningDepartmentName: locked.owning_department_name
+        });
+        if (text(locked.current_content_hash) === candidatePreview.contentHash) {
+          const detail = await getCaseDetailFrom(connection, locked.id);
+          return { ...detail, idempotent: true };
+        }
+        const mergedItems = mergeReviewItems(state.currentItems, candidatePreview.items);
+        const revisionNo = Number(locked.current_revision_no) + 1;
+        const [revisionResult] = await connection.execute(`
+          INSERT INTO process_v7_preview_revisions
+            (case_id, revision_no, source_file_name, source_schema_version, source_exported_at,
+             content_hash, content_json, uploaded_by_user_id, uploaded_by_person_id)
+          VALUES (?, ?, ?, ?, ?, ?, ?, CAST(? AS SIGNED), CAST(? AS SIGNED))
+        `, [
+          locked.id,
+          revisionNo,
+          meta.sourceFileName,
+          candidatePreview.document.schema_version,
+          text(candidatePreview.document && candidatePreview.document.export_meta && candidatePreview.document.export_meta.exported_at) || null,
+          candidatePreview.contentHash,
+          JSON.stringify(candidatePreview.document),
+          identitySqlValue(actor.userId),
+          identitySqlValue(actor.personId)
+        ]);
+        await connection.execute('UPDATE process_v7_preview_review_items SET is_current=0 WHERE case_id=? AND is_current=1', [locked.id]);
+        const insertedItems = await insertReviewItems(connection, locked.id, revisionResult.insertId, revisionNo, mergedItems, actor);
+        const status = caseStatusFromItems(insertedItems, Boolean(locked.owning_department_id), candidatePreview.blockingIssues);
+        await connection.execute(`
+          UPDATE process_v7_preview_cases
+          SET process_name=?, status=?, current_revision_no=?, current_revision_id=?, current_content_hash=?,
+              blocking_issues_json=?, scope_decision=NULL, scope_decision_basis=NULL,
+              scope_decided_by_user_id=NULL, scope_decided_by_person_id=NULL, scope_decided_at=NULL,
+              updated_at=CURRENT_TIMESTAMP
+          WHERE id=?
+        `, [
+          candidatePreview.processName,
+          status,
+          revisionNo,
+          revisionResult.insertId,
+          candidatePreview.contentHash,
+          JSON.stringify(candidatePreview.blockingIssues || []),
+          locked.id
+        ]);
+        await insertEvent(connection, {
+          caseId: locked.id,
+          revisionId: revisionResult.insertId,
+          eventType: 'preview_revision_uploaded',
+          actor,
+          payload: {
+            source_file_name: meta.sourceFileName,
+            content_hash: candidatePreview.contentHash,
+            previous_revision_no: Number(locked.current_revision_no),
+            carried_forward: mergedItems.filter(item => item.carry_state === 'carried_forward').length,
+            reopened: mergedItems.filter(item => item.carry_state === 'reopened').length
+          }
+        });
+        return {
+          case: publicCase(await one(connection, `SELECT ${previewColumns('cases')} FROM process_v7_preview_cases WHERE id=?`, [locked.id])),
+          revision: publicRevision(await one(connection, `SELECT ${previewColumns('revisions')} FROM process_v7_preview_revisions WHERE id=?`, [revisionResult.insertId])),
+          items: insertedItems,
+          idempotent: false
+        };
+      });
+    },
+
+    async decideItem(itemRow, party, decision, basis, expectedRevisionNo, expectedContentHash, actor) {
+      assertPreviewFeatureEnabled();
+      return await withTransaction(pool, async connection => {
+        const state = await lockCurrentPreviewWriteState(connection, itemRow.case_id, {
+          expectedRevisionNo,
+          expectedContentHash
+        });
+        const { lockedCase: caseRowLocked, lockedRevision } = state;
+        const item = state.currentItems.find(current => Number(current.id) === Number(itemRow.id));
+        if (!item) {
+          throw repositoryError(409, 'V7_PREVIEW_ITEM_SUPERSEDED', '当前核对项已经被新修订替代');
+        }
+        // Keep the managed origin path's binding-before-identity lock order.
+        await authoring.state(connection, caseRowLocked.id, true);
+        actor = await currentPreviewActor(connection, actor);
+        const actorDepartmentId = actor.departmentId;
+        const lockedParty = sameIdentityInteger(item.origin_department_id, actorDepartmentId)
+          ? 'origin'
+          : sameIdentityInteger(item.target_department_id, actorDepartmentId)
+            ? 'counterparty'
+            : '';
+        if (!lockedParty || (party && text(party) !== lockedParty)) {
+          throw repositoryError(403, 'V7_PREVIEW_SCOPE_DENIED', '当前审核员所在部门不是锁定核对项的对应参与方');
+        }
+        const managed = lockedParty === 'origin' && await authoring.assertCompiler(connection, caseRowLocked, actor, { start: true });
+        if (!managed && !actor.permissions.has('governance:review-department')) {
+          throw repositoryError(403, 'V7_PREVIEW_SCOPE_DENIED', '当前人员无权记录该参与方的核对结果');
+        }
+        const prefix = lockedParty;
+        await connection.execute(`
+          UPDATE process_v7_preview_review_items
+          SET ${prefix}_status=?, ${prefix}_basis=?,
+              ${prefix}_decided_by_user_id=CAST(? AS SIGNED), ${prefix}_decided_by_person_id=CAST(? AS SIGNED),
+              ${prefix}_decided_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP
+          WHERE id=?
+        `, [decision, basis, identitySqlValue(actor.userId), identitySqlValue(actor.personId), item.id]);
+        const updated = publicItem(await one(connection, `SELECT ${previewColumns('review_items')} FROM process_v7_preview_review_items WHERE id=?`, [item.id]));
+        updated.status = itemStatus(updated);
+        await connection.execute('UPDATE process_v7_preview_review_items SET status=? WHERE id=?', [updated.status, item.id]);
+        const replaced = state.currentItems.map(current => Number(current.id) === Number(updated.id) ? updated : current);
+        const caseStatus = caseStatusFromItems(
+          replaced,
+          Boolean(caseRowLocked.owning_department_id),
+          parseJson(caseRowLocked.blocking_issues_json, []),
+          text(caseRowLocked.scope_decision)
+        );
+        await connection.execute('UPDATE process_v7_preview_cases SET status=?, updated_at=CURRENT_TIMESTAMP WHERE id=?', [caseStatus, item.case_id]);
+        await insertEvent(connection, {
+          caseId: item.case_id,
+          revisionId: lockedRevision.id,
+          itemId: item.id,
+          eventType: 'department_review_decision_recorded',
+          actor,
+          decision,
+          basis,
+          payload: { party: lockedParty, previous_status: item[`${prefix}_status`], case_status: caseStatus }
+        });
+        return { ...updated, status: updated.status, case_status: caseStatus };
+      });
+    },
+
+    async recordScopeDecision(caseRow, decision, basis, _preview, expectedRevisionNo, expectedContentHash, actor) {
+      assertPreviewFeatureEnabled();
+      return await withTransaction(pool, async connection => {
+        const state = await lockCurrentPreviewWriteState(connection, caseRow.id, {
+          expectedRevisionNo,
+          expectedContentHash
+        });
+        const { lockedCase: locked } = state;
+        actor = await currentPreviewActor(connection, actor);
+        assertLeadWrite(actor, { roleRequired: true });
+        let preview = projectLockedPreview(state, {
+          owningDepartmentName: locked.owning_department_name
+        });
+        const issueCodes = new Set((preview.blockingIssues || []).map(issue => text(issue && issue.code)));
+        if (decision === 'confirmed_no_cross_department') {
+          if (!issueCodes.has('ZERO_CROSS_DEPARTMENT_SCOPE_PENDING')) {
+            throw repositoryError(409, 'V7_PREVIEW_SCOPE_DECISION_NOT_APPLICABLE', '当前修订不是待确认的零跨部门范围案例');
+          }
+        } else if (decision === 'keep_current_owner' || decision === 'accept_source_owner') {
+          if (!issueCodes.has('OWNING_DEPARTMENT_CHANGE_PENDING')) {
+            throw repositoryError(409, 'V7_PREVIEW_SCOPE_DECISION_NOT_APPLICABLE', '当前修订没有待处理的归口部门变化');
+          }
+        } else {
+          throw repositoryError(422, 'V7_PREVIEW_SCOPE_DECISION_INVALID', '范围决定必须从系统选项中选择');
+        }
+
+        let currentItems = state.currentItems;
+        let ownerId = locked.owning_department_id;
+        let ownerName = locked.owning_department_name;
+        if (decision === 'accept_source_owner') {
+          const acceptedPreview = validateAndProjectProcess(
+            parseJson(state.lockedRevision.content_json, {}),
+            state.activeDepartments
+          );
+          if (acceptedPreview.errors.length || !acceptedPreview.owningDepartment) {
+            throw repositoryError(422, 'V7_PREVIEW_OWNER_INVALID', '当前修订中的归口部门不能作为有效范围决定');
+          }
+          if (
+            text(acceptedPreview.processRef) !== text(locked.process_ref) ||
+            text(acceptedPreview.contentHash) !== text(locked.current_content_hash) ||
+            text(acceptedPreview.contentHash) !== text(state.lockedRevision.content_hash) ||
+            (acceptedPreview.blockingIssues || []).some(issue => text(issue && issue.code) === 'OWNING_DEPARTMENT_CHANGE_PENDING')
+          ) {
+            throw repositoryError(409, 'V7_PREVIEW_SCOPE_DECISION_NOT_APPLICABLE', '锁定修订重新投影后仍未解除归口部门变化，不能采用修订中的归口部门');
+          }
+          preview = acceptedPreview;
+          await connection.execute(
+            'UPDATE process_v7_preview_review_items SET is_current=0 WHERE case_id=? AND is_current=1',
+            [locked.id]
+          );
+          currentItems = await insertReviewItems(
+            connection,
+            locked.id,
+            locked.current_revision_id,
+            locked.current_revision_no,
+            preview.items,
+            actor
+          );
+          ownerId = preview.owningDepartment && preview.owningDepartment.id || null;
+          ownerName = preview.owningDepartment && preview.owningDepartment.name || null;
+        }
+
+        const status = caseStatusFromItems(currentItems, Boolean(ownerId), preview.blockingIssues, decision);
+        await connection.execute(`
+          UPDATE process_v7_preview_cases
+          SET owning_department_id=CAST(? AS SIGNED), owning_department_name=?, status=?, blocking_issues_json=?,
+              scope_decision=?, scope_decision_basis=?, scope_decided_by_user_id=CAST(? AS SIGNED),
+              scope_decided_by_person_id=CAST(? AS SIGNED), scope_decided_at=CURRENT_TIMESTAMP,
+              updated_at=CURRENT_TIMESTAMP
+          WHERE id=?
+        `, [
+          identitySqlValue(ownerId),
+          ownerName,
+          status,
+          JSON.stringify(preview.blockingIssues || []),
+          decision,
+          basis,
+          identitySqlValue(actor.userId),
+          identitySqlValue(actor.personId),
+          locked.id
+        ]);
+        await insertEvent(connection, {
+          caseId: locked.id,
+          revisionId: locked.current_revision_id,
+          eventType: 'scope_decision_recorded',
+          actor,
+          decision,
+          basis,
+          payload: {
+            previous_owner_department_id: locked.owning_department_id,
+            owner_department_id: ownerId,
+            blocking_issue_count: (preview.blockingIssues || []).length,
+            case_status: status
+          }
+        });
+        return publicCase(await one(connection, `SELECT ${previewColumns('cases')} FROM process_v7_preview_cases WHERE id=?`, [locked.id]));
+      });
+    },
+
+    async promoteCase(detail, preview, target, meta, actor) {
+      assertPromotionFeatureEnabled();
+      return await withTransaction(pool, async connection => {
+        const lockedCase = await one(connection, `SELECT ${previewColumns('cases')} FROM process_v7_preview_cases WHERE id=? FOR UPDATE`, [detail.case.id]);
+        if (!lockedCase) throw repositoryError(404, 'V7_PREVIEW_CASE_NOT_FOUND', '流程预览核对案例不存在');
+        assertPromotionWriteScope(lockedCase.process_ref);
+        if (text(lockedCase.status) !== 'review_complete') {
+          throw repositoryError(409, 'V7_PREVIEW_REVIEW_INCOMPLETE', '当前流程预览案例尚未完成核对，不能提升为正式草稿');
+        }
+        if (Number(meta.expectedRevisionNo) !== Number(lockedCase.current_revision_no)) {
+          throw repositoryError(409, 'V7_PREVIEW_REVISION_CONFLICT', '当前案例已经上传新修订，请刷新后重试', {
+            actual_revision_no: Number(lockedCase.current_revision_no)
+          });
+        }
+        if (text(meta.expectedContentHash) !== text(lockedCase.current_content_hash)) {
+          throw repositoryError(409, 'V7_PREVIEW_CONTENT_HASH_CONFLICT', '当前案例内容摘要已经变化，请刷新后重试');
+        }
+
+        const lockedRevision = await one(connection, `
+          SELECT ${previewColumns('revisions')} FROM process_v7_preview_revisions
+          WHERE id=? AND case_id=?
+          FOR SHARE
+        `, [lockedCase.current_revision_id, lockedCase.id]);
+        if (!lockedRevision) throw repositoryError(409, 'V7_PREVIEW_REVISION_MISSING', '当前流程修订不存在，不能提升');
+        if (
+          Number(lockedRevision.revision_no) !== Number(meta.expectedRevisionNo) ||
+          text(lockedRevision.content_hash) !== text(meta.expectedContentHash)
+        ) {
+          throw repositoryError(409, 'V7_PREVIEW_REVISION_CONFLICT', '当前修订号或内容摘要已经变化，请刷新后重试', {
+            actual_revision_no: Number(lockedRevision.revision_no)
+          });
+        }
+
+        const activeDepartments = (await rows(connection, `
+          SELECT CAST(id AS CHAR) AS id, name, code
+          FROM departments
+          WHERE status='active'
+          ORDER BY sort_order, id
+          FOR SHARE
+        `)).map(row => ({ ...row, id: identityInteger(row.id) }));
+        actor = await currentPreviewActor(connection, actor);
+        assertLeadWrite(actor, { roleRequired: true, promotion: true });
+        const currentPreview = validateAndProjectProcess(parseJson(lockedRevision.content_json, {}), activeDepartments, {
+          owningDepartmentName: lockedCase.owning_department_name
+        });
+        if (currentPreview.errors.length) {
+          const error = repositoryError(422, 'V7_PREVIEW_CONTENT_INVALID', '当前流程修订不再符合预览核对要求，不能提升');
+          error.payload = { error: error.message, code: error.code, details: currentPreview.errors };
+          throw error;
+        }
+        const blockingIssues = unresolvedBlockingIssues(currentPreview.blockingIssues, text(lockedCase.scope_decision));
+        if (blockingIssues.length) {
+          const error = repositoryError(
+            409,
+            'V7_PREVIEW_BLOCKING_ISSUES',
+            '当前流程修订仍有未解决的预览核对卡口，不能提升为正式草稿'
+          );
+          error.payload = {
+            error: error.message,
+            code: error.code,
+            details: blockingIssues.map(issue => ({ code: text(issue && issue.code) })).filter(issue => issue.code)
+          };
+          throw error;
+        }
+        if (
+          text(currentPreview.contentHash) !== text(lockedCase.current_content_hash) ||
+          text(currentPreview.processRef) !== text(lockedCase.process_ref)
+        ) {
+          throw repositoryError(409, 'V7_PREVIEW_CONTENT_HASH_CONFLICT', '当前修订正文与案例摘要不一致，不能提升');
+        }
+
+        const existingPromotion = await one(connection, `
+          SELECT *, CAST(promoted_by_user_id AS CHAR) AS promoted_by_user_id, CAST(promoted_by_person_id AS CHAR) AS promoted_by_person_id FROM process_v7_promotions
+          WHERE preview_case_id=? AND preview_revision_id=? AND preview_revision_no=? AND content_hash=?
+          FOR SHARE
+        `, [lockedCase.id, lockedRevision.id, lockedRevision.revision_no, lockedRevision.content_hash]);
+        if (existingPromotion) return await promotionResult(connection, existingPromotion, true);
+
+        let formalDocument;
+        if (target.mode === 'existing') {
+          formalDocument = await one(connection, 'SELECT *, CAST(owning_department_id AS CHAR) AS owning_department_id, CAST(created_by AS CHAR) AS created_by, CAST(updated_by AS CHAR) AS updated_by FROM process_design_documents WHERE id=? FOR UPDATE', [target.document_id]);
+          if (!formalDocument || text(formalDocument.status) !== 'active') {
+            throw repositoryError(404, 'V7_FORMAL_DOCUMENT_NOT_FOUND', '选择的正式流程主档不存在或已停用');
+          }
+          if (!sameIdentityInteger(formalDocument.owning_department_id, lockedCase.owning_department_id)) {
+            throw repositoryError(409, 'V7_FORMAL_DOCUMENT_OWNER_MISMATCH', '选择的正式流程主档不属于当前归口部门');
+          }
+          if (text(formalDocument.process_ref) && text(formalDocument.process_ref) !== text(lockedCase.process_ref)) {
+            throw repositoryError(409, 'V7_FORMAL_PROCESS_REF_CONFLICT', '选择的正式流程主档已经绑定其他process_ref');
+          }
+          if (!text(formalDocument.process_ref)) {
+            await connection.execute(
+              'UPDATE process_design_documents SET process_ref=?, updated_by=CAST(? AS SIGNED), updated_at=CURRENT_TIMESTAMP WHERE id=?',
+              [lockedCase.process_ref, identitySqlValue(actor.userId), formalDocument.id]
+            );
+            formalDocument.process_ref = lockedCase.process_ref;
+          }
+        } else {
+          const documentNumberConflict = await one(connection, 'SELECT id FROM process_design_documents WHERE document_no=? FOR UPDATE', [target.document_no]);
+          if (documentNumberConflict) {
+            throw repositoryError(409, 'V7_FORMAL_DOCUMENT_NO_EXISTS', '该制度编号已经存在；请选择已有主档，不能按名称或编号自动合并');
+          }
+          const processRefConflict = await one(connection, 'SELECT id FROM process_design_documents WHERE process_ref=? FOR UPDATE', [lockedCase.process_ref]);
+          if (processRefConflict) {
+            throw repositoryError(409, 'V7_FORMAL_PROCESS_REF_EXISTS', '该process_ref已经绑定正式流程主档；请选择已有主档');
+          }
+          const [documentResult] = await connection.execute(`
+            INSERT INTO process_design_documents
+              (document_no, process_ref, document_title, owning_department_id, status, created_by, updated_by)
+            VALUES (?, ?, ?, CAST(? AS SIGNED), 'active', CAST(? AS SIGNED), CAST(? AS SIGNED))
+          `, [
+            target.document_no,
+            lockedCase.process_ref,
+            target.document_title,
+            identitySqlValue(lockedCase.owning_department_id),
+            identitySqlValue(actor.userId),
+            identitySqlValue(actor.userId)
+          ]);
+          formalDocument = await one(connection, 'SELECT *, CAST(owning_department_id AS CHAR) AS owning_department_id, CAST(created_by AS CHAR) AS created_by, CAST(updated_by AS CHAR) AS updated_by FROM process_design_documents WHERE id=? FOR UPDATE', [documentResult.insertId]);
+        }
+
+        let currentVersion = null;
+        if (formalDocument.current_version_id) {
+          currentVersion = await one(connection, 'SELECT *, CAST(department_id AS CHAR) AS department_id FROM process_design_versions WHERE id=? FOR UPDATE', [formalDocument.current_version_id]);
+          if (!currentVersion || Number(currentVersion.document_id) !== Number(formalDocument.id)) {
+            throw repositoryError(409, 'V7_FORMAL_CURRENT_VERSION_INVALID', '正式流程主档的当前版本指针无效，不能创建下一版草稿');
+          }
+        }
+        const plannedEdition = currentVersion
+          ? nextEdition(text(formalDocument.current_edition) || currentVersion.edition)
+          : 'A';
+        const activeDraft = await one(connection, `
+          SELECT *, CAST(department_id AS CHAR) AS department_id, CAST(created_by AS CHAR) AS created_by, CAST(content_updated_by AS CHAR) AS content_updated_by, CAST(submitted_by AS CHAR) AS submitted_by, CAST(published_by AS CHAR) AS published_by FROM process_design_drafts
+          WHERE document_id=? AND status IN ('draft','submitted','under_review','needs_changes','approved','rejected')
+          ORDER BY id DESC
+          LIMIT 1
+          FOR UPDATE
+        `, [formalDocument.id]);
+        const relatedDepartmentIds = [...new Set((currentPreview.items || []).map(item => identityInteger(item.target_department_id)).filter(Boolean))];
+        const serializedContent = JSON.stringify(currentPreview.document);
+        let formalDraft;
+        if (activeDraft) {
+          if (
+            !supportsNativeProcess(text(activeDraft.schema_version)) ||
+            !['draft', 'needs_changes'].includes(text(activeDraft.status))
+          ) {
+            throw repositoryError(409, 'V7_FORMAL_DRAFT_LOCKED', '该正式流程主档已有不能覆盖的进行中草稿');
+          }
+          const activeContent = parseJson(activeDraft.process_content_json, {});
+          if (text(activeContent && activeContent.process && activeContent.process.process_ref) !== text(lockedCase.process_ref)) {
+            throw repositoryError(409, 'V7_FORMAL_PROCESS_REF_CONFLICT', '进行中的流程草稿属于其他process_ref');
+          }
+          await connection.execute(`
+            UPDATE process_design_drafts
+            SET document_no=?, document_title=?, process_name=?, reason=?, basis_type=?, basis_description=?,
+                involves_other_departments=?, related_departments_json=?, department_id=CAST(? AS SIGNED),
+                schema_version=?, process_content_json=?, content_hash=?, revision_no=?,
+                content_updated_by=CAST(? AS SIGNED), content_updated_at=CURRENT_TIMESTAMP,
+                status='draft', submitted_by=NULL, submitted_at=NULL, published_by=NULL, published_at=NULL,
+                updated_at=CURRENT_TIMESTAMP
+            WHERE id=?
+          `, [
+            formalDocument.document_no,
+            formalDocument.document_title,
+            currentPreview.processName,
+            '3001 流程预览核对完成后受控提升',
+            '流程预览核对',
+            `preview_case:${lockedCase.case_ref};revision:${lockedRevision.revision_no}`,
+            relatedDepartmentIds.length ? 1 : 0,
+            JSON.stringify(relatedDepartmentIds),
+            identitySqlValue(lockedCase.owning_department_id),
+            currentPreview.document.schema_version,
+            serializedContent,
+            lockedCase.current_content_hash,
+            lockedRevision.revision_no,
+            identitySqlValue(actor.userId),
+            activeDraft.id
+          ]);
+          formalDraft = await one(connection, 'SELECT *, CAST(department_id AS CHAR) AS department_id, CAST(created_by AS CHAR) AS created_by, CAST(content_updated_by AS CHAR) AS content_updated_by, CAST(submitted_by AS CHAR) AS submitted_by, CAST(published_by AS CHAR) AS published_by FROM process_design_drafts WHERE id=?', [activeDraft.id]);
+        } else {
+          const [draftResult] = await connection.execute(`
+            INSERT INTO process_design_drafts
+              (document_id, document_no, document_title, planned_edition, base_version_id, active_document_no,
+               process_name, reason, basis_type, basis_description, involves_other_departments,
+               related_departments_json, department_id, l1_name, l1_status, l2_name, l2_status, l3_name,
+               schema_version, process_content_json, content_hash, revision_no,
+               content_updated_by, content_updated_at, status, created_by)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS SIGNED), NULL, 'unclassified', NULL, 'unclassified', NULL,
+                    ?, ?, ?, ?, CAST(? AS SIGNED), CURRENT_TIMESTAMP, 'draft', CAST(? AS SIGNED))
+          `, [
+            formalDocument.id,
+            formalDocument.document_no,
+            formalDocument.document_title,
+            plannedEdition,
+            currentVersion && currentVersion.id || null,
+            formalDocument.document_no,
+            currentPreview.processName,
+            '3001 流程预览核对完成后受控提升',
+            '流程预览核对',
+            `preview_case:${lockedCase.case_ref};revision:${lockedRevision.revision_no}`,
+            relatedDepartmentIds.length ? 1 : 0,
+            JSON.stringify(relatedDepartmentIds),
+            identitySqlValue(lockedCase.owning_department_id),
+            currentPreview.document.schema_version,
+            serializedContent,
+            lockedCase.current_content_hash,
+            lockedRevision.revision_no,
+            identitySqlValue(actor.userId),
+            identitySqlValue(actor.userId)
+          ]);
+          formalDraft = await one(connection, 'SELECT *, CAST(department_id AS CHAR) AS department_id, CAST(created_by AS CHAR) AS created_by, CAST(content_updated_by AS CHAR) AS content_updated_by, CAST(submitted_by AS CHAR) AS submitted_by, CAST(published_by AS CHAR) AS published_by FROM process_design_drafts WHERE id=?', [draftResult.insertId]);
+        }
+
+        const promotionRef = `v7_promotion_${crypto.randomUUID()}`;
+        const [promotionInsert] = await connection.execute(`
+          INSERT INTO process_v7_promotions
+            (promotion_ref, preview_case_id, preview_revision_id, preview_revision_no, content_hash,
+             document_id, draft_id, promoted_by_user_id, promoted_by_person_id)
+          VALUES (?, ?, ?, ?, ?, ?, ?, CAST(? AS SIGNED), CAST(? AS SIGNED))
+        `, [
+          promotionRef,
+          lockedCase.id,
+          lockedRevision.id,
+          lockedRevision.revision_no,
+          lockedRevision.content_hash,
+          formalDocument.id,
+          formalDraft.id,
+          identitySqlValue(actor.userId),
+          identitySqlValue(actor.personId)
+        ]);
+        await connection.execute(`
+          INSERT INTO process_design_events (draft_id, event_type, actor_user_id, note, payload_json)
+          VALUES (?, 'v7_formal_promoted', CAST(? AS SIGNED), ?, ?)
+        `, [
+          formalDraft.id,
+          identitySqlValue(actor.userId),
+          '已将核对完成的流程修订提升为正式草稿',
+          JSON.stringify({
+            preview_case_id: Number(lockedCase.id),
+            preview_revision_id: Number(lockedRevision.id),
+            preview_revision_no: Number(lockedRevision.revision_no),
+            content_hash: lockedRevision.content_hash
+          })
+        ]);
+        await insertEvent(connection, {
+          caseId: lockedCase.id,
+          revisionId: lockedRevision.id,
+          eventType: 'formal_draft_promoted',
+          actor,
+          payload: {
+            promotion_ref: promotionRef,
+            document_id: Number(formalDocument.id),
+            draft_id: Number(formalDraft.id)
+          }
+        });
+        const insertedPromotion = await one(connection, 'SELECT *, CAST(promoted_by_user_id AS CHAR) AS promoted_by_user_id, CAST(promoted_by_person_id AS CHAR) AS promoted_by_person_id FROM process_v7_promotions WHERE id=?', [promotionInsert.insertId]);
+        return await promotionResult(connection, insertedPromotion, false);
+      });
+    }
+  };
+}
+
+// Read one immutable revision, including history, without replacing the current
+// case/review pointers. Callers must apply current identity and scope checks.
+async function readFixedPreviewRevision(executor, caseId, revisionId) {
+  return one(executor, `SELECT r.*, CAST(c.owning_department_id AS CHAR) scope_department_id,
+    d.name owning_department_name FROM process_v7_preview_revisions r
+    JOIN process_v7_preview_cases c ON c.id=r.case_id
+    LEFT JOIN departments d ON d.id=c.owning_department_id
+    WHERE r.case_id=? AND r.id=? FOR SHARE`, [caseId,revisionId]);
+}
+module.exports = { makeProcessPreviewReviewRepository, makeProcessV7PreviewReviewRepository: makeProcessPreviewReviewRepository, readFixedPreviewRevision };

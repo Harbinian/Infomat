@@ -1,5 +1,6 @@
 const { sendMysqlUnavailable } = require('../mysqlRuntimeSchema');
 const express = require('express');
+const { logRequestFailure } = require('../securityLog');
 const router = express.Router();
 const { requireAuth, getUserEffectivePermissionsAsync } = require('../auth');
 const { dataMapRepository } = require('../dataMapMysqlRepository');
@@ -10,7 +11,7 @@ function handleError(res, error) {
   if (error && (String(error.code || '').startsWith('ER_') || String(error.message).includes('constraint'))) {
     return res.status(400).json({ error: '数据不符合约束' });
   }
-  console.error(error);
+  logRequestFailure(res, error);
   return res.status(500).json({ error: '服务器错误' });
 }
 
@@ -32,13 +33,13 @@ async function canViewIdentity(req, context) {
 
 async function canMaintainIdentity(req, context) {
   const permissions = await permissionSet(req);
-  return permissions.has('governance:draft-department') &&
+  return !permissions.has('identity:manage-account') && permissions.has('governance:draft-department') &&
     Number(context && context.dept_id || 0) === Number(req.session.departmentId || 0);
 }
 
 async function canConfirmIdentity(req, context) {
   const permissions = await permissionSet(req);
-  return permissions.has('governance:review-department') &&
+  return !permissions.has('identity:manage-account') && permissions.has('governance:review-department') &&
     Number(context && context.dept_id || 0) === Number(req.session.departmentId || 0);
 }
 

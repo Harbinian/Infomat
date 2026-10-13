@@ -113,7 +113,7 @@ module.exports = async ctx => {
       await pool.execute('UPDATE data_map_v7_mappings SET revision_no=? WHERE mapping_id=?',[mapping.revision_no,ctx.mapping.mapping_id]);
       assert.deepEqual(await repo.getAnalysisIssueTasks(lead,issueId),before);
     });
-    await require('./analysisTaskBrowserVerification')({...ctx,test,issueId,officeId,findingId:f.finding_id});
+    if (!process.argv.includes('--repository-only')) await require('./analysisTaskBrowserVerification')({...ctx,test,issueId,officeId,findingId:f.finding_id});
     await require('./analysisClosureVerification')({...ctx,test,issueId,officeId,findingId:f.finding_id});
     const before=await repo.getAnalysisIssueTasks(lead,issueId),snapshot=backup();
     await pool.execute("UPDATE data_map_analysis_issue_tasks SET snapshot_digest=REPEAT('0',64) WHERE todo_id=?",[dispatched.todo_id]);

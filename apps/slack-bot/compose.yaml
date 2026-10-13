@@ -1,0 +1,108 @@
+name: infomat-slack-bot
+
+services:
+  slack-bot:
+    image: infomat-slack-bot:${SLACK_BOT_IMAGE_TAG:-local}
+    build:
+      # 只用本目录作上下文：机器人自包含，不必像其他 app 那样传整个仓库
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NODE_IMAGE: ${SLACK_BOT_NODE_IMAGE:-node:24-bookworm-slim}
+        CLAUDE_CODE_VERSION: ${SLACK_BOT_CLAUDE_VERSION:-2.1.296}
+        # 构建期代理。容器内的 127.0.0.1 指向容器自身，必须走 host.docker.internal
+        HTTP_PROXY: ${SLACK_BOT_BUILD_PROXY:-http://host.docker.internal:7892}
+        HTTPS_PROXY: ${SLACK_BOT_BUILD_PROXY:-http://host.docker.internal:7892}
+    container_name: infomat-slack-bot
+    restart: unless-stopped
+    init: true
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    env_file:
+      - .env
+    environment:
+      # 覆盖 .env 里的宿主路径，指向容器内的挂载点
+      BOT_WORKDIR: /repo
+      # 写入档专用路径（可写挂载点），只有 BOT_WRITE_USERS 里的用户会走到
+      BOT_WRITE_WORKDIR: /repo-write
+      BOT_PROXY: http://host.docker.internal:7892
+      BOT_SESSIONS_FILE: /data/sessions.json
+      BOT_HEARTBEAT_FILE: /data/heartbeat
+      # 模型通道：.env 里这三项还是模板占位符，真实值在宿主机的用户级环境变量里。
+      # Compose 变量插值优先取 shell 环境、.env 只作兜底，所以这里能取到真值，
+      # 密钥不必写进任何文件。（Node 的 --env-file 不覆盖已有变量，因此宿主机
+      # 直接 npm start 时一直用的就是系统环境变量，占位符被掩盖了。）
+      ANTHROPIC_BASE_URL: ${ANTHROPIC_BASE_URL}
+      ANTHROPIC_AUTH_TOKEN: ${ANTHROPIC_AUTH_TOKEN}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL}
+    volumes:
+      # /repo 读的是同步进 Docker 卷的镜像，不是宿主机 bind mount。
+      # 原因见 sync.sh 顶部：bind mount 的遍历慢 530 倍，会让 ripgrep
+      # 全树搜索撞上 60 秒硬超时。卷上同样是 :ro，只读保证不削弱。
+      - repo-mirror:/repo:ro
+      # /repo-write 仍直接指向真实仓库，保证负责人的改动能落到宿主机
+      - ../../:/repo-write
+      - slack-bot-state:/data
+      # Claude Code 需要可写的 HOME（会话、配置），根文件系统是只读的
+      - slack-bot-claude-home:/home/node
+    # read_only 会把 /tmp 一并锁死，而 Claude Code 要在这里建 /tmp/claude-<uid>。
+    # 用内存盘单独放开，既满足需求又不破坏根文件系统的只读。
+    tmpfs:
+      - /tmp:size=256m,mode=1777
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    # 宿主机 DNS 实测不稳定（nslookup 会连续超时），容器继承后表现为
+    # getaddrinfo EAI_AGAIN api.deepseek.com，CLI 会退避重试最多 10 次，
+    # 实测各会话累计光退避就烧掉 254 秒。改为直连国内可靠 DNS，绕开宿主机解析器。
+    dns:
+      - 223.5.5.5
+      - 119.29.29.29
+    healthcheck:
+      test: ["CMD", "node", "/app/healthcheck.cjs"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # 把仓库同步进 Docker 卷，供机器人快速读取。
+  # 复用同一个镜像（里面装了 rsync 和 sync.sh）。
+  repo-sync:
+    image: infomat-slack-bot:${SLACK_BOT_IMAGE_TAG:-local}
+    container_name: infomat-slack-bot-sync
+    restart: unless-stopped
+    init: true
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    # 以 root 运行：rsync 要读宿主机挂进来的全部文件，还要写进卷
+    user: "0:0"
+    entrypoint: ["/app/sync.sh"]
+    environment:
+      SYNC_SRC: /src
+      SYNC_DST: /dst
+      SYNC_INTERVAL: ${SLACK_BOT_SYNC_INTERVAL:-300}
+    volumes:
+      - ../../:/src:ro
+      - repo-mirror:/dst
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  slack-bot-state:
+  slack-bot-claude-home:
+  repo-mirror:

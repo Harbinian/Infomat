@@ -3,6 +3,8 @@
 // --serve keeps this owned fixture until Enter/SIGINT; the browser runner uses the same lifetime.
 // Callers may supply document/departments for an unreviewed source inspection;
 // previewOnly disables formal writes. These options still use the owned temporary DB.
+// randomDatabase uses a UUID-suffixed database inside that same owned container;
+// the runtime grant/config and credential-free target record bind its exact name.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -18,7 +20,7 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function withStage05Fixture(action, options = {}) {
   const evidenceDir = options.evidenceDir || path.resolve(appRoot, '../../artifacts/mdm-3000-launch/stage05-20260910');
-  await withFreshMysql(async ({ pool, port, password, owner, backup, restore }) => {
+  await withFreshMysql(async ({ pool, port, password, owner, database, backup, restore }) => {
     const identity = require('../server/identityMysqlRepository').makeIdentityMysqlRepository(pool);
     await identity.initSchema();
     const design = require('../server/routes/processDesignMysql');
@@ -66,12 +68,12 @@ async function withStage05Fixture(action, options = {}) {
     document.flow_relations = [0,1].map(i=>({relation_ref:'relation_'+i,relation_type:'sequence',from_behavior_ref:document.behaviors[i].behavior_ref,to_behavior_ref:document.behaviors[i+1].behavior_ref,condition:''}));
     if (options.document) document = structuredClone(options.document);
     await pool.query("CREATE USER 'stage05_runtime'@'%' IDENTIFIED BY ?", [password]);
-    await pool.execute("GRANT SELECT,INSERT,UPDATE,DELETE ON stage04_isolated.* TO 'stage05_runtime'@'%'");
+    await pool.execute(`GRANT SELECT,INSERT,UPDATE,DELETE ON ${database}.* TO 'stage05_runtime'@'%'`);
     const server = http.createServer(); server.listen(0,'127.0.0.1'); await once(server,'listening');
     const appPort = server.address().port; await new Promise(resolve=>server.close(resolve));
     assert.ok(![3000,3001,3306,3307,5173,63805].includes(appPort));
     const env = isolatedEnvironment({NODE_ENV:'test',HOST:'127.0.0.1',PORT:String(appPort),MDM_ACCESS_MODE:'http-local',MDM_SESSION_STORE:'mysql',
-      MYSQL_HOST:'127.0.0.1',MYSQL_PORT:String(port),MYSQL_USER:'stage05_runtime',MYSQL_PASSWORD:password,MYSQL_DATABASE:'stage04_isolated',
+      MYSQL_HOST:'127.0.0.1',MYSQL_PORT:String(port),MYSQL_USER:'stage05_runtime',MYSQL_PASSWORD:password,MYSQL_DATABASE:database,
       MDM_IDENTITY_READ_MODEL:'mysql',PROCESS_GOVERNANCE_READ_MODEL:'mysql',SESSION_SECRET:crypto.randomBytes(32).toString('hex'),
       PROCESS_V7_PREVIEW_ENABLED:'1',PROCESS_V7_FORMAL_ENABLED:options.previewOnly?'0':'1',PROCESS_V7_TRIAL_PROCESS_REF:document.process.process_ref,
       PROCESS_V7_AUTHORING_ENABLED:options.authoring?'1':'0',
@@ -97,6 +99,7 @@ async function withStage05Fixture(action, options = {}) {
       }
       fs.mkdirSync(evidenceDir,{recursive:true});
       const fixture={baseURL,loginPassword,document,evidenceDir,actors:actors.map(([name])=>name)};
+      if(options.randomDatabase)fs.writeFileSync(path.join(evidenceDir,'owned-target.json'),JSON.stringify({owner,database,mysqlHost:'127.0.0.1',mysqlPort:port,baseURL,randomDatabase:true},null,2));
       await action({pool,owner,fixture,expect,request,backup,restore});
     } finally {
       if(child.exitCode===null){const ended=once(child,'exit');child.send('mdm:stop',()=>{});const timer=setTimeout(()=>child.kill(),17000);await ended;clearTimeout(timer);}
@@ -104,7 +107,7 @@ async function withStage05Fixture(action, options = {}) {
       fs.writeFileSync(path.join(evidenceDir,'fixture-app.log'),diagnostics.join(''));
       console.log('STAGE05_OWNED_HTTP_STOPPED');
     }
-  });
+  }, {randomDatabase:options.randomDatabase===true});
 }
 
 async function main() {

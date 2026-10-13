@@ -80,10 +80,7 @@ async function main() {
       await submit().click(); await page.getByRole('heading',{name:'请重新登录',exact:true}).waitFor(); await login('adminMulti');
       assert.equal(await title().count(),0); assert.equal(await submit().count(),0);
       assert.equal(JSON.stringify((await pool.query('SELECT * FROM data_map_contexts ORDER BY id'))[0]),snapshot);
-      await page.getByRole('link',{name:'打开原数据地图入口',exact:true}).click(); await page.waitForURL('**/#/dataMap');
-      await page.locator('#dataMapContextSelect').selectOption(String(created.id));
-      assert.ok((await page.locator('#dataMapContextSelect').textContent()).includes('合成新增上下文'));
-      checks.push('real session expiry, same identity draft restoration, different identity clears draft, legacy reads new row');
+      checks.push('real session expiry, same identity draft restoration, different identity clears draft, current API preserves new row');
       const unexpectedConsole=consoleErrors.filter(x=>!/Failed to load resource|net::ERR_|status of (401|403|409|503)/.test(x));
       assert.deepEqual(errors,[]); assert.deepEqual(unexpectedConsole,[]); fs.writeFileSync(path.join(output,'results.json'),JSON.stringify({passed:true,checks,errors,unexpectedConsole},null,2));
     } catch(e) { fs.writeFileSync(path.join(output,'failure.json'),JSON.stringify({error:e.message,text:await page.locator('body').innerText()},null,2)); await page.screenshot({path:path.join(output,'failure.png'),fullPage:true}); throw e; }

@@ -1,3 +1,4 @@
+import {protocol} from './protocol.js';
 const messages = {
   401: '登录状态已失效，请重新登录。当前输入仍保留。',
   403: '当前身份无权执行此操作，请核对权限或联系负责人。',
@@ -14,55 +15,24 @@ export class ApiError extends Error {
     this.status = status;
     this.code = code;
     this.fieldErrors = fieldErrors || {};
-    if (code === 'PASSWORD_CHANGE_REQUIRED') this.message = '当前账号需要修改密码，请使用原入口完成修改后再继续。';
+    if (code === 'PASSWORD_CHANGE_REQUIRED') this.message = '当前账号需要修改密码，请在当前平台完成修改后重新登录。';
   }
 }
 
 export function createApiClient({ fetchImpl = globalThis.fetch, onUnauthorized = () => {}, timeoutMs = 15000 } = {}) {
-  let csrfToken = null;
-  let sessionGeneration = 0;
-  function resetSession() { csrfToken = null; sessionGeneration += 1; }
+  const client = protocol.createRequestClient({ fetchImpl, onUnauthorized, timeoutMs });
   async function request(url, { method = 'GET', body, signal, responseType = 'json' } = {}) {
-    if (!/^\/api\//.test(url) || url.includes('\\') || url.includes('..')) throw new Error('Only same-origin API paths are allowed.');
-    const generation = sessionGeneration;
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
-    const combinedSignal = signal ? AbortSignal.any([signal, controller.signal]) : controller.signal;
-    const login = url === '/api/org/login';
-    method = method.toUpperCase();
     try {
-      const headers = { Accept: responseType === 'blob' ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : 'application/json' };
-      const multipart = typeof FormData !== 'undefined' && body instanceof FormData;
-      if (body !== undefined && !multipart) headers['Content-Type'] = 'application/json';
-      if (!['GET', 'HEAD', 'OPTIONS'].includes(method) && !login) {
-        if (!csrfToken) {
-          const result = await request('/api/csrf-token', { signal: combinedSignal });
-          if (generation !== sessionGeneration) throw new DOMException('Session changed', 'AbortError');
-          csrfToken = result.csrfToken;
-        }
-        headers['X-CSRF-Token'] = csrfToken;
-      }
-      const response = await fetchImpl(url, {
-        method, headers, credentials: 'same-origin', cache: 'no-store', signal: combinedSignal,
-        ...(body !== undefined ? { body: multipart ? body : JSON.stringify(body) } : {})
+      return await client.request(url, {
+        method, body, signal, responseType, bodyEncoding: 'json',
+        headers: { Accept: responseType === 'blob' ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : 'application/json' }
       });
-      // Logout, a new login or a replaced request makes the old response unusable.
-      if (generation !== sessionGeneration || combinedSignal.aborted) throw new DOMException('Request replaced', 'AbortError');
-      const data = response.status === 204 ? null : response.ok && responseType === 'blob' ? await response.blob() : await response.json().catch(() => null);
-      if (generation !== sessionGeneration || combinedSignal.aborted) throw new DOMException('Request replaced', 'AbortError');
-      if (!response.ok) {
-        if (response.status === 401 && !login) { resetSession(); onUnauthorized(); }
-        if (response.status === 403) csrfToken = null;
-        throw new ApiError(response.status, data?.code, data?.field_errors);
-      }
-      if (data === null && response.status !== 204) throw new ApiError(502, 'INVALID_RESPONSE');
-      return data;
     } catch (error) {
-      if (signal?.aborted || generation !== sessionGeneration && !(error instanceof ApiError)) throw new DOMException('Request replaced', 'AbortError');
-      if (error instanceof ApiError) throw error;
-      if (error.name === 'AbortError' && !controller.signal.aborted) throw error;
-      throw new ApiError(0, controller.signal.aborted ? 'REQUEST_TIMEOUT' : 'NETWORK_ERROR');
-    } finally { clearTimeout(timer); }
+      if (!(error instanceof protocol.RequestError)) throw error;
+      const presented = new ApiError(error.status, error.code, error.fieldErrors);
+      presented.importStatus = error.importStatus;
+      throw presented;
+    }
   }
-  return { request, resetSession };
+  return { request, resetSession: client.resetSession };
 }

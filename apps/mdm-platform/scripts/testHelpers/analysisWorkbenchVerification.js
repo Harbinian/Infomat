@@ -95,12 +95,13 @@ module.exports = async function ({ repo, lead, pool, run, historical, fixture, s
       const longInput = '受限失败仍保留的合成中文输入'.repeat(30);
       await label('本轮范围说明').fill(longInput); await overflow(); await screenshot('p15-long-input-1699.png');
       const url = '**/api/analysis/runs';
+    const submitOrReconcile = () => button('核对同一请求结果').count().then(n => n ? button('核对同一请求结果').click() : button('创建并排队分析').click());
       for (const status of [403, 409, 503]) {
         await page.route(url, route => route.request().method() === 'POST' ? route.fulfill({ status, contentType: 'application/json', body: JSON.stringify({ error: 'synthetic', code: 'SYNTHETIC_FAILURE' }) }) : route.continue());
-        await button('创建并排队分析').click(); await idle(); assert.equal(await label('本轮范围说明').inputValue(), longInput); await page.unroute(url);
+        await submitOrReconcile(); await idle(); assert.equal(await label('本轮范围说明').inputValue(), longInput); await page.unroute(url);
       }
-      await page.route(url, route => route.request().method() === 'POST' ? route.abort('failed') : route.continue()); await button('创建并排队分析').click(); await idle(); assert.equal(await label('本轮范围说明').inputValue(), longInput); await page.unroute(url);
-      await page.route(url, route => route.request().method() === 'POST' ? route.fulfill({ status: 401, contentType: 'application/json', body: '{}' }) : route.continue()); await button('创建并排队分析').click(); await page.locator('#login-name').waitFor(); await page.unroute(url); await login(); assert.equal(await label('本轮范围说明').inputValue(), longInput);
+      await page.route(url, route => route.request().method() === 'POST' ? route.abort('failed') : route.continue()); await submitOrReconcile(); await idle(); assert.equal(await label('本轮范围说明').inputValue(), longInput); await page.unroute(url);
+      await page.route(url, route => route.request().method() === 'POST' ? route.fulfill({ status: 401, contentType: 'application/json', body: '{}' }) : route.continue()); await submitOrReconcile(); await page.locator('#login-name').waitFor(); await page.unroute(url); await login(); assert.equal(await label('本轮范围说明').inputValue(), longInput);
       const accept = page.waitForEvent('dialog'); const selected = label('当前运行').selectOption(first); await (await accept).accept(); await selected; await idle();
       let release; const gate = new Promise(r => { release = r; }); let seen; const observed = new Promise(r => { seen = r; });
       await page.route('**/api/analysis/runs/' + first, async route => { seen(); await gate; await route.continue().catch(() => {}); });

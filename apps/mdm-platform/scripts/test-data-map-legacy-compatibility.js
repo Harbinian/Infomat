@@ -8,7 +8,7 @@ const { isolatedEnvironment } = require('./testHelpers/isolatedProcess');
 const { mdmMysqlSchemaSql, splitSqlStatements } = require('../server/mysqlSchema');
 const { compareCreateStatements } = require('../server/processV7M0Baseline');
 const { inspectLegacyCompatibility: inspect, applyLegacyCompatibility: apply, MIGRATION_KEY } = require('../server/dataMapLegacyCompatibility');
-const { applyDefinitions } = require('../server/dataMapDefinitionMigration');
+const { applyDefinitions, inspectDefinitions, baseTables } = require('../server/dataMapDefinitionMigration');
 const { snapshot, digest } = require('../server/dataMapDefinitionValues');
 const { argumentsFor } = require('./manage-data-map-definitions');
 const arg = name => { const i = process.argv.indexOf(name); return i < 0 ? null : process.argv[i + 1]; };
@@ -44,7 +44,7 @@ async function main() {
       await db.execute("INSERT INTO data_map_contexts(id,context_key,title) VALUES (11,'compat_context','合成场景')");
       await db.execute("INSERT INTO data_map_fields(id,context_id,field_key,field_name_cn) VALUES (9007199254740994,11,'compat_field','合成旧字段')");
       await db.execute("INSERT INTO data_map_field_system_links(field_id,system_name,relation_type) VALUES (9007199254740994,'合成系统','candidate_authority')");
-      await db.execute("INSERT INTO data_map_field_identities(field_id) VALUES (9007199254740994)");
+      await db.execute("INSERT INTO data_map_field_identities(field_id,owner_user_id,owner_person_id,note) VALUES (9007199254740994,9007199254740995,NULL,'合成旧备注原样保留')");
       const sources = { object: await snapshot(db, 'object', '9007199254740993'), field: await snapshot(db, 'field', '9007199254740994') };
       const unchanged = async () => {
         assert.deepEqual(await snapshot(db, 'object', '9007199254740993'), sources.object);
@@ -60,6 +60,45 @@ async function main() {
       const originalStructure = await structure();
       const columnMetadata = async () => (await db.execute('SELECT TABLE_NAME,COLUMN_NAME,ORDINAL_POSITION,COLUMN_TYPE,IS_NULLABLE,COLUMN_DEFAULT,CHARACTER_SET_NAME,COLLATION_NAME,EXTRA FROM information_schema.columns WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN (?,?,?,?,?) ORDER BY TABLE_NAME,ORDINAL_POSITION', tables))[0];
       const originalColumns = await columnMetadata();
+      evidence.legacy_columns = originalColumns;
+      evidence.legacy_snapshot_digests = { object:digest(sources.object), field:digest(sources.field) };
+      const refuseWithoutAlter = async () => {
+        let alters = 0;
+        const guarded = new Proxy(db, { get(target,key) {
+          if(key==='execute') return (sql,params) => { if(/^ALTER TABLE/.test(sql)) alters++; return target.execute(sql,params); };
+          const value=target[key]; return typeof value==='function'?value.bind(target):value;
+        }});
+        await assert.rejects(apply(guarded),{code:'DEFINITION_COMPATIBILITY_SCHEMA_DRIFT'});
+        assert.equal(alters,0);
+      };
+      await check('every missing required base table blocks all maintenance without creating replacements', async () => {
+        evidence.missing_tables = [];
+        for(const table of baseTables) {
+          await db.query(`RENAME TABLE ${table} TO p25_owned_missing_base`);
+          try {
+            const observed=await inspect(db);
+            assert.ok(observed.drift.some(item=>item.table===table && item.reason==='BASE_TABLE_REQUIRED'));
+            await refuseWithoutAlter();
+            evidence.missing_tables.push({table,reason:'BASE_TABLE_REQUIRED',alter_count:0});
+          } finally { await db.query(`RENAME TABLE p25_owned_missing_base TO ${table}`); }
+        }
+        assert.deepEqual(await structure(),originalStructure); await unchanged();
+      });
+      await check('partial columns and changed references are unknown drift, never guessed or repaired', async () => {
+        await db.query('ALTER TABLE data_map_field_identities RENAME COLUMN owner_person_id TO p25_owned_person_reference');
+        try { assert.ok((await inspect(db)).drift.some(item=>item.table==='data_map_field_identities')); await refuseWithoutAlter(); }
+        finally { await db.query('ALTER TABLE data_map_field_identities RENAME COLUMN p25_owned_person_reference TO owner_person_id'); }
+        await db.query('ALTER TABLE data_map_field_identities DROP FOREIGN KEY fk_data_map_field_identities_field');
+        try { assert.ok((await inspect(db)).drift.some(item=>item.table==='data_map_field_identities')); await refuseWithoutAlter(); }
+        finally { await db.query('ALTER TABLE data_map_field_identities ADD CONSTRAINT fk_data_map_field_identities_field FOREIGN KEY (field_id) REFERENCES data_map_fields(id) ON DELETE CASCADE'); }
+        assert.deepEqual(await structure(),originalStructure); await unchanged();
+      });
+      await check('P02 refuses the known old defaults and CHECKs before compatibility maintenance', async () => {
+        const before=await structure();
+        assert.ok((await inspectDefinitions(db)).drift.length);
+        await assert.rejects(applyDefinitions(db),{code:'DEFINITION_SCHEMA_DRIFT'});
+        assert.deepEqual(await structure(),before); await unchanged();
+      });
       await check('inspect and dry-run preserve structures and rows; exact target is mandatory', async () => {
         assert.throws(() => argumentsFor(['--apply', '--target', 'wrong'], {}));
         const before = maintenance('--inspect');
@@ -101,6 +140,22 @@ async function main() {
         assert.equal((await db.execute("SELECT IS_USED_LOCK('mdm_definition_migration_v1') AS owner"))[0][0].owner, null);
         await unchanged();
         assert.equal(maintenance('--apply').ready, true); await unchanged();
+      });
+      await check('unknown drift after partial DDL blocks resume until explicitly restored', async () => {
+        fixture.restore(backup);
+        let alters=0;
+        const failed=new Proxy(db,{get(target,key){
+          if(key==='execute')return(sql,params)=>{if(/^ALTER TABLE/.test(sql)&&++alters===3)throw new Error('SYNTHETIC_LATER_DDL_FAILURE');return target.execute(sql,params);};
+          const value=target[key];return typeof value==='function'?value.bind(target):value;
+        }});
+        await assert.rejects(apply(failed),/SYNTHETIC_LATER_DDL_FAILURE/);
+        assert.equal((await inspect(db)).pending.length,2);
+        await db.query('ALTER TABLE data_map_contexts ADD COLUMN p25_owned_unknown INT NULL');
+        try { await refuseWithoutAlter(); await unchanged(); }
+        finally { await db.query('ALTER TABLE data_map_contexts DROP COLUMN p25_owned_unknown'); }
+        const resumedInspect=await inspect(db); assert.deepEqual(resumedInspect.drift,[]); assert.equal(resumedInspect.pending.length,2);
+        assert.equal(maintenance('--apply').ready,true); await unchanged();
+        evidence.interrupted_resume={completed_tables:2,pending_before_resume:2,unknown_drift_blocks:true,inspect_before_resume:true};
       });
       await check('repeat apply is idempotent and creates one marker', async () => {
         const before = await structure(); assert.equal(maintenance('--apply').ready, true);
@@ -156,12 +211,16 @@ async function main() {
         assert.equal((await db.execute('SELECT COUNT(*) AS n FROM data_map_definition_versions'))[0][0].n, 2);
       });
       evidence.final_inspect = await inspect(db);
+      evidence.compatible_columns = await columnMetadata();
+      evidence.final_snapshot_digests = { object:digest(await snapshot(db,'object','9007199254740993')), field:digest(await snapshot(db,'field','9007199254740994')) };
+      evidence.p02_marker = require('../server/dataMapDefinitionMigration').MIGRATION_KEY;
       evidence.target = { host: '127.0.0.1', port: fixture.port, database: fixture.database, container_id: fixture.containerId, storage: 'owned tmpfs' };
       await check('previous current defaults with narrow CHECKs upgrade without legacy conversion', async () => {
-        await db.query('CREATE DATABASE stage25_previous_current');
+        const previousDatabase = 'stage25_previous_' + crypto.randomUUID().replaceAll('-', '');
+        await db.query(`CREATE DATABASE ${previousDatabase}`);
         // Reset prepared statements as well as the default database; USE alone
         // can keep previously prepared unqualified queries bound to the old DB.
-        await db.changeUser({ database: 'stage25_previous_current' });
+        await db.changeUser({ database: previousDatabase });
         for (const sql of splitSqlStatements(mdmMysqlSchemaSql())) {
           const previous = sql.replace("'candidate_authority','reviewItem_authority'", "'reviewItem_authority'").replace("'candidate','needs_review','confirmed','rejected','archived'", "'needs_review','confirmed','rejected','archived'");
           await db.query(previous);
@@ -170,7 +229,7 @@ async function main() {
         assert.equal((await apply(db)).ready, true);
       });
     } finally { db.release(); }
-  }, { stage: '25' });
+  }, { stage: '25', randomDatabase: true });
   evidence.passed = true; evidence.owned_container_removed = true;
   if (output) fs.writeFileSync(output, JSON.stringify(evidence, null, 2), { flag: 'wx' });
   console.log('P25_COMPATIBILITY_PASS ' + checks.length);

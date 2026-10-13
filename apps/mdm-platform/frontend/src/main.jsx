@@ -1,6 +1,8 @@
 import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createApiClient } from './api.js';
+import { readAuthenticatedSession } from './sessionGate.js';
+import { PasswordChange } from './PasswordChange.jsx';
 import { FormField, InputProtection, StatusPanel, useInputProtection, useUnsavedInput } from './components.jsx';
 import './styles.css';
 import { TemplateImport } from './TemplateImport.jsx';
@@ -26,11 +28,11 @@ import { RoleWorkbench } from './RoleWorkbench.jsx';
 import { V7Mappings } from './V7Mappings.jsx';
 
 const TodoInbox = lazy(() => import('./TodoInbox.jsx').then(module => ({ default: module.TodoInbox })));
-const pages = { '/app/role-guide': '角色与责任', '/app/todos': '待办收到', '/app/data-map':'数据地图台账', '/app/quality':'数据质量', '/app/publications':'主数据发布', '/app/terms':'术语词典', '/app/conflicts':'冲突管理', '/app/accounts':'账号与授权办理', '/app/access-audit':'访问审计', '/app/organization':'组织架构', '/app/roster':'花名册', '/app/roles': '角色详细管理', '/app/dashboard': '统计看板', '/app/offices': '办公室工作台', '/app/data-governance': '正式数据治理工作包', '/app/process-formal': '流程正式流转', '/app/process-preview': '流程预览与核对', '/app/analysis': '分析检查台', '/app/': '我的工作台', '/app/workbench': '我的工作台', '/app/identity': '当前身份', '/app/template-import':'模板导入', '/app/objects':'对象与字段', '/app/fact-checks':'事实核对', '/app/design-handoffs':'设计交接', '/app/v7-mappings':'V7 来源映射' };
+import {pages,navigationGroups} from './protocol.js';
 const normalizedPath = () => window.location.pathname.replace(/\/$/, '') || '/';
 function currentPath() { return normalizedPath() === '/app' ? '/app/' : normalizedPath(); }
 
-function Login({ api, expired, onLoggedIn, onLegacy }) {
+function Login({ api, expired, notice, onLoggedIn }) {
   const [loginName, setLoginName] = useState('');
   const [password, setPassword] = useState('');
   const [dirty, setDirty] = useUnsavedInput();
@@ -47,14 +49,16 @@ function Login({ api, expired, onLoggedIn, onLegacy }) {
     if (next.loginName || next.password) { document.getElementById(next.loginName ? 'login-name' : 'login-password').focus(); return; }
     setBusy(true); setError(null);
     const controller = new AbortController(); active.current = controller;
+    let loginAccepted = false;
     try {
       api.resetSession();
       await api.request('/api/org/login', { method: 'POST', body: { loginName: loginName.trim(), password }, signal: controller.signal });
-      const identity = await api.request('/api/org/me', { signal: controller.signal });
+      loginAccepted = true;
+      const authenticated = await readAuthenticatedSession(api, { signal: controller.signal });
       if (controller.signal.aborted) return;
-      setDirty(false); setPassword(''); onLoggedIn(identity);
+      setDirty(false); setPassword(''); onLoggedIn(authenticated);
     } catch (failure) {
-      if (failure.name !== 'AbortError') setError(failure.status === 401 ? '工号或密码不正确，请核对后重试。' : failure.message);
+      if (failure.name !== 'AbortError') setError(failure.status === 401 && !loginAccepted ? '工号或密码不正确，请核对后重试。' : failure.message);
     } finally { if (!controller.signal.aborted) setBusy(false); }
   }
   return <main className="login-layout">
@@ -62,12 +66,12 @@ function Login({ api, expired, onLoggedIn, onLegacy }) {
       <div className="brand"><img src="/logo.png" alt="" /><span>MDM 平台</span></div>
       <h1>从当前身份<br />进入治理工作</h1>
       <p>使用现有账号登录，继续查看和办理有权访问的事项。</p>
-      <div className="intro-note"><strong>原有业务入口继续可用</strong><p>可在新入口办理流程预览与核对；正式流转也可在新入口办理；正式数据治理工作包已提供新页面，办公室办理已提供新页面。</p></div>
+      <div className="intro-note"><strong>按当前授权办理</strong><p>在此平台查看和办理流程、数据治理及账号事项，权限和范围由服务端核对。</p></div>
     </section>
     <section className="login-card" aria-labelledby="login-title">
       <span className="eyebrow">账号登录</span>
       <h2 id="login-title">{expired ? '请重新登录' : '登录 MDM 平台'}</h2>
-      <p className="muted">{expired ? '登录状态已失效，请重新核对身份后继续。' : '沿用现有工号或登录名及密码。'}</p>
+      <p className="muted">{expired ? (notice || '登录状态已失效，请重新核对身份后继续。') : '沿用现有工号或登录名及密码。'}</p>
       <form onSubmit={submit} noValidate aria-busy={busy}>
         <FormField id="login-name" label="工号或登录名" autoComplete="username" value={loginName} disabled={busy} error={errors.loginName} onChange={e => { setLoginName(e.target.value); setDirty(Boolean(e.target.value || password)); }} />
         <FormField id="login-password" label="密码" type="password" autoComplete="current-password" value={password} disabled={busy} error={errors.password} onChange={e => { setPassword(e.target.value); setDirty(Boolean(loginName || e.target.value)); }} />
@@ -75,9 +79,43 @@ function Login({ api, expired, onLoggedIn, onLegacy }) {
         {dirty && <p className="input-notice">输入尚未提交，仅保留在当前页面。</p>}
         <button className="primary full" type="submit" disabled={busy}>{busy ? '正在登录…' : '登录'}</button>
       </form>
-      <a className="legacy-link" href="/" onClick={onLegacy}>使用原入口</a>
+
     </section>
   </main>;
+}
+
+const workbenchPaths = ['/app/', '/app/workbench'];
+function isCurrentPage(href, path) { return href === '/app/workbench' ? workbenchPaths.includes(path) : path === href; }
+
+function Sidebar({ path, navigate }) {
+  const activeGroup = navigationGroups.find(group => group.items.some(page => isCurrentPage(page.href, path)))?.code;
+  const [collapsed, setCollapsed] = useState(() => new Set());
+  // The group holding the current page is reopened after any navigation so the
+  // selected entry never hides behind a collapsed parent.
+  useEffect(() => {
+    setCollapsed(previous => previous.has(activeGroup) ? new Set([...previous].filter(code => code !== activeGroup)) : previous);
+  }, [path, activeGroup]);
+  const toggle = code => setCollapsed(previous => {
+    const next = new Set(previous);
+    if (next.has(code)) next.delete(code); else next.add(code);
+    return next;
+  });
+  return <aside className="sidebar" aria-label="平台导航">
+    <p className="nav-caption">功能导航</p>
+    <nav className="nav-tree">
+      {navigationGroups.map(group => {
+        const expanded = !collapsed.has(group.code);
+        return <section className="nav-group" key={group.code} data-nav-group={group.code}>
+          <button type="button" className="nav-group-toggle" aria-expanded={expanded} aria-controls={`nav-group-${group.code}`} onClick={() => toggle(group.code)}>
+            <span>{group.title}</span><span className="nav-caret" aria-hidden="true">{expanded ? '▾' : '▸'}</span>
+          </button>
+          <div className="nav-children" id={`nav-group-${group.code}`} hidden={!expanded}>
+            {group.items.map(page => <a key={page.href} href={page.href} aria-current={isCurrentPage(page.href, path) ? 'page' : undefined} onClick={e => navigate(e, page.href)}>{page.title}</a>)}
+          </div>
+        </section>;
+      })}
+    </nav>
+  </aside>;
 }
 
 function App() {
@@ -140,6 +178,7 @@ function App() {
   const heading = useRef(null);
   const apiRef = useRef(null);
   if (!apiRef.current) apiRef.current = createApiClient({ onUnauthorized: () => {
+    ++requestId.current;
     setImportDraft(previous=>previous?{...previous,prepared:null}:previous);
     setSession({ state: 'expired', user: null });
   } });
@@ -172,8 +211,8 @@ function App() {
         const result = await api.request('/api/org/session', { signal: controller.signal });
         if (!result.authenticated) { setSession({ state: 'anonymous', user: null }); return; }
       }
-      const user = await api.request('/api/org/me', { signal: controller.signal });
-      if (id === requestId.current) setSession({ state: 'ready', user });
+      const authenticated = await readAuthenticatedSession(api, { signal: controller.signal });
+      if (id === requestId.current) setSession({ ...authenticated, source: initial ? 'restored' : session.source });
     } catch (error) {
       if (error.name !== 'AbortError' && id === requestId.current) {
         setRequestState({ busy: false, error, action: 'refresh' });
@@ -185,6 +224,7 @@ function App() {
   }
   useEffect(() => { refresh(true); return () => active.current?.abort(); }, []);
   useEffect(() => { if (session.state === 'ready') heading.current?.focus(); }, [path, session.state]);
+  useEffect(() => { if (session.state === 'password-required') document.getElementById('password-required-title')?.focus(); }, [session.state]);
   useEffect(() => {
     if (session.state === 'ready' && session.user?.identityKind === 'system_admin' && path === '/app/') {
       window.history.replaceState({ ...window.history.state, mdmIndex: historyIndex.current }, '', '/app/accounts');
@@ -205,7 +245,7 @@ function App() {
       window.history.pushState({ mdmIndex: historyIndex.current }, '', target); setPath(target);
     }
   }
-  const legacy = event => navigate(event, event.currentTarget.getAttribute('href'));
+  const followLink = (event, target) => navigate(event, target || event.currentTarget.getAttribute('href'));
   async function logout() {
     if (requestState.busy || !guard.confirmLeave()) return;
     active.current?.abort(); const id = ++requestId.current;
@@ -217,55 +257,36 @@ function App() {
     finally { if (id === requestId.current) setRequestState(state => ({ ...state, busy: false })); }
   }
   if (session.state === 'loading') return <main className="startup"><StatusPanel kind="loading" title="正在核对登录状态…">请稍候。</StatusPanel></main>;
-  if (session.state === 'error') return <main className="startup"><StatusPanel kind="error" title="暂时无法读取身份" onRetry={() => refresh(true)}>{requestState.error?.message}</StatusPanel><a href="/" onClick={legacy}>返回原入口</a></main>;
-  if (session.state !== 'ready') return <Login api={api} expired={session.state === 'expired'} onLegacy={legacy} onLoggedIn={user => { if (contextDraft?.owner !== `${user.personId}:${user.departmentId}`) setContextDraft(null); if (fieldImportDraft?.owner !== `${user.personId}:${user.departmentId}`) setFieldImportDraft(null); if (fieldIdentityDraft?.owner !== `${user.personId}:${user.departmentId}`) setFieldIdentityDraft(null); if (utilityDraft?.owner !== `${user.personId}:${user.departmentId}`) setUtilityDraft(null); if (identityDraft?.owner !== `${user.personId}:${user.departmentId}`) setIdentityDraft(null); if (officeDraft?.owner !== `${user.personId}:${user.departmentId}`) setOfficeDraft(null); if (governanceDraft?.owner !== `${user.personId}:${user.departmentId}`) setGovernanceDraft(null); if (formalDraft?.owner !== `${user.personId}:${user.departmentId}`) setFormalDraft(null); if (previewDraft?.owner !== `${user.personId}:${user.departmentId}`) setPreviewDraft(null); if (analysisDraft?.owner !== `${user.personId}:${user.departmentId}`) setAnalysisDraft(null); ++requestId.current; setRequestState({ busy: false, error: null }); setSession({ state: 'ready', user }); }} />;
+  if (session.state === 'error') return <main className="startup"><StatusPanel kind="error" title="暂时无法完成登录状态核对" onRetry={() => refresh(true)}>{requestState.error?.message}</StatusPanel></main>;
+  function passwordChanged() {
+    ++requestId.current; api.resetSession();
+    setRequestState({ busy: false, error: null });
+    setSession({ state: 'expired', notice: '密码已修改，请使用新密码重新登录。' });
+  }
+  if (session.state === 'password-required') return <main className="startup"><PasswordChange api={api} user={session.user} required onChanged={passwordChanged} onLogout={logout} /></main>;
+
+  if (session.state !== 'ready') return <Login api={api} expired={session.state === 'expired'} notice={session.notice} onLoggedIn={authenticated => { const user = authenticated.user; if (contextDraft?.owner !== `${user.personId}:${user.departmentId}`) setContextDraft(null); if (fieldImportDraft?.owner !== `${user.personId}:${user.departmentId}` && !fieldImportDraft?.uncertain) setFieldImportDraft(null); if (fieldIdentityDraft?.owner !== `${user.personId}:${user.departmentId}`) setFieldIdentityDraft(null); if (utilityDraft?.owner !== `${user.personId}:${user.departmentId}` && utilityDraft?.action !== 'term-todo' && !utilityDraft?.uncertain) setUtilityDraft(null); if (identityDraft?.owner !== `${user.personId}:${user.departmentId}`) setIdentityDraft(null); if (officeDraft?.owner !== `${user.personId}:${user.departmentId}`) setOfficeDraft(null); if (governanceDraft?.owner !== `${user.personId}:${user.departmentId}`) setGovernanceDraft(null); if (formalDraft?.owner !== `${user.personId}:${user.departmentId}`) setFormalDraft(null); if (previewDraft?.owner !== `${user.personId}:${user.departmentId}`) setPreviewDraft(null); if (analysisDraft?.owner !== `${user.personId}:${user.departmentId}`) setAnalysisDraft(null); ++requestId.current; setRequestState({ busy: false, error: null }); setSession({ ...authenticated, source: 'login' }); }} />;
 
   const user = session.user;
   const roles = user.rbacRoles || [];
+  const termTodoDraftBlocked = (utilityDraft?.action === 'term-todo' || utilityDraft?.uncertain) && utilityDraft.owner !== `${user.personId}:${user.departmentId}`;
   return <div className="app-shell">
     <a className="skip-link" href="#main">跳到主要内容</a>
     <header className="app-header">
       <div className="brand"><img src="/logo.png" alt="" /><span>MDM 平台</span></div>
       <div className="header-identity"><strong>{user.personName || user.name}</strong><span>{user.identityKind === 'system_admin' ? '系统维护身份' : user.departmentName || '部门待明确'}</span><button className="secondary" onClick={logout} disabled={requestState.busy}>退出登录</button></div>
     </header>
-    <aside className="sidebar" aria-label="平台导航">
-      <p className="nav-caption">我的工作</p>
-      <a href="/app/workbench" aria-current={['/app/','/app/workbench'].includes(path) ? 'page' : undefined} onClick={e => navigate(e, '/app/workbench')}>我的工作台</a>
-      <a href="/app/terms" aria-current={path === "/app/terms" ? "page" : undefined} onClick={e=>navigate(e,"/app/terms")}>术语词典</a>
-      <a href="/app/conflicts" aria-current={path === "/app/conflicts" ? "page" : undefined} onClick={e=>navigate(e,"/app/conflicts")}>冲突管理</a>
-      <a href="/app/accounts" aria-current={path === '/app/accounts' ? 'page' : undefined} onClick={e=>navigate(e,'/app/accounts')}>账号与授权办理</a>
-      <a href="/app/access-audit" aria-current={path === '/app/access-audit' ? 'page' : undefined} onClick={e=>navigate(e,'/app/access-audit')}>访问审计</a>
-      <a href="/app/organization" aria-current={path === '/app/organization' ? 'page' : undefined} onClick={e=>navigate(e,'/app/organization')}>组织架构</a>
-      <a href="/app/publications" aria-current={path === '/app/publications' ? 'page' : undefined} onClick={e=>navigate(e,'/app/publications')}>主数据发布</a>
-      <a href="/app/roster" aria-current={path === '/app/roster' ? 'page' : undefined} onClick={e=>navigate(e,'/app/roster')}>花名册</a>
-      <a href="/app/roles" aria-current={path === '/app/roles' ? 'page' : undefined} onClick={e => navigate(e, '/app/roles')}>角色详细管理</a>
-      <a href="/app/role-guide" aria-current={path === '/app/role-guide' ? 'page' : undefined} onClick={e => navigate(e, '/app/role-guide')}>角色与责任</a>
-      <a href="/app/data-map" aria-current={path === '/app/data-map' ? 'page' : undefined} onClick={e => navigate(e, '/app/data-map')}>数据地图台账</a>
-      <a href="/app/todos" aria-current={path === "/app/todos" ? "page" : undefined} onClick={e => navigate(e, "/app/todos")}>待办收到</a>
-      <a href="/app/quality" aria-current={path === '/app/quality' ? 'page' : undefined} onClick={e => navigate(e, '/app/quality')}>数据质量</a>
-      <a href="/app/dashboard" aria-current={path === '/app/dashboard' ? 'page' : undefined} onClick={e => navigate(e, '/app/dashboard')}>统计看板</a>
-      <a href="/app/offices" aria-current={path === '/app/offices' ? 'page' : undefined} onClick={e => navigate(e, '/app/offices')}>办公室工作台</a>
-      <a href="/app/identity" aria-current={path === '/app/identity' ? 'page' : undefined} onClick={e => navigate(e, '/app/identity')}>当前身份</a>
-      <a href="/app/template-import" aria-current={path === '/app/template-import' ? 'page' : undefined} onClick={e=>navigate(e,'/app/template-import')}>模板导入</a>
-      <a href="/app/objects" aria-current={path === '/app/objects' ? 'page' : undefined} onClick={e=>navigate(e,'/app/objects')}>对象与字段</a>
-      <a href="/app/fact-checks" aria-current={path === '/app/fact-checks' ? 'page' : undefined} onClick={e=>navigate(e,'/app/fact-checks')}>事实核对</a>
-      <a href="/app/design-handoffs" aria-current={path === '/app/design-handoffs' ? 'page' : undefined} onClick={e=>navigate(e,'/app/design-handoffs')}>设计交接</a>
-      <a href="/app/data-governance" aria-current={path === '/app/data-governance' ? 'page' : undefined} onClick={e => navigate(e, '/app/data-governance')}>正式数据治理工作包</a>
-      <a href="/app/process-formal" aria-current={path === '/app/process-formal' ? 'page' : undefined} onClick={e => navigate(e, '/app/process-formal')}>流程正式流转</a>
-      <a href="/app/process-preview" aria-current={path === '/app/process-preview' ? 'page' : undefined} onClick={e => navigate(e, '/app/process-preview')}>流程预览与核对</a>
-      <a href="/app/v7-mappings" aria-current={path === '/app/v7-mappings' ? 'page' : undefined} onClick={e=>navigate(e,'/app/v7-mappings')}>V7 来源映射</a>
-      <a href="/app/analysis" aria-current={path === '/app/analysis' ? 'page' : undefined} onClick={e=>navigate(e,'/app/analysis')}>分析检查台</a>
-      <div className="nav-footer"><p>现有业务办理</p><a href="/" onClick={legacy}>进入原入口 ↗</a></div>
-    </aside>
+    <Sidebar path={path} navigate={navigate} />
     <main id="main" className="workspace">
+      {termTodoDraftBlocked && <StatusPanel kind="error" title={utilityDraft.action === 'term-todo' ? '其他身份的术语待办输入仍保留' : '其他身份的办理输入仍保留'}>当前身份无法查看或提交该输入，也不会重绑定来源或请求编号。请重新登录原身份核对；若明确不再需要，可丢弃后重新办理。<button onClick={() => { if (window.confirm('丢弃原身份尚未核对的输入和请求编号？结果不明时请先用原身份核对记录与历史。')) setUtilityDraft(null); }}>{utilityDraft.action === 'term-todo' ? '丢弃原身份的术语待办输入' : '丢弃原身份的办理输入'}</button></StatusPanel>}
       <div className="page-heading"><div><p className="eyebrow">MDM / {pages[path] || '页面'}</p><h1 ref={heading} tabIndex={-1}>{pages[path] || '未找到页面'}</h1></div><button className="secondary" disabled={requestState.busy} onClick={() => refresh()}>{requestState.busy ? '正在核对…' : '刷新身份'}</button></div>
       {requestState.error && <StatusPanel kind="error" title="操作未完成" onRetry={requestState.action === 'logout' ? logout : () => refresh()}>{requestState.error.message}</StatusPanel>}
-      {path === '/app/role-guide' ? <Suspense fallback={<StatusPanel kind="loading" title="正在载入角色与责任…"/>}><RoleGuide key={`${user.personId}:${user.departmentId}:${(user.permissions || []).join(',')}`} api={api} user={user} onLegacy={legacy} onQueryChange={(url,push)=>{if(push)historyIndex.current+=1;history[push?'pushState':'replaceState']({...history.state,mdmIndex:historyIndex.current},'',url);}} /></Suspense> : path === '/app/todos' ? <Suspense fallback={<StatusPanel kind="loading" title="正在载入待办…"/>}><TodoInbox user={user} key={`${user.personId}:${user.departmentId}:${(user.permissions || []).join(',')}`} api={api} onLegacy={legacy} onNavigate={navigate} onQueryChange={(url,push)=>{if(push)historyIndex.current+=1;history[push?'pushState':'replaceState']({...history.state,mdmIndex:historyIndex.current},'',url);}} /></Suspense> : path === '/app/data-map' ? <Suspense fallback={<StatusPanel kind="loading" title="正在载入数据地图…"/>}><DataMapRead identityDraft={fieldIdentityDraft?.owner === `${user.personId}:${user.departmentId}` ? fieldIdentityDraft : null} setIdentityDraft={value => setFieldIdentityDraft(value ? {...value, owner: `${user.personId}:${user.departmentId}`} : null)} onQueryChange={(url,push)=>{if(push)historyIndex.current+=1;history[push?'pushState':'replaceState']({...history.state,mdmIndex:historyIndex.current},'',url);}} isFieldAttemptCurrent={id => fieldImportRef.current?.attemptId === id && currentPath() === "/app/data-map"} fieldDraft={fieldImportDraft?.owner === `${user.personId}:${user.departmentId}` ? fieldImportDraft : null} setFieldDraft={value => setFieldImportDraft(value ? {...value, owner: `${user.personId}:${user.departmentId}`} : null)} user={user} draft={contextDraft?.owner === `${user.personId}:${user.departmentId}` ? contextDraft : null} setDraft={value=>setContextDraft(value?{...value,owner:`${user.personId}:${user.departmentId}`}:null)} key={`${user.personId}:${user.departmentId}:${(user.permissions || []).join(',')}`} api={api} onLegacy={legacy} /></Suspense> : path === '/app/quality' ? <Suspense fallback={<StatusPanel kind="loading" title="正在载入质量页面…"/>}><Quality key={`${user.personId}:${user.departmentId}:${(user.permissions || []).join(',')}`} api={api} onLegacy={legacy} /></Suspense> : path === '/app/publications' ? <Suspense fallback={<StatusPanel kind="loading" title="正在载入发布页面…"/>}><Publications key={`publications:${user.personId}:${user.departmentId}:${(user.permissions||[]).join(',')}`} api={api} draft={identityDraft?.owner === `${user.personId}:${user.departmentId}` ? identityDraft : null} setDraft={value=>setIdentityDraft(value?{...value,owner:`${user.personId}:${user.departmentId}`}:null)} onLegacy={legacy} onQueryChange={(url,push)=>{if(push)historyIndex.current+=1;history[push?'pushState':'replaceState']({...history.state,mdmIndex:historyIndex.current},'',url);}} /></Suspense> : ["/app/terms","/app/conflicts"].includes(path) ? <Suspense fallback={<StatusPanel kind="loading" title="正在载入办理页面…"/>}><GovernanceUtilities onQueryChange={(url,push)=>{if(push)historyIndex.current+=1;history[push?"pushState":"replaceState"]({...history.state,mdmIndex:historyIndex.current},"",url);}} key={`${path}:${user.personId}:${user.departmentId}:${(user.permissions||[]).join(",")}`} api={api} user={user} kind={path === "/app/terms"?"terms":"conflicts"} draft={utilityDraft?.owner === `${user.personId}:${user.departmentId}` ? utilityDraft : null} setDraft={value=>setUtilityDraft(value?{...value,owner:`${user.personId}:${user.departmentId}`}:null)} onLegacy={legacy}/></Suspense> : path === "/app/accounts" ? <AccountManagement key={`accounts:${user.personId}:${user.departmentId}:${(user.permissions||[]).join(",")}`} api={api} user={user} draft={identityDraft?.owner === `${user.personId}:${user.departmentId}` ? identityDraft : null} setDraft={value=>setIdentityDraft(value?{...value,owner:`${user.personId}:${user.departmentId}`}:null)} onLegacy={legacy}/> : path === "/app/access-audit" ? <AccessAudit key={`${user.personId}:${user.departmentId}:${(user.permissions||[]).join(",")}`} api={api} onLegacy={legacy}/> : ["/app/organization","/app/roster"].includes(path) ? <Directory key={`${path}:${user.personId}:${user.departmentId}:${(user.permissions||[]).join(",")}`} api={api} kind={path === "/app/organization"?"organization":"roster"} draft={identityDraft?.owner === `${user.personId}:${user.departmentId}` ? identityDraft : null} setDraft={value=>setIdentityDraft(value?{...value,owner:`${user.personId}:${user.departmentId}`}:null)} onLegacy={legacy}/> : path === "/app/roles" ?  <RoleManagement key={`${user.personId}:${user.departmentId}:${(user.permissions || []).join(',')}`} api={api} onLegacy={legacy} /> : path === '/app/dashboard' ? <Dashboard key={`${user.personId}:${user.departmentId}:${(user.permissions || []).join(',')}`} api={api} user={user} onLegacy={legacy} /> : path === '/app/offices' ? <OfficeWorkbench key={`${user.personId}:${user.departmentId}`} api={api} draft={officeDraft?.owner === `${user.personId}:${user.departmentId}` ? officeDraft : null} setDraft={value => setOfficeDraft(value ? {...value, owner: `${user.personId}:${user.departmentId}`} : null)} onLegacy={legacy} /> : path === '/app/data-governance' ? <DataGovernance key={`${user.personId}:${user.departmentId}`} api={api} draft={governanceDraft?.owner === `${user.personId}:${user.departmentId}` ? governanceDraft : null} setDraft={value => setGovernanceDraft(value ? {...value, owner: `${user.personId}:${user.departmentId}`} : null)} onLegacy={legacy} /> : path === '/app/process-formal' ? <ProcessFormal key={`${user.personId}:${user.departmentId}`} api={api} draft={formalDraft?.owner === `${user.personId}:${user.departmentId}` ? formalDraft : null} setDraft={value => setFormalDraft(value ? {...value, owner: `${user.personId}:${user.departmentId}`} : null)} /> : path === '/app/process-preview' ? <ProcessPreview key={`${user.personId}:${user.departmentId}`} api={api} draft={previewDraft?.owner === `${user.personId}:${user.departmentId}` ? previewDraft : null} setDraft={value => setPreviewDraft(value ? {...value, owner: `${user.personId}:${user.departmentId}`} : null)} /> : path === '/app/analysis' ? <AnalysisWorkbench key={`${user.personId}:${user.departmentId}`} api={api} draft={analysisDraft?.owner === `${user.personId}:${user.departmentId}` ? analysisDraft : null} setDraft={value=>setAnalysisDraft(value ? {...value,owner:`${user.personId}:${user.departmentId}`} : null)}/> : path === '/app/design-handoffs' ? <DesignHandoffs key={`${user.personId}:${user.departmentId}`} api={api} draft={handoffDraft} setDraft={setHandoffDraft}/> : path === '/app/v7-mappings' ? <V7Mappings key={`${user.personId}:${user.departmentId}`} api={api} draft={mappingDraft} setDraft={setMappingDraft}/> : path === '/app/fact-checks' ? <FactChecks key={`${user.personId}:${user.departmentId}`} api={api} draft={factDraft} setDraft={setFactDraft}/> : path === '/app/objects' ? <ObjectManagement key={`${user.personId}:${user.departmentId}`} api={api} draft={objectDraft} setDraft={setObjectDraft}/> : path === '/app/template-import' ? <TemplateImport api={api} draft={importDraft} setDraft={setImportDraft}/> : path === '/app/identity' ? <>
-        <section className="card"><h2>当前账号与归属</h2><p className="muted">以下信息来自当前登录身份；角色和访问范围由服务端核对。</p>
+      {path === '/app/password' ? <PasswordChange api={api} user={user} onChanged={passwordChanged} /> : path === '/app/role-guide' ? <Suspense fallback={<StatusPanel kind="loading" title="正在载入角色与责任…"/>}><RoleGuide key={`${user.personId}:${user.departmentId}:${(user.permissions || []).join(',')}`} api={api} user={user} onNavigate={followLink} onQueryChange={(url,push)=>{if(push)historyIndex.current+=1;history[push?'pushState':'replaceState']({...history.state,mdmIndex:historyIndex.current},'',url);}} /></Suspense> : path === '/app/todos' ? <Suspense fallback={<StatusPanel kind="loading" title="正在载入待办…"/>}><TodoInbox user={user} key={`${user.personId}:${user.departmentId}:${(user.permissions || []).join(',')}`} api={api} onNavigate={followLink} onQueryChange={(url,push)=>{if(push)historyIndex.current+=1;history[push?'pushState':'replaceState']({...history.state,mdmIndex:historyIndex.current},'',url);}} /></Suspense> : path === '/app/data-map' ? <Suspense fallback={<StatusPanel kind="loading" title="正在载入数据地图…"/>}><DataMapRead identityDraft={fieldIdentityDraft?.owner === `${user.personId}:${user.departmentId}` ? fieldIdentityDraft : null} setIdentityDraft={value => setFieldIdentityDraft(value ? {...value, owner: `${user.personId}:${user.departmentId}`} : null)} onQueryChange={(url,push)=>{if(push)historyIndex.current+=1;history[push?'pushState':'replaceState']({...history.state,mdmIndex:historyIndex.current},'',url);}} isFieldAttemptCurrent={id => fieldImportRef.current?.attemptId === id && currentPath() === "/app/data-map"} fieldDraft={fieldImportDraft} setFieldDraft={value => setFieldImportDraft(value ? {...value, owner: value.owner || `${user.personId}:${user.departmentId}`} : null)} user={user} draft={contextDraft?.owner === `${user.personId}:${user.departmentId}` ? contextDraft : null} setDraft={value=>setContextDraft(value?{...value,owner:`${user.personId}:${user.departmentId}`}:null)} key={`${user.personId}:${user.departmentId}:${(user.permissions || []).join(',')}`} api={api} onNavigate={followLink} /></Suspense> : path === '/app/quality' ? <Suspense fallback={<StatusPanel kind="loading" title="正在载入质量页面…"/>}><Quality key={`${user.personId}:${user.departmentId}:${(user.permissions || []).join(',')}`} api={api} onNavigate={followLink} /></Suspense> : path === '/app/publications' ? <Suspense fallback={<StatusPanel kind="loading" title="正在载入发布页面…"/>}><Publications key={`publications:${user.personId}:${user.departmentId}:${(user.permissions||[]).join(',')}`} api={api} draft={identityDraft?.owner === `${user.personId}:${user.departmentId}` ? identityDraft : null} setDraft={value=>setIdentityDraft(value?{...value,owner:`${user.personId}:${user.departmentId}`}:null)} onNavigate={followLink} onQueryChange={(url,push)=>{if(push)historyIndex.current+=1;history[push?'pushState':'replaceState']({...history.state,mdmIndex:historyIndex.current},'',url);}} /></Suspense> : ["/app/terms","/app/conflicts"].includes(path) ? <Suspense fallback={<StatusPanel kind="loading" title="正在载入办理页面…"/>}><GovernanceUtilities draftBlocked={termTodoDraftBlocked} onQueryChange={(url,push)=>{if(push)historyIndex.current+=1;history[push?"pushState":"replaceState"]({...history.state,mdmIndex:historyIndex.current},"",url);}} key={`${path}:${user.personId}:${user.departmentId}:${(user.permissions||[]).join(",")}`} api={api} user={user} kind={path === "/app/terms"?"terms":"conflicts"} draft={utilityDraft?.owner === `${user.personId}:${user.departmentId}` ? utilityDraft : null} setDraft={value=>setUtilityDraft(value?{...value,owner:`${user.personId}:${user.departmentId}`}:null)} onNavigate={followLink}/></Suspense> : path === "/app/accounts" ? <AccountManagement key={`accounts:${user.personId}:${user.departmentId}:${(user.permissions||[]).join(",")}`} api={api} user={user} draft={identityDraft?.owner === `${user.personId}:${user.departmentId}` ? identityDraft : null} setDraft={value=>setIdentityDraft(value?{...value,owner:`${user.personId}:${user.departmentId}`}:null)} onNavigate={followLink}/> : path === "/app/access-audit" ? <AccessAudit key={`${user.personId}:${user.departmentId}:${(user.permissions||[]).join(",")}`} api={api} onNavigate={followLink}/> : ["/app/organization","/app/roster"].includes(path) ? <Directory key={`${path}:${user.personId}:${user.departmentId}:${(user.permissions||[]).join(",")}`} api={api} kind={path === "/app/organization"?"organization":"roster"} draft={identityDraft?.owner === `${user.personId}:${user.departmentId}` ? identityDraft : null} setDraft={value=>setIdentityDraft(value?{...value,owner:`${user.personId}:${user.departmentId}`}:null)} onNavigate={followLink}/> : path === "/app/roles" ?  <RoleManagement key={`${user.personId}:${user.departmentId}:${(user.permissions || []).join(',')}`} api={api} onNavigate={followLink} /> : path === '/app/dashboard' ? <Dashboard key={`${user.personId}:${user.departmentId}:${(user.permissions || []).join(',')}`} api={api} user={user} onNavigate={followLink} /> : path === '/app/offices' ? <OfficeWorkbench key={`${user.personId}:${user.departmentId}`} api={api} draft={officeDraft?.owner === `${user.personId}:${user.departmentId}` ? officeDraft : null} setDraft={value => setOfficeDraft(value ? {...value, owner: `${user.personId}:${user.departmentId}`} : null)} onNavigate={followLink} /> : path === '/app/data-governance' ? <DataGovernance key={`${user.personId}:${user.departmentId}`} api={api} draft={governanceDraft?.owner === `${user.personId}:${user.departmentId}` ? governanceDraft : null} setDraft={value => setGovernanceDraft(value ? {...value, owner: `${user.personId}:${user.departmentId}`} : null)} onNavigate={followLink} /> : path === '/app/process-formal' ? <ProcessFormal key={`${user.personId}:${user.departmentId}`} api={api} draft={formalDraft?.owner === `${user.personId}:${user.departmentId}` ? formalDraft : null} setDraft={value => setFormalDraft(value ? {...value, owner: `${user.personId}:${user.departmentId}`} : null)} /> : path === '/app/process-preview' ? <ProcessPreview key={`${user.personId}:${user.departmentId}`} api={api} draft={previewDraft?.owner === `${user.personId}:${user.departmentId}` ? previewDraft : null} setDraft={value => setPreviewDraft(value ? {...value, owner: `${user.personId}:${user.departmentId}`} : null)} /> : path === '/app/analysis' ? <AnalysisWorkbench key={`${user.personId}:${user.departmentId}`} api={api} draft={analysisDraft?.owner === `${user.personId}:${user.departmentId}` ? analysisDraft : null} setDraft={value=>setAnalysisDraft(value ? {...value,owner:`${user.personId}:${user.departmentId}`} : null)}/> : path === '/app/design-handoffs' ? <DesignHandoffs key={`${user.personId}:${user.departmentId}`} api={api} draft={handoffDraft} setDraft={setHandoffDraft}/> : path === '/app/v7-mappings' ? <V7Mappings key={`${user.personId}:${user.departmentId}`} api={api} draft={mappingDraft} setDraft={setMappingDraft}/> : path === '/app/fact-checks' ? <FactChecks key={`${user.personId}:${user.departmentId}`} api={api} draft={factDraft} setDraft={setFactDraft}/> : path === '/app/objects' ? <ObjectManagement key={`${user.personId}:${user.departmentId}`} api={api} draft={objectDraft} setDraft={setObjectDraft}/> : path === '/app/template-import' ? <TemplateImport api={api} draft={importDraft} setDraft={setImportDraft}/> : path === '/app/identity' ? <>
+        <section className="card"><h2>当前账号与归属</h2><a href="/app/password" onClick={followLink}>修改本人密码</a><p className="muted">以下信息来自当前登录身份；角色和访问范围由服务端核对。</p>
           <dl className="identity-grid"><div><dt>姓名</dt><dd>{user.personName || user.name || '未填写'}</dd></div><div><dt>工号</dt><dd>{user.identityKind === 'system_admin' ? '系统维护身份，不关联员工' : user.employeeNo || '未填写'}</dd></div><div><dt>所属部门</dt><dd>{user.identityKind === 'system_admin' ? '系统维护身份，不关联部门' : user.departmentName || '待明确'}</dd></div><div><dt>账号状态</dt><dd>{user.accountStatus === 'active' ? '有效' : '请核对账号状态'}</dd></div></dl>
         </section>
         <section className="card"><h2>有效工作角色</h2>{roles.length ? <ul className="role-list">{roles.map((role, index) => <li key={`${role.code}-${index}`}><strong>{role.name || role.code}</strong><span>{role.scope_type === 'global' || role.scopeType === 'global' ? '全局范围' : '按已授权范围'}</span></li>)}</ul> : <StatusPanel title="暂无有效工作角色">请联系账号管理人员核对授权。当前身份不会自动获得业务权限。</StatusPanel>}</section>
-      </> : <RoleWorkbench key={`${user.personId}:${user.departmentId}:${(user.roleCodes || []).join(',')}`} api={api} onNavigate={legacy} />}
+      </> : <RoleWorkbench key={`${user.personId}:${user.departmentId}:${(user.roleCodes || []).join(',')}`} api={api} onNavigate={followLink} />}
       <footer className="workspace-footer">办理权限以当前身份和事项范围为准。</footer>
     </main>
   </div>;

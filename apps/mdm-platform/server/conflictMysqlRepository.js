@@ -2,6 +2,7 @@ const { checkRuntimeSchema } = require('./mysqlRuntimeSchema');
 const mysql = require('mysql2/promise');
 const { mysqlConfigFromEnv } = require('./mysqlConfig');
 const { mdmMysqlSchemaSql, splitSqlStatements } = require('./mysqlSchema');
+const { createRegisteredPool } = require('./mysqlPoolRegistry');
 
 let conflictRepoPromise = null;
 let conflictRepositoryFactory = null;
@@ -193,6 +194,50 @@ function assigneePersonIdFromPayload(payload = {}) {
 }
 
 function makeConflictMysqlRepository(pool) {
+  const writes = require('./legacyGovernanceWrites');
+  async function mutate(action, conflictId, conflictType, payload) {
+    const session = payload.actor_session;
+    // Legacy pages cannot supply their original snapshot. Capture the server's
+    // admission read so the wait-for-lock window still cannot overwrite a winner.
+    const admitted = await makeConflictMysqlRepository(pool).getConflict(conflictId, conflictType, {canViewAll:true});
+    if (!admitted) throw writes.fail(404,'LEGACY_CONFLICT_MISSING','冲突不存在');
+    const expected = payload.expected_token === undefined ? admitted.write_token : payload.expected_token;
+    return await writes.transaction(pool, async db => {
+      const table = conflictType === 'term' ? 'mdm_term_conflicts' : 'mdm_field_conflicts';
+      const [[root]] = await db.execute(`SELECT id FROM ${table} WHERE id=? FOR UPDATE`,[conflictId]);
+      if (!root) throw writes.fail(404,'LEGACY_CONFLICT_MISSING','冲突不存在');
+      const repo = makeConflictMysqlRepository(db);
+      const before = await repo.getConflict(conflictId,conflictType,{canViewAll:true});
+      writes.compareToken(expected,before.write_token);
+      const permission = {assignConflict:'governance:assign-work',reassignConflict:'governance:assign-work',submitCoordination:'governance:handle-assigned-conflict',
+        finalDecideConflict:before.status==='escalated'?'governance:decide-escalation':'governance:handle-assigned-conflict',
+        escalateConflict:'governance:escalate-conflict',reopenConflict:'governance:assign-work',archiveConflict:'governance:structure-gate'}[action];
+      if (!session && action !== 'escalateConflict') throw writes.fail(403,'LEGACY_WRITE_FORBIDDEN','缺少人员写入身份');
+      // The existing overdue-escalation script is an internal caller, not an HTTP
+      // identity. Keep its null actor and rule; serialize it against human decisions.
+      const current = session ? await writes.actor(db,session,permission) : {person_id:null,current_department_id:null,effects:new Map()};
+      const actorId = Number(current.person_id);
+      const assignedId = Number(before.currentAssignee?.assignee_person_id || before.currentAssignee?.assignee_user_id || 0);
+      if (session && (action==='submitCoordination' || (action==='finalDecideConflict' && before.status!=='escalated') || (action==='escalateConflict' && current.effects.get('governance:assign-work')!=='allow')) && actorId!==assignedId) throw writes.fail(403,'LEGACY_WRITE_FORBIDDEN','只能处理本人当前被分派的冲突');
+      let assigneeDept = payload.assignee_dept_id;
+      if (['assignConflict','reassignConflict'].includes(action)) {
+        const assigneeId = assigneePersonIdFromPayload(payload);
+        const [[account]] = await db.execute('SELECT account_id,auth_version FROM user_accounts WHERE person_id=? FOR SHARE',[assigneeId]);
+        if (!account) throw writes.fail(422,'LEGACY_ASSIGNEE_INVALID','只能分派给当前有效的数据冲突处理人');
+        let assignee;
+        try {assignee = await require('./processV7Authoring').activeActor(db,{personId:assigneeId,accountId:account.account_id,authVersion:account.auth_version});}
+        catch(error) {if(error.statusCode===401) throw writes.fail(422,'LEGACY_ASSIGNEE_INVALID','所选冲突处理人当前无效');throw error;}
+        if (assignee.admin || !assignee.grants.some(g=>g.role_code==='data_conflict_handler' && (g.scope_type==='global'||Number(g.scope_department_id)===Number(assignee.current_department_id)))) throw writes.fail(422,'LEGACY_ASSIGNEE_INVALID','只能分派给当前有效的数据冲突处理人');
+        assigneeDept = assignee.current_department_id;
+      }
+      const result = await repo[action](conflictId,conflictType,{...payload,actor_session:undefined,actor_person_id:session ? actorId : payload.actor_person_id || null,actor_user_id:session?.userId || payload.actor_user_id || null,
+        actor_dept_id:current.current_department_id,assignee_dept_id:assigneeDept,canManageAll:false,requireAssignment:action==='finalDecideConflict' && before.status!=='escalated'});
+      if (result?.ok===false) throw writes.fail(result.statusCode,'LEGACY_WRITE_CONFLICT',result.error);
+      const after = await repo.getConflict(conflictId,conflictType,{canViewAll:true});
+      await writes.audit(db,'conflict_'+conflictType,conflictId,action,session || {userId:payload.actor_user_id || null,personId:payload.actor_person_id || null},before,after);
+      return result;
+    });
+  }
   async function insertTodo(payload = {}, actorUserId = null) {
     const actorPersonId = personIdFromPayload(payload, actorUserId);
     const result = await pool.execute(
@@ -394,9 +439,10 @@ function makeConflictMysqlRepository(pool) {
       if (mode === 'escalated' && conflict.status !== 'escalated') return null;
       if (!['global', 'department', 'assigned', 'escalated'].includes(mode)) return null;
       const history = await coordinationHistory(conflictId, conflictType);
+      const revision = await first(pool,"SELECT CAST(COALESCE(MAX(id),0) AS CHAR) AS revision FROM mdm_version_log WHERE entity_type=? AND entity_id=?",['conflict_'+conflictType,conflictId]);
       const submitted = new Set(history.map(row => Number(row.assignee_person_id || row.assignee_user_id)).filter(Boolean));
       const assigned = new Set(assignments.map(row => Number(row.assignee_person_id || row.assignee_user_id)).filter(Boolean));
-      return {
+      const detail = {
         ...conflict,
         currentAssignee: assignments[0] || null,
         coordinationHistory: history,
@@ -405,8 +451,11 @@ function makeConflictMysqlRepository(pool) {
         sideB: null,
         bothSubmitted: assigned.size > 0 && Array.from(assigned).every(id => submitted.has(id)),
         deadline: conflict.deadline || null,
-        resolution_type: conflict.resolution_type || null
+        resolution_type: conflict.resolution_type || null,
+        write_revision: revision?.revision || '0'
       };
+      const {write_revision,...visible}=detail;
+      return {...visible,write_token:writes.conflictToken(detail)};
     },
 
     async detectConflicts(filters = {}, actor = {}) {
@@ -534,6 +583,7 @@ function makeConflictMysqlRepository(pool) {
     },
 
     async assignConflict(conflictId, conflictType = 'field', payload = {}) {
+      if (payload.actor_session) return await mutate('assignConflict',conflictId,conflictType,payload);
       const assigneePersonId = assigneePersonIdFromPayload(payload);
       const actorPersonId = personIdFromPayload(payload, payload.actor_user_id);
       const conflict = await getBaseConflict(conflictId, conflictType);
@@ -560,6 +610,7 @@ function makeConflictMysqlRepository(pool) {
     },
 
     async reassignConflict(conflictId, conflictType = 'field', payload = {}) {
+      if (payload.actor_session) return await mutate('reassignConflict',conflictId,conflictType,payload);
       const assigneePersonId = assigneePersonIdFromPayload(payload);
       const actorPersonId = personIdFromPayload(payload, payload.actor_user_id);
       const conflict = await getBaseConflict(conflictId, conflictType);
@@ -574,6 +625,7 @@ function makeConflictMysqlRepository(pool) {
     },
 
     async submitCoordination(conflictId, conflictType = 'field', payload = {}) {
+      if (payload.actor_session) return await mutate('submitCoordination',conflictId,conflictType,payload);
       const actorPersonId = personIdFromPayload(payload, payload.actor_user_id);
       if (!['A', 'B', 'compromise'].includes(payload.result)) return resultError(422, 'result 必须为 A, B, 或 compromise');
       const conflict = await getBaseConflict(conflictId, conflictType);
@@ -596,6 +648,7 @@ function makeConflictMysqlRepository(pool) {
     },
 
     async finalDecideConflict(conflictId, conflictType = 'field', payload = {}) {
+      if (payload.actor_session) return await mutate('finalDecideConflict',conflictId,conflictType,payload);
       const conflict = await getBaseConflict(conflictId, conflictType);
       if (!conflict) return resultError(404, '冲突不存在');
       if (!['coordinating', 'escalated', 'resolved'].includes(conflict.status)) {
@@ -621,6 +674,7 @@ function makeConflictMysqlRepository(pool) {
     },
 
     async escalateConflict(conflictId, conflictType = 'field', payload = {}) {
+      if (payload.actor_session || typeof pool.getConnection === 'function') return await mutate('escalateConflict',conflictId,conflictType,payload);
       const conflict = await getBaseConflict(conflictId, conflictType);
       if (!conflict) return resultError(404, '冲突不存在');
       if (conflict.status !== 'coordinating') return resultError(409, '仅协调中的冲突可升级');
@@ -637,6 +691,7 @@ function makeConflictMysqlRepository(pool) {
     },
 
     async reopenConflict(conflictId, conflictType = 'field', payload = {}) {
+      if (payload.actor_session) return await mutate('reopenConflict',conflictId,conflictType,payload);
       const conflict = await getBaseConflict(conflictId, conflictType);
       if (!conflict) return resultError(404, '冲突不存在');
       if (conflict.status !== 'resolved') return resultError(409, '仅已解决状态可重开');
@@ -650,7 +705,8 @@ function makeConflictMysqlRepository(pool) {
       return { ok: true };
     },
 
-    async archiveConflict(conflictId, conflictType = 'field') {
+    async archiveConflict(conflictId, conflictType = 'field', payload = {}) {
+      if (payload.actor_session) return await mutate('archiveConflict',conflictId,conflictType,payload);
       const conflict = await getBaseConflict(conflictId, conflictType);
       if (!conflict) return resultError(404, '冲突不存在');
       if (conflict.status !== 'resolved') return resultError(409, '仅已解决状态可归档');
@@ -673,7 +729,7 @@ async function conflictRepository() {
   if (conflictRepositoryFactory) return await conflictRepositoryFactory();
   if (!conflictRepoPromise) {
     conflictRepoPromise = (async () => {
-      const pool = mysql.createPool(mysqlConfigFromEnv());
+      const pool = createRegisteredPool(process.env, 'conflict');
       const repo = makeConflictMysqlRepository(pool);
       await checkRuntimeSchema(pool, 'conflict');
       return repo;

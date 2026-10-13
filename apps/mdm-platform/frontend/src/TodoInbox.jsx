@@ -10,7 +10,7 @@ function relatedWork(row) {
   if (row.type === 'conflict_resolution') return { path: '/app/conflicts', label: '到冲突列表核对', note: '待办未提供可直接定位的冲突类型和编号，请在当前可见列表核对具体事项。' };
   if (row.type === 'terminology' && row.related_term_id != null) {
     const id = String(row.related_term_id);
-    if (/^[1-9]\d*$/.test(id) && Number.isSafeInteger(Number(id))) return { path: `/app/terms?id=${encodeURIComponent(id)}`, label: '查看关联术语', note: `关联术语 #${id}。打开时按当前身份重新读取；待办可见不表示有权查看该术语。` };
+    if (/^[1-9]\d*$/.test(id) && Number.isSafeInteger(Number(id))) return { path: `/app/terms?id=${encodeURIComponent(id)}`, label: '查看关联术语', note: `关联术语 #${id}。打开时按当前身份读取当前内容，不代表固定历史术语版本；待办可见不表示有权查看该术语。` };
     return { path: '/app/terms', label: '到术语列表核对', note: '术语来源编号无法精确读取，请核对原记录，本页不会猜测关联。' };
   }
   if (row.type === 'terminology') return { path: '/app/terms', label: '到术语列表核对', note: '待办未提供可直接定位的术语编号，请在当前可见列表核对具体事项。' };
@@ -28,7 +28,7 @@ function selection() {
   return { status: query.get('status') || '', type: query.get('type') || '' };
 }
 
-export function TodoInbox({ api, user, onLegacy, onNavigate, onQueryChange }) {
+export function TodoInbox({ api, user, onNavigate, onQueryChange }) {
   const [filter, setFilter] = useState(selection);
   const [revision, setRevision] = useState(0);
   const [state, setState] = useState({ busy: true });
@@ -36,7 +36,7 @@ export function TodoInbox({ api, user, onLegacy, onNavigate, onQueryChange }) {
   const attempt = useRef(null);
   const actionPanel = useRef(null);
   useEffect(() => { if (action?.phase) actionPanel.current?.focus(); }, [action?.phase]);
-  const canDelete = (user.permissions || []).includes('governance:structure-gate');
+  const canDelete = (user.permissions || []).includes('governance:structure-gate') && !(user.permissions || []).includes('identity:manage-account');
   const canComplete = row => row.status === 'pending' && !row.related_mapping_id &&
     !(user.permissions || []).includes('identity:manage-account') &&
     Boolean(user.departmentId) && Number(row.to_dept_id) === Number(user.departmentId) &&
@@ -105,7 +105,7 @@ export function TodoInbox({ api, user, onLegacy, onNavigate, onQueryChange }) {
       <div className="section-heading"><h1>待办收到</h1><button className="secondary" disabled={action?.phase === 'pending'} onClick={() => { cancelAction(); setState({ busy: true }); setRevision(value => value + 1); }}>刷新待办</button></div>
       <p>按当前身份的数据范围查看收到的待办。列表沿用原接口的紧急程度、截止日期和创建时间排序。</p>
       <p className="muted">本部门有办理权限的人员可确认完成未关联原映射记录的待办；具备结构核对权限的人员可删除待办。有明确来源的术语待办可查看关联术语；其余术语及冲突事项进入相应列表核对，办公室任务请到办公室工作台办理。待办已完成或删除不表示问题关闭或正式审核通过。</p>
-      <div className="identity-actions"><a href="/#/todos" onClick={onLegacy}>打开原待办入口</a><a href="/app/offices" onClick={event => onNavigate(event, '/app/offices')}>进入办公室工作台</a></div>
+      <div className="identity-actions"><a href="/app/offices" onClick={event => onNavigate(event, '/app/offices')}>进入办公室工作台</a></div>
       <div className="identity-fields">
         <label className="identity-field">待办状态<select aria-label="待办状态" disabled={action?.phase === 'pending'} value={filter.status} onChange={event => change('status', event.target.value)}>
           <option value="">全部状态</option>{filter.status && !Object.hasOwn(statuses, filter.status) && <option value={filter.status}>不支持的状态</option>}{Object.entries(statuses).map(([value, label]) => <option key={value} value={value}>{label}</option>)}

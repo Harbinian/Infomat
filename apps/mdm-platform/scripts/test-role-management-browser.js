@@ -53,13 +53,8 @@ async function main() {
       await page.getByLabel('选择角色').selectOption(String(lead.role_id)); await ready();
       await page.goBack(); await ready(); assert.equal(await page.getByLabel('选择角色').inputValue(), String(historicalId));
       await page.goForward(); await ready(); assert.equal(await page.getByLabel('选择角色').inputValue(), String(lead.role_id));
-      await page.getByRole('link', { name: '原账号管理与访问审计' }).click(); await page.waitForURL('**/#/rbac');
-      await page.locator('#rbacPanel').getByRole('button', { name: '手工创建账号', exact: true }).waitFor();
-      await page.locator('.rbac-nav-item[data-panel="visibleTabs"]').click();
-      await page.locator('#visibleTabRoleSelect').waitFor();
-      assert.equal(await page.locator('#visibleTabRoleSelect option').count(), model.roles.length);
-      await page.goBack(); await ready();
-      checks.push('real model/list/detail/matrix, historical inheritance and revoked assignments; old entry; reload/back/forward');
+
+      checks.push('real model/list/detail/matrix, historical inheritance and revoked assignments; reload/back/forward');
       for (const status of [403, 409, 503]) {
         await page.route('**/api/roles/' + lead.role_id + '/permissions', route => route.fulfill({ status, json: {} }), { times: 1 });
         await refresh(); await page.getByText('角色详情暂不可用', { exact: true }).waitFor();

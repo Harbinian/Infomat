@@ -1,8 +1,8 @@
 // Pure synthetic tests. No MySQL, HTTP, external materials or writes.
 const test = require('node:test'), assert = require('node:assert/strict');
-const { analyze, CHECKS, catalog, enabledManifest } = require('../server/v7AnalysisRules');
+const { analyze, LEGACY_CHECKS: CHECKS, PREVIOUS_VERSION, catalog, enabledManifest } = require('../server/v7AnalysisRules');
 const { document, node, edge, binding } = require('./testHelpers/v7AnalysisSamples');
-const run = (d, status = 'valid', check_ids = CHECKS) => analyze({ step: { check_ids }, inputs: [{ input_key: 'source', snapshot: { validation_status: status }, document: d }] });
+const run = (d, status = 'valid', check_ids = CHECKS) => analyze({ parser_version: PREVIOUS_VERSION, step: { check_ids }, inputs: [{ input_key: 'source', snapshot: { validation_status: status }, document: d }] });
 const has = (r, id) => r.findings.some(f => f.rule_id === 'v7.' + id);
 test('normal action chain, empty fields and text are not business errors', () => {
   const r = run(document()); assert.equal(r.status, 'succeeded'); assert.equal(r.findings.length, 0); assert.equal(r.checked_ids.length, 8);
@@ -68,7 +68,49 @@ test('limits fail explicitly without silently truncating findings', () => {
 test('CPU thread dispatch returns real findings and supports cancellation', async () => {
   const { dispatch } = require('../server/analysisWorker');
   const d = document(); d.flow_relations[0].relation_type = 'condition';
-  const task = { step: { parser_key: 'v7_deterministic', check_ids: CHECKS }, inputs: [{ input_key: 'source', snapshot: { validation_status: 'valid' }, document: d }] };
+  const task = { parser_version: PREVIOUS_VERSION, step: { parser_key: 'v7_deterministic', check_ids: CHECKS }, inputs: [{ input_key: 'source', snapshot: { validation_status: 'valid' }, document: d }] };
   assert(has(await dispatch(task, new AbortController().signal), 'branch_condition'));
   const c = new AbortController(); c.abort(); await assert.rejects(dispatch(task, c.signal), e => e.code === 'ABORTED');
+});
+
+test('declared other formats are refused, undeclared and invalid V7 retain format diagnosis', () => {
+  const d = require('../../structured-output-service/server').createEmptyProcessGovernanceDocument();
+  assert.equal(run(d).status, 'succeeded');
+  for (const value of [{ ...document(), schema_version: 'unknown' }, { ...document(), schema_version: null }]) {
+    const result = run(value); assert.equal(result.status, 'failed'); assert.equal(result.error_code, 'SOURCE_FORMAT_UNSUPPORTED'); assert.deepEqual(result.findings, []); assert.deepEqual(result.checked_ids, []);
+  }
+  const missing = document(); delete missing.schema_version; assert(has(run(missing), 'required'));
+  assert(has(run({}), 'required')); assert(has(run(null, 'parse_failed'), 'format'));
+  const mismatch = analyze({ step: { check_ids: CHECKS }, inputs: [{ input_key: 'source', snapshot: { schema_version: 'process-governance-v8' }, document: document() }] });
+  assert.equal(mismatch.error_code, 'SOURCE_FORMAT_METADATA_MISMATCH'); assert.deepEqual(mismatch.findings, []);
+});
+
+function comparisonRun(doc, { version = require('../server/v7AnalysisRules').PREVIOUS_VERSION, parserVersion = version, metadata = true, output, status = 'succeeded', documents = true } = {}) {
+  const { digest } = require('../server/dataMapDefinitionValues'), rules = require('../server/v7AnalysisRules');
+  const snapshot = { kind: 'v7_source', ref_id: '1', source_kind: 'preview_revision', content_digest: digest(doc), digest_algorithm: 'sha256-v7-stable-json-v1', identity: { kind: 'preview_revision', id: '1' }, ...(metadata ? { schema_version: doc.schema_version } : {}) };
+  const result = output || run(doc), coverage = { expected: CHECKS, checked: result.checked_ids, missing: CHECKS.filter(id => !result.checked_ids.includes(id)) };
+  return { run_id: '1', scope_department_id: '1', status, manifest_digest: digest(snapshot),
+    manifest: { inputs: [{ input_key: 'source', snapshot }], rule_version: version, parser_versions: { [rules.PARSER]: parserVersion }, ai_metadata: null, check_scope: { check_ids: CHECKS }, steps: [{ step_key: 'v7', parser_key: rules.PARSER, input_keys: ['source'], check_ids: CHECKS }] },
+    ...(documents ? { documents: { source: doc } } : {}), attempts: [{ step_key: 'v7', attempt_no: 1, attempt_id: '1', status: result.status, coverage,
+      evidence: result.evidence.map(e => ({ ...e, fixed_reference: snapshot, locator_validation: 'resolved' })), findings: result.findings.map((f, i) => ({ ...f, finding_id: String(i + 1), comparison_algorithm: 'analysis-subject-v1', rule_version: version })) }] };
+}
+test('comparison maps old/new V7 semantics and optional metadata without erasing evidence changes', () => {
+  const compare = require('../server/analysisComparison').compareAnalysisSnapshots, d = document(); d.behaviors.push(node('behavior_c'));
+  const before = comparisonRun(d, { version: 'v7-deterministic-v1', metadata: false }), after = comparisonRun(d); const original = structuredClone(before);
+  assert.equal(compare(before, after).counts.persistent, 1); assert.equal(compare(before, after).comparison_complete, true); assert.deepEqual(before, original);
+  const reordered = structuredClone(d); reordered.behaviors.reverse(); assert.equal(compare(before, comparisonRun(reordered)).counts.evidence_changed, 1);
+  const fixed = structuredClone(d); fixed.flow_relations.push(edge('relation_bc', 'behavior_b', 'behavior_c'));
+  assert.equal(compare(before, comparisonRun(fixed)).counts.not_detected, 1);
+});
+test('different native format, unknown format/version and missing coverage never mean no longer detected', () => {
+  const compare = require('../server/analysisComparison').compareAnalysisSnapshots, d = document(); d.behaviors.push(node('behavior_c')); const before = comparisonRun(d);
+  for (const schema_version of ['process-governance-v8', 'unknown']) {
+    const after = comparisonRun({ ...d, schema_version }); const result = compare(before, after); assert(result.comparability_reasons.includes('SOURCE_FORMAT_CHANGED')); assert.equal(result.counts.not_detected, 0); assert.equal(result.comparison_complete, false);
+  }
+  const noMetadata = comparisonRun(d, { metadata: false, documents: false }); assert(compare(before, noMetadata).comparability_reasons.includes('SOURCE_FORMAT_UNRESOLVED'));
+  assert(compare(before, comparisonRun(d, { version: 'different-rules' })).comparability_reasons.includes('RULE_SEMANTICS_UNMAPPED'));
+  assert(compare(before, comparisonRun(d, { parserVersion: 'different-parser' })).comparability_reasons.includes('PARSER_VERSION_CHANGED'));
+  const output = { status: 'partial', checked_ids: ['v7.format', 'v7.required'], evidence: [], findings: [] };
+  const partial = compare(before, comparisonRun(d, { output, status: 'partial' })); assert.equal(partial.counts.incomparable, 1); assert.equal(partial.rows[0].reason, 'RULE_COVERAGE_INCOMPLETE'); assert.equal(partial.counts.not_detected, 0);
+  assert(partial.comparability_reasons.includes('CHECK_COVERAGE_INCOMPLETE'));
 });

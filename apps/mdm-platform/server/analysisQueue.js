@@ -18,10 +18,21 @@ function policy(value = {}) {
 module.exports = function (helpers) {
   const tx = fn => helpers.transaction(async db => {
     if (!(await db.execute('SELECT migration_key FROM schema_migrations WHERE migration_key=?', [MIGRATION_KEY]))[0].length) throw code('MIGRATION_REQUIRED', 503);
+    await require('./analysisDependencyReadiness').assertAnalysisStorage(db);
     return fn(db);
   });
   // This factory is private: transaction and fencing cannot be selected by callers.
-  const api = db => require('./analysisRuns')({ ...helpers, transaction: fn => fn(db), workerTransaction: true });
+  const api = (db, request = helpers.request) => require('./analysisRuns')({ ...helpers, request, transaction: fn => fn(db), workerTransaction: true });
+  // Hash and replay the original completion payload before adapting its private
+  // operation copy. Exact attempt bindings must start as text on a prepared
+  // connection; changing the public payload would change legacy request digests.
+  const completionRequest = (db, who, action, payload, operation) => helpers.request(db, who, action, payload, async () => {
+    const original = payload.attempt_id;
+    if (require('./sessionSubject').identityInteger(original) === null) return operation();
+    payload.attempt_id = String(original);
+    try { return await operation(); }
+    finally { payload.attempt_id = original; }
+  });
   const event = (db, q, type, error = null) => db.execute('INSERT INTO data_map_analysis_queue_events(run_id,generation,worker_id,event_type,error_code,created_at) VALUES (?,?,?,?,?,UTC_TIMESTAMP(3))', [q.run_id, q.generation, q.worker_id, type, error]);
   async function row(db, runId) {
     const [[q]] = await db.execute(`SELECT *,CAST(run_id AS CHAR) run_id,
@@ -58,7 +69,13 @@ module.exports = function (helpers) {
       const expected = manifest.steps.find(s => s.step_key === a.step_key).check_ids;
       const coverage = { expected, checked: [], missing: expected };
       const outcome = { status: 'failed', coverage, error_code: reason, evidence: [], findings: [] };
-      await db.execute("UPDATE data_map_analysis_attempts SET status='failed',coverage_json=?,error_code=?,result_digest=?,completed_by_person_id=?,finished_at=UTC_TIMESTAMP(3) WHERE attempt_id=?", [json(coverage), reason, digest(outcome), q.session.personId, a.attempt_id]);
+      // Legacy numeric sessions can warm this prepared parameter as a number.
+      // Bind exact actors as text from the first prepared execution; MySQL can
+      // retain a numeric parameter type across later text bindings. Malformed
+      // historical values keep their original binding and errors.
+      const exactActor = require('./sessionSubject').identityInteger(q.session.personId) !== null;
+      const completedActorBinding = exactActor ? 'CAST(CAST(? AS CHAR) AS SIGNED)' : '?';
+      await db.execute(`UPDATE data_map_analysis_attempts SET status='failed',coverage_json=?,error_code=?,result_digest=?,completed_by_person_id=${completedActorBinding},finished_at=UTC_TIMESTAMP(3) WHERE attempt_id=?`, [json(coverage), reason, digest(outcome), exactActor ? String(q.session.personId) : q.session.personId, a.attempt_id]);
       await db.execute("UPDATE data_map_analysis_steps SET status='failed' WHERE run_id=? AND step_key=?", [q.run_id, a.step_key]);
     }
     if (active.length) await db.execute('UPDATE data_map_analysis_runs SET revision_no=revision_no+1 WHERE run_id=?', [q.run_id]);
@@ -92,6 +109,9 @@ module.exports = function (helpers) {
         const stub = run.manifest.rule_version === 'p10-stub-v1' && !run.manifest.ai_metadata && Object.values(run.manifest.parser_versions).every(v => v === 'p10-stub-v1') &&
           run.manifest.steps.every(s => ['stub_success', 'stub_transient', 'stub_invalid', 'stub_hang', 'stub_partial'].includes(s.parser_key));
         if (!stub && !require('./v7AnalysisRules').enabledManifest(run.manifest) && !require('./handoffAnalysisRules').enabledManifest(run.manifest) && !require('./excelEvidenceRules').enabledManifest(run.manifest) && !require('./wordEvidenceRules').enabledManifest(run.manifest) && !require('./pdfEvidenceRules').enabledManifest(run.manifest) && !require('./analysisAiOffline').enabledManifest(run.manifest)) throw code('ADAPTER_NOT_ENABLED', 400);
+        // New enrollment is early-refused. Already enrolled legacy work is fenced
+        // and evaluated by the CPU adapter with explicit failed/missing coverage.
+        require('./v7AnalysisRules').assertSourceFormats(run.manifest, run.input_formats);
         const savedSession = { personId: id(session.personId), accountId: id(session.accountId), authVersion: id(session.authVersion) };
         await db.execute("INSERT INTO data_map_analysis_queue(run_id,session_json,policy_json,state,available_at,created_at,updated_at) VALUES (?,?,?,'ready',UTC_TIMESTAMP(3),UTC_TIMESTAMP(3),UTC_TIMESTAMP(3))", [run.run_id, json(savedSession), json(p)]);
         await event(db, { run_id: run.run_id, generation: 0, worker_id: null }, 'enqueued');
@@ -159,14 +179,14 @@ module.exports = function (helpers) {
         for (const key of s.input_keys) {
           const ref = run.manifest.inputs.find(i => i.input_key === key).snapshot;
           const resolved = await resolve(db, who, ref.kind, ref.ref_id);
-          if (json(resolved.snapshot) !== json(ref)) throw code('INPUT_CHANGED');
-          inputs.push({ input_key: key, ...resolved });
+          if (!require('./analysisInputReferences').snapshotMatches(resolved.snapshot, ref, resolved.document)) throw code('INPUT_CHANGED');
+          inputs.push({ input_key: key, ...resolved, snapshot: ref });
         }
       }
-      return { ...attempt, step: s, manifest_digest: run.manifest_digest, ai_metadata: run.manifest.ai_metadata, ...(inputs ? { inputs } : {}) };
+      return { ...attempt, step: s, manifest_digest: run.manifest_digest, rule_version: run.manifest.rule_version, parser_version: run.manifest.parser_versions[s.parser_key], ai_metadata: run.manifest.ai_metadata, ...(inputs ? { inputs } : {}) };
     }); },
     completeQueuedAnalysis(claim, result) { return tx(async db => {
-      const q = await fenced(db, claim), a = api(db);
+      const q = await fenced(db, claim), a = api(db, completionRequest);
       const run = await a.getAnalysisRun(q.session, q.run_id);
       const { ai_trace, ...ordinary } = result;
       const ai = require('./analysisAiOffline');
@@ -176,14 +196,17 @@ module.exports = function (helpers) {
         const who = await helpers.actor(db, q.session, 'governance:structure-gate'), resolve = require('./analysisInputReferences')(helpers), inputs = [];
         for (const input_key of step.input_keys) {
           const ref = run.manifest.inputs.find(i => i.input_key === input_key).snapshot;
-          inputs.push({ input_key, ...await resolve(db, who, ref.kind, ref.ref_id) });
+          const resolved = await resolve(db, who, ref.kind, ref.ref_id);
+          if (!require('./analysisInputReferences').snapshotMatches(resolved.snapshot, ref, resolved.document)) throw code('INPUT_CHANGED');
+          inputs.push({ input_key, ...resolved, snapshot: ref });
         }
         try { ai.verifyTrace({ step, inputs, ai_metadata: run.manifest.ai_metadata }, ai_trace, result); }
         catch { throw code('AI_TRACE_INVALID', 400); }
         const trace = { run_id: run.run_id, attempt_id: String(result.attempt_id), manifest_digest: run.manifest_digest, ...ai_trace };
-        const [[prior]] = await db.execute('SELECT snapshot_digest FROM data_map_analysis_ai_outputs WHERE attempt_id=? FOR UPDATE', [result.attempt_id]);
+        const attemptBinding = require('./sessionSubject').identityInteger(result.attempt_id) === null ? result.attempt_id : String(result.attempt_id);
+        const [[prior]] = await db.execute('SELECT snapshot_digest FROM data_map_analysis_ai_outputs WHERE attempt_id=? FOR UPDATE', [attemptBinding]);
         if (prior && prior.snapshot_digest !== digest(trace)) throw code('AI_TRACE_CONFLICT');
-        if (!prior) await db.execute('INSERT INTO data_map_analysis_ai_outputs(attempt_id,run_id,snapshot_json,snapshot_digest,created_at) VALUES (?,?,?,?,UTC_TIMESTAMP(3))', [result.attempt_id, run.run_id, json(trace), digest(trace)]);
+        if (!prior) await db.execute('INSERT INTO data_map_analysis_ai_outputs(attempt_id,run_id,snapshot_json,snapshot_digest,created_at) VALUES (?,?,?,?,UTC_TIMESTAMP(3))', [attemptBinding, run.run_id, json(trace), digest(trace)]);
       } else if (ai_trace) throw code('AI_TRACE_INVALID', 400);
       const completed = await a.completeAnalysisAttempt(q.session, { ...ordinary, run_id: q.run_id });
       if (completed.revision_no <= run.revision_no) return completed;

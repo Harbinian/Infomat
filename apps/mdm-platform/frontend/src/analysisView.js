@@ -1,7 +1,7 @@
 // View-only filtering: fixed IDs, all pages loaded, latest attempts explicit.
 export const statuses = { queued: '排队中', running: '分析中', succeeded: '本轮检查完成', partial: '部分完成', failed: '分析失败', cancelled: '已取消' };
 export const types = { definite_defect: '确定的登记矛盾', business_question: '待业务核对', not_covered: '未覆盖', material_constraint: '材料技术约束' };
-export const stages = { uploaded_material: '独立上传材料', preview_revision: 'V7 预览修订', published_version: '正式已发布版本', handoff: '固定设计交接', definition: '固定台账版本', template: '模板批次', mapping: '固定来源映射' };
+export const stages = { uploaded_material: '独立上传材料', preview_revision: '流程预览修订', published_version: '正式已发布版本', handoff: '固定设计交接', definition: '固定台账版本', template: '模板批次', mapping: '固定来源映射' };
 export const labelSource = s => `${s.source_kind==='pdf_material'?'PDF 固定证据':s.source_kind==='word_material'?'DOCX 固定证据':s.source_kind==='excel_material'?'Excel 固定证据':stages[s.source_kind || s.kind] || s.kind} · ${s.original_name || '固定引用 ' + s.ref_id}`;
 export function filterFindings(items, run, filter) {
   const latest = new Map();

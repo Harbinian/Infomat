@@ -15,7 +15,7 @@ const guideActions = [
 ];
 const list = values => Array.isArray(values) && values.length ? values.join('、') : '未指定';
 
-export function RoleGuide({ api, user, onLegacy, onQueryChange }) {
+export function RoleGuide({ api, user, onNavigate, onQueryChange }) {
   const [code, setCode] = useState(selectedRole);
   const [revision, setRevision] = useState(0);
   const [state, setState] = useState({ loading: true });
@@ -70,7 +70,7 @@ export function RoleGuide({ api, user, onLegacy, onQueryChange }) {
   return <div className="role-management" data-role-guide-state={state.loading ? 'loading' : state.error ? 'error' : 'ready'}>
     <section className="card"><h2>角色与责任</h2>
       <p>查看固定角色的目标、使用说明和责任矩阵。当前账号的有效角色与权限来自登录身份；此页只读，不能授予角色或代替具体事项的服务端核验。</p>
-      <div className="role-management-actions"><button type="button" onClick={() => setRevision(value => value + 1)}>刷新角色说明</button><a href="/#/roleGuide" onClick={onLegacy}>查看原角色与责任入口</a></div>
+      <div className="role-management-actions"><button type="button" onClick={() => setRevision(value => value + 1)}>刷新角色说明</button></div>
     </section>
     {state.loading ? <StatusPanel kind="loading" title="正在读取固定角色模型…" /> : state.error ? <StatusPanel kind="error" title="角色说明暂不可用" onRetry={() => setRevision(value => value + 1)}>{state.error.message} 读取失败不代表角色或权限已变更。</StatusPanel> : <>
       <section className="card"><p>固定治理模型：{model.modelVersion || '版本未提供'}</p><p>当前账号角色：{names([...owned])}。</p>
@@ -78,7 +78,7 @@ export function RoleGuide({ api, user, onLegacy, onQueryChange }) {
         {code && !role && <p role="alert">所选角色不在当前固定模型中，请重新选择。</p>}
       </section>
       {role && <section className="card" data-role-guide-code={role.code}><h3>{role.name}</h3><p>{role.description || '未提供说明'}</p>
-        <dl className="identity-grid"><div><dt>角色目标</dt><dd>{role.goal || '未提供'}</dd></div><div><dt>第一步入口</dt><dd>{firstEntryHref ? <a href={firstEntryHref} onClick={onLegacy}>{role.firstEntry.label}</a> : role.firstEntry?.label || '未提供'}</dd></div><div><dt>可见功能标签</dt><dd>{list((role.visibleTabs || []).map(tab => tab.name))}</dd></div><div><dt>当前待办</dt><dd>{todoState.loading ? '正在读取…' : todoState.error ? '暂不可用，请到我的工作台核对' : `${roleTodos.length} 项`}；<a href="/app/workbench" onClick={onLegacy}>进入我的工作台</a></dd></div><div><dt>允许动作</dt><dd>{list((role.permissions || []).map(permission => permissionDescriptions.get(permission) || permission))}</dd></div><div><dt>角色 RACI 责任</dt><dd>{list(roleRaci)}</dd></div><div><dt>典型样例</dt><dd>{role.sample || '未提供'}</dd></div><div><dt>常见误区</dt><dd>{role.pitfall || '未提供'}</dd></div><div><dt>完成标准</dt><dd>{role.doneCriteria || '未提供'}</dd></div></dl>
+        <dl className="identity-grid"><div><dt>角色目标</dt><dd>{role.goal || '未提供'}</dd></div><div><dt>第一步入口</dt><dd>{firstEntryHref ? <a href={firstEntryHref} onClick={onNavigate}>{role.firstEntry.label}</a> : role.firstEntry?.label || '未提供'}</dd></div><div><dt>可见功能标签</dt><dd>{list((role.visibleTabs || []).map(tab => tab.name))}</dd></div><div><dt>当前待办</dt><dd>{todoState.loading ? '正在读取…' : todoState.error ? '暂不可用，请到我的工作台核对' : `${roleTodos.length} 项`}；<a href="/app/workbench" onClick={onNavigate}>进入我的工作台</a></dd></div><div><dt>允许动作</dt><dd>{list((role.permissions || []).map(permission => permissionDescriptions.get(permission) || permission))}</dd></div><div><dt>角色 RACI 责任</dt><dd>{list(roleRaci)}</dd></div><div><dt>典型样例</dt><dd>{role.sample || '未提供'}</dd></div><div><dt>常见误区</dt><dd>{role.pitfall || '未提供'}</dd></div><div><dt>完成标准</dt><dd>{role.doneCriteria || '未提供'}</dd></div></dl>
         <p>处理顺序：{list(role.workflow)}</p>
       </section>}
       <section className="card"><h3>当前不可直接执行的常见动作</h3>

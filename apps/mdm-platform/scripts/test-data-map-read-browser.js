@@ -44,9 +44,18 @@ async function main() {
         assert.equal(await page.evaluate(() => visualViewport.scale), 1);
         await page.screenshot({ path: path.join(output, name + '.png'), fullPage: true });
       }
-      await page.getByLabel('关联字段台账', { exact: true }).focus(); await page.keyboard.press('ArrowRight');
-      await page.waitForFunction(() => document.querySelector('.identity-table').scrollLeft > 0);
-      await page.setViewportSize({ width: 1699, height: 828 });
+      // Verify keyboard focus at the supported desktop geometry. Scrolling is needed only when
+      // the actual ledger overflows; do not change the viewport to manufacture that condition.
+      const ledger = page.getByLabel('关联字段台账', { exact: true });
+      const ledgerOverflows = await ledger.evaluate(el => el.scrollWidth > el.clientWidth);
+      await ledger.focus(); await page.keyboard.press('ArrowRight');
+      assert.equal(await ledger.evaluate(el => document.activeElement === el), true);
+      if (ledgerOverflows) {
+        await page.waitForFunction(() => document.querySelector('.identity-table').scrollLeft > 0);
+      } else {
+        assert.equal(await ledger.evaluate(el => el.scrollLeft), 0);
+      }
+      checks.push(ledgerOverflows ? 'desktop ledger keyboard scroll' : 'desktop ledger fits and accepts keyboard focus');
       await page.reload(); await ready(); assert.equal(await select().inputValue(), '911');
       await page.getByRole('link', { name: '数据质量', exact: true }).click(); await page.goBack(); await ready(); assert.equal(await select().inputValue(), '911');
       await select().selectOption('913'); await ready(); await page.getByText('当前上下文暂无字段。', { exact: true }).waitFor();
@@ -64,9 +73,7 @@ async function main() {
       await page.getByRole('button', { name: '刷新数据地图', exact: true }).click(); await entered; await refresh(); release();
       await page.waitForTimeout(150); assert.equal(await page.getByText('迟到旧结果', { exact: true }).count(), 0);
       checks.push('injected failure/retry, offline and stale concurrent result protection');
-      await page.getByRole('link', { name: '打开原数据地图入口', exact: true }).click(); await page.waitForURL('**/#/dataMap');
-      await page.locator('#dataMapContextSelect').selectOption('911'); await page.locator('#dataMapFieldRows').getByText(longName, { exact: true }).waitFor();
-      await page.goBack(); await ready();
+      assert.equal(await page.locator('a[href*="/#/"]').count(),0);
       await pool.execute('UPDATE user_accounts SET auth_version=auth_version+1 WHERE account_id=182');
       await page.getByRole('button', { name: '刷新数据地图', exact: true }).click(); await page.getByRole('heading', { name: '请重新登录', exact: true }).waitFor();
       await login('contact'); assert.equal(await select().locator('option[value="912"]').count(), 0);
