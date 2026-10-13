@@ -1,12 +1,12 @@
 // Typed maintenance principal; never substitute an account number for person_id.
 const { ROLE_GUIDES, ACCESS_MODEL_VERSION } = require('./roleDefinitions');
 const { MIGRATION_KEY } = require('./systemAdminMigration');
+const { identityInteger } = require('./sessionSubject');
 const ACTOR = Symbol('systemAdminAuditActor');
 const principal = id => `system-admin:${id}`;
 const accountId = ref => {
   if (!/^system-admin:([1-9]\d*)$/.test(String(ref))) return null;
-  const id=Number(String(ref).split(':')[1]);
-  return Number.isSafeInteger(id)?id:null;
+  return identityInteger(String(ref).split(':')[1]);
 };
 const enabled = () => process.env.MDM_SYSTEM_ADMIN_ENABLED==='1';
 const fail = (code,statusCode=403) => Object.assign(new Error(code),{code,statusCode});
@@ -15,16 +15,16 @@ async function getSystemAdmin(db,ref,{login=false,locked=false}={}) {
   if (!enabled()) return null;
   const marker = await first(db,'SELECT migration_key FROM schema_migrations WHERE migration_key=?',[MIGRATION_KEY]);
   if (!marker) throw fail('SYSTEM_ADMIN_SCHEMA_UNAVAILABLE',503);
-  const row=await first(db,`SELECT * FROM system_admin_accounts WHERE ${login?'login_name':'account_id'}=?${locked?' FOR SHARE':''}`,[login?ref:accountId(ref)]);
+  const row=await first(db,`SELECT *,CAST(account_id AS CHAR) AS account_id,CAST(auth_version AS CHAR) AS auth_version FROM system_admin_accounts WHERE ${login?'login_name=?':'account_id=CAST(? AS SIGNED)'}${locked?' FOR SHARE':''}`,[login?ref:accountId(ref)]);
   if (!row || row.account_status!=='active') return null;
   const role=await first(db,"SELECT role_id,role_name FROM roles WHERE role_code='admin' AND status='active' AND model_version=?",[ACCESS_MODEL_VERSION]);
   if (!role) return null;
-  const id=Number(row.account_id);
-  if (!Number.isSafeInteger(id)||id<1) throw fail('SYSTEM_ADMIN_ID_INVALID',409);
+  const id=identityInteger(row.account_id);
+  if (!id) throw fail('SYSTEM_ADMIN_ID_INVALID',409);
   return {...row,id:principal(id),identityKind:'system_admin',identityRef:principal(id),systemAccountId:id,accountId:id,
     personId:null,person_id:null,name:'系统管理员',personName:'系统管理员',employeeNo:null,
     department_id:null,current_department_id:null,departmentName:null,accountStatus:row.account_status,
-    authVersion:Number(row.auth_version),adminRoleId:role.role_id,role:'admin'};
+    authVersion:identityInteger(row.auth_version),adminRoleId:role.role_id,role:'admin'};
 }
 async function permissions(db,ref) {
   const user=await getSystemAdmin(db,ref);
@@ -44,8 +44,17 @@ async function currentPayload(db,session) {
     departmentId:null,departmentName:null,department:null,positions:[],positionInfo:{status:'not_applicable'},
     rbacRoles:[role],roleAssignments:[role],roleCodes:['admin'],permissions:[...permSet],dataScopes:['global'],governanceModelVersion:ACCESS_MODEL_VERSION};
 }
-async function event(db,id,type,identityEventId=null,targetPersonId=null) {
-  await db.execute('INSERT INTO system_admin_events(actor_account_id,event_type,identity_event_id,target_person_id) VALUES (?,?,?,?)',[id,type,identityEventId,targetPersonId]);
+async function event(db,id,type,identityEventId=null,targetPersonId=null,exactIdentity=false) {
+  const binding=value=>{
+    if(value==null)return null;
+    const normalized=identityInteger(value);
+    if(normalized===null)throw fail('SYSTEM_ADMIN_ID_INVALID',409);
+    return String(normalized);
+  };
+  await db.execute(exactIdentity
+    ? 'INSERT INTO system_admin_events(actor_account_id,event_type,identity_event_id,target_person_id) VALUES (CAST(? AS SIGNED),?,CAST(? AS SIGNED),CAST(? AS SIGNED))'
+    : 'INSERT INTO system_admin_events(actor_account_id,event_type,identity_event_id,target_person_id) VALUES (?,?,?,?)',
+    exactIdentity?[binding(id),type,binding(identityEventId),binding(targetPersonId)]:[id,type,identityEventId,targetPersonId]);
 }
 async function bootstrapSystemAdmin(pool,{passwordHash,authorizationBasis}) {
   if (!passwordHash||!String(authorizationBasis||'').trim()) throw fail('SYSTEM_ADMIN_BOOTSTRAP_INPUT_INVALID',422);

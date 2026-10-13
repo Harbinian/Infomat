@@ -108,7 +108,7 @@ module.exports = function (helpers) {
         public_summary_enabled: false, summary_fields: SUMMARY_FIELDS, material_kinds: ['v7_json', 'v8_json', 'xlsx', 'docx', 'pdf'], source_kinds: Object.keys(sourceTables), export_formats: ['json'],
         adapters: [['v7_source', require('./v7AnalysisRules')], ['handoff', require('./handoffAnalysisRules')], ['template', require('./excelEvidenceRules')], ['template', require('./wordEvidenceRules')], ['template', require('./pdfEvidenceRules')]].map(([kind, rules]) => ({
           kind, source_kind: rules.PARSER === 'pdf_evidence' ? 'pdf_material' : rules.PARSER === 'word_evidence' ? 'word_material' : rules.PARSER === 'excel_evidence' ? 'excel_material' : null, parser_key: rules.PARSER, rule_version: rules.VERSION, check_ids: rules.CHECKS,
-          ...(rules.PARSER === 'v7_deterministic' ? { native_schema_versions: rules.NATIVE_SCHEMAS, diagnostic_formats: ['undeclared', 'parse_failed'], legacy_rule_versions: [rules.LEGACY_VERSION, rules.PREVIOUS_VERSION] } : {}),
+          ...(rules.PARSER === 'v7_deterministic' ? { native_schema_versions: rules.NATIVE_SCHEMAS, diagnostic_formats: ['undeclared', 'parse_failed'], legacy_rule_versions: [rules.LEGACY_VERSION, rules.V2_VERSION, rules.PREVIOUS_VERSION] } : {}),
           catalog: rules.catalog.map(r => pick(r, ['rule_id', 'title', 'enabled', 'prerequisite', 'not_applicable']))
         })).concat([{ kind: 'v7_source', parser_key: 'ai_offline', rule_version: require('./analysisAiOffline').VERSION,
           check_ids: require('./analysisAiOffline').CHECKS, ai_metadata: require('./analysisAiOffline').METADATA,

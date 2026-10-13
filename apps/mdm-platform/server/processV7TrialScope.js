@@ -22,14 +22,14 @@ function trialScopeError(statusCode, code, message) {
 function assertV7PreviewEnabled(options = {}) {
   const env = options.env || process.env;
   if (!env || env.PROCESS_V7_PREVIEW_ENABLED !== '1') {
-    throw trialScopeError(503, 'V7_PREVIEW_DISABLED', 'V7预览核对功能当前未启用');
+    throw trialScopeError(503, 'V7_PREVIEW_DISABLED', '流程预览核对功能当前未启用');
   }
 }
 
 function assertV7FormalEnabled(options = {}) {
   const env = options.env || process.env;
   if (!env || env.PROCESS_V7_FORMAL_ENABLED !== '1') {
-    throw trialScopeError(503, 'V7_FORMAL_DISABLED', 'V7正式承接功能当前未启用');
+    throw trialScopeError(503, 'V7_FORMAL_DISABLED', '流程正式承接功能当前未启用');
   }
 }
 
@@ -41,7 +41,7 @@ function assertV7TrialProcessRef(processRef, options = {}) {
     throw trialScopeError(
       422,
       'V7_PROCESS_REF_INVALID',
-      '流程稳定标识无效，请核对V7文件中的process_ref'
+      '流程稳定标识无效，请核对流程JSON文件中的process_ref'
     );
   }
   return text(processRef);

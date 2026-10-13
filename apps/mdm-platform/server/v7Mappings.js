@@ -2,10 +2,13 @@
 // mapping states only; no formal master-data decision or process write occurs.
 const {failure,id,parse,json,digest,lastId}=require('./dataMapDefinitionValues');
 const {MIGRATION_KEY}=require('./v7MappingSchema');
-const fixed=require('./v7FixedSource');
+const {createFixedSource}=require('./v7FixedSource');
 const keys=(v,allowed)=>{if(!v||Array.isArray(v)||typeof v!=='object'||Object.keys(v).some(k=>!allowed.includes(k)))throw failure('DEFINITION_PROPERTY_NOT_ALLOWED');};
 const text=(v,max=255)=>{if(typeof v!=='string'||!v.trim()||v.length>max)throw failure('DEFINITION_V7_TEXT_REQUIRED');return v.trim();};
-const sourceSelect=`SELECT *,CAST(source_id AS CHAR) source_id,CAST(scope_department_id AS CHAR) scope_department_id,
+// Name required columns: SELECT * could silently accept a missing validation column
+// and expose drift columns while current validation made the source look usable.
+const sourceSelect=`SELECT source_key,source_kind,raw_sha256,byte_length,original_name,content_digest,digest_algorithm,
+  validation_status,validation_json,content_json,CAST(source_id AS CHAR) source_id,CAST(scope_department_id AS CHAR) scope_department_id,
   CAST(case_id AS CHAR) case_id,CAST(revision_id AS CHAR) revision_id,CAST(process_version_id AS CHAR) process_version_id,
   CAST(created_by_person_id AS CHAR) created_by_person_id,DATE_FORMAT(created_at,'%Y-%m-%dT%H:%i:%s.%fZ') created_at FROM data_map_v7_sources`;
 const mappingSelect=`SELECT CAST(m.mapping_id AS CHAR) mapping_id,CAST(m.source_id AS CHAR) source_id,m.local_object_ref,m.local_field_ref,
@@ -15,66 +18,18 @@ const mappingSelect=`SELECT CAST(m.mapping_id AS CHAR) mapping_id,CAST(m.source_
   DATE_FORMAT(v.created_at,'%Y-%m-%dT%H:%i:%s.%fZ') created_at
   FROM data_map_v7_mappings m JOIN data_map_v7_mapping_versions v ON v.mapping_id=m.mapping_id
   LEFT JOIN person p ON p.person_id=v.actor_person_id`;
-module.exports=function({transaction,actor,scope,entityScope,version,request}){
-  const tx=fn=>transaction(async db=>{if(!(await db.execute('SELECT migration_key FROM schema_migrations WHERE migration_key=?',[MIGRATION_KEY]))[0].length)throw failure('DEFINITION_V7_MIGRATION_REQUIRED',503);return fn(db);});
-  const writable=w=>!w.readOnly&&w.permissions.has('governance:structure-gate');
-  function refs(r){return r.source_kind==='uploaded_material'?{batch_id:r.source_id,material_version:1}:r.source_kind==='preview_revision'?{case_id:r.case_id,revision_id:r.revision_id}:{process_version_id:r.process_version_id};}
-  function nodes(document){return (document?.data_objects||[]).map(o=>({local_object_ref:o.data_ref,name:o.data_name,fields:(o.fields||[]).map(f=>({local_field_ref:f.field_ref,name:f.field_name}))}));}
-  async function loadSource(db,who,sourceId){
-    const [[r]]=await db.execute(sourceSelect+' WHERE source_id=? FOR UPDATE',[id(sourceId)]);
-    if(!r)throw failure('DEFINITION_V7_SOURCE_NOT_FOUND',404);scope(who,r.scope_department_id);
-    r.document=r.content_json===null?null:parse(r.content_json);r.validation=parse(r.validation_json);delete r.content_json;delete r.validation_json;
-    if(r.digest_algorithm!==fixed.ALGORITHM||r.content_digest!==null&&fixed.contentHash(r.document)!==r.content_digest)throw failure('DEFINITION_V7_SOURCE_INTEGRITY_CONFLICT',409);
-    r.source_ref=refs(r);r.raw_digest_algorithm=r.raw_sha256?'sha256-raw-bytes':null;r.raw_digest_status=r.raw_sha256?'available':'unavailable';r.stale=false;
-    let options={};
-    if(r.source_kind!=='uploaded_material'){
-      try{const live=await fixed.readReference(db,r.source_kind,r,who,scope);if(live.scope_department_id!==r.scope_department_id||live.content_digest!==r.content_digest)r.stale=true;options=live.options;}
-      catch(e){if(['DEFINITION_V7_SOURCE_CHANGED','DEFINITION_V7_NOT_PUBLISHED'].includes(e.code))r.stale=true;else throw e;}
-    }
-    r.current_validation=r.validation_status==='valid'?await fixed.validation(db,r.document,options):r.validation;
-    r.can_confirm=writable(who)&&!r.stale&&r.validation_status==='valid'&&!r.current_validation.errors.length&&!r.current_validation.blocking_issues.length;
-    return r;
-  }
-  function unpack(r){
-    const s=parse(r.snapshot_json);
-    if(digest(s)!==r.snapshot_digest||s.object_version_id!==r.object_version_id||s.field_version_id!==r.field_version_id||s.parent_mapping_version_id!==r.parent_mapping_version_id||s.status!==r.status||s.local_object_ref!==r.local_object_ref||s.local_field_ref!==r.local_field_ref||s.source_id!==r.source_id||s.revision_no!==r.revision_no)throw failure('DEFINITION_V7_MAPPING_INTEGRITY_CONFLICT',409);
-    delete r.snapshot_json;return {...r,...s};
-  }
-  async function bindings(db,who,r){
-    const [rows]=await db.execute(mappingSelect+' WHERE m.source_id=? AND v.revision_no=m.revision_no ORDER BY m.mapping_id',[r.source_id]);
-    const mappings=[];
-    for(const row of rows){
-      const m=unpack(row);
-      // A source read does not grant access to a ledger in another scope.
-      try{await target(db,who,m.object_version_id,m.field_version_id);}catch(e){if(e.code==='DEFINITION_ACCESS_DENIED')continue;throw e;}
-      mappings.push(m);
-    }
-    return mappings.map(m=>{const parent=m.local_field_ref?mappings.find(o=>!o.local_field_ref&&o.local_object_ref===m.local_object_ref):null;
-      const needs_recheck=r.stale||!r.can_confirm&&Boolean(r.current_validation.errors.length||r.current_validation.blocking_issues.length)||Boolean(m.local_field_ref&&(!parent||parent.mapping_version_id!==m.parent_mapping_version_id||parent.status!=='confirmed'));
-      return {...m,needs_recheck,effective_confirmed:m.status==='confirmed'&&!needs_recheck};});
-  }
-  async function target(db,who,objectId,fieldId){
-    const o=await version(db,id(objectId),true);if(o.entity_type!=='object')throw failure('DEFINITION_FIELD_OBJECT_MISMATCH',409);
-    scope(who,(await entityScope(db,'object',o.entity_id,true)).departmentId);
-    const f=fieldId===null?null:await version(db,id(fieldId),true);
-    if(f){scope(who,(await entityScope(db,'field',f.entity_id,true)).departmentId);if(f.entity_type!=='field'||f.object_version_id!==o.version_id||f.base_snapshot.row.object_id!==o.entity_id)throw failure('DEFINITION_FIELD_OBJECT_MISMATCH',409);}
-    return {o,f};
-  }
+module.exports=function(helpers){
+  const fixed=helpers.fixedSource || createFixedSource(helpers.fixedSourceDependencies);
+  const {transaction,actor,scope,entityScope,version,request}=helpers;
+  const {tx,writable,refs,nodes,loadSource,unpack,bindings,target}=helpers.mappingContext || require('./fixedMappingContext').createFixedMappingContext({...helpers,fixedSource:fixed});
   return {
-    ...require('./excelEvidence')({transaction,actor,scope,entityScope,version,request,loadSource,target,unpack,mappingSelect}),
-    ...require('./wordEvidence')({transaction,actor,scope,entityScope,version,request,loadSource,target,unpack,mappingSelect}),
-    ...require('./pdfEvidence')({transaction,actor,scope,entityScope,version,request,loadSource,target,unpack,mappingSelect}),
-    ...require('./analysisIssues')({transaction,actor,scope,entityScope,version,request,loadSource,target,unpack,mappingSelect}),
-    ...require('./analysisApi')({transaction,actor,scope,entityScope,version,request,loadSource,target,unpack,mappingSelect}),
-    ...require('./analysisRuns')({transaction,actor,scope,entityScope,version,request,loadSource,target,unpack,mappingSelect}),
-    ...require('./analysisQueue')({transaction,actor,scope,entityScope,version,request,loadSource,target,unpack,mappingSelect}),
-    ...require('./designHandoffs')({transaction,actor,scope,entityScope,version,request,loadSource,target,unpack,mappingSelect,bindings}),
     v7MappingCapabilities(session){return tx(async db=>{const who=await actor(db,session);scope(who,who.departmentId);return {person_id:who.personId,department_id:who.departmentId,can_write:writable(who)};});},
     listV7Sources(session,{after=null}={}){return tx(async db=>{
       const who=await actor(db,session),conditions=[],args=[];scope(who,who.departmentId);
       if(!who.permissions.has('governance:read-global')){conditions.push('scope_department_id=?');args.push(who.departmentId);}
       if(after){conditions.push('source_id>?');args.push(id(after));}
-      const [rows]=await db.execute(sourceSelect+(conditions.length?' WHERE '+conditions.join(' AND '):'')+' ORDER BY data_map_v7_sources.source_id LIMIT 101',args);
+      // Department filtering must use the current source scope after actor locks.
+      const [rows]=await db.execute(sourceSelect+(conditions.length?' WHERE '+conditions.join(' AND '):'')+' ORDER BY data_map_v7_sources.source_id LIMIT 101 FOR SHARE',args);
       // Reference scope is rechecked; moved references are not disclosed in lists.
       const items=[];let unavailable=false;for(const row of rows.slice(0,100)){try{if(row.source_kind!=='uploaded_material')await fixed.readReference(db,row.source_kind,row,who,scope);}catch(e){if(e.code==='DEFINITION_ACCESS_DENIED')continue;if(['DEFINITION_V7_PREVIEW_DISABLED','DEFINITION_V7_FORMAL_DISABLED'].includes(e.code)){unavailable=true;continue;}if(!['DEFINITION_V7_SOURCE_CHANGED','DEFINITION_V7_NOT_PUBLISHED'].includes(e.code))throw e;}
         items.push({source_id:row.source_id,source_kind:row.source_kind,source_ref:refs(row),original_name:row.original_name,validation_status:row.validation_status,content_digest:row.content_digest});}
@@ -107,12 +62,12 @@ module.exports=function({transaction,actor,scope,entityScope,version,request}){
       if(r.validation_status!=='valid')throw failure('DEFINITION_V7_SOURCE_INVALID',409);
       const o=r.document.data_objects.find(o=>o.data_ref===query.object),f=query.field?o?.fields.find(f=>f.field_ref===query.field):null;
       if(!o||(query.field&&!f))throw failure('DEFINITION_V7_LOCAL_REF_INVALID',404);
-      return {source_id:r.source_id,source_kind:r.source_kind,source_ref:r.source_ref,content_digest:r.content_digest,digest_algorithm:r.digest_algorithm,stale:r.stale,local_object_ref:o.data_ref,local_field_ref:f?.field_ref||null,evidence:f||o};
+      return {source_id:r.source_id,source_kind:r.source_kind,source_ref:r.source_ref,schema_version:r.schema_version,content_digest:r.content_digest,digest_algorithm:r.digest_algorithm,stale:r.stale,local_object_ref:o.data_ref,local_field_ref:f?.field_ref||null,evidence:f||o};
     });},
     getV7MappingHistory(session,sourceId,mappingId,{before=null}={}){return tx(async db=>{
-      const who=await actor(db,session);await loadSource(db,who,sourceId);
+      const who=await actor(db,session),source=await loadSource(db,who,sourceId);
       const [rows]=await db.execute(mappingSelect+' WHERE m.source_id=? AND m.mapping_id=?'+(before?' AND v.mapping_version_id<?':'')+' ORDER BY v.mapping_version_id DESC LIMIT 51',[id(sourceId),id(mappingId),...(before?[id(before)]:[])]);
-      const items=[];for(const row of rows.slice(0,50)){const m=unpack(row);await target(db,who,m.object_version_id,m.field_version_id);items.push(m);}return {items,next:rows.length>50?String(rows[49].mapping_version_id):null};
+      const items=[];for(const row of rows.slice(0,50)){const m=unpack(row);await target(db,who,m.object_version_id,m.field_version_id);items.push({...m,schema_version:source.schema_version});}return {items,next:rows.length>50?String(rows[49].mapping_version_id):null};
     });},
     saveV7Mapping(session,sourceId,payload){return tx(async db=>{
       keys(payload,['request_id','expected_revision','source_digest','local_object_ref','local_field_ref','object_version_id','field_version_id','status','basis']);

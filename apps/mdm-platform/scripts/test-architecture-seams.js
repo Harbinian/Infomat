@@ -71,6 +71,24 @@ test('page registry preserves exact server paths and complete supported navigati
   assert.equal(protocol.targetHref('/app/analysis#run=1&finding=2'),'/app/analysis#run=1&finding=2');
   assert.equal(protocol.targetHref('https://external.example'),null);
 });
+test('sidebar groups cover every module once, in business-flow order, without changing routes',()=>{
+  const groups=protocol.navigationGroups;
+  assert.deepEqual(groups.map(group=>group.title),['我的工作','流程治理','数据治理','成果查阅','管理与辅助']);
+  assert.equal(new Set(groups.map(group=>group.code)).size,groups.length);
+  const nav=protocol.pages.filter(page=>page.navigation!==null).sort((a,b)=>a.navigation-b.navigation);
+  // Grouping is presentation only: routing metadata and the 25-entry sequence stay intact.
+  assert.equal(nav.length,25);
+  assert.deepEqual([...new Set(nav.map(page=>page.navigation))],Array.from({length:25},(_,index)=>index));
+  const declared=new Set(groups.map(group=>group.code));
+  assert.equal(nav.filter(page=>!declared.has(page.group)).length,0,'every module declares a known parent');
+  assert.deepEqual([...new Set(nav.map(page=>page.group))],groups.map(group=>group.code),'groups and modules share one business-flow order');
+  for(const group of groups){
+    const indexes=nav.flatMap((page,index)=>page.group===group.code?[index]:[]);
+    assert.ok(indexes.length>=1,`group ${group.code} must list at least one module`);
+    assert.deepEqual(indexes,[...indexes].sort((a,b)=>a-b));
+    assert.equal(indexes[indexes.length-1]-indexes[0],indexes.length-1,`group ${group.code} modules stay contiguous`);
+  }
+});
 test('invalidated CSRF reads cannot overwrite newer tokens; one cancelled caller does not cancel another',async()=>{
   const session=protocol.createRequestSession();let release;
   const old=session.csrf(()=>new Promise(r=>release=r));await new Promise(r=>setImmediate(r));

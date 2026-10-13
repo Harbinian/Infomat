@@ -44,9 +44,18 @@ async function main() {
         assert.equal(await page.evaluate(() => visualViewport.scale), 1);
         await page.screenshot({ path: path.join(output, name + '.png'), fullPage: true });
       }
-      await page.getByLabel('关联字段台账', { exact: true }).focus(); await page.keyboard.press('ArrowRight');
-      await page.waitForFunction(() => document.querySelector('.identity-table').scrollLeft > 0);
-      await page.setViewportSize({ width: 1699, height: 828 });
+      // Verify keyboard focus at the supported desktop geometry. Scrolling is needed only when
+      // the actual ledger overflows; do not change the viewport to manufacture that condition.
+      const ledger = page.getByLabel('关联字段台账', { exact: true });
+      const ledgerOverflows = await ledger.evaluate(el => el.scrollWidth > el.clientWidth);
+      await ledger.focus(); await page.keyboard.press('ArrowRight');
+      assert.equal(await ledger.evaluate(el => document.activeElement === el), true);
+      if (ledgerOverflows) {
+        await page.waitForFunction(() => document.querySelector('.identity-table').scrollLeft > 0);
+      } else {
+        assert.equal(await ledger.evaluate(el => el.scrollLeft), 0);
+      }
+      checks.push(ledgerOverflows ? 'desktop ledger keyboard scroll' : 'desktop ledger fits and accepts keyboard focus');
       await page.reload(); await ready(); assert.equal(await select().inputValue(), '911');
       await page.getByRole('link', { name: '数据质量', exact: true }).click(); await page.goBack(); await ready(); assert.equal(await select().inputValue(), '911');
       await select().selectOption('913'); await ready(); await page.getByText('当前上下文暂无字段。', { exact: true }).waitFor();

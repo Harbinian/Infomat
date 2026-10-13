@@ -10,7 +10,7 @@ function relatedWork(row) {
   if (row.type === 'conflict_resolution') return { path: '/app/conflicts', label: '到冲突列表核对', note: '待办未提供可直接定位的冲突类型和编号，请在当前可见列表核对具体事项。' };
   if (row.type === 'terminology' && row.related_term_id != null) {
     const id = String(row.related_term_id);
-    if (/^[1-9]\d*$/.test(id) && Number.isSafeInteger(Number(id))) return { path: `/app/terms?id=${encodeURIComponent(id)}`, label: '查看关联术语', note: `关联术语 #${id}。打开时按当前身份重新读取；待办可见不表示有权查看该术语。` };
+    if (/^[1-9]\d*$/.test(id) && Number.isSafeInteger(Number(id))) return { path: `/app/terms?id=${encodeURIComponent(id)}`, label: '查看关联术语', note: `关联术语 #${id}。打开时按当前身份读取当前内容，不代表固定历史术语版本；待办可见不表示有权查看该术语。` };
     return { path: '/app/terms', label: '到术语列表核对', note: '术语来源编号无法精确读取，请核对原记录，本页不会猜测关联。' };
   }
   if (row.type === 'terminology') return { path: '/app/terms', label: '到术语列表核对', note: '待办未提供可直接定位的术语编号，请在当前可见列表核对具体事项。' };
@@ -36,7 +36,7 @@ export function TodoInbox({ api, user, onLegacy, onNavigate, onQueryChange }) {
   const attempt = useRef(null);
   const actionPanel = useRef(null);
   useEffect(() => { if (action?.phase) actionPanel.current?.focus(); }, [action?.phase]);
-  const canDelete = (user.permissions || []).includes('governance:structure-gate');
+  const canDelete = (user.permissions || []).includes('governance:structure-gate') && !(user.permissions || []).includes('identity:manage-account');
   const canComplete = row => row.status === 'pending' && !row.related_mapping_id &&
     !(user.permissions || []).includes('identity:manage-account') &&
     Boolean(user.departmentId) && Number(row.to_dept_id) === Number(user.departmentId) &&

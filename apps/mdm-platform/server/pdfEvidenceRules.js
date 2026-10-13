@@ -10,7 +10,7 @@ function analyze(task){
   const add=(rule,locator,semantic,message)=>{if(!checked.includes(rule))return;const evidence_key='e'+digest([input.input_key,rule,semantic]).slice(0,48);
    evidence.push({evidence_key,input_key:input.input_key,locator_kind:'json_pointer',locator,note:message});
    findings.push({rule_id:rule,finding_type:'not_covered',message,subject_input_keys:[input.input_key],semantic_locator:semantic,evidence_keys:[evidence_key]});};
-  add('pdf.coverage','/coverage','document:extraction-coverage',`共 ${doc.coverage.page_count} 页，${doc.coverage.text_page_count} 页提取到文字。${doc.coverage.not_covered.join('；')}。${doc.links.length?'显式关联仅表示固定引用，不表示业务认定。':'未登记对象、字段或V7来源的显式关联。'}`);
+  add('pdf.coverage','/coverage','document:extraction-coverage',`共 ${doc.coverage.page_count} 页，${doc.coverage.text_page_count} 页提取到文字。${doc.coverage.not_covered.join('；')}。${doc.links.length?'显式关联仅表示固定引用，不表示业务认定。':'未登记对象、字段或流程固定来源的显式关联。'}`);
   const first=doc.anchors.findIndex(a=>a.text.trim());
   add('pdf.position',first<0?'/coverage':`/anchors/${first}`,'document:text-position',first<0?'未提取到文本层，提取不足；没有执行OCR，不据此断言原件没有内容。':'此处定位首个文字片段；全部物理页及文本位置可在证据浏览中核对。重复标题分别保留，不按名称合并；不重建表格或推断跨页关系。');
  }

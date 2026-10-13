@@ -21,14 +21,18 @@ async function main(){const checks=[];
     }finally{db.release();}
     checks.push('additive repeat maintenance and unknown drift refusal');
     const [[before]]=await pool.execute('SELECT (SELECT COUNT(*) FROM person) persons,(SELECT COUNT(*) FROM user_accounts) accounts,(SELECT COUNT(*) FROM person_roles) roles');
-    const snapshot=async tables=>JSON.stringify(await Promise.all(tables.map(async table=>(await pool.query('SELECT * FROM '+table+' ORDER BY 1'))[0])));
-    const originalIdentity=await snapshot(['person','user_accounts','person_roles']);
+    const snapshot=async tables=>crypto.createHash('sha256').update(JSON.stringify(await Promise.all(tables.map(async table=>(await pool.query('SELECT * FROM '+table+' ORDER BY 1'))[0])))).digest('hex');
     const password=crypto.randomBytes(24).toString('base64url')+'9a';
+    await pool.execute("UPDATE user_accounts SET login_name='admin' WHERE account_id=181");
+    await assert.rejects(identity.bootstrapSystemAdmin(pool,{passwordHash:hashPassword(password),authorizationBasis:'synthetic collision'}),e=>e.code==='SYSTEM_ADMIN_BOOTSTRAP_ALREADY_COMPLETED');
+    await pool.execute("UPDATE user_accounts SET login_name='SYNTHETIC_admin' WHERE account_id=181");
+    const originalIdentity=await snapshot(['person','user_accounts','person_roles']);
     const boot=await identity.bootstrapSystemAdmin(pool,{passwordHash:hashPassword(password),authorizationBasis:'Synthetic P25 standalone administrator authorization'});
     assert.equal(boot.personId,null);await assert.rejects(identity.bootstrapSystemAdmin(pool,{passwordHash:hashPassword(password),authorizationBasis:'repeat'}),e=>e.code==='SYSTEM_ADMIN_BOOTSTRAP_ALREADY_COMPLETED');
     const [[after]]=await pool.execute('SELECT (SELECT COUNT(*) FROM person) persons,(SELECT COUNT(*) FROM user_accounts) accounts,(SELECT COUNT(*) FROM person_roles) roles');assert.deepEqual(before,after);
     assert.equal(await snapshot(['person','user_accounts','person_roles']),originalIdentity);
     checks.push('standalone admin bootstrap without person/department; repeat refuses; old identities unchanged');
+    checks.push('existing personnel admin login collision refuses bootstrap without copying credentials');
     const clients={};
     async function call(who,url,method='GET',body,csrf=true){const c=clients[who]||(clients[who]={});
       const r=await fetch(fixture.baseURL+url,{method,headers:{'Content-Type':'application/json',Cookie:c.cookie||'',...(csrf&&c.csrf?{'X-CSRF-Token':c.csrf}:{})},...(body===undefined?{}:{body:JSON.stringify(body)})});
@@ -58,17 +62,57 @@ async function main(){const checks=[];
     const [[events]]=await pool.execute('SELECT COUNT(*) count FROM system_admin_events WHERE identity_event_id IS NOT NULL');assert(Number(events.count)>=3);
     await ex('sys','/api/org/accounts','POST',{loginName:'admin',employeeNo:'SYNTHETIC_BAD',name:'合成错误',departmentId:91,roleAssignments:[basis]},409);
     checks.push('original account APIs and explicit role/activation; true system-account actor audit; reserved login collision refused');
+    await require('../server/publicationSchema').managePublicationSchema(pool,'apply');
+    const publicationStatus=await ex('sys','/api/publications/status');
+    assert.equal(publicationStatus.ready,true);assert.equal(publicationStatus.canPublish,false);
+    assert.deepEqual((await ex('sys','/api/publications?kind=master_data')).rows,[]);
+    await ex('sys','/api/publications/publish','POST',{},403);
+    const governanceStatus=await ex('sys','/api/process-data-governance/status');
+    assert.equal(governanceStatus.enabled,true);
+    await ex('sys','/api/process-data-governance/creation-tasks/reconcile','POST',{process_version_id:77},403);
+    await expect('admin','/api/publications/status','GET');
+    await expect('admin','/api/process-data-governance/status','GET');
+    await expect('contact','/api/publications/status','GET',undefined,403);
+    await ex('anonymous','/api/publications/status','GET',undefined,401);
+    await ex('anonymous','/api/process-data-governance/status','GET',undefined,401);
+    checks.push('typed system-admin read access to publications and data-governance status; governance writes, unauthorized personnel and anonymous access remain denied');
     for(const [url,body] of [['/api/process-v7-preview/cases',{document:fixture.document}],['/api/process-design/drafts/1/publish',{}],['/api/data-map/contexts',{}],['/api/data-map-definitions/save',{}],['/api/analysis/runs',{}]]){
       const r=await call('sys',url,'POST',body);assert.equal(r.status,403,`${url} must refuse system administrator governance writes`);
     }
     await expect('contact','/api/process-v7-preview/cases','POST',{document:fixture.document,source_file_name:'system-admin-legacy.json'},201);
     const visible=await ex('sys','/api/process-v7-preview/cases');assert(visible.items.length);
     await expect('lead','/api/org/me','GET');await expect('admin','/api/org/accounts','GET');
+    await expect('adminMulti','/api/process-v7-preview/cases','POST',{document:fixture.document},403);
     checks.push('system admin governance writes refused; original personnel admin/contact/lead paths preserved');
     const oldEnv=process.env.MDM_SYSTEM_ADMIN_ENABLED;process.env.MDM_SYSTEM_ADMIN_ENABLED='1';
     try{
+      const repo=require('../server/governanceAccessMysqlRepository').makeGovernanceAccessMysqlRepository(pool);
+      const identityRepo=require('../server/identityMysqlRepository').makeIdentityMysqlRepository(pool);
       const systemUser=await identity.getSystemAdmin(pool,identity.principal(boot.accountId));
-      const decorated=require('../server/governanceAccessMysqlRepository').makeGovernanceAccessMysqlRepository(pool).forSystemAdmin(systemUser);
+      const decorated=repo.forSystemAdmin(systemUser);
+      assert.equal((await identityRepo.validateSession({identityKind:'system_admin',accountId:boot.accountId,authVersion:systemUser.authVersion,personId:81})).valid,false);
+      process.env.MDM_SYSTEM_ADMIN_ENABLED='0';
+      assert.equal((await identityRepo.validateSession({identityKind:'system_admin',accountId:boot.accountId,authVersion:systemUser.authVersion})).valid,false);
+      await assert.rejects(decorated.createAccount({loginName:'SYNTHETIC_OFF',employeeNo:'SYNTHETIC_OFF',name:'合成关闭',departmentId:91,roleAssignments:[basis],pendingPasswordHash:hashPassword(password)}),e=>e.code==='SYSTEM_ADMIN_ACTOR_CHANGED');
+      process.env.MDM_SYSTEM_ADMIN_ENABLED='1';
+      const markerDb=await pool.getConnection();
+      try{await markerDb.beginTransaction();await markerDb.execute('DELETE FROM schema_migrations WHERE migration_key=?',[migration.MIGRATION_KEY]);await assert.rejects(identity.getSystemAdmin(markerDb,systemUser.identityRef),e=>e.code==='SYSTEM_ADMIN_SCHEMA_UNAVAILABLE'&&e.statusCode===503);}finally{await markerDb.rollback();markerDb.release();}
+      checks.push('mixed person/system identity refused; disabled switch revokes system session/maintenance; missing marker returns 503');
+      const auditBefore=await snapshot(['person','user_accounts','person_roles','identity_access_events','system_admin_events']);
+      await pool.query("CREATE TRIGGER synthetic_fail_system_audit BEFORE INSERT ON system_admin_events FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='synthetic audit failure'");
+      try{await assert.rejects(decorated.createAccount({loginName:'SYNTHETIC_AUDIT_FAIL',employeeNo:'SYNTHETIC_AUDIT_FAIL',name:'合成审计失败',departmentId:91,roleAssignments:[basis],pendingPasswordHash:hashPassword(password)}),e=>e.sqlState==='45000');}finally{await pool.query('DROP TRIGGER synthetic_fail_system_audit');}
+      assert.equal(await snapshot(['person','user_accounts','person_roles','identity_access_events','system_admin_events']),auditBefore);
+      checks.push('real system audit failure rolls back person/account/roles and both audit histories in the same transaction');
+      const blocker=await pool.getConnection();let pending,settled=false;
+      try{
+        await blocker.beginTransaction();await blocker.execute('UPDATE system_admin_accounts SET auth_version=auth_version+1 WHERE account_id=?',[boot.accountId]);
+        pending=decorated.createAccount({loginName:'SYNTHETIC_CONCURRENT',employeeNo:'SYNTHETIC_CONCURRENT',name:'合成并发撤销',departmentId:91,roleAssignments:[basis],pendingPasswordHash:hashPassword(password)});
+        pending.then(()=>{settled=true;},()=>{settled=true;});
+        await new Promise(resolve=>setTimeout(resolve,100));assert.equal(settled,false,'maintenance waits for concurrent actor revocation lock');
+        await blocker.commit();await assert.rejects(pending,e=>e.code==='SYSTEM_ADMIN_ACTOR_CHANGED');
+      }finally{await blocker.rollback();blocker.release();if(pending)await pending.catch(()=>{});}
+      const [[absent]]=await pool.execute("SELECT COUNT(*) count FROM person WHERE employee_no IN ('SYNTHETIC_OFF','SYNTHETIC_AUDIT_FAIL','SYNTHETIC_CONCURRENT')");assert.equal(Number(absent.count),0);
+      checks.push('concurrent revocation holds actor lock; queued account maintenance rechecks new version and leaves no partial write');
       await pool.execute('UPDATE system_admin_accounts SET auth_version=auth_version+1 WHERE account_id=?',[boot.accountId]);
       await assert.rejects(decorated.createAccount({loginName:'SYNTHETIC_STALE',employeeNo:'SYNTHETIC_STALE',name:'合成过期',departmentId:91,roleAssignments:[basis],pendingPasswordHash:hashPassword(password)}),e=>e.code==='SYSTEM_ADMIN_ACTOR_CHANGED');
       const [[missing]]=await pool.execute("SELECT COUNT(*) count FROM person WHERE employee_no='SYNTHETIC_STALE'");assert.equal(Number(missing.count),0);
@@ -91,6 +135,45 @@ async function main(){const checks=[];
       // must open password bootstrap before any protected catalog/business reads.
       await pool.execute('UPDATE system_admin_accounts SET must_change_password=1,auth_version=auth_version+1 WHERE account_id=?',[boot.accountId]);
       const finalPassword=crypto.randomBytes(24).toString('base64url')+'8a';
+      const appContext=await browser.newContext({viewport:{width:1699,height:828},deviceScaleFactor:1});
+      const appPage=await appContext.newPage();appPage.setDefaultTimeout(12000);
+      const appReads=[],appErrors=[];
+      const bootstrapPaths=new Set(['/api/org/login','/api/org/session','/api/org/me','/api/org/me/password-status','/api/csrf-token','/api/org/logout']);
+      appPage.on('request',r=>{const url=new URL(r.url()).pathname;if(url.startsWith('/api/')&&!bootstrapPaths.has(url))appReads.push(url);});
+      appPage.on('pageerror',e=>appErrors.push(e.message));
+      await appPage.goto(fixture.baseURL+'/app/');
+      await appPage.getByLabel('工号或登录名').fill('admin');await appPage.getByLabel('密码',{exact:true}).fill(updated);
+      for(const status of [401,403,409,503]){
+        await appPage.route('**/api/org/me/password-status',route=>route.fulfill({status,contentType:'application/json',body:JSON.stringify({code:'SYNTHETIC_STATUS_FAILURE'})}),{times:1});
+        await appPage.getByRole('button',{name:'登录',exact:true}).click();await appPage.getByRole('alert').waitFor();
+        assert.equal(await appPage.getByLabel('密码',{exact:true}).inputValue(),updated);assert.deepEqual(appReads,[]);
+        if(status===401)assert((await appPage.getByRole('alert').innerText()).includes('登录状态已失效'));
+      }
+      await appPage.getByRole('button',{name:'登录',exact:true}).click();await appPage.locator('[data-password-required="true"]').waitFor();
+      assert((await appPage.locator('body').innerText()).includes('已登录为“系统管理员”'));
+      assert.equal(await appPage.locator('#password-required-title').evaluate(el=>el===document.activeElement),true);
+      assert.equal(await appPage.locator('.app-shell').count(),0);assert.deepEqual(appReads,[]);
+      assert.equal(await appPage.evaluate(()=>innerWidth===1699&&innerHeight===828&&devicePixelRatio===1&&document.documentElement.scrollWidth<=innerWidth),true);
+      await appPage.screenshot({path:path.join(output,'app-first-password.png')});
+      await appPage.reload();await appPage.locator('[data-password-required="true"]').waitFor();
+      assert((await appPage.locator('body').innerText()).includes('已恢复本浏览器中“系统管理员”的登录会话'));assert.deepEqual(appReads,[]);
+      await appPage.screenshot({path:path.join(output,'app-restored-password.png')});
+      await appPage.route('**/api/org/me/password-status',route=>route.fulfill({status:503,contentType:'application/json',body:'{}'}),{times:1});
+      await appPage.reload();await appPage.getByText('暂时无法完成登录状态核对',{exact:true}).waitFor();assert.deepEqual(appReads,[]);
+      await appPage.getByRole('button',{name:'重试',exact:true}).click();await appPage.locator('[data-password-required="true"]').waitFor();
+      let releaseStatus,enteredStatus;const statusEntered=new Promise(resolve=>{enteredStatus=resolve;});
+      await appPage.route('**/api/org/me/password-status',async route=>{enteredStatus();await new Promise(resolve=>{releaseStatus=resolve;});await route.continue();},{times:1});
+      await appPage.reload({waitUntil:'domcontentloaded'});await statusEntered;
+      assert.deepEqual(appReads,[]);assert.equal(await appPage.locator('.app-shell').count(),0);
+      releaseStatus();await appPage.locator('[data-password-required="true"]').waitFor();assert.deepEqual(appReads,[]);
+      await pool.execute('UPDATE system_admin_accounts SET auth_version=auth_version+1 WHERE account_id=?',[boot.accountId]);
+      await appPage.getByRole('button',{name:'退出登录',exact:true}).click();await appPage.getByRole('heading',{name:'请重新登录',exact:true}).waitFor();assert.deepEqual(appReads,[]);
+      await appPage.getByLabel('工号或登录名').fill('admin');await appPage.getByLabel('密码',{exact:true}).fill(updated);
+      await appPage.getByRole('button',{name:'登录',exact:true}).click();await appPage.locator('[data-password-required="true"]').waitFor();
+      await appPage.getByRole('link',{name:'前往原入口完成改密',exact:true}).click();await appPage.locator('#passwordDialog').waitFor({state:'visible'});
+      assert.equal(appReads.filter(p=>['/api/rbac/model','/api/org/departments','/api/role-workbench'].includes(p)).length,0);assert.deepEqual(appErrors,[]);
+      await appContext.close();
+      checks.push('app login/restore gates all protected reads; accurate typed identity and legacy handoff; 403/409/503 input protection, status retry/delay, revoked session 401, desktop focus/overflow');
       const bootstrapContext=await browser.newContext({viewport:{width:1699,height:828},deviceScaleFactor:1});
       const bootstrapPage=await bootstrapContext.newPage();bootstrapPage.setDefaultTimeout(12000);
       let protectedReads=0;const bootstrapErrors=[];
@@ -140,6 +223,9 @@ async function main(){const checks=[];
       await bootstrapPage.locator('#passwordSubmitBtn').click();
       await bootstrapPage.locator('#passwordDialogMsg').filter({hasText:'合成改密服务暂不可用'}).waitFor();
       assert.equal(await bootstrapPage.locator('#currentPassword').inputValue(),updated);assert.equal(await bootstrapPage.locator('#newPassword').inputValue(),finalPassword);
+      await bootstrapPage.route('**/api/org/me/password',route=>route.fulfill({status:409,contentType:'application/json',body:JSON.stringify({error:'合成改密状态已变化'})}),{times:1});
+      await bootstrapPage.locator('#passwordSubmitBtn').click();await bootstrapPage.locator('#passwordDialogMsg').filter({hasText:'合成改密状态已变化'}).waitFor();
+      assert.equal(await bootstrapPage.locator('#currentPassword').inputValue(),updated);assert.equal(await bootstrapPage.locator('#newPassword').inputValue(),finalPassword);assert.equal(await bootstrapPage.locator('#confirmPassword').inputValue(),finalPassword);
       const changed=bootstrapPage.waitForResponse(r=>r.url().endsWith('/api/org/me/password')&&r.request().method()==='POST');
       await bootstrapPage.locator('#passwordSubmitBtn').click();assert.equal((await changed).status(),200);
       await bootstrapPage.locator('#loginMsg').filter({hasText:'密码修改成功，请重新登录'}).waitFor();
@@ -147,6 +233,10 @@ async function main(){const checks=[];
       for(const id of ['currentPassword','newPassword','confirmPassword','password'])assert.equal(await bootstrapPage.locator('#'+id).inputValue(),'');
       assert.equal(protectedReads,0);assert.deepEqual(bootstrapErrors,[]);
       const [[changedAccount]]=await pool.execute('SELECT must_change_password FROM system_admin_accounts WHERE account_id=?',[boot.accountId]);assert.equal(changedAccount.must_change_password,0);
+      assert.equal((await bootstrapContext.request.get(fixture.baseURL+'/api/org/me')).status(),401);
+      await bootstrapPage.locator('#employeeNo').fill('admin');await bootstrapPage.locator('#password').fill(updated);
+      const oldPassword=bootstrapPage.waitForResponse(r=>r.url().endsWith('/api/org/login')&&r.request().method()==='POST');await bootstrapPage.locator('#loginBtn').click();assert.equal((await oldPassword).status(),401);
+      assert.equal(await bootstrapPage.locator('#password').inputValue(),updated);assert.equal(protectedReads,0);
       await bootstrapPage.locator('#employeeNo').fill('admin');await bootstrapPage.locator('#password').fill(finalPassword);await bootstrapPage.locator('#loginBtn').click();
       await bootstrapPage.locator('#appContent').waitFor({state:'visible'});
       assert(protectedReads>0);assert.equal(await bootstrapPage.locator('#passwordDialog').isVisible(),false);
@@ -180,9 +270,26 @@ async function main(){const checks=[];
       await page.getByRole('button',{name:'登录',exact:true}).click();
       await page.waitForFunction(()=>!document.body.textContent.includes('系统维护身份，不关联员工')&&document.body.textContent.includes('合成lead'));
       await context.close();
+      await pool.execute('UPDATE user_accounts SET must_change_password=1,auth_version=auth_version+1 WHERE account_id=181');
+      const personnelContext=await browser.newContext({viewport:{width:1699,height:828},deviceScaleFactor:1});const personnelPage=await personnelContext.newPage();let personnelReads=0;
+      personnelPage.on('request',r=>{const url=new URL(r.url()).pathname;if(url.startsWith('/api/')&&!bootstrapPaths.has(url)&&url!=='/api/org/me/password')personnelReads++;});
+      await personnelPage.goto(fixture.baseURL+'/app/');await personnelPage.getByLabel('工号或登录名').fill('SYNTHETIC_admin');await personnelPage.getByLabel('密码',{exact:true}).fill(fixture.loginPassword);
+      await personnelPage.getByRole('button',{name:'登录',exact:true}).click();await personnelPage.locator('[data-password-required="true"]').waitFor();
+      assert((await personnelPage.locator('body').innerText()).includes('已登录为“合成admin”'));assert((await personnelPage.locator('body').innerText()).includes('工号：SYNTHETIC_admin'));assert.equal(personnelReads,0);
+      await personnelPage.reload();await personnelPage.locator('[data-password-required="true"]').waitFor();assert((await personnelPage.locator('body').innerText()).includes('已恢复本浏览器中“合成admin”的登录会话'));
+      await personnelPage.screenshot({path:path.join(output,'personnel-admin-first-password.png')});
+      await personnelPage.getByRole('link',{name:'前往原入口完成改密',exact:true}).click();await personnelPage.locator('#passwordDialog').waitFor({state:'visible'});assert.equal(personnelReads,0);
+      const personnelPassword=crypto.randomBytes(24).toString('base64url')+'2a';
+      await personnelPage.locator('#currentPassword').fill(fixture.loginPassword);await personnelPage.locator('#newPassword').fill(personnelPassword);await personnelPage.locator('#confirmPassword').fill(personnelPassword);
+      await personnelPage.locator('#passwordSubmitBtn').click();await personnelPage.locator('#loginMsg').filter({hasText:'密码修改成功，请重新登录'}).waitFor();
+      assert.equal((await personnelContext.request.get(fixture.baseURL+'/api/org/me')).status(),401);
+      for(const id of ['currentPassword','newPassword','confirmPassword','password'])assert.equal(await personnelPage.locator('#'+id).inputValue(),'');
+      await personnelPage.goto(fixture.baseURL+'/app/');await personnelPage.getByLabel('工号或登录名').fill('SYNTHETIC_admin');await personnelPage.getByLabel('密码',{exact:true}).fill(personnelPassword);
+      await personnelPage.getByRole('button',{name:'登录',exact:true}).click();await personnelPage.locator('.app-shell').waitFor();assert.equal(await personnelPage.locator('[data-password-required="true"]').count(),0);
+      await personnelContext.close();checks.push('old personnel admin retains personnel identity through app first-login/restore, legacy CSRF change, revoked old session and new-password relogin');
     }finally{await browser.close();}
     checks.push('Edge 100% desktop 1699x828 standalone identity/accounts, no horizontal overflow, cancel-logout input protection and switch to personnel identity');
-  },{evidenceDir:output,systemAdmin:true,createDocument:()=>({
+  },{evidenceDir:output,systemAdmin:true,processDataGovernanceVersionId:77,randomDatabase:true,createDocument:()=>({
     schema_version:'process-governance-v7',
     export_meta:{package_ref:'package_synthetic_admin',exported_at:new Date().toISOString(),initiating_department:'',compiler:''},
     process:{process_ref:'process_synthetic_admin',process_name:'',owning_department:'',purpose:'',scope:'',capability_domain:null,business_capability:null,classification_status:'unclassified'},

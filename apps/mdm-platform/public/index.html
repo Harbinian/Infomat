@@ -3136,7 +3136,7 @@ async function downloadNativeDiagram() {
         '<div class="notice"><b>边界：</b>本区域保存的是流程预览核对（V8）记录。只有核对完成并由MDM工作组组长明确提升后，才会形成正式草稿；预览记录本身不是审核或发布结论。</div>' +
         '<div class="notice" id="pgV7EditNotice" style="margin-top:12px" hidden></div>' +
         '<div class="publication-actions" style="margin-top:12px"><button type="button" class="btn secondary"data-click="openPreviewDiagram" data-click-args="' + actionArgs(['process']) + '">查看本修订流程图</button><button type="button" class="btn secondary"data-click="openPreviewDiagram" data-click-args="' + actionArgs(['data']) + '">查看本修订数据关系</button></div>' +
-        renderV7HandlingSummary(detail) + ownerAssignment + warningHtml + scopeDecisionEditor +
+        renderV7HandlingSummary(detail) + renderV7ContentChecks(detail.content_checks) + ownerAssignment + warningHtml + scopeDecisionEditor +
         '<div class="process-design-form" style="margin-top:12px"><label>流程名称<input readonly value="' + safeText(process.process_name || caseRow.process_name) + '"></label><label>归口部门<input readonly value="' + safeText(caseRow.owning_department_name || '待分派') + '"></label><label class="wide">目的<textarea rows="2" readonly>' + safeText(process.purpose || '待业务确认') + '</textarea></label><label class="wide">范围<textarea rows="3" readonly>' + safeText(process.scope || '待业务确认') + '</textarea></label></div>' +
         '<details class="process-design-detail" open style="margin-top:12px"><summary><strong>原生流程业务行为预览</strong></summary><div class="table-container" style="margin-top:12px"><table class="data-table"><thead><tr><th>业务行为</th><th>执行角色</th><th>触发</th><th>完成标准</th></tr></thead><tbody>' + (behaviorRows || '<tr><td colspan="4" class="empty">没有业务行为</td></tr>') + '</tbody></table></div></details>' +
         '<h3 style="margin-top:18px">跨部门核对项</h3>' + itemHtml +
@@ -3148,6 +3148,11 @@ async function downloadNativeDiagram() {
           runPageTask(function() { return submitV7PreviewDecision(button); }, '部门核对结果保存失败');
         });
       });
+      if ($('pgDownloadV7PreviewDraftBtn')) $('pgDownloadV7PreviewDraftBtn').onclick = function() {
+        var url = URL.createObjectURL(new Blob([JSON.stringify(documentValue, null, 2)], {type:'application/json;charset=utf-8'}));
+        var link = document.createElement('a'); link.href = url; link.download = 'process-preview-' + caseRow.id + '-r' + revision.revision_no + '.json'; link.click();
+        setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+      };
       if ($('pgUploadV7PreviewRevisionBtn')) $('pgUploadV7PreviewRevisionBtn').onclick = function() { $('pgV7PreviewRevisionInput').click(); };
       if ($('pgAssignV7PreviewOwnerBtn')) $('pgAssignV7PreviewOwnerBtn').onclick = function() {
         runPageTask(assignV7PreviewOwner, '归口部门分派失败');
@@ -3187,6 +3192,18 @@ async function downloadNativeDiagram() {
         if (selection && typeof el.setSelectionRange === 'function' && el.type !== 'select-one') el.setSelectionRange(selection[0], selection[1]);
         window.scrollTo(0, oldScroll);
       }
+    }
+
+    function renderV7ContentChecks(checks) {
+      if (!checks) return '<div class="notice">当前修订检查尚未取得，请刷新核对。</div>';
+      return '<section data-process-checks style="overflow-wrap:anywhere"><h3>当前修订检查</h3><p>编制缺项需回3001修订。待确认事项由业务人员核实，不自动补造事实；未完成草稿仍可下载。</p>' +
+        (checks.status !== 'ready' ? '<p>业务内容检查未完成，不能据此判断没有问题。</p>' : '') +
+        [['technical','技术错误'],['incomplete','编制缺项'],['confirmation','待确认事项']].map(function(group) {
+          return '<details' + (checks.counts[group[0]] ? ' open' : '') + '><summary>' + group[1] + '：' + Number(checks.counts[group[0]] || 0) + '项</summary><ol>' +
+            (checks.issues || []).filter(function(issue) { return issue.group === group[0]; }).map(function(issue) {
+              return '<li>' + safeText(issue.message) + (issue.path ? '<p>位置：' + safeText(issue.path) + '</p>' : '') + '<p>处理建议：' + safeText((issue.suggestions || []).join('；')) + '</p></li>';
+            }).join('') + '</ol></details>';
+        }).join('') + '</section><button type="button" class="btn secondary" id="pgDownloadV7PreviewDraftBtn">下载当前修订草稿 JSON</button><p>下载保留原生正文及稳定标识，不应用页面上未提交的意见，不表示审核通过。</p>';
     }
 
     function renderV7HandlingSummary(detail) {

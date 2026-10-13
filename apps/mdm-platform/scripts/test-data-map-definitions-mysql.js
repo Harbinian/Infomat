@@ -215,7 +215,7 @@ async function main() {
       evidence.legacy_object_digest=digest(await snapshot(db,'object',big));
       evidence.additive_tables=tables;
     } finally {db.release();}
-  },{stage:'02'});
+  },{stage:'02',randomDatabase:true});
   evidence.finished_at=new Date().toISOString();evidence.owned_container_removed=true;evidence.status='passed';
   if(output)fs.writeFileSync(output,JSON.stringify(evidence,null,2)+'\n');
   console.log(`P02_DEFINITIONS_PASS ${checks.length}`);

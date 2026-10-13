@@ -37,7 +37,11 @@ function formalRoutes() {
       const original=router[method];
       router[method]=function(...values) {
         const stack=new Error().stack;
-        const location=stack.match(/[\\/]server[\\/]routes[\\/]([^:\n]+):(\d+):/);
+        let location=stack.match(/[\\/]server[\\/]routes[\\/]([^:\n]+):(\d+):/);
+        if (!location) {
+          const frontend=stack.match(/[\\/]server[\\/]frontend\.js:(\d+):/);
+          if (frontend) location=[frontend[0],'../frontend.js',frontend[1]];
+        }
         if(location) {
           const handlers=values.flat(Infinity).filter(v=>typeof v==='function').map(fn=>({name:fn.name,body:String(fn)}));
           if(method==='use') middleware.push({line:Number(location[2]),path:typeof values[0]==='string'?values[0]:null,handlers});
@@ -63,7 +67,10 @@ function formalRoutes() {
     if(mount.router.stack.some(layer=>!layer.route&&layer.handle&&layer.handle.stack))throw Error('Untraced nested router: '+mount.base);
     for(const route of observed) {
       const methods=route.methods._all?['ALL']:Object.keys(route.methods).filter(key=>route.methods[key]).map(key=>key.toUpperCase());
-      for(const method of methods)if(!mount.rows.some(row=>row.path===route.path&&row.method===method))throw Error(`Untraced Express route: ${mount.base} ${method} ${route.path}`);
+      const samePath = (left, right) => Array.isArray(left) && Array.isArray(right)
+        ? left.length === right.length && left.every((value, index) => value === right[index])
+        : left === right;
+      for(const method of methods)if(!mount.rows.some(row=>samePath(row.path,route.path)&&row.method===method))throw Error(`Untraced Express route: ${mount.base} ${method} ${route.path}`);
     }
     if(observed.length!==mount.rows.length)throw Error('Registration occurrence mismatch: '+mount.base);
   }
@@ -107,7 +114,8 @@ function localEvidence(row) {
   const text=parts.join('\n');
   const guards=[...new Set(text.match(/\b(?:assert|can|has|require|authorized|requestHas)\w*(?=\s*\()/g)||[])].filter(n=>!['require','requireAuth'].includes(n));
   const permissions=[...new Set([...text.matchAll(/['"]((?:governance|identity|guidance):[a-z_-]+)['"]/g)].map(m=>m[1]))];
-  const calls=[...new Set([...text.matchAll(/\b(?:repo|officeRepository)(?:\(\))?\.(\w+)\(/g)].map(m=>m[1]))];
+  const responseMethods = new Set(['json','status','set','send','end','type','redirect']);
+  const calls=[...new Set([...text.matchAll(/\b(?:repo|officeRepository|r)(?:\(\))?\.(\w+)\(/g)].map(m=>m[1]))].filter(name=>!responseMethods.has(name));
   return {guards,permissions,helpers:[...found.values()],repositoryCalls:calls,source:text};
 }
 module.exports={appRoot,source,reference,staticRoutes,formalRoutes,localEvidence,sha};

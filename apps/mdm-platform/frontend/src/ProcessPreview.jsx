@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { StatusPanel } from './components.jsx';
+import { ProcessChecks } from './ProcessChecks.jsx';
 
 const ROOT = '/api/process-v7-preview';
 const labels = { pending: '待核对', confirmed: '已确认', needs_changes: '需要修改', pending_evidence: '待补证据', disputed: '存在分歧', pending_owner: '待分派归口', under_review: '核对中', needs_revision: '待上传修订', review_complete: '核对完成', closed: '已关闭', new: '新增', reopened: '重新核对', carried_forward: '沿用结论', action: '业务行为', decision: '判断节点', use: '使用', create: '创建', update: '更新', pending_confirmation: '待确认' };
@@ -86,6 +87,12 @@ function SourceContent({ source }) {
   })}<JsonDetails title="完整修订原文（含表单、关系、来源与稳定标识）" value={source} /></>;
 }
 
+function downloadDraft(documentValue, name) {
+  const url = URL.createObjectURL(new Blob([JSON.stringify(documentValue, null, 2)], { type: 'application/json;charset=utf-8' }));
+  const link = document.createElement('a'); link.href = url; link.download = name;
+  link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 // Draft lives above the authenticated view, in memory only, and is bound to identity/case/revision.
 export function ProcessPreview({ api, draft, setDraft }) {
   const [list, setList] = useState(null), [detail, setDetail] = useState(null);
@@ -161,6 +168,16 @@ export function ProcessPreview({ api, draft, setDraft }) {
         todo_id: item.task?.todo_id || null, expected_task_revision: item.task?.revision_no ?? null, work_cursor: workCursor } : {}) });
   }
   function update(values) { setDraft({ ...draftRef.current, ...values, dirty: true }); }
+  async function checkDraft() {
+    const current = draftRef.current;
+    if (!current?.document || busyRef.current) return;
+    const token = generation.current; busyRef.current = true; setBusy(true); setError('');
+    try {
+      const result = await api.request(ROOT + '/checks', { method: 'POST', body: { document: current.document } });
+      if (token === generation.current && draftRef.current === current) update({ checks: result.content_checks });
+    } catch (e) { if (token === generation.current) setError(failureText(e)); }
+    finally { busyRef.current = false; setBusy(false); }
+  }
   async function readFile(event) {
     const file = event.target.files?.[0]; event.target.value = ''; if (!file) return;
     if (draftRef.current?.fileName && !window.confirm('替换当前待上传文件？原文件不会被修改。')) return;
@@ -170,7 +187,7 @@ export function ProcessPreview({ api, draft, setDraft }) {
       if (file.size > 2 * 1024 * 1024) throw new Error('文件超过2MiB，请缩小内容后重试。');
       const document = JSON.parse(await file.text());
       if (!['process-governance-v7', 'process-governance-v8'].includes(document?.schema_version)) throw new Error('请选择V8或受支持的V7流程文件，不支持其他版本的在线写入。');
-      if (token === generation.current && draftRef.current === current) update({ fileName: file.name, document, comparison: null });
+      if (token === generation.current && draftRef.current === current) update({ fileName: file.name, document, comparison: null, checks: null });
     } catch (e) { if (token === generation.current) setError(e instanceof SyntaxError ? '文件不是有效JSON，已保留原待上传内容。' : e.message); }
     finally { busyRef.current = false; setBusy(false); }
   }
@@ -232,7 +249,7 @@ export function ProcessPreview({ api, draft, setDraft }) {
       }
       const result = await api.request(path, { method: 'POST', body });
       if (token !== generation.current) return;
-      setDraft(null); setNotice(current.kind === 'issueReply' ? '答复已保存到原问题历史及关联任务记录。任务办结与问题复核需分别办理。' : '已保存预览核对记录。正式审核与发布需另行办理。');
+      setDraft(null); setNotice(current.kind === 'issueReply' ? (current.todo_id ? '答复已保存到原问题历史及关联任务记录。任务办结与问题复核需分别办理。' : '答复已保存到原问题历史。本次没有关联办公室任务，问题仍须有权人员复核。') : '已保存预览核对记录。正式审核与发布需另行办理。');
       const id = String(result.case?.id || current.caseId);
       const url = new URL(location.href); url.searchParams.set('case', id); history.replaceState(history.state, '', url);
       if (id !== selected) setSelected(id); else await load(id);
@@ -268,7 +285,7 @@ export function ProcessPreview({ api, draft, setDraft }) {
       {stale && <StatusPanel kind="error" title="来源已变化，当前输入仍保留">请复制保留意见后明确放弃本次编辑，再按最新修订重新核对。系统不会把旧意见自动应用到新修订。</StatusPanel>}
       {draft.resultUnknown && <StatusPanel title="本次提交结果需核对">输入已保留。先读取当前记录核对结果，再决定是否重试。<button disabled={busy || loading} onClick={reconcile}>核对本次提交结果</button></StatusPanel>}
       <form onSubmit={submit}><fieldset disabled={busy || loading || feature?.enabled !== true || Boolean(stale) || draft.resultUnknown}>
-        {['create', 'revision'].includes(draft.kind) ? <><label>流程JSON文件<input aria-label="流程JSON文件" type="file" accept=".json,application/json" onChange={readFile} /></label><p>{draft.fileName || '尚未选择文件'} {draft.document?.schema_version}</p>{draft.document && <p>流程：{draft.document.process?.process_name}</p>}{draft.comparison && <><h3>新修订影响</h3><p>{Object.entries(draft.comparison.comparison?.counts || {}).map(([k, v]) => `${({ added:'新增', removed:'移除', reopened:'重新核对', carried_forward:'沿用' })[k] || k} ${v}项`).join('；')}</p><p>受影响部门：{draft.comparison.comparison?.affected_departments?.join('、') || '无新增影响部门'}</p><JsonDetails title="完整比较、提示与卡口" value={draft.comparison} /></>}</>
+        {['create', 'revision'].includes(draft.kind) ? <><label>流程JSON文件<input aria-label="流程JSON文件" type="file" accept=".json,application/json" onChange={readFile} /></label><p>{draft.fileName || '尚未选择文件'} {draft.document?.schema_version}</p>{draft.document && <p>流程：{draft.document.process?.process_name}</p>}{draft.document && <><div className="import-actions"><button type="button" onClick={checkDraft}>检查待上传草稿</button><button type="button" onClick={() => downloadDraft(draft.document, 'unfinished-process-draft.json')}>下载待上传草稿 JSON</button></div>{draft.checks && <ProcessChecks checks={draft.checks} allowLocate={false} />}</>}{draft.comparison && <><h3>新修订影响</h3><p>{Object.entries(draft.comparison.comparison?.counts || {}).map(([k, v]) => `${({ added:'新增', removed:'移除', reopened:'重新核对', carried_forward:'沿用' })[k] || k} ${v}项`).join('；')}</p><p>受影响部门：{draft.comparison.comparison?.affected_departments?.join('、') || '无新增影响部门'}</p><JsonDetails title="完整比较、提示与卡口" value={draft.comparison} /></>}</>
           : draft.kind === 'issueReply' ? <><p>问题{draft.issue_id}：{draft.issue_title}{draft.todo_id && `；关联办公室任务${draft.todo_id}`}</p><label>问题答复<textarea aria-label="问题答复" required rows={4} maxLength={4000} value={draft.content} onChange={e => update({ content: e.target.value })} /></label><p>答复进入原问题历史，关联任务保留同一答复依据。保存答复不表示任务办结或问题关闭。</p></>
           : ['transfer', 'coordinate', 'author'].includes(draft.kind) ? <>
             {draft.kind === 'transfer' ? <><p>仅在首次成功编制保存或提交前转办。接收者只获得此流程的编制范围；未开通账号的人员不会自动开户。</p><label>接收编制者<select aria-label="接收编制者" required value={draft.recipient_person_id} onChange={e => update({ recipient_person_id: e.target.value })}><option value="">请选择本部门有效人员</option>{(people?.items || []).map(p => <option key={p.person_id} value={p.person_id}>{p.person_name} · {p.employee_no}{p.login_available ? '' : ' · 尚无有效登录账号'}</option>)}</select></label>{people?.truncated && <p>候选超过200人，本次仅返回前200人。</p>}</> : <label>记录类别<select aria-label="记录类别" value={draft.record_kind} onChange={e => update({ record_kind: e.target.value })}>{(draft.kind === 'coordinate' ? ['message', 'supplement_request', 'reminder'] : ['fact_note', 'problem_reply', 'governance_suggestion']).map(k => <option key={k} value={k}>{recordLabels[k]}</option>)}</select></label>}
@@ -284,10 +301,12 @@ export function ProcessPreview({ api, draft, setDraft }) {
       {detail.authoring && <section><h3>编制归属与协调</h3>{detail.authoring.managed ? <>
         <p>当前编制者：{detail.authoring.compiler_name || '待主对接人指定'}；{detail.authoring.started_at ? '编制已开始，转办窗口已关闭' : '尚未成功保存编制内容'}。</p>
         <div className="import-actions">{actions.includes('transfer_authoring') && <button disabled={busy || Boolean(draft)} onClick={() => start('transfer')}>编制前转办</button>}{actions.includes('coordinate_authoring') && <button disabled={busy} onClick={() => start('coordinate')}>记录协调事项</button>}{actions.includes('record_authoring') && <button disabled={busy} onClick={() => start('author')}>记录编制说明</button>}</div>
+        <p>关联问题答复支持固定 V8 及受支持 V7 来源，必须绑定本案例的准确修订、摘要和问题版本；答复不自动关闭问题。</p>
         <button disabled={busy || loading} onClick={() => loadWork()}>查看关联治理问题与任务</button>
-        {work && <section><h3>关联治理问题与任务</h3><p>每页检查20条关联候选，仅显示固定V7证据全部属于本案例的问题。独立材料或跨流程来源须按原治理入口核对；本页已排除{work.excluded}条范围不明确的候选。</p>
+        {work && <section><h3>关联治理问题与任务</h3><p>每页检查20条关联候选，仅显示固定流程证据全部属于本案例的问题。独立材料或跨流程来源须按原治理入口核对；本页已排除{work.excluded}条范围不明确的候选。跨页不是同一快照；每个问题最多展示200个任务和最近50条答复，历史保留。</p>
           {!work.items.length && <p>本页暂无可核对到本案例的问题。</p>}
           {work.items.map(i => <article className="preview-source" key={i.issue_id}><h4>问题{i.issue_id}：{i.title}</h4><p>状态：{label(i.status)}；问题修订{i.revision_no}。{!i.source_current && '来源修订已变化，请先由MDM工作组重新核对。'}</p>
+            <details className="authoring-fixed-sources" open><summary>本问题的固定来源</summary>{(i.fixed_sources || []).map(s => <div key={s.source_id}><p>来源{s.source_id} · {s.schema_version} · {s.source_kind === 'preview_revision' ? `案例${s.source_ref.case_id} / 预览修订标识${s.source_ref.revision_id}` : `已发布版本${s.source_ref.process_version_id}`}</p><p className="digest">固定内容摘要：{s.content_digest}</p></div>)}{!i.fixed_sources?.length && <p>当前响应缺少固定来源明细，请核对后端版本后重新读取。</p>}</details>
             {i.can_reply && <button disabled={busy} onClick={() => start('issueReply', i)}>答复问题{i.issue_id}</button>}
             {i.tasks.map(t => <div key={t.todo_id}><p>任务{t.todo_id} · 第{t.round_no}轮 · {t.status === 'done' ? '已办结' : '待办理'}：{t.instruction}</p>
               {i.can_reply && t.status === 'pending' && <button disabled={busy} onClick={() => start('issueReply', { ...i, task: t })}>答复任务{t.todo_id}</button>}
@@ -300,7 +319,10 @@ export function ProcessPreview({ api, draft, setDraft }) {
         <details><summary>交接、编制与协调记录</summary><p>最多显示最近{detail.authoring.record_limit}条；历史不删除。</p>{detail.authoring.records.map(r => <p key={r.id}>{r.created_at} · {r.actor_name} · {recordLabels[r.record_kind]} · 修订{r.revision_no} · {r.content_text}{r.record_kind === 'transfer' && ` · 接收人员标识 ${r.recipient_person_id}`}</p>)}{!detail.authoring.records.length && <p>暂无记录。</p>}</details>
       </> : <p>此案例缺少已确立的编制归属历史，不能默认开放转办；原有记录与办理规则保留。</p>}</section>}
       <div className="import-actions">{actions.includes('upload_revision') && <button disabled={busy} onClick={() => start('revision')}>上传3001新修订</button>}{actions.includes('assign_owner') && <button disabled={busy} onClick={() => start('owner')}>分派归口部门</button>}{actions.includes('record_scope_decision') && <button disabled={busy} onClick={() => start('scope')}>记录范围决定</button>}<button onClick={() => setShowDiagram(v => !v)}>{showDiagram ? '收起图形' : '查看本修订图形'}</button></div>
-      {!!blockers.length && <div className="status-panel"><strong>待处理卡口</strong><ul>{blockers.map((v, i) => <li key={i}>{v.message} <small>{v.code}</small></li>)}</ul><p>执行部门未解决的卡口不能通过人工范围决定解除。</p></div>}
+      <ProcessChecks checks={detail.content_checks} />
+      <button onClick={() => downloadDraft(detail.revision.document, `process-preview-${detail.case.id}-r${detail.case.current_revision_no}.json`)}>下载当前修订草稿 JSON</button>
+      <p>下载当前已保存修订，保留原生正文和稳定标识；未提交意见仍保留在页面中。下载不代表核对完成或审核通过。</p>
+      {!!blockers.length && <div className="status-panel"><strong>待处理卡口：{blockers.length}项</strong><p>编制缺项和执行部门卡口不能通过人工范围决定解除。请按上方检查修订；核对提示另见下方。</p><details><summary>查看全部卡口</summary><ul>{blockers.map((v, i) => <li key={i}>{v.message} <small>{v.code}</small></li>)}</ul></details></div>}
       {detail.case.scope_decision && <p>已记录范围决定：{({ confirmed_no_cross_department: '本修订不涉及跨部门', keep_current_owner: '保留当前归口部门', accept_source_owner: '采用修订中的归口部门' })[detail.case.scope_decision] || detail.case.scope_decision}；依据：{detail.case.scope_decision_basis || '未提供'}</p>}
       {!!detail.warnings?.length && <details><summary>核对提示</summary><ul>{detail.warnings.map((w, i) => <li key={i}>{w.message}</li>)}</ul></details>}
       {showDiagram && <Diagram key={detail.case.current_content_hash} documentData={detail.revision.document} revision={detail.case.current_revision_no} />}

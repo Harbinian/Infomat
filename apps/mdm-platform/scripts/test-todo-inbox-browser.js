@@ -175,5 +175,5 @@ async function main(){await withStage05Fixture(async({fixture,pool,expect})=>{
   assert.deepEqual(pageErrors,[]);const unexpectedConsole=consoleErrors.filter(x=>!/Failed to load resource|net::ERR_|status of (401|403|409|503)/.test(x));assert.deepEqual(unexpectedConsole,[]);
   fs.writeFileSync(path.join(output,'results.json'),JSON.stringify({passed:true,checks,pageErrors,unexpectedConsole,writes},null,2));
  }catch(error){fs.writeFileSync(path.join(output,'failure.json'),JSON.stringify({error:error.message,pageErrors,text:await page.locator('body').innerText()},null,2));await page.screenshot({path:path.join(output,'failure.png'),fullPage:true});throw error;}finally{await browser.close();}
-},{evidenceDir:output});}
+},{evidenceDir:output,randomDatabase:true});}
 main().catch(error=>{console.error(error);process.exitCode=1;});

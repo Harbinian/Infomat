@@ -7,9 +7,9 @@
 - 正式身份链路：`person -> user_accounts -> person_roles -> roles -> role_permissions -> permissions`
 - 遗留`users/user_roles`和SQLite人员接口：仅保留明确的历史兼容或隔离测试，不参与正式授权
 
-当前原生V7/V8核对与正式治理使用保留V7名称的兼容接口；3001工作树为V8候选，实际服务版本另查健康状态。V1至V3本地编制、结构化导入和旧承接办理已退役。以下明确标为历史的模块、字段和状态用于解释既有资产，不授权恢复旧入口、清空或转换旧数据。技术文档不构成业务真源。
+当前原生V8及受支持V7核对与正式治理使用保留V7名称的兼容接口；3001工作树为V8候选，实际服务版本另查健康状态。V1至V3本地编制、结构化导入和旧承接办理已退役。以下明确标为历史的模块、字段和状态用于解释既有资产，不授权恢复旧入口、清空或转换旧数据。技术文档不构成业务真源。
 
-2026-09-09第02阶段已在应用入口实施MySQL运行边界：两种读模型及必要连接变量显式校验，旧SQLite路由在正式模式返回410，公共初始化只加载运行能力与部门。非production的显式遗留测试使用独立数据库路径；无正式回退。运行仓储的隐式初始化改为必要表列的只读探测，结构维护仍使用已有显式迁移。该探测不替代类型、索引、外键及迁移记录核验。维护命令、账号权限、历史数据去向及未验证项见[README](README.md#正式运行与结构维护分离)。旧正文和历史状态继续保留，当前正式事务按原生V7/V8合同核对。
+应用入口实施MySQL运行边界：两种读模型及必要连接变量显式校验，旧SQLite路由在正式模式返回410，公共初始化只加载运行能力与部门。非production的显式遗留测试使用独立数据库路径；无正式回退。运行仓储的隐式初始化改为必要表列的只读探测，结构维护仍使用已有显式迁移。该探测不替代类型、索引、外键及迁移记录核验。维护命令、账号权限、历史数据去向及未验证项见[运行与结构维护](docs/Current-Runtime-Maintenance.md#正式运行与结构维护分离)。旧正文和历史状态继续保留，当前正式事务按原生V7/V8合同核对。
 
 本规格说明现行身份、授权、责任证据、原生V7/V8核对与正式治理，以及历史流程JSON和承接资产的兼容边界。3001独立编制并由用户主动下载、上传交接；业务依据回到用户指定的外部材料、实际说明和明确确认。
 
@@ -26,17 +26,17 @@
 | 模型接口 | `server/routes/rbac.js` | 固定模型只读接口 |
 | 责任接口 | `server/routes/governance.js` | 部门决定读取和追加接口 |
 | 会话与中间件 | `server/auth.js` | 登录、会话校验、权限校验和首次改密限制 |
-| 前端 | `public/index.html` | 原生V7/V8核对与正式办理、角色责任页、账号管理和角色可见标签；旧编制和承接工作区退役 |
+| 前端 | `frontend/src/`；`public/index.html`为兼容入口 | 原生V7/V8核对与正式办理、角色责任页、账号管理和角色可见标签；旧编制和承接工作区退役 |
 | 历史v1/v2规范化 | `server/processGovernanceV2.js` | 保留旧结构校验、引用检查和摘要兼容，旧在线导入退役 |
 | 历史承接迁移 | `server/crossDeptHandoffV2Migration.js` | 保留旧字段和状态迁移、盘点、核对与恢复工具，不恢复办理入口 |
 | 历史统一入口迁移 | `server/processGovernanceUnifiedMigration.js` | 保留旧完整JSON、草稿、承接冲突和事件维护工具，执行须具体授权 |
 | 历史v3表单迁移 | `server/processGovernanceV3Migration.js` | 保留旧数据映射、批次备份与恢复，不自动转换当前原生V7/V8 |
 | 流程设计接口 | `server/routes/processDesignMysql.js` | 当前正式草稿、审核、发布和准确版本正文；旧V1至V3编制、导入及承接入口拒绝 |
 | 角色工作台 | `server/routes/roleWorkbench.js` | 当前原生V7/V8事项只读聚合，旧编制及承接队列退役 |
-| V7预览核对 | `server/processV7PreviewReview*.js`、`server/routes/processV7PreviewReview.js` | 按实际V7/V8版本校验、生成固定跨部门核对项、隔离保存修订与部门结果，路径保留V7名称 |
+| V7预览核对 | `server/processPreviewReview.js`、`server/processPreviewReviewRepository.js`、`server/routes/processPreviewReview.js` | 按实际V7/V8版本校验、生成固定跨部门核对项、隔离保存修订与部门结果，路径保留V7名称 |
 | V7迁移基线 | `server/processV7M0Baseline.js`、`scripts/inspect-process-v7-m0-baseline.js` | 只读核对正式三表、JSON摘要、引用关系和live schema差异 |
 | V7正式基础迁移 | `server/processV7FormalMigration.js` | 以幂等DDL增加原生V7所需可空列、审核正文绑定和提升审计；不创建业务行 |
-| 流程版本后续数据治理 | `server/processDataGovernance*.js`、`server/routes/processDataGovernance.js` | 用户选择已发布原生V7版本、工作包固定来源、确定性待定候选、工作包状态、定向事实问题、来源摘要复核和审核卡口 |
+| 流程版本后续数据治理 | `server/processDataGovernance*.js`、`server/routes/processDataGovernance.js` | 用户选择已发布原生V8或受支持V7版本、工作包固定来源、确定性待定候选、工作包状态、定向事实问题、来源摘要复核和审核卡口 |
 | 后续数据治理迁移 | `server/processDataGovernanceMigration.js` | 六张专用表的dry-run、结构一致性检查、显式应用和空表回退 |
 
 ## 3. 授权计算
@@ -76,7 +76,7 @@ HTTPS Cookie为`__Host-infomat.mdm.sid`，固定Secure、HttpOnly、SameSite=Lax
 
 `/api/health`兼容存活合同，`/api/ready`另行返回就绪及源码摘要。就绪探测使用最多1连接和整体超时，并合并并发探测、短期缓存结果；MySQL、必要表列或配置失败返回503。仅3000的运行脚本、会话迁移/清理、环境变量、Windows监督方式和未验证边界详见[发布与恢复](../../docs/plans/2026-09-09-mdm-3000-launch/03-发布与恢复.md)。
 
-第05阶段将会话专用池的等待队列限定为最多32个请求，保留默认2连接及原有整体超时。该时限包含排队、取得连接和SQL操作；到期后返回失败，延迟取得的连接销毁，不自动重试业务提交。就绪专用池继续不排队。该修改解决合成浏览器正常并发读取时的满池失败，不代表正式并发容量已经验收。
+会话专用池的等待队列限定为最多32个请求，保留默认2连接及原有整体超时。该时限包含排队、取得连接和SQL操作；到期后返回失败，延迟取得的连接销毁，不自动重试业务提交。就绪专用池继续不排队。该限制不代表正式并发容量已验收。
 
 ## 5. 固定角色与范围
 
@@ -119,7 +119,7 @@ HTTPS Cookie为`__Host-infomat.mdm.sid`，固定Secure、HttpOnly、SameSite=Lax
 - `process_v7_preview_cases`、`process_v7_preview_revisions`、`process_v7_preview_review_items`和`process_v7_preview_events`只保存V7预览核对，不引用或写入正式流程版本。
 - 保存完整v3 JSON时，同一数据库事务同步流程、业务行为、承接候选修订和事件。投影同步失败时回滚JSON修订，不形成半套治理事实。
 - 删除已有治理记录的承接必须提交`handoff_ref`和作废原因；历史承接只取消当前标记，不物理删除。
-- `process_data_governance_*`六张专用表只保存固定流程版本绑定、待定候选、MDM结论、定向事实答复、审核和事件，不复制完整V7正文。工作包以`process_version_id`唯一，所有写操作共享`revision_no`。
+- `process_data_governance_*`六张专用表只保存固定流程版本绑定、待定候选、MDM结论、定向事实答复、审核和事件，不复制完整原生V8/V7正文。工作包以`process_version_id`唯一，所有写操作共享`revision_no`。
 
 ## 8. 接口
 
@@ -193,29 +193,11 @@ HTTPS Cookie为`__Host-infomat.mdm.sid`，固定Secure、HttpOnly、SameSite=Lax
 
 MDM工作组组长只能在卡口通过后发布，不能以角色权限跳过部门决定。
 
-### 9.1 旧承接状态与决定（历史，已退役）
 
-以下描述仅解释旧数据和事件，不能按这些状态重新开放承接办理或推断当前责任。
 
-承接状态依次覆盖分派、归口审核、外部门范围确认、外部门补充、外部门审核和结构卡口，并使用`returned`表示退回上一责任步骤、`conflict_open`表示存在未关闭冲突。历史`rejected`迁移为待分派冲突，历史`escalated`迁移为待项目决策。每个写接口在通用权限之外继续校验固定角色、参与人、部门、`can_act`、当前修订、对象状态和事项关联。
+### 9.3 原生流程预览核对隔离
 
-双方决定写入`governance_decision_records`，`subject_type='cross_dept_handoff'`，`subject_version`为候选内容哈希。最终责任人从决定发生时当前部门表读取。承接待办直接从承接状态和参与关系生成，不通过问题池复制业务事实。
-
-### 9.2 旧完整流程JSON与并发（历史，已退役）
-
-以下为旧V1至V3本地编制器合同。当前用户在3001编制，再主动下载、上传原生V7/V8；历史内容、稳定标识和修订继续保留。
-
-- MDM接受`process-governance-v1`、`process-governance-v2`和`process-governance-v3`，在服务端规范化后统一保存和导出v3。v1、v2表单只补`form_design_state=unspecified`，不推断现状或拟设计状态。
-- 本地流程编辑器按整张纸质表单同时渲染全部字段。字段归属变化只在`forms[].areas[].items[]`之间移动同一字段对象；字段级不保存重复归属值，MDM也不创建与主表或明细表一一对应的物理数据库表。
-- `form_design_state`允许`current_state`、`proposed_design`和兼容迁移使用的`unspecified`。主表标题不参与提示和评分；多张明细表合法；多张明细表中的空标题逐张形成可定位业务提示。
-- 当时`process_content_json`是完整技术内容存储，承接及待办表是旧治理投影；这些历史记录不是业务真源。
-- 保存请求必须携带`expected_revision`。更新语句同时匹配`id + revision_no`，不匹配时返回`409 DRAFT_REVISION_CONFLICT`。
-- 内容哈希未变化时不增加修订号；变化时增加修订并更新时间、更新人和哈希。
-- 浏览器不使用`localStorage`或`sessionStorage`保存业务内容。
-
-### 9.3 V7预览核对隔离
-
-- 原生V7/V8通过`/api/process-v7-preview`进入专用案例，路径和机器标识保留V7兼容命名，不经过旧V3导入。数据治理工作包仍仅支持已发布原生V7，不降级V8。
+- 原生V7/V8通过`/api/process-v7-preview`进入专用案例，路径和机器标识保留V7兼容命名，不经过旧V3导入。数据治理工作包支持已发布原生V8或受支持V7，保留来源版本，不降级正文。
 - 服务端按实际V7/V8版本调用共享纯校验入口，按归口部门和固定执行部门生成核对项。不能识别部门时只返回提示，不推测业务事实。
 - 新修订以`process_ref`、内容摘要、核对项稳定标识和核对内容摘要进行并发与变化判断。未变化项沿用双方结果，变化项重新打开。
 - 部门核对写入同时校验权限、当前人员部门、核对方和修订号。管理员不得执行写操作。
@@ -224,10 +206,10 @@ MDM工作组组长只能在卡口通过后发布，不能以角色权限跳过�
 - V7提升事务按预览案例、当前修订、目标主档、活动草稿的顺序加锁；相同修订和摘要使用提升审计唯一约束保证幂等。
 - V7审核任务保存`draft_revision_no`和`content_hash`。审核或发布发现绑定过期时返回409，不允许旧结论覆盖当前正文。
 - V7发布事务按草稿、主档、当前版本、审核任务的顺序加锁。发布版本不填伪造的L1、L2、L3或V3投影，成功响应返回`process_version_id`。
-- `GET /api/process-design/versions/:processVersionId/content`只从不可变正式版本读取完整正文，并对V7重新计算摘要；正式下游不得读取预览案例。
+- `GET /api/process-design/versions/:processVersionId/content`只从不可变正式版本读取完整正文，并对原生正文重新计算摘要；正式下游不得读取预览案例。
 - 3001与3000共同调用仓库内无网络、数据库和浏览器副作用的V7校验入口；预览上传、后续提升和发布三个信任边界都必须重新验证。
 
-### 9.4 V7工作台与编辑会话
+### 9.4 原生流程工作台与编辑会话
 
 - `GET /api/role-workbench`复用案例、当前核对项、提升记录、正式草稿和审核任务进行只读聚合。预览核对、退回修改、范围核对、提升、提交、正式审核和待发布任务使用原对象ID、修订和内容摘要，不新增任务表或通用任务引擎。
 - 可变MySQL工作台响应不再使用15秒缓存，并返回`Cache-Control: no-store`；静态角色说明仍可缓存。办理完成的事项在下一次读取消失，受修订影响的核对事项重新出现；范围决定只有尚未解除的卡口进入待办。
@@ -238,12 +220,12 @@ MDM工作组组长只能在卡口通过后发布，不能以角色权限跳过�
 
 ### 9.5 流程版本后续数据治理
 
-- `PROCESS_DATA_GOVERNANCE_ENABLED`默认关闭。旧`PROCESS_DATA_GOVERNANCE_TRIAL_PROCESS_VERSION_ID`不再读取，`configured_process_version_id`兼容返回`null`、`scope_mode=published_v7_versions`；工作包固定绑定用户选择的已发布原生V7版本和来源摘要。
+- `PROCESS_DATA_GOVERNANCE_ENABLED`默认关闭。旧`PROCESS_DATA_GOVERNANCE_TRIAL_PROCESS_VERSION_ID`不再读取，`configured_process_version_id`兼容返回`null`、`scope_mode=published_v7_versions`；工作包固定绑定用户选择的已发布原生V8或受支持V7版本和来源摘要。
 - `PROCESS_DATA_GOVERNANCE_READ_ONLY`缺省或`0`保留原办理模式；`1`关闭所有工作包写入口，仅按原权限查阅准确版本的`completed`工作包及定向事实。总开关关闭仍返回不可用；只读参数非法返回`PROCESS_DATA_GOVERNANCE_READ_ONLY_INVALID`，ready为不可用。该配置不改变表结构、既有数据、角色、审批状态或默认启用策略。
 - `/status`及工作台`feature`增量返回`read_only`布尔值。只读模式的`allowed_actions`只有`view`，工作包待办为空；工作台仅返回已完成包，部门事实列表包含该包中本部门已关闭的记录。未完成详情返回`PROCESS_DATA_GOVERNANCE_COMPLETED_ONLY`；所有写方法返回409及`PROCESS_DATA_GOVERNANCE_READ_ONLY`，在路由和每个仓储写入口操作数据库前拒绝，包含发布事务调用的创建任务函数。
 - 只读页面显示已存治理结论、判断依据、责任部门和统一对象标识；不生成编辑控件，不修改空值或历史内容。正式版本正文仍复用`GET /api/process-design/versions/:processVersionId/content`及原有权限、摘要校验；部门收到事实问题不自动取得完整正式版本或MDM工作包权限。结束方案另须关闭V7写开关，该参数不是全平台只读开关。
-- 流程发布与迁移不自动创建任务或工作包；具有所需权限的`mdm_lead`在页面选择任一已发布原生V7版本并主动建包，包括历史已发布版本。既有包保持原版本、摘要、标识和记录，不合并、重建或回填。
-- 候选规则只读取V7结构，使用单值`behavior_links[].operation`。每个已声明字段进入关键字段判断；字段、数据流或生命周期范围为空时生成范围缺失待定项。
+- 流程发布与迁移不自动创建任务或工作包；具有所需权限的`mdm_lead`在页面选择任一已发布原生V8或受支持V7版本并主动建包，包括历史已发布版本。既有包保持原版本、摘要、标识和记录，不合并、重建或回填。
+- 候选规则只读取受支持原生版本的既有结构，使用单值`behavior_links[].operation`。每个已声明字段进入关键字段判断；字段、数据流或生命周期范围为空时生成范围缺失待定项。
 - 每次写入在工作包行锁和`expected_revision`检查后，再复核正式版本内容摘要。来源变化、规则版本变化或并发修订冲突均停止写入。
 - `admin`只读；MDM专业治理要求`mdm_lead`及固定权限；业务答复要求目标部门的固定部门角色和权限。
 - 前端待办模式只渲染1至3个动作。工作包和事实问题使用全屏蒙版弹窗，并对关闭、切换、地址变化和离页执行未提交修改保护。
@@ -311,3 +293,7 @@ npm run service:check
 浏览器仅采用Edge100%、1699×828 CSS内容可视区，按当前入口核对登录、首次改密、管理员账号管理、只读角色责任页、角色可见标签、原生V7/V8案例与修订上传、双方核对、正式办理及角色范围。旧四工作区、承接故事链和旧冲突办理不再作为现行验收入口。3001单独核对首页与`/api/health`实际版本，保持独立运行。
 
 第05阶段的`test:launch-stage05`在净化环境运行相关回归，再新建隔离MySQL和Edge合成办理验证。`test:stage05-mysql-isolated`与`test:stage05-browser`可定向复验。实际证据及人工IME、真实历史数据和业务验收的限制见[整改与证据第11节](../../docs/plans/2026-09-09-mdm-3000-launch/02-整改与证据.md#11-第05阶段实际整改与证据2026-09-10)。
+
+## 历史追溯
+
+整理前原文、阶段记录和已废止说明保留在[历史快照](../../docs/archives/2026-10-09-leaf-docs/apps/mdm-platform/Tech-Spec.md.before.txt)。仅在核对决策依据、兼容或历史问题时读取；它不覆盖本文的当前说明。

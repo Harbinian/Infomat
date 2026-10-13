@@ -223,7 +223,7 @@ async function main() {
       checks.push('real Edge 100% 1699x828: department overview pagination, explicit discard before transfer, editor focus, cancelled navigation preserves input, committed transfer with lost response reconciles once, 401/403/409/503 retain and reconcile inputs, same-person reauthentication, roleless compiler records reply, no page errors/desktop overflow');
     } finally { await browser.close(); }
     fs.writeFileSync(path.join(output, 'results.json'), JSON.stringify({ checks, scope: 'real isolated MySQL/HTTP/Edge; synthetic only; not formal enablement or business acceptance' }, null, 2));
-  }, { authoring: true, evidenceDir: output });
+  }, { authoring: true, randomDatabase: true, evidenceDir: output });
   console.log('V7_AUTHORING_CHECKS_PASSED ' + checks.length);
 }
 main().catch(e => { fs.writeFileSync(path.join(output, 'failure.json'), JSON.stringify({ message: e.message, stack: e.stack, inspection: e.inspection }, null, 2)); console.error(e); process.exitCode = 1; });

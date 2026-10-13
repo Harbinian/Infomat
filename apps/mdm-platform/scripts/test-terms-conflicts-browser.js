@@ -202,7 +202,7 @@ async function main() {
       const makeDraft = async name => { await button('新增术语').click(); await page.getByLabel('术语名称', { exact:true }).fill(name); await page.getByLabel('所属业务流程', { exact:true }).selectOption('501'); };
       const cancelDraft = async () => { page.once('dialog',d=>d.accept()); await button('取消本次办理').click(); };
       await makeDraft('合成异常保留');
-      for (const status of [403,409]) { await page.route('**/api/terminology',route=>route.fulfill({status,json:{}}),{times:1}); await button('确认提交').click(); await page.getByText('术语读取或办理未完成',{exact:true}).waitFor(); assert.equal(await page.getByLabel('术语名称',{exact:true}).inputValue(),'合成异常保留'); }
+      for (const status of [403,409]) { await page.route('**/api/terminology',route=>route.fulfill({status,json:{}}),{times:1}); await button('确认提交').click(); await page.getByText('术语读取或办理未完成',{exact:true}).waitFor(); assert.equal(await page.getByLabel('术语名称',{exact:true}).inputValue(),'合成异常保留'); if(status===409) {assert.equal(await button('确认提交').isDisabled(),true);await cancelDraft();await makeDraft('合成异常保留');} }
       await confirmAction(); await termsReady();
       const [createdRows]=await pool.execute("SELECT id FROM terminology_terms WHERE term='合成异常保留'"); const editedId=createdRows[0].id;
       await button('查看术语 '+editedId).click(); await button('修改术语').click(); await page.getByLabel('定义',{exact:true}).fill('必须保留的并发输入');
@@ -230,6 +230,6 @@ async function main() {
       fs.writeFileSync(path.join(output, 'results.json'), JSON.stringify({ checks, pageErrors, unexpectedConsole }, null, 2));
     } catch (error) { fs.writeFileSync(path.join(output, 'failure.json'), JSON.stringify({ message: error.message, stack: error.stack, checks, pageErrors }, null, 2)); await page.screenshot({ path: path.join(output, 'failure.png'), fullPage: true, timeout:5000 }).catch(() => {}); throw error; }
     finally { await browser.close(); }
-  }, { evidenceDir: output, previewOnly: true });
+  }, { evidenceDir: output, previewOnly: true, randomDatabase:true });
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });

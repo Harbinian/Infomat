@@ -18,6 +18,7 @@ async function main() {
       const normalizedSql = sql.replace(/\s+/g, ' ').trim();
 
       if (normalizedSql.startsWith('CREATE TABLE')) return [[], undefined];
+      if (normalizedSql.includes('AS revision FROM mdm_version_log')) return [[{revision:'0'}], undefined];
 
       if (normalizedSql.includes('FROM terminology_terms')) {
         return [[

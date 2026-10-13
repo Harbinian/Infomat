@@ -1,0 +1,1465 @@
+{
+  "schema": "infomat-3000-launch-facts-v1",
+  "evidenceVersion": "20261009-07",
+  "analysisAt": "2026-10-09T09:26:17.248828+08:00",
+  "tracking": "P25 / p00-20260916-120151",
+  "authority": "当前用户指令、指定外部原始材料和有权主体确认；docs仅为技术入口/历史决定追溯，不是业务真源。原对话未重放，引用历史用户答复不新增授权。",
+  "scopeStatus": "有限核查骨架；保留D00-01与OFF前提，未替用户批准当前材料/角色/启用/放行",
+  "canonicalPath": "docs/plans/2026-09-09-mdm-3000-launch/3000-launch-facts.json",
+  "baseline": {
+    "checkedAt": "2026-10-09T09:21:05.639702+08:00",
+    "branch": "codex/single-process-authoring-skill",
+    "head": "e96a220ed6c2308fc7a3d9a253c6301672109ab1",
+    "staged": "D\tapps/structured-output-service/x.textContent.trim()",
+    "fingerprintCount": 795,
+    "workingTreeRuntimeDigest": "0afae65bef50ac2f8d1b606929f5b1b449a4f85d2e04a7aa2697928a97024d8b",
+    "testedRuntimeDigest": "05c460ec109c439f381cff2f078bdb19d3a4cb328a4fcaf1913ef11d3d72b02c",
+    "testedRuntimeDigestMatches": false,
+    "deployedRuntimeDigest": "4a17f6dabe8cf468cbe821b7b6ce02582ca33a301fb4ede592c3c636838c2684",
+    "baselineEvidence": "artifacts/infomat-code-map-20261008/launch-review-20261009/baseline.json",
+    "note": "包含未提交与未跟踪代码，HEAD不代表完整工作区；摘要只覆盖runtimeVersion约定运行资产，不覆盖全部前端源码/测试/资料",
+    "initialWorkingTreeRuntimeDigest": "05c460ec109c439f381cff2f078bdb19d3a4cb328a4fcaf1913ef11d3d72b02c"
+  },
+  "entries": {
+    "business": "当前用户指令＋用户指定外部原始材料＋有权确认；历史决定索引见本数据decisions",
+    "implementation": "apps/mdm-platform/README.md；模块符号及指纹见steps.codeRefs",
+    "deployment": "apps/mdm-platform/DOCKER.md（维护合同）＋本轮runtime-readonly.json（有时点状态）",
+    "history": "artifacts/mdm-3000-upgrade-20260916/p00-20260916-120151/contract.md / execution.md；旧阶段保留"
+  },
+  "steps": [
+    {
+      "id": "L01",
+      "title": "导入指定流程材料",
+      "objective": "用户从3001主动下载未审核JSON，再手动上传3000；保留来源和修订",
+      "ruleSources": [
+        "rules-current",
+        "decision-material",
+        "contract-v8"
+      ],
+      "page": "apps/mdm-platform/frontend/src/ProcessPreview.jsx",
+      "interfaces": [
+        "POST /api/process-v7-preview/cases"
+      ],
+      "codeRefs": [
+        {
+          "path": "apps/mdm-platform/frontend/src/ProcessPreview.jsx",
+          "symbol": "const ROOT",
+          "line": 4,
+          "sha256": "dac4fd4e154fd2b15292fb8033f07e7c4086400ff2055be9312e3cbd1266180b"
+        },
+        {
+          "path": "apps/mdm-platform/server/routes/processPreviewReview.js",
+          "symbol": "router.post('/cases'",
+          "line": 381,
+          "sha256": "b38a4da9d1a541c589fc143113b2120f7e79fea0ec3c74f9899f83ade0ec1a20"
+        },
+        {
+          "path": "apps/mdm-platform/server/processPreviewReview.js",
+          "symbol": "function validateAndProjectProcess",
+          "line": 130,
+          "sha256": "537069817b1da63ad8c7c007104e862033146a04ccb2d3fc499e8530865a7215"
+        },
+        {
+          "path": "apps/mdm-platform/server/processPreviewReviewRepository.js",
+          "symbol": "function makeProcessPreviewReviewRepository",
+          "line": 538,
+          "sha256": "bcf86948d93383c87183b2527d699ab736de7bf275f52ac3b7bf1eecd86fe14f"
+        },
+        {
+          "path": "apps/mdm-platform/server/processNativeFormats.js",
+          "symbol": "PRIMARY_SCHEMA",
+          "line": 2,
+          "sha256": "8798013aa7f57f48f74a444c6e0b77d9f880024f334611c569d9e2918faf5fa6"
+        }
+      ],
+      "dataObjects": [
+        "process_v7_preview_cases",
+        "process_v7_preview_revisions",
+        "schema_version",
+        "process_ref",
+        "content_hash"
+      ],
+      "implementation": {
+        "status": "源码已核对",
+        "summary": "列明页面、路由及核心处理符号存在；实现不赋予业务权责",
+        "evidence": [],
+        "workspaceDigest": "05c460ec109c439f381cff2f078bdb19d3a4cb328a4fcaf1913ef11d3d72b02c"
+      },
+      "test": {
+        "status": "未核实当前变更版本（历史技术通过）",
+        "summary": "本轮只核对历史结果；并发源码变化后的当前运行版本未重验",
+        "evidence": [
+          "current-test",
+          "current-test-health",
+          "test-import"
+        ],
+        "input": "自有隔离MySQL、合成V8/V7及合成独立身份；无真实材料",
+        "expected": "合成V8和V7可进入预览；不支持格式拒绝；预览不产生正式版本；原正文/ID/摘要保留",
+        "result": "历史results.passed=true；受测运行摘要05c460ec，当前变化后摘要不同，未重跑该变化版本",
+        "date": "2026-10-09（证据文件时间；本轮未重跑）",
+        "version": "05c460ec109c439f381cff2f078bdb19d3a4cb328a4fcaf1913ef11d3d72b02c",
+        "uncovered": "真实材料、实际角色、中文IME及目标启用尚未核实；并发定义/映射/权限关联变更的适用回归"
+      },
+      "deployment": {
+        "status": "运行镜像已核实；此步骤未启用验收",
+        "summary": "Docker localhost:3000健康/就绪200；部署摘要与当前工作区不同。预览关闭已核实，其余开关仅有历史关闭记录",
+        "evidence": [
+          "deployment",
+          "history-p25"
+        ],
+        "environment": "本机Docker；公司内网HTTPS目标未验证",
+        "version": "4a17f6dabe8cf468cbe821b7b6ce02582ca33a301fb4ede592c3c636838c2684",
+        "checkedAt": "2026-10-09T09:21:07.428121+08:00"
+      },
+      "business": {
+        "status": "未核实",
+        "summary": "没有本轮真实角色、指定材料、该步操作结果与有权主体确认",
+        "evidence": [
+          "decision-endpoint",
+          "decision-people"
+        ],
+        "actualRole": "由用户在3000安排；当前未读取真实身份",
+        "material": "采购到货验收及结算流程是已同意核对的候选；当前有效输入未绑定",
+        "result": "未取得",
+        "confirmingAuthority": "待在范围/放行记录落实，不能从协调人或代码权限推定"
+      },
+      "remaining": "真实材料、实际角色、中文IME及目标启用尚未核实",
+      "nextAction": "在准确目标/版本及获准启用后，按该步用例由实际主体操作并留证；本轮只准备用例",
+      "closeWhen": "独立四类证据各有结果；当前版本适用技术检查通过，真实角色与材料操作结果经有权主体确认"
+    },
+    {
+      "id": "L02",
+      "title": "部门事实核对",
+      "objective": "各部门确认本部门事实；未定部门、缺失依据与旧摘要不得被默认通过",
+      "ruleSources": [
+        "rules-current",
+        "decision-finance",
+        "decision-quality",
+        "decision-branches"
+      ],
+      "page": "apps/mdm-platform/frontend/src/ProcessPreview.jsx",
+      "interfaces": [
+        "POST /api/process-v7-preview/items/:id/decision",
+        "POST /api/process-v7-preview/cases/:id/scope-decision"
+      ],
+      "codeRefs": [
+        {
+          "path": "apps/mdm-platform/server/routes/processPreviewReview.js",
+          "symbol": "router.post('/items/:id/decision'",
+          "line": 778,
+          "sha256": "b38a4da9d1a541c589fc143113b2120f7e79fea0ec3c74f9899f83ade0ec1a20"
+        },
+        {
+          "path": "apps/mdm-platform/server/processPreviewReviewRepository.js",
+          "symbol": "makeProcessPreviewReviewRepository",
+          "line": 538,
+          "sha256": "bcf86948d93383c87183b2527d699ab736de7bf275f52ac3b7bf1eecd86fe14f"
+        },
+        {
+          "path": "apps/mdm-platform/server/processPreviewReview.js",
+          "symbol": "canonicalReviewValue",
+          "line": 46,
+          "sha256": "537069817b1da63ad8c7c007104e862033146a04ccb2d3fc499e8530865a7215"
+        }
+      ],
+      "dataObjects": [
+        "process_v7_preview_review_items",
+        "process_v7_preview_review_items.id",
+        "item_digest",
+        "origin_department_id",
+        "target_department_id"
+      ],
+      "implementation": {
+        "status": "源码已核对",
+        "summary": "列明页面、路由及核心处理符号存在；实现不赋予业务权责",
+        "evidence": [],
+        "workspaceDigest": "05c460ec109c439f381cff2f078bdb19d3a4cb328a4fcaf1913ef11d3d72b02c"
+      },
+      "test": {
+        "status": "未核实当前变更版本（历史技术通过）",
+        "summary": "本轮只核对历史结果；并发源码变化后的当前运行版本未重验",
+        "evidence": [
+          "current-test",
+          "current-test-scope",
+          "test-import"
+        ],
+        "input": "自有隔离MySQL、合成V8/V7及合成独立身份；无真实材料",
+        "expected": "跨部门/管理员写入拒绝；当前资格与固定修订/摘要保持；退回不等于通过",
+        "result": "历史results.passed=true；受测运行摘要05c460ec，当前变化后摘要不同，未重跑该变化版本",
+        "date": "2026-10-09（证据文件时间；本轮未重跑）",
+        "version": "05c460ec109c439f381cff2f078bdb19d3a4cb328a4fcaf1913ef11d3d72b02c",
+        "uncovered": "真实材料、实际角色、中文IME及目标启用尚未核实；并发定义/映射/权限关联变更的适用回归"
+      },
+      "deployment": {
+        "status": "运行镜像已核实；此步骤未启用验收",
+        "summary": "Docker localhost:3000健康/就绪200；部署摘要与当前工作区不同。预览关闭已核实，其余开关仅有历史关闭记录",
+        "evidence": [
+          "deployment",
+          "history-p25"
+        ],
+        "environment": "本机Docker；公司内网HTTPS目标未验证",
+        "version": "4a17f6dabe8cf468cbe821b7b6ce02582ca33a301fb4ede592c3c636838c2684",
+        "checkedAt": "2026-10-09T09:21:07.428121+08:00"
+      },
+      "business": {
+        "status": "未核实",
+        "summary": "没有本轮真实角色、指定材料、该步操作结果与有权主体确认",
+        "evidence": [
+          "decision-endpoint",
+          "decision-people"
+        ],
+        "actualRole": "由用户在3000安排；当前未读取真实身份",
+        "material": "采购到货验收及结算流程是已同意核对的候选；当前有效输入未绑定",
+        "result": "未取得",
+        "confirmingAuthority": "待在范围/放行记录落实，不能从协调人或代码权限推定"
+      },
+      "remaining": "真实材料、实际角色、中文IME及目标启用尚未核实",
+      "nextAction": "在准确目标/版本及获准启用后，按该步用例由实际主体操作并留证；本轮只准备用例",
+      "closeWhen": "独立四类证据各有结果；当前版本适用技术检查通过，真实角色与材料操作结果经有权主体确认"
+    },
+    {
+      "id": "L03",
+      "title": "退回修订与编制答复",
+      "objective": "退回后回3001修订并上传原案例；编制答复、办公室任务完成和问题关闭分别成立",
+      "ruleSources": [
+        "rules-current",
+        "decision-interview",
+        "decision-people"
+      ],
+      "page": "apps/mdm-platform/frontend/src/ProcessPreview.jsx",
+      "interfaces": [
+        "POST /api/process-v7-preview/cases/:id/revisions",
+        "POST /api/process-v7-preview/cases/:id/authoring-issues/:issueId/reply"
+      ],
+      "codeRefs": [
+        {
+          "path": "apps/mdm-platform/server/routes/processPreviewReview.js",
+          "symbol": "router.post('/cases/:id/revisions'",
+          "line": 621,
+          "sha256": "b38a4da9d1a541c589fc143113b2120f7e79fea0ec3c74f9899f83ade0ec1a20"
+        },
+        {
+          "path": "apps/mdm-platform/server/processV7AuthoringIssues.js",
+          "symbol": "module.exports",
+          "line": 142,
+          "sha256": "3239831469425bfa166374939c520b77a575c8a70417efacffd951274b13f7d1"
+        },
+        {
+          "path": "apps/mdm-platform/server/processV7Authoring.js",
+          "symbol": "module.exports",
+          "line": 136,
+          "sha256": "dc88f9a53ed4733a31a5b2fa60aace0e0272e4e5095ff95c9ee2b3351674533d"
+        }
+      ],
+      "dataObjects": [
+        "process_v7_preview_revisions",
+        "process_v7_authoring_records",
+        "issue_id",
+        "process_governance_issue_events"
+      ],
+      "implementation": {
+        "status": "源码已核对",
+        "summary": "列明页面、路由及核心处理符号存在；实现不赋予业务权责",
+        "evidence": [],
+        "workspaceDigest": "05c460ec109c439f381cff2f078bdb19d3a4cb328a4fcaf1913ef11d3d72b02c"
+      },
+      "test": {
+        "status": "未核实当前变更版本（历史技术通过）",
+        "summary": "本轮只核对历史结果；并发源码变化后的当前运行版本未重验",
+        "evidence": [
+          "current-test",
+          "test-issues"
+        ],
+        "input": "自有隔离MySQL、合成V8/V7及合成独立身份；无真实材料",
+        "expected": "新修订留存旧正文/依据；合成编制人答复后问题仍待独立核验；办公室成员完成任务不自动关闭问题",
+        "result": "历史results.passed=true；受测运行摘要05c460ec，当前变化后摘要不同，未重跑该变化版本",
+        "date": "2026-10-09（证据文件时间；本轮未重跑）",
+        "version": "05c460ec109c439f381cff2f078bdb19d3a4cb328a4fcaf1913ef11d3d72b02c",
+        "uncovered": "真实退回修订、IME、输入保护，以及首批是否用办公室/分析问题未核实；并发定义/映射/权限关联变更的适用回归"
+      },
+      "deployment": {
+        "status": "运行镜像已核实；此步骤未启用验收",
+        "summary": "Docker localhost:3000健康/就绪200；部署摘要与当前工作区不同。预览关闭已核实，其余开关仅有历史关闭记录",
+        "evidence": [
+          "deployment",
+          "history-p25"
+        ],
+        "environment": "本机Docker；公司内网HTTPS目标未验证",
+        "version": "4a17f6dabe8cf468cbe821b7b6ce02582ca33a301fb4ede592c3c636838c2684",
+        "checkedAt": "2026-10-09T09:21:07.428121+08:00"
+      },
+      "business": {
+        "status": "未核实",
+        "summary": "没有本轮真实角色、指定材料、该步操作结果与有权主体确认",
+        "evidence": [
+          "decision-endpoint",
+          "decision-people"
+        ],
+        "actualRole": "由用户在3000安排；当前未读取真实身份",
+        "material": "采购到货验收及结算流程是已同意核对的候选；当前有效输入未绑定",
+        "result": "未取得",
+        "confirmingAuthority": "待在范围/放行记录落实，不能从协调人或代码权限推定"
+      },
+      "remaining": "真实退回修订、IME、输入保护，以及首批是否用办公室/分析问题未核实",
+      "nextAction": "在准确目标/版本及获准启用后，按该步用例由实际主体操作并留证；本轮只准备用例",
+      "closeWhen": "独立四类证据各有结果；当前版本适用技术检查通过，真实角色与材料操作结果经有权主体确认"
+    },
+    {
+      "id": "L04",
+      "title": "正式审核当前修订",
+      "objective": "只对当前修订与正文摘要由有权主体审核；管理员只读，职责分离",
+      "ruleSources": [
+        "rules-current",
+        "decision-people"
+      ],
+      "page": "apps/mdm-platform/frontend/src/ProcessPreview.jsx",
+      "interfaces": [
+        "POST /api/process-v7-preview/cases/:id/promote",
+        "POST /api/process-design/drafts/:id/submit",
+        "POST /api/process-design/review-tasks/:id/decision"
+      ],
+      "codeRefs": [
+        {
+          "path": "apps/mdm-platform/server/routes/processPreviewReview.js",
+          "symbol": "router.post('/cases/:id/promote'",
+          "line": 735,
+          "sha256": "b38a4da9d1a541c589fc143113b2120f7e79fea0ec3c74f9899f83ade0ec1a20"
+        },
+        {
+          "path": "apps/mdm-platform/server/routes/processDesignMysql.js",
+          "symbol": "router.post('/review-tasks/:id/decision'",
+          "line": 292,
+          "sha256": "037a1a5542a188e8a9681c65c3900e1f3cb637839ab654cf32c5aa3b3128f955"
+        },
+        {
+          "path": "apps/mdm-platform/server/processDesignApplication.js",
+          "symbol": "createProcessDesignApplication",
+          "line": 4,
+          "sha256": "2ae7a726f3756430bb0dff71ee72d6f7a98379e4d2f3b65ade9c8c0b2f1cfe66"
+        },
+        {
+          "path": "apps/mdm-platform/server/processDesignMysqlRepository.js",
+          "symbol": "module.exports",
+          "line": 750,
+          "sha256": "ce9adbce9fda8a688c2e7fa3ba0f552f87d708b87350f84d821e7b1846fadb0c"
+        }
+      ],
+      "dataObjects": [
+        "process_design_drafts",
+        "process_design_review_tasks",
+        "draft_revision_no",
+        "content_hash"
+      ],
+      "implementation": {
+        "status": "源码已核对",
+        "summary": "列明页面、路由及核心处理符号存在；实现不赋予业务权责",
+        "evidence": [],
+        "workspaceDigest": "05c460ec109c439f381cff2f078bdb19d3a4cb328a4fcaf1913ef11d3d72b02c"
+      },
+      "test": {
+        "status": "未核实当前变更版本（历史技术通过）",
+        "summary": "本轮只核对历史结果；并发源码变化后的当前运行版本未重验",
+        "evidence": [
+          "current-test",
+          "current-test-health",
+          "test-import"
+        ],
+        "input": "自有隔离MySQL、合成V8/V7及合成独立身份；无真实材料",
+        "expected": "合成联系人无提交权403；独立审核主体审核当前版本；过期摘要/撤权拒绝；正式审核与预览核对有区分",
+        "result": "历史results.passed=true；受测运行摘要05c460ec，当前变化后摘要不同，未重跑该变化版本",
+        "date": "2026-10-09（证据文件时间；本轮未重跑）",
+        "version": "05c460ec109c439f381cff2f078bdb19d3a4cb328a4fcaf1913ef11d3d72b02c",
+        "uncovered": "真实材料、实际角色、中文IME及目标启用尚未核实；并发定义/映射/权限关联变更的适用回归"
+      },
+      "deployment": {
+        "status": "运行镜像已核实；此步骤未启用验收",
+        "summary": "Docker localhost:3000健康/就绪200；部署摘要与当前工作区不同。预览关闭已核实，其余开关仅有历史关闭记录",
+        "evidence": [
+          "deployment",
+          "history-p25"
+        ],
+        "environment": "本机Docker；公司内网HTTPS目标未验证",
+        "version": "4a17f6dabe8cf468cbe821b7b6ce02582ca33a301fb4ede592c3c636838c2684",
+        "checkedAt": "2026-10-09T09:21:07.428121+08:00"
+      },
+      "business": {
+        "status": "未核实",
+        "summary": "没有本轮真实角色、指定材料、该步操作结果与有权主体确认",
+        "evidence": [
+          "decision-endpoint",
+          "decision-people"
+        ],
+        "actualRole": "由用户在3000安排；当前未读取真实身份",
+        "material": "采购到货验收及结算流程是已同意核对的候选；当前有效输入未绑定",
+        "result": "未取得",
+        "confirmingAuthority": "待在范围/放行记录落实，不能从协调人或代码权限推定"
+      },
+      "remaining": "真实材料、实际角色、中文IME及目标启用尚未核实",
+      "nextAction": "在准确目标/版本及获准启用后，按该步用例由实际主体操作并留证；本轮只准备用例",
+      "closeWhen": "独立四类证据各有结果；当前版本适用技术检查通过，真实角色与材料操作结果经有权主体确认"
+    },
+    {
+      "id": "L05",
+      "title": "正式发布不可变版本",
+      "objective": "审核通过后有权发布；下游绑定固定process_version_id及来源摘要",
+      "ruleSources": [
+        "rules-current",
+        "decision-endpoint"
+      ],
+      "page": "apps/mdm-platform/frontend/src/ProcessPreview.jsx",
+      "interfaces": [
+        "POST /api/process-design/drafts/:id/publish",
+        "GET /api/process-design/versions/:processVersionId/content"
+      ],
+      "codeRefs": [
+        {
+          "path": "apps/mdm-platform/server/routes/processDesignMysql.js",
+          "symbol": "router.post('/drafts/:id/publish'",
+          "line": 312,
+          "sha256": "037a1a5542a188e8a9681c65c3900e1f3cb637839ab654cf32c5aa3b3128f955"
+        },
+        {
+          "path": "apps/mdm-platform/server/processDesignApplication.js",
+          "symbol": "async publish",
+          "line": 159,
+          "sha256": "2ae7a726f3756430bb0dff71ee72d6f7a98379e4d2f3b65ade9c8c0b2f1cfe66"
+        },
+        {
+          "path": "apps/mdm-platform/server/v7FixedSource.js",
+          "symbol": "module.exports",
+          "line": 33,
+          "sha256": "3de56b4d34db6f46586b0807cce27b265887522b33bd7eb71f5d23746ce86731"
+        }
+      ],
+      "dataObjects": [
+        "process_design_versions",
+        "process_version_id",
+        "published",
+        "source_content_hash"
+      ],
+      "implementation": {
+        "status": "源码已核对",
+        "summary": "列明页面、路由及核心处理符号存在；实现不赋予业务权责",
+        "evidence": [],
+        "workspaceDigest": "05c460ec109c439f381cff2f078bdb19d3a4cb328a4fcaf1913ef11d3d72b02c"
+      },
+      "test": {
+        "status": "未核实当前变更版本（历史技术通过）",
+        "summary": "本轮只核对历史结果；并发源码变化后的当前运行版本未重验",
+        "evidence": [
+          "current-test",
+          "current-test-health",
+          "test-import"
+        ],
+        "input": "自有隔离MySQL、合成V8/V7及合成独立身份；无真实材料",
+        "expected": "合成编制人发布403，独立有权主体发布；正式版本读回正文与摘要一致，下游来源变化拒绝新写",
+        "result": "历史results.passed=true；受测运行摘要05c460ec，当前变化后摘要不同，未重跑该变化版本",
+        "date": "2026-10-09（证据文件时间；本轮未重跑）",
+        "version": "05c460ec109c439f381cff2f078bdb19d3a4cb328a4fcaf1913ef11d3d72b02c",
+        "uncovered": "真实材料、实际角色、中文IME及目标启用尚未核实；并发定义/映射/权限关联变更的适用回归"
+      },
+      "deployment": {
+        "status": "运行镜像已核实；此步骤未启用验收",
+        "summary": "Docker localhost:3000健康/就绪200；部署摘要与当前工作区不同。预览关闭已核实，其余开关仅有历史关闭记录",
+        "evidence": [
+          "deployment",
+          "history-p25"
+        ],
+        "environment": "本机Docker；公司内网HTTPS目标未验证",
+        "version": "4a17f6dabe8cf468cbe821b7b6ce02582ca33a301fb4ede592c3c636838c2684",
+        "checkedAt": "2026-10-09T09:21:07.428121+08:00"
+      },
+      "business": {
+        "status": "未核实",
+        "summary": "没有本轮真实角色、指定材料、该步操作结果与有权主体确认",
+        "evidence": [
+          "decision-endpoint",
+          "decision-people"
+        ],
+        "actualRole": "由用户在3000安排；当前未读取真实身份",
+        "material": "采购到货验收及结算流程是已同意核对的候选；当前有效输入未绑定",
+        "result": "未取得",
+        "confirmingAuthority": "待在范围/放行记录落实，不能从协调人或代码权限推定"
+      },
+      "remaining": "真实材料、实际角色、中文IME及目标启用尚未核实",
+      "nextAction": "在准确目标/版本及获准启用后，按该步用例由实际主体操作并留证；本轮只准备用例",
+      "closeWhen": "独立四类证据各有结果；当前版本适用技术检查通过，真实角色与材料操作结果经有权主体确认"
+    },
+    {
+      "id": "L06",
+      "title": "主动建立固定版本工作包",
+      "objective": "MDM主动选择已发布版本建立工作包；发布不自动回填，也不自动形成正式主数据结论",
+      "ruleSources": [
+        "rules-current",
+        "decision-endpoint"
+      ],
+      "page": "apps/mdm-platform/frontend/src/DataGovernance.jsx",
+      "interfaces": [
+        "POST /api/process-data-governance/creation-tasks/reconcile",
+        "GET /api/process-data-governance/work-packages/:id"
+      ],
+      "codeRefs": [
+        {
+          "path": "apps/mdm-platform/server/routes/processDataGovernance.js",
+          "symbol": "router.post('/creation-tasks/reconcile'",
+          "line": 275,
+          "sha256": "5e5ad8622735404424b791e70200b4a945fa15d152a65c95f4074df9952d496a"
+        },
+        {
+          "path": "apps/mdm-platform/server/processDataGovernanceRepository.js",
+          "symbol": "async function materializeCreationTask",
+          "line": 344,
+          "sha256": "35d3495f7dfb53ca4105b895be2d1bd4154475cc19e5ac1d736bd614b708c950"
+        },
+        {
+          "path": "apps/mdm-platform/server/processDataGovernance.js",
+          "symbol": "function buildGovernanceCandidates",
+          "line": 55,
+          "sha256": "c3680f8410494cf97831db844de3fefb1086bae1e3093e6cf4f81252526d1f1d"
+        }
+      ],
+      "dataObjects": [
+        "process_data_governance_work_packages",
+        "process_data_governance_creation_tasks",
+        "process_version_id"
+      ],
+      "implementation": {
+        "status": "源码已核对",
+        "summary": "列明页面、路由及核心处理符号存在；实现不赋予业务权责",
+        "evidence": [],
+        "workspaceDigest": "05c460ec109c439f381cff2f078bdb19d3a4cb328a4fcaf1913ef11d3d72b02c"
+      },
+      "test": {
+        "status": "未核实当前变更版本（历史技术通过）",
+        "summary": "本轮只核对历史结果；并发源码变化后的当前运行版本未重验",
+        "evidence": [
+          "current-test",
+          "test-package"
+        ],
+        "input": "自有隔离MySQL、合成V8/V7及合成独立身份；无真实材料",
+        "expected": "合成V8发布后不会自动建包；显式建立可重试；管理员只读；固定来源不变",
+        "result": "历史results.passed=true；受测运行摘要05c460ec，当前变化后摘要不同，未重跑该变化版本",
+        "date": "2026-10-09（证据文件时间；本轮未重跑）",
+        "version": "05c460ec109c439f381cff2f078bdb19d3a4cb328a4fcaf1913ef11d3d72b02c",
+        "uncovered": "真实材料、实际角色、中文IME及目标启用尚未核实；并发定义/映射/权限关联变更的适用回归"
+      },
+      "deployment": {
+        "status": "运行镜像已核实；此步骤未启用验收",
+        "summary": "Docker localhost:3000健康/就绪200；部署摘要与当前工作区不同。预览关闭已核实，其余开关仅有历史关闭记录",
+        "evidence": [
+          "deployment",
+          "history-p25"
+        ],
+        "environment": "本机Docker；公司内网HTTPS目标未验证",
+        "version": "4a17f6dabe8cf468cbe821b7b6ce02582ca33a301fb4ede592c3c636838c2684",
+        "checkedAt": "2026-10-09T09:21:07.428121+08:00"
+      },
+      "business": {
+        "status": "未核实",
+        "summary": "没有本轮真实角色、指定材料、该步操作结果与有权主体确认",
+        "evidence": [
+          "decision-endpoint",
+          "decision-people"
+        ],
+        "actualRole": "由用户在3000安排；当前未读取真实身份",
+        "material": "采购到货验收及结算流程是已同意核对的候选；当前有效输入未绑定",
+        "result": "未取得",
+        "confirmingAuthority": "待在范围/放行记录落实，不能从协调人或代码权限推定"
+      },
+      "remaining": "真实材料、实际角色、中文IME及目标启用尚未核实",
+      "nextAction": "在准确目标/版本及获准启用后，按该步用例由实际主体操作并留证；本轮只准备用例",
+      "closeWhen": "独立四类证据各有结果；当前版本适用技术检查通过，真实角色与材料操作结果经有权主体确认"
+    },
+    {
+      "id": "L07",
+      "title": "事实补充与治理复核",
+      "objective": "业务人员确认事实，MDM形成治理判断；未知内容不补造、候选不当成正式认定",
+      "ruleSources": [
+        "rules-current",
+        "decision-endpoint",
+        "decision-quality"
+      ],
+      "page": "apps/mdm-platform/frontend/src/DataGovernance.jsx",
+      "interfaces": [
+        "POST /api/process-data-governance/work-packages/:id/fact-requests",
+        "POST /api/process-data-governance/fact-requests/:id/respond",
+        "PATCH /api/process-data-governance/work-packages/:id/details/:detailId"
+      ],
+      "codeRefs": [
+        {
+          "path": "apps/mdm-platform/server/routes/processDataGovernance.js",
+          "symbol": "router.post('/fact-requests/:id/respond'",
+          "line": 352,
+          "sha256": "5e5ad8622735404424b791e70200b4a945fa15d152a65c95f4074df9952d496a"
+        },
+        {
+          "path": "apps/mdm-platform/server/processDataGovernanceRepository.js",
+          "symbol": "async function respondFactRequest",
+          "line": 792,
+          "sha256": "35d3495f7dfb53ca4105b895be2d1bd4154475cc19e5ac1d736bd614b708c950"
+        },
+        {
+          "path": "apps/mdm-platform/server/processDataGovernanceRepository.js",
+          "symbol": "async function updateDetail",
+          "line": 641,
+          "sha256": "35d3495f7dfb53ca4105b895be2d1bd4154475cc19e5ac1d736bd614b708c950"
+        }
+      ],
+      "dataObjects": [
+        "process_data_governance_details",
+        "process_data_governance_fact_requests",
+        "process_data_governance_reviews"
+      ],
+      "implementation": {
+        "status": "源码已核对",
+        "summary": "列明页面、路由及核心处理符号存在；实现不赋予业务权责",
+        "evidence": [],
+        "workspaceDigest": "05c460ec109c439f381cff2f078bdb19d3a4cb328a4fcaf1913ef11d3d72b02c"
+      },
+      "test": {
+        "status": "未核实当前V8完整路径",
+        "summary": "本轮只核对已有证据和摘要，未运行会写数据库的业务测试",
+        "evidence": [
+          "historical-workpackage"
+        ],
+        "input": "自有隔离MySQL、合成V8/V7及合成独立身份；无真实材料",
+        "expected": "业务答复限制本部门；MDM判断必须有依据；旧修订并发只成功一次；来源变动停止写入",
+        "result": "仅能核对历史V7结果和当前测试源码；当前V8此终点未核实",
+        "date": "2026-10-08及更早历史；当前未重跑",
+        "version": "历史4a17f6da；当前05c460ec未取得该终点证据",
+        "uncovered": "当前V8工作包事实答复/复核的独立结果和当前版本绑定未核实；历史V7通过不能替代"
+      },
+      "deployment": {
+        "status": "运行镜像已核实；此步骤未启用验收",
+        "summary": "Docker localhost:3000健康/就绪200；部署摘要与当前工作区不同。预览关闭已核实，其余开关仅有历史关闭记录",
+        "evidence": [
+          "deployment",
+          "history-p25"
+        ],
+        "environment": "本机Docker；公司内网HTTPS目标未验证",
+        "version": "4a17f6dabe8cf468cbe821b7b6ce02582ca33a301fb4ede592c3c636838c2684",
+        "checkedAt": "2026-10-09T09:21:07.428121+08:00"
+      },
+      "business": {
+        "status": "未核实",
+        "summary": "没有本轮真实角色、指定材料、该步操作结果与有权主体确认",
+        "evidence": [
+          "decision-endpoint",
+          "decision-people"
+        ],
+        "actualRole": "由用户在3000安排；当前未读取真实身份",
+        "material": "采购到货验收及结算流程是已同意核对的候选；当前有效输入未绑定",
+        "result": "未取得",
+        "confirmingAuthority": "待在范围/放行记录落实，不能从协调人或代码权限推定"
+      },
+      "remaining": "当前V8工作包事实答复/复核的独立结果和当前版本绑定未核实；历史V7通过不能替代",
+      "nextAction": "在准确目标/版本及获准启用后，按该步用例由实际主体操作并留证；本轮只准备用例",
+      "closeWhen": "独立四类证据各有结果；当前版本适用技术检查通过，真实角色与材料操作结果经有权主体确认"
+    },
+    {
+      "id": "L08",
+      "title": "完成工作包并保留查阅",
+      "objective": "该版本工作包完成审核才到达首发终点；期末处理写入口、持续运行与查阅分别按已有决定落实",
+      "ruleSources": [
+        "decision-endpoint",
+        "decision-readonly",
+        "decision-hours"
+      ],
+      "page": "apps/mdm-platform/frontend/src/DataGovernance.jsx",
+      "interfaces": [
+        "POST /api/process-data-governance/work-packages/:id/complete",
+        "GET /api/process-data-governance/work-packages/:id"
+      ],
+      "codeRefs": [
+        {
+          "path": "apps/mdm-platform/server/routes/processDataGovernance.js",
+          "symbol": "router.post('/work-packages/:id/complete'",
+          "line": 370,
+          "sha256": "5e5ad8622735404424b791e70200b4a945fa15d152a65c95f4074df9952d496a"
+        },
+        {
+          "path": "apps/mdm-platform/server/processDataGovernanceRepository.js",
+          "symbol": "async function completeWorkPackage",
+          "line": 862,
+          "sha256": "35d3495f7dfb53ca4105b895be2d1bd4154475cc19e5ac1d736bd614b708c950"
+        }
+      ],
+      "dataObjects": [
+        "process_data_governance_work_packages.status",
+        "process_data_governance_reviews",
+        "completed",
+        "basis_text"
+      ],
+      "implementation": {
+        "status": "源码已核对",
+        "summary": "列明页面、路由及核心处理符号存在；实现不赋予业务权责",
+        "evidence": [],
+        "workspaceDigest": "05c460ec109c439f381cff2f078bdb19d3a4cb328a4fcaf1913ef11d3d72b02c"
+      },
+      "test": {
+        "status": "未核实当前V8完整路径",
+        "summary": "本轮只核对已有证据和摘要，未运行会写数据库的业务测试",
+        "evidence": [
+          "historical-workpackage"
+        ],
+        "input": "自有隔离MySQL、合成V8/V7及合成独立身份；无真实材料",
+        "expected": "未核对事项/无依据阻止完成；全部适用项有明确结果才完成；完成后拒绝继续写入；只读不改正式来源",
+        "result": "仅能核对历史V7结果和当前测试源码；当前V8此终点未核实",
+        "date": "2026-10-08及更早历史；当前未重跑",
+        "version": "历史4a17f6da；当前05c460ec未取得该终点证据",
+        "uncovered": "当前V8完成审核、完成后拒写和期末只读未取得独立技术及真实业务证据"
+      },
+      "deployment": {
+        "status": "运行镜像已核实；此步骤未启用验收",
+        "summary": "Docker localhost:3000健康/就绪200；部署摘要与当前工作区不同。预览关闭已核实，其余开关仅有历史关闭记录",
+        "evidence": [
+          "deployment",
+          "history-p25"
+        ],
+        "environment": "本机Docker；公司内网HTTPS目标未验证",
+        "version": "4a17f6dabe8cf468cbe821b7b6ce02582ca33a301fb4ede592c3c636838c2684",
+        "checkedAt": "2026-10-09T09:21:07.428121+08:00"
+      },
+      "business": {
+        "status": "未核实",
+        "summary": "没有本轮真实角色、指定材料、该步操作结果与有权主体确认",
+        "evidence": [
+          "decision-endpoint",
+          "decision-people"
+        ],
+        "actualRole": "由用户在3000安排；当前未读取真实身份",
+        "material": "采购到货验收及结算流程是已同意核对的候选；当前有效输入未绑定",
+        "result": "未取得",
+        "confirmingAuthority": "待在范围/放行记录落实，不能从协调人或代码权限推定"
+      },
+      "remaining": "当前V8完成审核、完成后拒写和期末只读未取得独立技术及真实业务证据",
+      "nextAction": "在准确目标/版本及获准启用后，按该步用例由实际主体操作并留证；本轮只准备用例",
+      "closeWhen": "独立四类证据各有结果；当前版本适用技术检查通过，真实角色与材料操作结果经有权主体确认"
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow-0",
+      "source": "L01",
+      "target": "L02",
+      "kind": "business",
+      "label": "业务规则规定的办理顺序",
+      "evidence": [
+        "rules-current",
+        "decision-endpoint"
+      ],
+      "note": "办理顺序来自规则与范围追溯，不是静态导入、运行调用或验收结果"
+    },
+    {
+      "id": "flow-1",
+      "source": "L02",
+      "target": "L03",
+      "kind": "business",
+      "label": "业务规则规定的办理顺序",
+      "evidence": [
+        "rules-current",
+        "decision-endpoint"
+      ],
+      "note": "办理顺序来自规则与范围追溯，不是静态导入、运行调用或验收结果"
+    },
+    {
+      "id": "flow-2",
+      "source": "L03",
+      "target": "L04",
+      "kind": "business",
+      "label": "业务规则规定的办理顺序",
+      "evidence": [
+        "rules-current",
+        "decision-endpoint"
+      ],
+      "note": "办理顺序来自规则与范围追溯，不是静态导入、运行调用或验收结果"
+    },
+    {
+      "id": "flow-3",
+      "source": "L04",
+      "target": "L05",
+      "kind": "business",
+      "label": "业务规则规定的办理顺序",
+      "evidence": [
+        "rules-current",
+        "decision-endpoint"
+      ],
+      "note": "办理顺序来自规则与范围追溯，不是静态导入、运行调用或验收结果"
+    },
+    {
+      "id": "flow-4",
+      "source": "L05",
+      "target": "L06",
+      "kind": "business",
+      "label": "业务规则规定的办理顺序",
+      "evidence": [
+        "rules-current",
+        "decision-endpoint"
+      ],
+      "note": "办理顺序来自规则与范围追溯，不是静态导入、运行调用或验收结果"
+    },
+    {
+      "id": "flow-5",
+      "source": "L06",
+      "target": "L07",
+      "kind": "business",
+      "label": "业务规则规定的办理顺序",
+      "evidence": [
+        "rules-current",
+        "decision-endpoint"
+      ],
+      "note": "办理顺序来自规则与范围追溯，不是静态导入、运行调用或验收结果"
+    },
+    {
+      "id": "flow-6",
+      "source": "L07",
+      "target": "L08",
+      "kind": "business",
+      "label": "业务规则规定的办理顺序",
+      "evidence": [
+        "rules-current",
+        "decision-endpoint"
+      ],
+      "note": "办理顺序来自规则与范围追溯，不是静态导入、运行调用或验收结果"
+    }
+  ],
+  "relationKinds": [
+    {
+      "kind": "import",
+      "label": "静态导入关系"
+    },
+    {
+      "kind": "http",
+      "label": "源码核对的接口对应"
+    },
+    {
+      "kind": "business",
+      "label": "业务规则规定的流程"
+    },
+    {
+      "kind": "inference",
+      "label": "尚待验证的推断"
+    }
+  ],
+  "inferences": [
+    {
+      "id": "i01",
+      "kind": "inference",
+      "text": "旧候选测试或源码存在能否覆盖当前真实材料、完整V8工作包及公司内网使用，尚待验证，不能自动成立",
+      "evidence": [
+        "current-test",
+        "historical-workpackage"
+      ]
+    }
+  ],
+  "gates": [
+    {
+      "id": "A01",
+      "category": "A",
+      "title": "预览办理当前未启用",
+      "status": "已核实的上线阻碍",
+      "failedAcceptance": "L01导入并进入核对无法在当前服务执行",
+      "evidence": [
+        "deployment"
+      ],
+      "impact": "匿名GET预览入口503/V7_PREVIEW_DISABLED；健康200不代表流程办理已开启",
+      "minimalScope": "不改代码。准确目标、身份、恢复与允许范围就绪后，只批准/启用必要功能并验证",
+      "nextAction": "用户放行具体启用范围；维护执行者核对依赖后实施，本轮不执行",
+      "closeWhen": "获准启用后的实际导入/核对入口可用，权限与依赖验证通过"
+    },
+    {
+      "id": "B01",
+      "category": "B",
+      "title": "首批有效材料及保留前提未绑定",
+      "status": "待验证",
+      "evidence": [
+        "decision-material",
+        "offline-gates",
+        "decision-finance",
+        "decision-branches",
+        "decision-quality"
+      ],
+      "impact": "已有采购流程候选与Q03—Q05规则不能丢掉；旧JSON不是当前获准输入",
+      "nextAction": "用户指定该候选的当前修订/原始材料；业务确认财务参与、适用分支及独立质量意见；逐项填写OFF-01—10和三类待办证据",
+      "closeWhen": "流程/材料摘要及主链、三类待办、OFF适用结果绑定，任何调整有明确决定"
+    },
+    {
+      "id": "B02",
+      "category": "B",
+      "title": "上线候选、测试与部署尚未绑定同一版本",
+      "status": "待验证；版本差异已核实",
+      "evidence": [
+        "deployment",
+        "current-test",
+        "current-test-health"
+      ],
+      "impact": "当前工作区运行资产摘要0afae65bef50ac2f8d1b606929f5b1b449a4f85d2e04a7aa2697928a97024d8b；历史隔离连续链05c460ec；实时镜像4a17f6da。版本不同，不能混用证据宣称当前测试或上线通过",
+      "nextAction": "用户/发布负责人固定准确首发候选，开发比较差异并补受影响验证；部署另需授权",
+      "closeWhen": "候选资产、测试范围、构建与实时摘要一致，旧证据复用边界明确"
+    },
+    {
+      "id": "B03",
+      "category": "B",
+      "title": "实际角色与有权验收尚未核验",
+      "status": "待验证",
+      "evidence": [
+        "decision-people",
+        "decision-endpoint"
+      ],
+      "impact": "用户已决定自己在3000安排人员；不继续逐人问姓名，不按源码角色推定任命",
+      "nextAction": "用户完成平台安排；获准后核对有效身份、部门范围、职责分离，由实际角色办理L01—L08并由有权主体确认",
+      "closeWhen": "实际操作、版本、材料、角色与验收结论留证"
+    },
+    {
+      "id": "B04",
+      "category": "B",
+      "title": "当前V8工作包终点缺独立验证",
+      "status": "未核实；无失败反证",
+      "evidence": [
+        "current-test",
+        "test-package",
+        "historical-workpackage"
+      ],
+      "impact": "今天连续链证明V8主动创建/重试，未证明L07/L08完成审核；不能把旧V7通过移作V8终点完成",
+      "nextAction": "先审查现有工作包测试；另获准在自有隔离目标补V8事实答复→治理复核→完成→拒写/查阅，再由业务验收",
+      "closeWhen": "独立预期、输入、结果、日期、版本明确且终点通过"
+    },
+    {
+      "id": "B05",
+      "category": "B",
+      "title": "当次恢复、持续运行与依赖面待核验",
+      "status": "待验证",
+      "evidence": [
+        "deployment",
+        "test-recovery",
+        "history-p25",
+        "decision-backup",
+        "decision-hours",
+        "decision-capacity"
+      ],
+      "impact": "ready只验证当前配置检查面；历史恢复不能代替下一次切换/启用时恢复点，容器未重启不能证明Windows/引擎恢复",
+      "nextAction": "用户是运维/恢复统一对接人；维护执行者在获准准确目标准备当次恢复并隔离核验，落实工作时间、观察窗口及10人适用负载",
+      "closeWhen": "恢复责任/窗口/证据明确，适用依赖、会话恢复和持续运行验证通过"
+    },
+    {
+      "id": "B06",
+      "category": "B",
+      "title": "公司内网HTTPS首发目标尚未验证",
+      "status": "待验证",
+      "evidence": [
+        "decision-network",
+        "decision-ca",
+        "deployment"
+      ],
+      "impact": "内网、内部CA方向已决定；当前仅localhost，不能当作部门安全访问已交付",
+      "nextAction": "运维核对准确地址/证书/客户端信任/HTTPS Cookie与CSRF以及访问边界，外部开放另需授权",
+      "closeWhen": "获准内网客户端实际安全访问及身份路径通过；不降低权限/安全要求"
+    },
+    {
+      "id": "C01",
+      "category": "C",
+      "title": "V8办公室版本选择：运行镜像仍有V7单格式筛选",
+      "status": "条件性已核实缺口",
+      "evidence": [
+        "deployed-source",
+        "current-test"
+      ],
+      "impact": "首发若含V8办公室版本选择，旧镜像该列表无法选出V8；本地已修正并有隔离证据，不要重复开发",
+      "minimalScope": "绑定已修正候选，复验V8/V7 published列表、旧数据与权限；仅在获准部署任务替换镜像",
+      "nextAction": "核对首批三类待办是否使用此入口，使用则纳入候选/部署验收",
+      "closeWhen": "适用入口当前版本可选正确V8固定版本且不新增权限"
+    },
+    {
+      "id": "C02",
+      "category": "C",
+      "title": "M2结构回退的V8使用痕迹识别",
+      "status": "条件性已核实差异",
+      "evidence": [
+        "deployed-source",
+        "current-test-scope"
+      ],
+      "impact": "旧部署检查仍只按V7统计；若将M2回退用于恢复V8记录则不能信赖该门槛。常规代码回退不等于执行M2 DDL",
+      "minimalScope": "采用V8使用痕迹已修正的维护候选并验证；不执行正式DDL",
+      "nextAction": "维护负责人明确恢复是否涉及M2；涉及则必须验证V8使用拒回退，不得降级",
+      "closeWhen": "准确恢复工具覆盖V8/V7，或批准恢复方案明确不使用该结构回退"
+    },
+    {
+      "id": "C03",
+      "category": "C",
+      "title": "分析、问题、办公室及旧页面写路径的适用覆盖",
+      "status": "范围相关待核验",
+      "evidence": [
+        "offline-gates",
+        "test-issues",
+        "current-test-scope"
+      ],
+      "impact": "保留主链/三类待办前提；具体采用哪些入口未绑定。无请求ID/原快照的旧调用不能承诺未知结果重放/页面过期保护",
+      "nextAction": "对首批实际入口逐一匹配验收，适用越权/并发/输入丢失失败才授权最小补修；不得要求全量旧入口替换",
+      "closeWhen": "适用验收通过或有明确范围调整决定；未用能力不强加开发"
+    },
+    {
+      "id": "D01",
+      "category": "D",
+      "title": "架构职责整理、纯函数化、导航收敛及完整看板",
+      "status": "上线后改善",
+      "evidence": [],
+      "nextAction": "仅按独立授权和具体收益续办；本轮不开展",
+      "closeWhen": "不作为本轮上线门槛；若发现适用安全/一致性反证再升级"
+    },
+    {
+      "id": "E01",
+      "category": "E",
+      "title": "正式主数据清单/正式数据地图、编码申请、AI与全公司扩围",
+      "status": "当前暂缓的新能力",
+      "evidence": [
+        "decision-endpoint"
+      ],
+      "nextAction": "后续另有明确范围、真源、责任和授权再进入",
+      "closeWhen": "不挡已确认首发终点；单流程治理不宣称全公司能力"
+    }
+  ],
+  "decisions": [
+    {
+      "id": "D00-01",
+      "status": "已有明确决定",
+      "value": "流程正式版本发布＋该版本治理工作包完成；主链、三类待办、OFF-01—10前提保留",
+      "evidence": [
+        "decision-endpoint",
+        "offline-gates"
+      ],
+      "pending": "骨架不自动成为新批准范围；具体适用材料与门槛结果待绑定"
+    },
+    {
+      "id": "D00-02",
+      "status": "候选已明确；当前输入待绑定",
+      "value": "采购到货验收及结算流程已同意进入核对；财务参与、适用分支汇合、独立质量意见已确认",
+      "evidence": [
+        "decision-material",
+        "decision-finance",
+        "decision-branches",
+        "decision-quality"
+      ],
+      "pending": "用户指定当前修订/原始材料，业务在3000核对实际做法"
+    },
+    {
+      "id": "D00-03/Q19",
+      "status": "安排方式已明确",
+      "value": "用户自己在3000安排人员，不逐人访谈",
+      "evidence": [
+        "decision-people"
+      ],
+      "pending": "实际资格、办理结果及放行/验收主体由平台安排与有权确认核验"
+    },
+    {
+      "id": "Q12/Q13/Q14/Q20",
+      "status": "方向已有明确决定",
+      "value": "仅公司内网、最多10人同时在线、工作时间可用、内部CA准备",
+      "evidence": [
+        "decision-network",
+        "decision-capacity",
+        "decision-hours",
+        "decision-ca"
+      ],
+      "pending": "准确地址、客户端信任、维护人员/窗口和适用负载证据；不重复询问内网/公网选择"
+    },
+    {
+      "id": "Q11/Q16",
+      "status": "已有决定，具体当次执行未获准",
+      "value": "备份设置当时暂缓；用户统一对接运维/恢复；期末成果保留只读；观察安排需结合准确目标落实",
+      "evidence": [
+        "decision-backup",
+        "decision-readonly"
+      ],
+      "pending": "历史后续获准备份不自动授权本轮新备份；下一次启用/切换明确恢复和期末持续运行/关闭安排"
+    },
+    {
+      "id": "release-authority",
+      "status": "待落实",
+      "value": "代码权限、协调人姓名和文件上传人都不能证明业务批准权",
+      "evidence": [
+        "rules-current",
+        "decision-people"
+      ],
+      "pending": "用户/项目负责人指定放行与验收主体及其确认方式"
+    }
+  ],
+  "conflicts": [
+    {
+      "where": "docs/plans/2026-09-09-mdm-3000-launch/10-3000最小上线与增量完善计划.md §1/§3; artifacts/mdm-3000-upgrade-20260916/p00-20260916-120151/execution.md 部署前停机段",
+      "scope": "运行状态",
+      "evidence": [
+        "history-p25",
+        "deployment"
+      ],
+      "finding": "当前健康/就绪200，昨天停机为历史；技术入口需要替代",
+      "resolution": "更新计划当前段与T1描述；历史停机证据保留，事实以带时间只读核查为准",
+      "status": "本轮处理"
+    },
+    {
+      "where": "代码地图 chain / analyze.mjs 的三个 processV7PreviewReview 职责说明",
+      "scope": "实现定位",
+      "evidence": [
+        "contract-v8"
+      ],
+      "finding": "当前中性模块是实现，旧名只是转发；旧地图描述把旧模块当实现",
+      "resolution": "更新实际切片与职责说明，保留兼容包装节点与源码入口",
+      "status": "本轮处理"
+    },
+    {
+      "where": "原2026-10-08计划§9（本轮document-before历史副本）与03 Q12/Q13/Q14/Q19/Q20；当前计划§5",
+      "scope": "既有决定",
+      "evidence": [
+        "decision-network",
+        "decision-people",
+        "decision-capacity",
+        "decision-hours",
+        "decision-ca"
+      ],
+      "finding": "不能重新问本机还是内网或逐个人名；真实配置/验收仍未核实",
+      "resolution": "集中列明已决定与需落实部分，不代批准、不重复访谈",
+      "status": "本轮处理"
+    },
+    {
+      "where": "docs/plans/2026-09-09-mdm-3000-launch/13/14 架构推进与10最小上线计划",
+      "scope": "工作顺序与授权",
+      "evidence": [],
+      "finding": "此前先架构的决定存在；当前用户只授权事实核查/文档/地图，不授权继续重构或业务发布",
+      "resolution": "在当前入口注明本轮授权边界，历史计划与调度保留；架构未结项不能自动延长首发门槛",
+      "status": "范围已澄清；未修改调度"
+    },
+    {
+      "where": "Q02旧JSON/Q03-Q06与实际业务",
+      "scope": "业务事实",
+      "evidence": [
+        "decision-material",
+        "decision-finance",
+        "decision-branches",
+        "decision-quality",
+        "decision-interview"
+      ],
+      "finding": "旧材料可能未体现财务、分支与质量决定；实现不能倒推责任或付款审批",
+      "resolution": "待业务核对当前原始材料与修订；不覆盖业务规则，不默改JSON",
+      "status": "待定"
+    },
+    {
+      "where": "今天V8连续链/旧V7工作包/实时Docker版本",
+      "scope": "证据版本",
+      "evidence": [
+        "current-test",
+        "historical-workpackage",
+        "deployment"
+      ],
+      "finding": "三个证据范围不同；V8主动创建不等于完成审核",
+      "resolution": "四类证据逐节点独立登记，L07/L08当前V8终点标未核实",
+      "status": "本轮分开记录"
+    }
+  ],
+  "stopConditions": [
+    "准确首批材料、终点及保留OFF/三类待办适用结果明确",
+    "A已关闭，B适用条件有证据，C仅对首发采用能力处理",
+    "版本/测试/部署绑定，安全/权限/数据一致性/恢复条件不降级",
+    "真实主体完成L01—L08，有权主体确认验收与放行",
+    "访问、维护、恢复及期末安排落实；不以全量重构/看板/新能力延长本轮"
+  ],
+  "businessAcceptanceCases": [
+    {
+      "id": "L01",
+      "role": "按平台实际安排的有权主体；先确认目标与操作",
+      "input": "当前获准材料/版本及准确修订摘要",
+      "expected": "合成V8和V7可进入预览；不支持格式拒绝；预览不产生正式版本；原正文/ID/摘要保留",
+      "record": "角色/材料摘要/操作时间/对象ID/实际结果/异常/有权确认",
+      "execution": "仅准备；本轮没有业务写入授权或执行"
+    },
+    {
+      "id": "L02",
+      "role": "按平台实际安排的有权主体；先确认目标与操作",
+      "input": "当前获准材料/版本及准确修订摘要",
+      "expected": "跨部门/管理员写入拒绝；当前资格与固定修订/摘要保持；退回不等于通过",
+      "record": "角色/材料摘要/操作时间/对象ID/实际结果/异常/有权确认",
+      "execution": "仅准备；本轮没有业务写入授权或执行"
+    },
+    {
+      "id": "L03",
+      "role": "按平台实际安排的有权主体；先确认目标与操作",
+      "input": "当前获准材料/版本及准确修订摘要",
+      "expected": "新修订留存旧正文/依据；合成编制人答复后问题仍待独立核验；办公室成员完成任务不自动关闭问题",
+      "record": "角色/材料摘要/操作时间/对象ID/实际结果/异常/有权确认",
+      "execution": "仅准备；本轮没有业务写入授权或执行"
+    },
+    {
+      "id": "L04",
+      "role": "按平台实际安排的有权主体；先确认目标与操作",
+      "input": "当前获准材料/版本及准确修订摘要",
+      "expected": "合成联系人无提交权403；独立审核主体审核当前版本；过期摘要/撤权拒绝；正式审核与预览核对有区分",
+      "record": "角色/材料摘要/操作时间/对象ID/实际结果/异常/有权确认",
+      "execution": "仅准备；本轮没有业务写入授权或执行"
+    },
+    {
+      "id": "L05",
+      "role": "按平台实际安排的有权主体；先确认目标与操作",
+      "input": "当前获准材料/版本及准确修订摘要",
+      "expected": "合成编制人发布403，独立有权主体发布；正式版本读回正文与摘要一致，下游来源变化拒绝新写",
+      "record": "角色/材料摘要/操作时间/对象ID/实际结果/异常/有权确认",
+      "execution": "仅准备；本轮没有业务写入授权或执行"
+    },
+    {
+      "id": "L06",
+      "role": "按平台实际安排的有权主体；先确认目标与操作",
+      "input": "当前获准材料/版本及准确修订摘要",
+      "expected": "合成V8发布后不会自动建包；显式建立可重试；管理员只读；固定来源不变",
+      "record": "角色/材料摘要/操作时间/对象ID/实际结果/异常/有权确认",
+      "execution": "仅准备；本轮没有业务写入授权或执行"
+    },
+    {
+      "id": "L07",
+      "role": "按平台实际安排的有权主体；先确认目标与操作",
+      "input": "当前获准材料/版本及准确修订摘要",
+      "expected": "业务答复限制本部门；MDM判断必须有依据；旧修订并发只成功一次；来源变动停止写入",
+      "record": "角色/材料摘要/操作时间/对象ID/实际结果/异常/有权确认",
+      "execution": "仅准备；本轮没有业务写入授权或执行"
+    },
+    {
+      "id": "L08",
+      "role": "按平台实际安排的有权主体；先确认目标与操作",
+      "input": "当前获准材料/版本及准确修订摘要",
+      "expected": "未核对事项/无依据阻止完成；全部适用项有明确结果才完成；完成后拒绝继续写入；只读不改正式来源",
+      "record": "角色/材料摘要/操作时间/对象ID/实际结果/异常/有权确认",
+      "execution": "仅准备；本轮没有业务写入授权或执行"
+    }
+  ],
+  "evidenceIndex": [
+    {
+      "id": "rules-current",
+      "path": "AGENTS.md",
+      "line": 5,
+      "sha256": "e1d6a7cb26e8ebe83268bbc4ff61190c0956ff7d41c2bf2ed3c1773efca800a2",
+      "meaning": "当前仓库规则；用户指定材料与明确确认决定业务事实"
+    },
+    {
+      "id": "decision-endpoint",
+      "path": "docs/plans/2026-09-09-mdm-3000-launch/03-发布与恢复.md",
+      "line": 572,
+      "sha256": "c8ea0151caddad3a52a7aef17c589fe4f11e099dee3858bc6382d01b1767f871",
+      "meaning": "用户答复的历史追溯；不是 docs 业务真源"
+    },
+    {
+      "id": "decision-material",
+      "path": "docs/plans/2026-09-09-mdm-3000-launch/03-发布与恢复.md",
+      "line": 581,
+      "sha256": "c8ea0151caddad3a52a7aef17c589fe4f11e099dee3858bc6382d01b1767f871",
+      "meaning": "候选已同意进入核对；不表示当前首批材料已批准"
+    },
+    {
+      "id": "decision-finance",
+      "path": "docs/plans/2026-09-09-mdm-3000-launch/03-发布与恢复.md",
+      "line": 605,
+      "sha256": "c8ea0151caddad3a52a7aef17c589fe4f11e099dee3858bc6382d01b1767f871",
+      "meaning": "财务参与及责任待核对"
+    },
+    {
+      "id": "decision-branches",
+      "path": "docs/plans/2026-09-09-mdm-3000-launch/03-发布与恢复.md",
+      "line": 615,
+      "sha256": "c8ea0151caddad3a52a7aef17c589fe4f11e099dee3858bc6382d01b1767f871",
+      "meaning": "适用分支完成再汇合，完成不等于合格"
+    },
+    {
+      "id": "decision-quality",
+      "path": "docs/plans/2026-09-09-mdm-3000-launch/03-发布与恢复.md",
+      "line": 625,
+      "sha256": "c8ea0151caddad3a52a7aef17c589fe4f11e099dee3858bc6382d01b1767f871",
+      "meaning": "质量、数量与外观意见分别留存"
+    },
+    {
+      "id": "decision-interview",
+      "path": "docs/plans/2026-09-09-mdm-3000-launch/03-发布与恢复.md",
+      "line": 650,
+      "sha256": "c8ea0151caddad3a52a7aef17c589fe4f11e099dee3858bc6382d01b1767f871",
+      "meaning": "业务细节留到3000正式治理，初步理解不替代确认"
+    },
+    {
+      "id": "decision-backup",
+      "path": "docs/plans/2026-09-09-mdm-3000-launch/03-发布与恢复.md",
+      "line": 722,
+      "sha256": "c8ea0151caddad3a52a7aef17c589fe4f11e099dee3858bc6382d01b1767f871",
+      "meaning": "既有用户决定追溯；不重复询问已决定分支"
+    },
+    {
+      "id": "decision-network",
+      "path": "docs/plans/2026-09-09-mdm-3000-launch/03-发布与恢复.md",
+      "line": 729,
+      "sha256": "c8ea0151caddad3a52a7aef17c589fe4f11e099dee3858bc6382d01b1767f871",
+      "meaning": "既有用户决定追溯；不重复询问已决定分支"
+    },
+    {
+      "id": "decision-capacity",
+      "path": "docs/plans/2026-09-09-mdm-3000-launch/03-发布与恢复.md",
+      "line": 764,
+      "sha256": "c8ea0151caddad3a52a7aef17c589fe4f11e099dee3858bc6382d01b1767f871",
+      "meaning": "既有用户决定追溯；不重复询问已决定分支"
+    },
+    {
+      "id": "decision-hours",
+      "path": "docs/plans/2026-09-09-mdm-3000-launch/03-发布与恢复.md",
+      "line": 771,
+      "sha256": "c8ea0151caddad3a52a7aef17c589fe4f11e099dee3858bc6382d01b1767f871",
+      "meaning": "既有用户决定追溯；不重复询问已决定分支"
+    },
+    {
+      "id": "decision-readonly",
+      "path": "docs/plans/2026-09-09-mdm-3000-launch/03-发布与恢复.md",
+      "line": 845,
+      "sha256": "c8ea0151caddad3a52a7aef17c589fe4f11e099dee3858bc6382d01b1767f871",
+      "meaning": "既有用户决定追溯；不重复询问已决定分支"
+    },
+    {
+      "id": "decision-people",
+      "path": "docs/plans/2026-09-09-mdm-3000-launch/03-发布与恢复.md",
+      "line": 874,
+      "sha256": "c8ea0151caddad3a52a7aef17c589fe4f11e099dee3858bc6382d01b1767f871",
+      "meaning": "既有用户决定追溯；不重复询问已决定分支"
+    },
+    {
+      "id": "decision-ca",
+      "path": "docs/plans/2026-09-09-mdm-3000-launch/03-发布与恢复.md",
+      "line": 881,
+      "sha256": "c8ea0151caddad3a52a7aef17c589fe4f11e099dee3858bc6382d01b1767f871",
+      "meaning": "既有用户决定追溯；不重复询问已决定分支"
+    },
+    {
+      "id": "offline-gates",
+      "path": "docs/plans/2026-09-07-3000-offline-process-map-rehearsal.md",
+      "line": 112,
+      "sha256": "58ceed15124d0efe59009b7be811e495b5de7919f397d267da3c0c0326711ac0",
+      "meaning": "历史上线前提追溯；具体样本与覆盖尚待核对"
+    },
+    {
+      "id": "history-p25",
+      "path": "artifacts/mdm-3000-upgrade-20260916/p00-20260916-120151/execution.md",
+      "line": 1,
+      "sha256": "c13e90b3ac12d0917b9ec3afcc2222779918d8742a859c01294f4578228a92cb",
+      "meaning": "累计P25最新部署记录；下面停机段为部署前历史"
+    },
+    {
+      "id": "contract-v8",
+      "path": "artifacts/mdm-3000-upgrade-20260916/p00-20260916-120151/contract.md",
+      "line": 1481,
+      "sha256": "233bd6b823b6e75bd8ee2d80e1143cea58291ac5da3b87ef96ba56482595514a",
+      "meaning": "全面转向V8的历史用户决定及兼容边界"
+    },
+    {
+      "id": "current-test",
+      "path": "artifacts/native-process-consistency-20261009-1791507119970/v8-current-verification/results.json",
+      "line": 1,
+      "sha256": "892ebe2a304ef2374d949494703d5986eaf4384092beff46604c40baa966c43c",
+      "meaning": "2026-10-09既有合成隔离连续链；本轮未重跑"
+    },
+    {
+      "id": "current-test-health",
+      "path": "artifacts/native-process-consistency-20261009-1791507119970/v8-current-verification/candidate-health.json",
+      "line": 1,
+      "sha256": "ed59514823ba0998b97f23fe86b4de95387b579277fa72807b746ac0de1b3c07",
+      "meaning": "隔离受测运行摘要及前端构建资源"
+    },
+    {
+      "id": "current-test-scope",
+      "path": "artifacts/native-process-consistency-20261009-1791507119970/audit-results.json",
+      "line": 42,
+      "sha256": "0239f94a738b2bc5108dca5da3aec97b086d93e06705cf0175b13379488c55ef",
+      "meaning": "已有测试分项；不代表全部首发业务条件"
+    },
+    {
+      "id": "historical-workpackage",
+      "path": "artifacts/mdm-3000-upgrade-20260916/p00-20260916-120151/evidence/p25/v8-transition-20261008-01/test-summary.json",
+      "line": 1,
+      "sha256": "f9826afe9d3f697c6453fb723e250b286aca9a8555d56ebb0c9d8a5234d95e78",
+      "meaning": "旧候选V7工作包等历史验证；不能直接证明当前V8工作包完成"
+    },
+    {
+      "id": "deployment",
+      "path": "artifacts/infomat-code-map-20261008/launch-review-20261009/runtime-readonly.json",
+      "line": 1,
+      "sha256": "ece49e7d19ccae6edb3866c197795ffb3ae2791f7ba4f466e257a4fb5742ca52",
+      "meaning": "本轮无Cookie匿名GET与容器只读核查"
+    },
+    {
+      "id": "test-expected",
+      "path": "apps/mdm-platform/scripts/test-p25-candidate-integration.js",
+      "line": 35,
+      "sha256": "713c7198f3e77eeba203885f5f3f64fbf0a3148da88ac639fd7343b5bcebc1f1",
+      "meaning": "独立预期见具体断言与权限拒绝断言；非由运行结果倒推"
+    },
+    {
+      "id": "test-import",
+      "path": "apps/mdm-platform/scripts/test-p25-candidate-integration.js",
+      "line": 67,
+      "sha256": "713c7198f3e77eeba203885f5f3f64fbf0a3148da88ac639fd7343b5bcebc1f1",
+      "meaning": "合成联系人/编制人/审核人与发布人；越权403、修订摘要核对"
+    },
+    {
+      "id": "test-package",
+      "path": "apps/mdm-platform/scripts/test-p25-candidate-integration.js",
+      "line": 92,
+      "sha256": "713c7198f3e77eeba203885f5f3f64fbf0a3148da88ac639fd7343b5bcebc1f1",
+      "meaning": "V8显式创建、重试与管理员只读；未覆盖完成审核"
+    },
+    {
+      "id": "test-issues",
+      "path": "apps/mdm-platform/scripts/test-p25-candidate-integration.js",
+      "line": 181,
+      "sha256": "713c7198f3e77eeba203885f5f3f64fbf0a3148da88ac639fd7343b5bcebc1f1",
+      "meaning": "任务完成与独立问题关闭分别断言"
+    },
+    {
+      "id": "test-recovery",
+      "path": "apps/mdm-platform/scripts/test-p25-candidate-integration.js",
+      "line": 209,
+      "sha256": "713c7198f3e77eeba203885f5f3f64fbf0a3148da88ac639fd7343b5bcebc1f1",
+      "meaning": "合成完整恢复摘要核对；不等于当次真实备份"
+    },
+    {
+      "id": "deployed-source",
+      "path": "artifacts/infomat-code-map-20261008/launch-review-20261009/deployed-source-inspection.json",
+      "line": 1,
+      "sha256": "33fe9276ed76e09fea96be4ecedd48c269e8fa3995ba89cd0aeea0bed75d75eb",
+      "meaning": "当前运行镜像中的格式筛选源码反证"
+    }
+  ],
+  "limitations": [
+    "没有读取Secret、真实账号、业务记录或SQL备份；没有直接连接数据库",
+    "没有启停业务服务/改变开关/赋权/部署业务包/运行会写业务库的测试",
+    "健康/ready仅为检查时点与配置检查面，不证明持续运行或关闭模块依赖",
+    "真实角色、业务材料、IME与有权验收未取得；没有完成率或剩余工期",
+    "收尾有非本轮定义仓储/映射及测试并发变化；当前变化版本技术测试未重验，旧结果保留受测范围"
+  ],
+  "workspaceReview": {
+    "checkedAt": "2026-10-09T09:54:00.432031+08:00",
+    "existingBusinessFilesUnchanged": false,
+    "indexPreserved": true,
+    "runtimeDigestPreserved": false,
+    "concurrentNewFiles": [
+      {
+        "path": "apps/mdm-platform/scripts/test-b02-definition-authority-contract.js",
+        "sha256": "149680b8ab7075679328398cf7eabf967d796ef230e68c74bc2a65888b88d40b"
+      },
+      {
+        "path": "apps/mdm-platform/scripts/test-b02-definition-authority-mysql.js",
+        "sha256": "c21ffb4496643406cb8959cf3ebcd5e985e645357d3116a7508a0d7bbbbc051f"
+      }
+    ],
+    "concurrentChangedFiles": [
+      {
+        "path": "apps/mdm-platform/server/dataMapDefinitionRepository.js",
+        "beforeSha256": "15da2c7f795c04f371e6de832ff4231bb573de02fe82022d331d936b03c9fb29",
+        "sha256": "02ea80bdaf185200e98d99b3c8323bc7f510f979595261df6f2aa2a5a7abfcd4"
+      },
+      {
+        "path": "apps/mdm-platform/server/v7Mappings.js",
+        "beforeSha256": "c2b55582c2e8e33a0ce779558a90d1a95ea0670af47dc4657465a0f79f1bf69f",
+        "sha256": "b32fe5e875f459a64b641526f09a4c09a6eb1d0913154e590533fc2904e5b728"
+      }
+    ],
+    "impact": "本轮没有修改业务源码；期间定义仓储/固定来源映射及新增测试有并发变化。运行资产摘要已不同于既有连续链05c460ec，当前变化版本未重验；旧通过证据只证明其受测版本。固定来源、映射及权限关联需按准确候选补验。静态图按快照时间有效，后续变化另行核对。",
+    "documentationReview": "另有非本轮根说明/目录入口及历史归档变化，已核对根AGENTS的相关差异：仅将仍有效要求直接表述，业务真源和桌面验证边界未改变；其余无关文档保持，不赋予业务权威。"
+  }
+}

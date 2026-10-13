@@ -687,7 +687,7 @@ git commit -m "feat: add rate limiter middleware for API protection"
 
 ### 跨运行发现对照（P13技术术语）
 
-发现实例ID（finding_id）标识某次尝试保存的一条发现。跨运行匹配键（match_key）由analysis-diff-v1根据规则语义、材料逻辑身份、稳定对象/字段语义标识及部门范围派生，不替换旧comparison_key。新增（added）和本轮未再检出（not_detected）只适用于检查范围可比且对应规则完整覆盖的情况；后者不代表整改或问题关闭。持续（persistent）表示身份及引用证据未变；证据变化（evidence_changed）表示同一发现的固定证据或发现类型改变。不可比较（incomparable）表示来源、规则、范围或覆盖条件不满足；待人工匹配（manual_match）表示现有稳定身份或证据不足以自动判定。上述状态均为分析结果，不是业务认定或审批状态。
+发现实例ID（finding_id）标识某次尝试保存的一条发现。跨运行匹配键（match_key）由analysis-diff-v2（旧v1历史及comparison_key保留）根据规则语义、材料逻辑身份、稳定对象/字段语义标识及部门范围派生，不替换旧comparison_key。新增（added）和本轮未再检出（not_detected）只适用于检查范围可比且对应规则完整覆盖的情况；后者不代表整改或问题关闭。持续（persistent）表示身份及引用证据未变；证据变化（evidence_changed）表示同一发现的固定证据或发现类型改变。不可比较（incomparable）表示来源、规则、范围或覆盖条件不满足；待人工匹配（manual_match）表示现有稳定身份或证据不足以自动判定。上述状态均为分析结果，不是业务认定或审批状态。
 
 ## 分析发现人工确认与问题关联
 
@@ -733,3 +733,33 @@ git commit -m "feat: add rate limiter middleware for API protection"
 ### 独立系统维护身份（system_admin）
 
 2026-09-30用户明确的admin维护登录，不关联真实员工或部门，与本人用于治理的人员账号分开。使用专用系统账号及审计，复用固定admin维护权限并对治理只读；不表示新的业务角色或person_id，不自动授予普通人员账号系统维护权限。实现默认关闭，正式启用仍需当次放行。
+
+
+## P25／03＋06第3项技术术语补充（2026-10-06）
+
+| 技术术语／机器字段 | 含义与适用边界 |
+| --- | --- |
+| 旧字段导入请求／request_id | 可选UUID v4，按显式原人员隔离；绑定原上下文、部门和原XLSX字节摘要，同键异内容拒绝。旧无ID调用不具备回执重放保障 |
+| 原导入回执／legacy-field-import-v1 | 既有mdm_version_log内保存的批次／原字段ID／摘要及原响应。读取回执不表示字段当前存在，也不授权重建或业务确认 |
+| 原内容快照标识／write_token、expected_token | 保存记录的内容及内部审计／历史版本摘要，锁内比较；不是正式流程版本号或审批结论。旧无token只保护请求进入后窗口 |
+| 旧办理事务审计／legacy-governance-write-v1 | 术语及冲突办理同事务的前后快照；entity_type为terminology_term、conflict_field或conflict_term，读取沿原全局权限，不新增业务授权 |
+| 结果不明／LEGACY_WRITE_UNKNOWN | 提交确认或响应无法核对；冻结自动重试。字段导入可明确POST原请求核对，术语／冲突需人工核对后重新办理 |
+
+
+## P25／03＋06第7项技术术语（2026-10-06）
+
+| 字段/术语 | 技术含义与边界 |
+| --- | --- |
+| 消费者存储prepared | 仅所选依赖结构/标记及实际直接固定来源前置准备；不等于核心所有模块就绪、来源可读、人员有权、规则覆盖或业务验收 |
+| not_ready / not_checked | 前者有缺失/漂移/关闭条件证据；后者未核对或无法完成诊断，不写成零计数/成功 |
+| diagnostic_state | 登记的stopped或近期/过期/未来heartbeat分类；process_state始终not_checked，心跳及PID不证明进程存活 |
+| analysis-dependency-readiness-v1 | 本期只读元数据/标记预检实现版本，写入新worker的runtime来源追踪；不是新迁移标记、业务状态或运行开关 |
+
+### 原生 V8 主线增量（2026-10-08）
+
+以下技术定义按用户“全面转向V8”的决定更新当前使用口径，旧 V7 名称保留为历史和机器兼容别名，不提供业务权威。
+
+| 中文名称 | 英文或标识 | 定义 |
+|---|---|---|
+| 原生 V8 流程主线 | Native V8 Process Mainline | 3001主动下载、人工上传3000的`process-governance-v8`正文，经预览核对、正式审核发布、固定映射、分析及数据治理办理；受支持V7保持原格式，API或表名中的v7不决定正文格式。 |
+| 原生流程确定性检查 | Native Process Deterministic Checks | `v7-deterministic-v3`按固定正文的实际V8/V7格式执行技术与待核实检查；v1/v2仍仅支持V7，结果不能直接形成业务结论或自动关闭问题。 |

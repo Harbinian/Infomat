@@ -1,14 +1,16 @@
 const crypto = require('node:crypto');
+const { sessionSubject, identityInteger, sameIdentityInteger } = require('./sessionSubject');
+const { readPersonAuthority } = require('./identityMysqlRepository');
 const { failure, normalizePublication } = require('./publicationSpreadsheet');
-const { officeSnapshot, planOffice, planMembership, applyOffices, applyMemberships } = require('./officePublication');
+const { officePublicationState, exactColumns, splitIdentityRows, identityParam, planOffice, planMembership, applyOffices, applyMemberships } = require('./officePublication');
 
 const keyOf = value => String(value || '').trim().toLowerCase();
 const hash = value => crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex');
-const metadataColumns = 'id,publication_ref,kind,dataset_key,title,version_no,previous_publication_id,source_file_name,content_hash,row_count,published_by_person_id,UNIX_TIMESTAMP(published_at) AS published_epoch';
+const metadataColumns = 'id,publication_ref,kind,dataset_key,title,version_no,previous_publication_id,source_file_name,content_hash,row_count,CAST(published_by_person_id AS CHAR) AS published_by_person_id,UNIX_TIMESTAMP(published_at) AS published_epoch';
 
 function publicRow(row) {
   if (!row) return null;
-  const result = { ...row, published_at: new Date(Number(row.published_epoch) * 1000).toISOString() };
+  const result = { ...row, published_by_person_id: identityInteger(row.published_by_person_id), published_at: new Date(Number(row.published_epoch) * 1000).toISOString() };
   delete result.published_epoch;
   return result;
 }
@@ -23,20 +25,25 @@ function conflict(message) { const e = failure(message, 'PUBLICATION_SOURCE_CHAN
 
 async function directoryPlan(db, normalized, lock = false) {
   const suffix = lock ? ' FOR UPDATE' : '';
-  const [departments] = await db.query('SELECT id,code,name,parent_id,department_type,status FROM departments ORDER BY id' + suffix);
-  const [persons] = await db.query('SELECT person_id,employee_no,person_name,current_department_id,employment_status,status,mobile,email FROM person ORDER BY person_id' + suffix);
+  const [departmentRows] = await db.query('SELECT id,code,name,parent_id,department_type,status,' + exactColumns(['id','parent_id']) + ' FROM departments ORDER BY id' + suffix);
+  const [personRows] = await db.query('SELECT person_id,employee_no,person_name,current_department_id,employment_status,status,mobile,email,' + exactColumns(['person_id','current_department_id']) + ' FROM person ORDER BY person_id' + suffix);
+  const departmentState = splitIdentityRows(departmentRows, ['id','parent_id']);
+  const personState = splitIdentityRows(personRows, ['person_id','current_department_id']);
+  const departments = departmentState.identities, persons = personState.identities;
   const byCode = new Map(departments.map(row => [keyOf(row.code), row]));
-  const byId = new Map(departments.map(row => [Number(row.id), row]));
+  const byId = new Map(departments.map(row => [String(row.id), row]));
   const people = new Map(persons.map(row => [keyOf(row.employee_no), row]));
   const errors = [];
   const changes = [];
   const reviewChanges = [];
   const summary = { added: 0, updated: 0, unchanged: 0, removed: 0 };
   const fields = normalized.content.mapping;
-  const offices = await officeSnapshot(db, lock);
+  const officeState = await officePublicationState(db, lock), offices = officeState.identities;
+  // The exact comparison view is never serialized into the legacy source hash.
+  const snapshot = {departments:departmentState.snapshot,persons:personState.snapshot};
   if (normalized.content.kind === 'organization') {
     const incoming = new Map(normalized.records.filter(row => row.unit_type === 'department').map(row => [keyOf(row.code), row]));
-    const parentCodes = new Map(departments.map(row => [keyOf(row.code), keyOf(byId.get(Number(row.parent_id))?.code)]));
+    const parentCodes = new Map(departments.map(row => [keyOf(row.code), keyOf(byId.get(String(row.parent_id))?.code)]));
     for (const [index, record] of normalized.records.entries()) {
       if (record.unit_type === 'office') {
         const result = planOffice(record, fields, offices, departments, persons, normalized.records, normalized.content.sourceRows[index]);
@@ -47,15 +54,15 @@ async function directoryPlan(db, normalized, lock = false) {
       const existing = byCode.get(keyOf(record.code));
       if (offices.offices.some(o => o.org_type === 'office' && keyOf(o.org_unit_code) === keyOf(record.code))) errors.push({row:normalized.content.sourceRows[index],message:'该组织编码已被办公室使用，不能转换为部门'});
       const desired = { ...record, status: record.status || existing?.status || 'active', department_type: fields.department_type ? record.department_type : existing?.department_type || null };
-      const parentCode = fields.parent_code ? keyOf(record.parent_code) : keyOf(byId.get(Number(existing?.parent_id))?.code);
+      const parentCode = fields.parent_code ? keyOf(record.parent_code) : keyOf(byId.get(String(existing?.parent_id))?.code);
       parentCodes.set(keyOf(record.code), parentCode);
       if (parentCode && !byCode.has(parentCode) && !incoming.has(parentCode)) errors.push({ row: normalized.content.sourceRows[index], message: '上级部门编码不存在' });
-      if (desired.status !== 'active' && existing && persons.some(person => Number(person.current_department_id) === Number(existing.id) && person.status === 'active' && person.employment_status === 'active')) errors.push({ row: normalized.content.sourceRows[index], message: '部门仍有在职人员，请先调整人员归属后再停用或归档' });
-      if (desired.status !== 'active' && existing && offices.offices.some(o => Number(o.department_id) === Number(existing.id) && o.org_type === 'office' && o.status === 'active')) errors.push({row:normalized.content.sourceRows[index],message:'部门仍有启用的办公室，请先调整办公室后再停用或归档'});
-      const same = existing && existing.name === desired.name && String(existing.department_type || '') === String(desired.department_type || '') && existing.status === desired.status && keyOf(byId.get(Number(existing.parent_id))?.code) === parentCode;
+      if (desired.status !== 'active' && existing && persons.some(person => sameIdentityInteger(person.current_department_id, existing.id) && person.status === 'active' && person.employment_status === 'active')) errors.push({ row: normalized.content.sourceRows[index], message: '部门仍有在职人员，请先调整人员归属后再停用或归档' });
+      if (desired.status !== 'active' && existing && offices.offices.some(o => sameIdentityInteger(o.department_id, existing.id) && o.org_type === 'office' && o.status === 'active')) errors.push({row:normalized.content.sourceRows[index],message:'部门仍有启用的办公室，请先调整办公室后再停用或归档'});
+      const same = existing && existing.name === desired.name && String(existing.department_type || '') === String(desired.department_type || '') && existing.status === desired.status && keyOf(byId.get(String(existing.parent_id))?.code) === parentCode;
       summary[!existing ? 'added' : same ? 'unchanged' : 'updated'] += 1;
       changes.push({ existing, desired, parentCode, same });
-      const before=existing?{name:existing.name,department_type:existing.department_type,status:existing.status,parent_code:byId.get(Number(existing.parent_id))?.code||''}:{};
+      const before=existing?{name:existing.name,department_type:existing.department_type,status:existing.status,parent_code:byId.get(String(existing.parent_id))?.code||''}:{};
       const after={name:desired.name,department_type:desired.department_type,status:desired.status,parent_code:record.parent_code===undefined?before.parent_code||'':record.parent_code};
       reviewChanges.push({row:normalized.content.sourceRows[index],key:record.code,action:!existing?'added':same?'unchanged':'updated',fields:Object.keys(after).filter(field=>String(before[field]??'')!==String(after[field]??'')).map(field=>({field,before:before[field]??'',after:after[field]??''}))});
     }
@@ -67,10 +74,14 @@ async function directoryPlan(db, normalized, lock = false) {
       }
     }
   } else {
-    const [accounts] = await db.query('SELECT person_id,account_status FROM user_accounts ORDER BY person_id' + suffix);
-    const [assignments] = await db.query("SELECT person_id,scope_department_id FROM person_roles WHERE assignment_status='active' AND scope_type='department' ORDER BY person_id,role_id" + suffix);
-    const [admins] = await db.query("SELECT DISTINCT pr.person_id FROM person_roles pr JOIN roles r ON r.role_id=pr.role_id WHERE pr.assignment_status='active' AND r.role_code='admin' AND r.status='active'");
-    const adminIds = new Set(admins.map(row => Number(row.person_id)));
+    const [accountRows] = await db.query('SELECT person_id,account_status,' + exactColumns(['person_id']) + ' FROM user_accounts ORDER BY person_id' + suffix);
+    const [assignmentRows] = await db.query("SELECT person_id,scope_department_id," + exactColumns(['person_id','scope_department_id']) + " FROM person_roles WHERE assignment_status='active' AND scope_type='department' ORDER BY person_id,role_id" + suffix);
+    // publish's request-id read can establish an earlier RR snapshot. Keep this
+    // target qualification current and locked on the same transaction connection.
+    const [adminRows] = await db.query("SELECT DISTINCT pr.person_id," + exactColumns(['person_id'],'pr.') + " FROM person_roles pr JOIN roles r ON r.role_id=pr.role_id WHERE pr.assignment_status='active' AND r.role_code='admin' AND r.status='active'" + (lock ? ' FOR SHARE' : ''));
+    const accountState = splitIdentityRows(accountRows, ['person_id']), assignmentState = splitIdentityRows(assignmentRows, ['person_id','scope_department_id']), adminState = splitIdentityRows(adminRows, ['person_id']);
+    const accounts = accountState.identities, assignments = assignmentState.identities;
+    const adminIds = new Set(adminState.identities.map(row => String(row.person_id)));
     for (const [index, record] of normalized.records.entries()) {
       const existing = people.get(keyOf(record.employee_no));
       const matches = record.department_code ? departments.filter(row => keyOf(row.code) === keyOf(record.department_code)) : departments.filter(row => row.name === record.department_name);
@@ -81,17 +92,17 @@ async function directoryPlan(db, normalized, lock = false) {
       const membership = planMembership(record, fields, existing, offices, departments, normalized.content.sourceRows[index]);
       errors.push(...membership.errors);
       const same = existing && !membership.membershipChanged && ['person_name', 'current_department_id', 'employment_status', 'mobile', 'email'].every(field => String(existing[field] || '') === String(desired[field] || ''));
-      if (existing && !same && adminIds.has(Number(existing.person_id))) errors.push({ row: normalized.content.sourceRows[index], message: '系统管理员身份不通过业务花名册修改，请保留原记录' });
-      if (existing && Number(existing.current_department_id) !== Number(desired.current_department_id) && assignments.some(row => Number(row.person_id) === Number(existing.person_id))) errors.push({ row: normalized.content.sourceRows[index], message: '此人员还有部门范围的有效角色，请先撤销原部门授权，再调整部门' });
-      if (existing && desired.employment_status !== 'active' && accounts.some(row => Number(row.person_id) === Number(existing.person_id) && row.account_status === 'active')) errors.push({ row: normalized.content.sourceRows[index], message: '离职或停职人员仍有有效账号，请先停用账号' });
+      if (existing && !same && adminIds.has(String(existing.person_id))) errors.push({ row: normalized.content.sourceRows[index], message: '系统管理员身份不通过业务花名册修改，请保留原记录' });
+      if (existing && !sameIdentityInteger(existing.current_department_id, desired.current_department_id) && assignments.some(row => sameIdentityInteger(row.person_id, existing.person_id))) errors.push({ row: normalized.content.sourceRows[index], message: '此人员还有部门范围的有效角色，请先撤销原部门授权，再调整部门' });
+      if (existing && desired.employment_status !== 'active' && accounts.some(row => sameIdentityInteger(row.person_id, existing.person_id) && row.account_status === 'active')) errors.push({ row: normalized.content.sourceRows[index], message: '离职或停职人员仍有有效账号，请先停用账号' });
       summary[!existing ? 'added' : same ? 'unchanged' : 'updated'] += 1;
       changes.push({ existing, desired, same, officeIds:membership.officeIds, membershipChanged:membership.membershipChanged });
-      reviewChanges.push({row:normalized.content.sourceRows[index],key:record.employee_no,action:!existing?'added':same?'unchanged':'updated',fields:['person_name','current_department_id','employment_status','mobile','email'].filter(field=>String(existing?.[field]??'')!==String(desired[field]??'')).map(field=>({field:field==='current_department_id'?'department_name':field,before:field==='current_department_id'?byId.get(Number(existing?.[field]))?.name||'':existing?.[field]??'',after:field==='current_department_id'?department?.name||'未匹配':desired[field]??''}))});
+      reviewChanges.push({row:normalized.content.sourceRows[index],key:record.employee_no,action:!existing?'added':same?'unchanged':'updated',fields:['person_name','current_department_id','employment_status','mobile','email'].filter(field=>String(existing?.[field]??'')!==String(desired[field]??'')).map(field=>({field:field==='current_department_id'?'department_name':field,before:field==='current_department_id'?byId.get(String(existing?.[field]))?.name||'':existing?.[field]??'',after:field==='current_department_id'?department?.name||'未匹配':desired[field]??''}))});
       if (membership.review) reviewChanges[reviewChanges.length-1].fields.push(membership.review);
     }
-    return { summary, errors, changes, reviewChanges, baseHash: hash({ departments, persons, accounts, assignments, admins, offices }) };
+    return { summary, errors, changes, reviewChanges, baseHash: hash({ ...snapshot, accounts:accountState.snapshot, assignments:assignmentState.snapshot, admins:adminState.snapshot, offices:officeState.snapshot }) };
   }
-  return { summary, errors, changes, reviewChanges, baseHash: hash({ departments, persons, offices }) };
+  return { summary, errors, changes, reviewChanges, baseHash: hash({ ...snapshot, offices:officeState.snapshot }) };
 }
 
 async function applyDirectory(db, kind, changes, actorId) {
@@ -100,31 +111,31 @@ async function applyDirectory(db, kind, changes, actorId) {
     for (const change of departmentChanges) {
       if (change.same) continue;
       const row = change.desired;
-      if (change.existing) await db.execute('UPDATE departments SET name=?,department_type=?,status=? WHERE id=?', [row.name, row.department_type, row.status, change.existing.id]);
+      if (change.existing) await db.execute('UPDATE departments SET name=?,department_type=?,status=? WHERE id=?', [row.name, row.department_type, row.status, identityParam(change.existing.id)]);
       else await db.execute("INSERT INTO departments (code,name,department_type,status,source_system) VALUES (?,?,?,?,'MANUAL_PUBLICATION')", [row.code, row.name, row.department_type, row.status]);
     }
-    const [departments] = await db.query('SELECT id,code FROM departments');
+    const [departments] = await db.query('SELECT CAST(id AS CHAR) AS id,code FROM departments');
     const byCode = new Map(departments.map(row => [keyOf(row.code), row.id]));
-    for (const change of departmentChanges) if (!change.same) await db.execute('UPDATE departments SET parent_id=? WHERE id=?', [change.parentCode ? byCode.get(change.parentCode) : null, byCode.get(keyOf(change.desired.code))]);
-    const [hierarchy] = await db.query('SELECT id,parent_id,path FROM departments');
-    const byId = new Map(hierarchy.map(row => [Number(row.id), row]));
+    for (const change of departmentChanges) if (!change.same) await db.execute('UPDATE departments SET parent_id=? WHERE id=?', [change.parentCode ? identityParam(byCode.get(change.parentCode)) : null, identityParam(byCode.get(keyOf(change.desired.code)))]);
+    const [hierarchy] = await db.query('SELECT CAST(id AS CHAR) AS id,CAST(parent_id AS CHAR) AS parent_id,path FROM departments');
+    const byId = new Map(hierarchy.map(row => [String(row.id), row]));
     for (const row of hierarchy) {
       const ids = [], visited = new Set(); let cursor = row;
       while (cursor) {
-        if (visited.has(Number(cursor.id))) throw failure('组织层级存在循环，请先修正');
-        visited.add(Number(cursor.id)); ids.unshift(cursor.id); cursor = byId.get(Number(cursor.parent_id));
+        if (visited.has(String(cursor.id))) throw failure('组织层级存在循环，请先修正');
+        visited.add(String(cursor.id)); ids.unshift(cursor.id); cursor = byId.get(String(cursor.parent_id));
       }
       const path = '/' + ids.join('/') + '/';
       if (path.length > 1024) throw failure('组织层级过深，无法保存');
-      if (row.path !== path) await db.execute('UPDATE departments SET path=? WHERE id=?', [path, row.id]);
+      if (row.path !== path) await db.execute('UPDATE departments SET path=? WHERE id=?', [path, identityParam(row.id)]);
     }
     await applyOffices(db, changes, actorId);
   } else {
     for (const change of changes) {
       if (change.same) continue;
       const row = change.desired;
-      if (change.existing) await db.execute('UPDATE person SET person_name=?,current_department_id=?,employment_status=?,mobile=?,email=? WHERE person_id=?', [row.person_name, row.current_department_id, row.employment_status, row.mobile, row.email, change.existing.person_id]);
-      else await db.execute("INSERT INTO person (employee_no,person_name,current_department_id,employment_status,mobile,email,status) VALUES (?,?,?,?,?,?,'active')", [row.employee_no, row.person_name, row.current_department_id, row.employment_status, row.mobile, row.email]);
+      if (change.existing) await db.execute('UPDATE person SET person_name=?,current_department_id=?,employment_status=?,mobile=?,email=? WHERE person_id=?', [row.person_name, identityParam(row.current_department_id), row.employment_status, row.mobile, row.email, identityParam(change.existing.person_id)]);
+      else await db.execute("INSERT INTO person (employee_no,person_name,current_department_id,employment_status,mobile,email,status) VALUES (?,?,?,?,?,?,'active')", [row.employee_no, row.person_name, identityParam(row.current_department_id), row.employment_status, row.mobile, row.email]);
     }
     await applyMemberships(db, changes, actorId);
   }
@@ -169,8 +180,9 @@ function makePublicationRepository(pool) {
       return { datasetKey: key, expectedLatestId: result.previous?.id || 0, baseHash: result.baseHash, contentHash: normalized.contentHash, summary: result.summary, changes: result.reviewChanges || [], errors: result.errors };
     },
     async publish(input, actor) {
-      const actorId=Number(actor?.personId);
-      if(!Number.isSafeInteger(actorId)||actorId<1)throw failure('缺少有效发布人');
+      const subject = sessionSubject(actor);
+      const actorId = identityInteger(subject.personId);
+      if(!actorId)throw failure('缺少有效发布人');
       const normalized = normalizePublication(input.content);
       const key = datasetKey(normalized.content.kind, input.datasetKey);
       if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(input.requestId || ''))) throw failure('发布请求标识无效');
@@ -178,19 +190,16 @@ function makePublicationRepository(pool) {
       const db = await pool.getConnection();
       try {
         await db.beginTransaction();
-        await db.execute('SELECT account_id FROM user_accounts WHERE person_id=? FOR UPDATE',[actorId]);
-        await db.execute('SELECT person_id FROM person WHERE person_id=? FOR UPDATE',[actorId]);
-        await db.execute('SELECT person_role_id FROM person_roles WHERE person_id=? FOR UPDATE',[actorId]);
-        const identity=require('./identityMysqlRepository').makeIdentityMysqlRepository(db);
-        const session=await identity.validateSession(actor);
-        const {permSet}=await identity.getUserEffectivePermissions(actorId);
-        const roles=await identity.getUserRoleCodes(actorId);
-        if(!session.valid || session.user.must_change_password || !permSet.has('governance:publish') || roles.some(role=>role.code==='admin')){
+        await db.execute('SELECT account_id FROM user_accounts WHERE person_id=CAST(? AS SIGNED) FOR UPDATE',[identityParam(actorId)]);
+        await db.execute('SELECT person_id FROM person WHERE person_id=CAST(? AS SIGNED) FOR UPDATE',[identityParam(actorId)]);
+        await db.execute('SELECT person_role_id FROM person_roles WHERE person_id=CAST(? AS SIGNED) FOR UPDATE',[identityParam(actorId)]);
+        const authority = await readPersonAuthority(db, actor, actorId, { currentRead: true });
+        if(!authority.valid || !authority.permissions.has('governance:publish') || authority.readOnly){
           const denied=failure('发布人的账号或授权已变化，请重新登录核对','PUBLICATION_ACCESS_CHANGED');denied.statusCode=403;throw denied;
         }
         const [already] = await db.execute(`SELECT ${metadataColumns} FROM mdm_publications WHERE request_id=?`, [input.requestId]);
         if (already[0]) {
-          if (already[0].content_hash !== normalized.contentHash || already[0].dataset_key !== key || Number(already[0].published_by_person_id) !== Number(actorId)) throw conflict('同一请求标识不能用于其他发布内容');
+          if (already[0].content_hash !== normalized.contentHash || already[0].dataset_key !== key || !sameIdentityInteger(already[0].published_by_person_id, actorId)) throw conflict('同一请求标识不能用于其他发布内容');
           await db.rollback(); return { ...publicRow(already[0]), idempotent: true };
         }
         const prepared = await plan(db, normalized, key, true);
@@ -198,8 +207,8 @@ function makePublicationRepository(pool) {
         if (prepared.errors.length) throw failure('导入内容仍有待处理问题', 'PUBLICATION_REVIEW_REQUIRED', { issues: prepared.errors });
         if (normalized.content.kind !== 'master_data') await applyDirectory(db, normalized.content.kind, prepared.changes, actorId);
         const ref = crypto.randomUUID();
-        const [inserted] = await db.execute('INSERT INTO mdm_publications (publication_ref,request_id,kind,dataset_key,title,version_no,previous_publication_id,source_file_name,content_hash,payload_json,row_count,published_by_person_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)', [ref, input.requestId, normalized.content.kind, key, normalized.content.title, Number(prepared.previous?.version_no || 0) + 1, prepared.previous?.id || null, normalized.content.sourceFileName, normalized.contentHash, JSON.stringify(normalized.content), normalized.content.rows.length, actorId]);
-        await db.execute("INSERT INTO mdm_version_log (entity_type,entity_id,operation,operated_by_person_id,metadata_json) VALUES ('publication',?,'publish',?,?)", [inserted.insertId, actorId, JSON.stringify({ kind: normalized.content.kind, publicationRef: ref, contentHash: normalized.contentHash, rowCount: normalized.content.rows.length })]);
+        const [inserted] = await db.execute('INSERT INTO mdm_publications (publication_ref,request_id,kind,dataset_key,title,version_no,previous_publication_id,source_file_name,content_hash,payload_json,row_count,published_by_person_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)', [ref, input.requestId, normalized.content.kind, key, normalized.content.title, Number(prepared.previous?.version_no || 0) + 1, prepared.previous?.id || null, normalized.content.sourceFileName, normalized.contentHash, JSON.stringify(normalized.content), normalized.content.rows.length, identityParam(actorId)]);
+        await db.execute("INSERT INTO mdm_version_log (entity_type,entity_id,operation,operated_by_person_id,metadata_json) VALUES ('publication',?,'publish',?,?)", [inserted.insertId, identityParam(actorId), JSON.stringify({ kind: normalized.content.kind, publicationRef: ref, contentHash: normalized.contentHash, rowCount: normalized.content.rows.length })]);
         await db.commit();
         const [published] = await db.execute(`SELECT ${metadataColumns} FROM mdm_publications WHERE id=?`, [inserted.insertId]);
         return publicRow(published[0]);

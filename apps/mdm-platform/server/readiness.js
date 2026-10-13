@@ -17,6 +17,10 @@ function probesFromSql(sql) {
 function requiredProbes(env) {
   const domains = ['identity', 'processGovernance', 'inputBaseline', 'issuePool', 'guidance', 'dataMap', 'mapping', 'conflict', 'todo', 'terminology', 'audit'];
   const probes = domains.flatMap(runtimeSchemaProbes);
+  // The legacy field identity module is always available. Its scope reads and
+  // transactional history require these existing core tables as well.
+  const fieldIdentityTables = ['data_map_field_system_links', 'data_map_change_sets', 'data_map_version_log'];
+  probes.push(...probesFromSql(mdmMysqlSchemaSql()).filter(p => fieldIdentityTables.includes(p.table)).map(p => p.sql));
   if (env.MDM_SYSTEM_ADMIN_ENABLED === '1') probes.push(...probesFromSql(require('./systemAdminMigration').SCHEMA_SQL).map(p => p.sql));
   probes.push(...probesFromSql(mdmMysqlSchemaSql()).filter(p => p.table.startsWith('process_design_') && !p.table.includes('migration_backups')).map(p => p.sql));
   if (env.PROCESS_V7_PREVIEW_ENABLED === '1' || env.PROCESS_V7_FORMAL_ENABLED === '1') {
@@ -63,6 +67,7 @@ function createReadiness({ env = process.env, version, pool, now = Date.now } = 
           for (const sql of requiredProbes(env)) await connection.execute(sql);
           const sessions = await inspectSessionSchema(connection);
           if (sessions.state !== 'applied') throw new Error('SESSION_SCHEMA_UNAVAILABLE');
+          await require('./todoTermSourceMigration').assertTodoTermSourceReady(connection);
           for (const [enabled, modulePath] of [
             [env.MDM_SYSTEM_ADMIN_ENABLED === '1', './systemAdminMigration'],
             [env.PROCESS_V7_PREVIEW_ENABLED === '1' || env.PROCESS_V7_FORMAL_ENABLED === '1', './processV7PreviewReviewMigration'],

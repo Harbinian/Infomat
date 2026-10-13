@@ -21,11 +21,11 @@
 
 ## 遗留入口与历史数据
 
-正式服务对`systems/capabilities/processes/views/org-units/positions/persons/product-families/products/class-nodes/attributes/external/integration`接口族及`/api/quality/dashboard`返回`410 LEGACY_SQLITE_ROUTE_ISOLATED`。这是存储边界隔离；旧业务功能是否纳入首发仍待确定，不代表相关能力已经迁移或需求已经取消。`/api/quality/field-identities/progress`及现有MySQL治理接口继续保留。
+正式服务不再注册`systems/capabilities/processes/views/org-units/positions/persons/product-families/products/class-nodes/attributes/external/integration`接口族及`/api/quality/dashboard`，对这些路径的请求落在未注册边界（HTTP 404，非JSON响应），`rejectLegacyRoute`的410不在请求路径上。这是存储边界隔离；旧业务功能是否纳入首发仍待确定，不代表相关能力已经迁移或需求已经取消。退役边界由`test:mysql-runtime-boundary`与`test:security-routes`断言；不得为迁就旧的410期望而复活这些路由。`/api/quality/field-identities/progress`及现有MySQL治理接口继续保留。
 
 历史SQLite记录仍在原`MDM_DB_PATH`指定文件或历史`data/platform.db`内，由原维护方保管，具体接续维护人待确认；这些记录不得因维护当前功能而被自动移动、删除或导入。旧能力、流程和地图不等于V7正式流程版本；组织岗位、产品和集成历史也不得按同名表直接转入MySQL。未来如需承接，先确定业务范围、原记录ID、引用和目标模型，再按单独迁移方案处理。已有MySQL草稿、发布版本、审批记录和稳定引用不变。
 
-遗留测试只有在非production环境显式设置`MDM_ALLOW_LEGACY_TEST_MODE=1`并指定独立`MDM_DB_PATH`时才能注册旧路由，禁止指向共享`data/platform.db`；公开SQLite维护命令继续使用`legacy-sqlite:`前缀。该模式不提供正式服务回退。测试助手只在其创建的临时目录中使用此模式。
+遗留测试只有在非production环境显式设置`MDM_ALLOW_LEGACY_TEST_MODE=1`并指定独立`MDM_DB_PATH`时才能以隔离遗留模式启动（SQLite读取与内存会话；已退役的路由在任何模式下都不注册），禁止指向共享`data/platform.db`；公开SQLite维护命令继续使用`legacy-sqlite:`前缀。该模式不提供正式服务回退。测试助手只在其创建的临时目录中使用此模式。
 
 登录公共初始化仅读取运行能力和部门目录；其他模块在进入对应页面后读取。工作台与页面提示复用MySQL待办和冲突仓储，流程上下文从当前MySQL快照读取。旧页面显示暂停与承接提示，质量页保留字段进度；这些提示不改写首发业务范围。
 
@@ -62,9 +62,9 @@ getHistoricalReview复用当前账号/人员/auth_version验证，仅既有gover
 
 ## 3000 Docker本机部署
 
-本节部署记录对应既有运行包；后续本地 B02 源码整改没有替换该包或开启业务。
+当前运行包已包含 2026-10-12 的工作台、预览及管理员读取修复和 2026-10-13 的侧边栏重构。工作区其余源码整改未发布。
 
-当前容器`infomat-mdm-3000`，镜像`infomat-mdm:v8-20261008-4a17f6da`；访问`http://127.0.0.1:3000/app/`。复用原V8源码、前端构建、MySQL试运行库和账号／会话配置，原业务开关继续关闭。Linux运行、完整资源和容器重启检查通过，业务验收另行核对。容器／镜像识别、启动停止、受保护配置及限定恢复见[DOCKER.md](../DOCKER.md)；同批次`evidence/p25/docker-deployment-20261008-01/`保存当前ID和验证。历史Windows副本／state保留，状态须以当前Docker及实时健康核对。
+当前容器`infomat-mdm-3000`，镜像`infomat-mdm:v8-20261013-sidebar-39555ef9`；访问`http://127.0.0.1:3000/app/`。沿用原MySQL试运行库、账号／会话配置及权限，预览核对开启，正式流程、编制归属和数据治理开关关闭。健康、就绪、登录后工作台、预览及设计交接读取和侧边栏交互已验证；真实案例流转与业务验收另行核对。容器／镜像识别、启动停止、受保护配置及限定恢复见[DOCKER.md](../DOCKER.md)；当前证据保存在`artifacts/mdm-3000-sidebar-release-20261013-02/`，原Docker批次和历史Windows副本／state保留。状态须以当前Docker及实时健康核对。
 
 
 ## 历史记录

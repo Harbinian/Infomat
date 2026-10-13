@@ -31,6 +31,8 @@ async function main() {
       assert.match(sql.trim(), /^(SELECT|SHOW)\b/);
       if (failure) throw new Error('synthetic sensitive details must not escape');
       if (sql.startsWith('SHOW CREATE')) return [[{ 'Create Table': SESSION_SCHEMA_SQL }]];
+      if (sql.includes("COLUMN_NAME='related_term_id'")) return [[{COLUMN_TYPE:'bigint',IS_NULLABLE:'YES',COLUMN_DEFAULT:null,EXTRA:''}]];
+      if (sql.includes("TABLE_NAME='mdm_todos'")) return [[{ENGINE:'InnoDB'}]];
       return [[{ migration_key: 'present', TABLE_NAME: 'mdm_http_sessions' }]];
     }, release() {}, destroy() { destroyed++; }
   };
@@ -46,7 +48,8 @@ async function main() {
   readiness.stop(); assert.equal((await readiness.check()).reason, 'STOPPING');
   const invalid = createReadiness({ env: { ...env, PROCESS_GOVERNANCE_READ_MODEL: 'sqlite' }, pool });
   assert.equal((await invalid.check()).reason, 'CONFIG_INVALID');
-  assert.equal((await createReadiness({ env: { ...env, PROCESS_V7_FORMAL_ENABLED: '1' }, pool }).check()).reason, 'CONFIG_INVALID');
+  assert.equal((await createReadiness({ env: { ...env, PROCESS_V7_FORMAL_ENABLED: '1' }, pool }).check()).ready, true, 'retired trial setting does not select a single process');
+  for (const table of ['data_map_field_system_links','data_map_change_sets','data_map_version_log']) assert.ok(requiredProbes(env).some(sql => sql.includes('`' + table + '`')));
   assert.ok(!requiredProbes(env).some(sql => sql.includes('process_data_governance_')));
   assert.ok(requiredProbes({ ...env, PROCESS_DATA_GOVERNANCE_ENABLED: '1' }).some(sql => sql.includes('process_data_governance_')));
   await assert.rejects(withMysqlDeadline(pool, () => new Promise(() => {}), 20), /超时/);

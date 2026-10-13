@@ -12,7 +12,13 @@ const select=`SELECT CAST(h.handoff_id AS CHAR) handoff_id,CAST(v.handoff_versio
   FROM data_map_design_handoffs h JOIN data_map_design_handoff_versions v ON v.handoff_id=h.handoff_id
   LEFT JOIN person p ON p.person_id=v.actor_person_id`;
 module.exports=function({transaction,actor,scope,entityScope,version,request,loadSource,target,unpack,mappingSelect,bindings}){
-  const tx=fn=>transaction(async db=>{if(!(await db.execute('SELECT migration_key FROM schema_migrations WHERE migration_key=?',[MIGRATION_KEY]))[0].length)throw failure('DEFINITION_HANDOFF_MIGRATION_REQUIRED',503);return fn(db);});
+  const tx=fn=>transaction(async db=>{
+    const dependency=require('./v7MappingSchema').MIGRATION_KEY;
+    const [markers]=await db.execute('SELECT migration_key FROM schema_migrations WHERE migration_key IN (?,?)',[MIGRATION_KEY,dependency]);
+    if(!markers.some(m=>m.migration_key===MIGRATION_KEY))throw failure('DEFINITION_HANDOFF_MIGRATION_REQUIRED',503);
+    if(!markers.some(m=>m.migration_key===dependency))throw failure('DEFINITION_V7_MIGRATION_REQUIRED',503);
+    return fn(db);
+  });
   const writable=w=>!w.readOnly&&w.permissions.has('governance:structure-gate');
   async function mapping(db,who,vid,cache){
     vid=id(vid);if(cache.has(vid))return cache.get(vid);

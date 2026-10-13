@@ -6,22 +6,26 @@
 
 - 4000 和 4001 未被其他进程占用。
 - MySQL 固定目标为 `localhost:3307/infomat_mdm`，密码只存在受控环境。
+- 信息收集使用`mdm_user`及其独立变量`COLLECTION_MYSQL_PASSWORD`；共享运行配置中其他账号的密码不能用于此账号。
 - 首位信息收集管理员工号已经由业务负责人确认。
 - 生产附件目录位于仓库外，并已纳入备份。
 - 局域网入口使用 HTTPS；生产附件扫描命令已经配置。
 
 ## 2. 部署步骤
 
-1. 在应用目录执行 `npm install --ignore-scripts` 和 `npm test`。
+以下命令从仓库根目录执行；迁移、开户和启停分别使用对应入口，不在应用目录直接运行仓库命令。
+
+1. 执行 `npm --prefix apps/information-collection-service install --ignore-scripts` 和 `npm --prefix apps/information-collection-service test`。
 2. 执行 `npm run migrate:information-collection:dry-run`，保存不含密码的输出。
 3. 运维人员确认 dry-run 只新增 `collection_*` 表后，执行 `npm run migrate:information-collection:apply`。
-4. 设置 `COLLECTION_BOOTSTRAP_ADMIN_EMPLOYEE_NO` 并执行应用目录的 `npm run bootstrap:admin`。脚本必须返回已确认人员的工号和姓名。
+4. 设置 `COLLECTION_BOOTSTRAP_ADMIN_EMPLOYEE_NO` 并执行`npm --prefix apps/information-collection-service run bootstrap:admin`。脚本必须返回已确认人员的工号和姓名。
 5. 执行 `npm run start:information-collection`。
 6. 执行 `npm run smoke:information-collection`，确认两个健康接口和未登录访问边界通过。
 7. 业务负责人使用首位管理员账号登录 4000，授权一个测试设计者。测试设计者发布最小任务，目标人员在 4001 完成一次提交和一次重新编辑。
 
 ## 3. 停止和失败处理
 
+- 原表结构和管理员授权已经存在时，先执行`npm run check:information-collection-schema`；检查通过后直接启动，不重复迁移或初始化账号。连接拒绝时先核对固定账号与受控凭据是否对应，不通过切换到其他运行库、重建表或重新初始化来掩盖连接问题。
 - 任一端口启动失败时，启动脚本关闭本次已启动的另一端口，不终止占用端口的未知进程。
 - 数据库迁移失败时，部署人员停止启动，不删除已经存在的 `collection_*` 表，并保存迁移错误和当前表清单。
 - 附件扫描不可用时，服务继续提供无附件表单，但生产环境拒绝新附件上传。

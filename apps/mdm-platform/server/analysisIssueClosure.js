@@ -1,6 +1,6 @@
 // P17 contract §27: per-issue authority, immutable decisions, no automatic dispatch.
 const { id, digest, json, parse, failure, rows, lastId } = require('./dataMapDefinitionValues');
-const { makeIdentityMysqlRepository } = require('./identityMysqlRepository');
+const { readPersonQualification } = require('./identityMysqlRepository');
 const { MIGRATION_KEY } = require('./analysisClosureSchema');
 const fail = (code, status = 409) => failure('DEFINITION_ANALYSIS_CLOSURE_' + code, status);
 const text = (v, max = 4000) => { if (typeof v !== 'string' || !v.trim() || v.length > max) throw fail('TEXT_REQUIRED',400); return v.trim(); };
@@ -57,18 +57,20 @@ module.exports = h => {
       (e.event_type==='office_task_completed' && e.actor_person_id===personId) ||
       (e.event_type==='office_person_assigned' && [e.note?.from_person_id,e.note?.to_person_id].some(v=>v!=null&&String(v)===personId)))));
   }
-  async function candidate(db, personId, issueId, items, links) {
-    const [[a]]=await db.execute(`SELECT CAST(account_id AS CHAR) account_id,CAST(auth_version AS CHAR) auth_version FROM user_accounts WHERE person_id=?`,[personId]);
-    if(!a) return null;
-    const session={personId,accountId:a.account_id,authVersion:a.auth_version};
+  async function candidate(db, personId, issueId, items, links, actingPersonId = null) {
     try {
-      // A candidate is not the acting session. Do not acquire another person's write locks:
-      // the actual reviewer is locked/revalidated by actor() before every decision.
-      const identity=makeIdentityMysqlRepository(db),validation=await identity.validateSession(session);
-      if(!validation.valid||validation.user.must_change_password)return null;
-      const roles=await identity.getUserRoleCodes(personId),{permSet}=await identity.getUserEffectivePermissions(personId);
-      const [[person]]=await db.execute('SELECT CAST(current_department_id AS CHAR) department_id FROM person WHERE person_id=?',[personId]);
-      const who={personId,departmentId:person.department_id,permissions:permSet,readOnly:roles.some(r=>r.code==='admin')};
+      // actor() already holds this person's identity locks. Its appointment must
+      // use the same current rows after a wait; other candidates remain nonlocking.
+      const reader=personId===actingPersonId ? {execute(sql,params) {
+        if(!/^\s*SELECT\b/i.test(sql))throw new Error('Current qualification reader accepts SELECT only');
+        return db.execute(`${sql} FOR SHARE`,params);
+      }} : db;
+      const qualification=await readPersonQualification(reader,personId);
+      if(!qualification.valid)return null;
+      const {user,roles,permissions,readOnly}=qualification;
+      // Preserve the historical CAST-to-string digest inputs and null department.
+      const a={account_id:String(user.accountId),auth_version:String(user.authVersion)};
+      const who={personId,departmentId:user.current_department_id==null?null:String(user.current_department_id),permissions,readOnly};
       if(who.readOnly || !roles.some(r=>['mdm_lead','data_quality_auditor'].includes(r.code)) || participated(items,personId)) return null;
       const [[binding]]=await db.execute('SELECT CAST(owner_department_id AS CHAR) department_id FROM data_map_analysis_issue_bindings WHERE issue_id=?',[issueId]);
       h.helpers.scope(who,binding.department_id);
@@ -78,7 +80,7 @@ module.exports = h => {
       }
       await sourceHeads(db,who,links);
       // Account generation changes on supported revoke/restore paths. Never reuse an old appointment after restoration.
-      const [grants]=await db.execute('SELECT CAST(person_role_id AS CHAR) person_role_id,CAST(role_id AS CHAR) role_id,scope_type,CAST(scope_department_id AS CHAR) scope_department_id,assignment_status,CAST(effective_from AS CHAR) effective_from,CAST(effective_to AS CHAR) effective_to,CAST(revoked_at AS CHAR) revoked_at FROM person_roles WHERE person_id=? ORDER BY person_role_id',[personId]);
+      const [grants]=await reader.execute('SELECT CAST(person_role_id AS CHAR) person_role_id,CAST(role_id AS CHAR) role_id,scope_type,CAST(scope_department_id AS CHAR) scope_department_id,assignment_status,CAST(effective_from AS CHAR) effective_from,CAST(effective_to AS CHAR) effective_to,CAST(revoked_at AS CHAR) revoked_at FROM person_roles WHERE person_id=CAST(? AS SIGNED) ORDER BY person_role_id',[personId]);
       return {person_id:personId,authorization_digest:digest({account:a,department:who.departmentId,grants,permissions:[...who.permissions].sort()})};
     } catch(e) { if([401,403,404].includes(e.statusCode)) return null; throw e; }
   }
@@ -107,7 +109,7 @@ module.exports = h => {
     let suspended=!!assignment && events.some(e=>e.action==='suspend'&&e.revision_no>assignment.revision_no);
     const c={who,result,issueId:id(issueId),links,items,events,assignment,suspended,source_heads,isOwner:!who.readOnly&&dept?.owner===who.personId};
     if(assignment&&!suspended) {
-      const valid=await candidate(db,assignment.reviewer.person_id,c.issueId,items,links);
+      const valid=await candidate(db,assignment.reviewer.person_id,c.issueId,items,links,who.personId);
       if(!valid||valid.authorization_digest!==assignment.reviewer.authorization_digest) {
         await append(db,c,who,'suspend',{assignment_revision:assignment.revision_no,reason:'身份、候选资格、办理参与或来源权限变化，原指定不自动恢复'});
         c.events=await history(db,c.issueId);c.suspended=true;
@@ -134,7 +136,7 @@ module.exports = h => {
         const reason=text(payload.reason);
         if(payload.action==='reopen'?!closed:closed) throw fail('STATE_CONFLICT');
         if(payload.action==='designate'||payload.action==='reopen') {
-          const reviewer=await candidate(db,id(payload.reviewer_person_id),c.issueId,c.items,c.links);
+          const reviewer=await candidate(db,id(payload.reviewer_person_id),c.issueId,c.items,c.links,who.personId);
           if(!reviewer) throw fail('REVIEWER_INELIGIBLE',403);
           if(!Array.isArray(payload.conditions)||!payload.conditions.length||payload.conditions.length>32) throw fail('CONDITIONS_REQUIRED',400);
           const conditions=payload.conditions.map((s,i)=>({condition_id:'condition-'+(i+1),text:text(s,1000)}));
@@ -170,7 +172,7 @@ module.exports = h => {
       if(c.isOwner) {
         const [people]=await db.execute(`SELECT DISTINCT CAST(pr.person_id AS CHAR) person_id,p.person_name FROM person_roles pr JOIN roles r ON r.role_id=pr.role_id JOIN person p ON p.person_id=pr.person_id
           WHERE r.role_code IN ('mdm_lead','data_quality_auditor') ORDER BY person_id`);
-        for(const p of people) {const value=await candidate(db,p.person_id,c.issueId,c.items,c.links);if(value)candidates.push({person_id:p.person_id,person_name:p.person_name});}
+        for(const p of people) {const value=await candidate(db,p.person_id,c.issueId,c.items,c.links,c.who.personId);if(value)candidates.push({person_id:p.person_id,person_name:p.person_name});}
       }
       const closed=['closed','completed','not_in_scope'].includes(c.result.value.display_status);
       return {issue_id:c.issueId,status:c.result.value.display_status,revision_no:c.result.binding.revision_no,issue_digest:c.result.binding.issue_digest,

@@ -3,13 +3,14 @@
 const express = require('express');
 const path = require('node:path');
 const fs = require('node:fs');
+const {pages} = require('../public/mdm-protocol');
 
 function frontendRouter(dist = path.resolve(__dirname, '../frontend/dist')) {
   const router = express.Router();
   router.use('/assets', express.static(path.join(dist, 'assets'), {
     dotfiles: 'deny', index: false, immutable: true, maxAge: '1y', fallthrough: true
   }));
-  router.get(['/', '/workbench', '/identity', '/template-import', '/objects', '/fact-checks', '/v7-mappings', '/design-handoffs', '/analysis', '/process-preview', '/process-formal', '/data-governance', '/offices', '/dashboard', '/roles', '/role-guide', '/accounts', '/access-audit', '/organization', '/roster', '/terms', '/conflicts', '/publications', '/quality', '/data-map', '/todos'], (req, res, next) => {
+  router.get(pages.map(page=>page.serverPath), (req, res, next) => {
     const index = path.join(dist, 'index.html');
     if (!fs.existsSync(index)) {
       return res.status(503).type('text').send('新入口尚未构建，请使用原入口。');

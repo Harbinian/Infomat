@@ -6,8 +6,8 @@ const show = value => value === null || value === undefined || value === '' ? '�
 const labels = { needs_review: '待核实', confirmed: '已确认', high: '高', medium: '中', low: '低' };
 const fingerprint = value => JSON.stringify(Object.keys(value).sort().map(key => [key, value[key]]));
 
-// The legacy identity API has no atomic revision/receipt contract. A preflight read
-// detects already changed records, but cannot close the read-to-write race.
+// The preflight improves feedback; expected_identity closes the read-to-write
+// race under the server lock. The legacy API still has no idempotent receipt.
 export function FieldIdentity({ api, user, context, fields, pending, readAt, draft, setDraft, onQueryChange }) {
   const [selectedId, setSelectedId] = useState(selection), [revision, setRevision] = useState(0);
   const [state, setState] = useState({}), [feedback, setFeedback] = useState({}), [busy, setBusy] = useState(false);
@@ -17,8 +17,9 @@ export function FieldIdentity({ api, user, context, fields, pending, readAt, dra
   const field = !pending && fields?.find(row => String(row.id) === fieldId);
   const sameTarget = !draft || (draft.contextId === String(context?.id) && draft.fieldId === fieldId);
   const sameDepartment = context?.dept_id && Number(context.dept_id) === Number(user.departmentId);
-  const canMaintain = Boolean(sameDepartment && user.permissions?.includes('governance:draft-department'));
-  const canConfirm = Boolean(sameDepartment && user.permissions?.includes('governance:review-department'));
+  const accountMaintainer = Boolean(user.permissions?.includes('identity:manage-account'));
+  const canMaintain = Boolean(!accountMaintainer && sameDepartment && user.permissions?.includes('governance:draft-department'));
+  const canConfirm = Boolean(!accountMaintainer && sameDepartment && user.permissions?.includes('governance:review-department'));
   useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
   useEffect(() => { const update = () => setSelectedId(selection()); window.addEventListener('popstate', update); return () => window.removeEventListener('popstate', update); }, []);
   useEffect(() => {
@@ -110,7 +111,7 @@ export function FieldIdentity({ api, user, context, fields, pending, readAt, dra
       </dl>}
       <p className="muted">人员、部门编号按原记录展示，不按名称推断。未确认记录中的原确认人和时间可能来自上次确认，不表示本次已通过；旧系统未保存的审核历史无法补全。</p>
       <FieldIdentityHistory key={fieldId} api={api} fieldId={fieldId} />
-      {ownershipUnresolved && <p role="status">此记录有历史 user 编号但缺少 person 编号。原保存接口会自动沿用该编号，本页暂停维护以避免猜测人员映射；须先明确兼容处理。原记录仍可查阅。</p>}
+      {ownershipUnresolved && <p role="status">此记录有历史 user 编号但缺少 person 编号。本页及保存接口暂停维护，须先明确人员映射及兼容处理。原记录仍可查阅，不推测人员编号。</p>}
       {!draft && <div className="actions">
         {canMaintain && !ownershipUnresolved && <button onClick={() => start('maintain')}>维护黄金源信息</button>}
         {canConfirm && identity.id && !identity.confirmed && <button onClick={() => start('confirm')}>办理部门确认</button>}

@@ -101,6 +101,12 @@ export function AnalysisWorkbench({ api, draft, setDraft }) {
     }
   }, [busy, route.finding, finding, detail]);
   const d = draft || { kind: sourceKind, ref: '', description: '', dirty: false, requestId: uuid() };
+  const adapter = cap?.adapters.find(a => sourceKind==='ai_offline'?a.parser_key==='ai_offline':sourceKind==='pdf'?a.parser_key==='pdf_evidence':sourceKind==='word'?a.parser_key==='word_evidence':a.kind===sourceKind&&!['word_evidence','pdf_evidence'].includes(a.parser_key));
+  const fixedSource = sources.find(s => s.ref_id === d.ref);
+  const usesNativeProcessRules = adapter?.parser_key === 'v7_deterministic' || adapter?.base_adapter?.parser_key === 'v7_deterministic';
+  const formatAllowed = !usesNativeProcessRules || fixedSource?.deterministic_format?.supported === true;
+  const formatLabel = value => value?.schema_version || (value?.format_state === 'parse_failed' ? 'JSON解析失败（仅格式诊断）' : '未声明格式（仅格式诊断）');
+  const errorMessage = error?.code === 'DEFINITION_ANALYSIS_SOURCE_FORMAT_UNSUPPORTED' ? '所选固定来源格式不在本次规则版本支持范围；当前规则支持原生V8及受支持V7，旧规则仍仅支持V7。来源保留，不据此认定材料缺陷。' : error?.message;
   function edit(key, value) { setDraft({ ...d, [key]: value, dirty: true, requestId: uuid() }); }
   async function act(fn) {
     if (operation.current || busy) return; operation.current = true; setBusy(true); setError(null); setNotice('');
@@ -115,9 +121,17 @@ export function AnalysisWorkbench({ api, draft, setDraft }) {
   async function create(event) {
     event.preventDefault();
     if (!d.ref || !d.description.trim()) { setError(new Error('请选择固定来源并填写本轮范围说明。')); document.getElementById(!d.ref ? 'analysis-source' : 'analysis-description')?.focus(); return; }
-    const adapter = cap.adapters.find(a => sourceKind==='ai_offline'?a.parser_key==='ai_offline':sourceKind==='pdf'?a.parser_key==='pdf_evidence':sourceKind==='word'?a.parser_key==='word_evidence':a.kind===sourceKind&&!['word_evidence','pdf_evidence'].includes(a.parser_key));
+    if (!adapter || !fixedSource || !formatAllowed) { setError(new Error('当前固定来源尚未获准用于所选检查，请保留范围说明并重新核对来源格式和可见范围。')); return; }
+    await submitAnalysis(createPayload(adapter, d.ref, d.description.trim(), d.requestId));
+  }
+  async function submitAnalysis(body) {
     await act(async signal => {
-      const result = await api.request(root + '/runs', { method: 'POST', body: createPayload(adapter, d.ref, d.description.trim(), d.requestId), signal });
+      let result;
+      try { result = await api.request(root + '/runs', { method: 'POST', body, signal }); }
+      catch (e) {
+        if (!signal.aborted && (['NETWORK_ERROR', 'REQUEST_TIMEOUT', 'INVALID_RESPONSE'].includes(e.code) || e.status >= 500)) setDraft({ ...d, dirty: true, analysisRequest: body });
+        throw e;
+      }
       if (signal.aborted) return; setDraft(null); changeRoute({ run: result.run_id, finding: '', evidence: '', compare: '', input: '', q: '', type: '' }); setTick(t => t + 1);
     });
   }
@@ -136,20 +150,22 @@ export function AnalysisWorkbench({ api, draft, setDraft }) {
   function back() { if ((draft?.review || draft?.task || draft?.closure) && !guard.confirmLeave()) return; if (draft?.review || draft?.task || draft?.closure) setDraft({ ...draft, review: null, task: null, closure: null, dirty: (draft.closure || draft.task || draft.review).baseDirty }); returnFocus.current = route.finding; changeRoute({ finding: '', evidence: '' }); }
   return <div className="analysis-workbench">
     <StatusPanel title="按当前身份获准范围检查固定材料">确定性分析结果初始为待核实；有权人员核对后可明确关联现有问题或创建问题，不自动生成待办。主链框架和完整输入尚未确认，不能据局部结果宣称主链贯通。历史评审意见未导入本检查台。</StatusPanel>
-    {error && <StatusPanel kind="error" title="操作未完成，当前输入保留" onRetry={() => setTick(t => t + 1)}>{error.message} {error.code}</StatusPanel>}
+    {error && <StatusPanel kind="error" title="操作未完成，当前输入保留" onRetry={() => setTick(t => t + 1)}>{errorMessage} {error.code}</StatusPanel>}
     {notice && <StatusPanel title={notice} />}
-    <ExcelEvidence api={api} draft={draft} setDraft={setDraft} batchId={route.excel || (sourceKind==='template'?d.ref:'')} canWrite={cap?.can_create} onRegistered={id=>{setSourceKind('template');setDraft({...draft,excel:null,kind:'template',ref:id,description:draft?.description||'',dirty:!!draft?.description,requestId:uuid()});changeRoute({excel:id});setTick(t=>t+1);}} />
-    <WordEvidence api={api} draft={draft} setDraft={setDraft} batchId={route.word || (sourceKind==='word'?d.ref:'')} anchorId={route.wordAnchor} canWrite={cap?.can_create} onRegistered={id=>{setSourceKind('word');setDraft({...draft,word:null,kind:'word',ref:id,description:draft?.description||'',dirty:!!draft?.description,requestId:uuid()});changeRoute({word:id,wordAnchor:''});setTick(t=>t+1);}} />
-    <PdfEvidence api={api} draft={draft} setDraft={setDraft} batchId={route.pdf || (sourceKind==='pdf'?d.ref:'')} anchorId={route.pdfAnchor} canWrite={cap?.can_create} onRegistered={id=>{setSourceKind('pdf');setDraft({...draft,pdf:null,kind:'pdf',ref:id,description:draft?.description||'',dirty:!!draft?.description,requestId:uuid()});changeRoute({pdf:id,pdfAnchor:''});setTick(t=>t+1);}} />
-    <section className="card"><h2>创建分析</h2><p>选择一个固定 V7 来源、设计交接版本或 Excel、DOCX 证据批次。对象、字段和映射仍通过现有台账入口维护。</p>
-      <form onSubmit={create}><fieldset disabled={busy || !cap?.can_create || !!draft?.review || !!draft?.task || !!draft?.closure || !!draft?.excel || !!draft?.word || !!draft?.pdf}>
-        <label className="management-input">分析对象<select aria-label="分析对象" value={sourceKind} onChange={e => { if (!guard.confirmLeave()) return; setDraft(null); setSourceKind(e.target.value); }}><option value="ai_offline">单流程与离线 AI 校验（不调用模型）</option><option value="v7_source">V7 固定材料</option><option value="handoff">固定设计交接</option><option value="template">Excel 证据读取核对</option><option value="word">DOCX 证据读取核对</option><option value="pdf">PDF 证据读取核对</option></select></label>
-        <label className="management-input">固定来源<select id="analysis-source" aria-label="固定来源" value={d.ref} onChange={e => edit('ref', e.target.value)}><option value="">请选择来源及版本</option>{sources.map(s => <option value={s.ref_id} key={s.ref_id}>{labelSource(s)} · {s.validation_status || '版本 ' + (s.revision_no || s.version_no || s.ref_id)}</option>)}{d.ref && !sources.some(s => s.ref_id === d.ref) && <option value={d.ref}>原选择 {d.ref}（待重新核对）</option>}</select></label>
+    <ExcelEvidence api={api} draft={draft} setDraft={setDraft} batchId={route.excel || (sourceKind==='template'?d.ref:'')} canWrite={cap?.can_create && !draft?.analysisRequest} onRegistered={id=>{setSourceKind('template');setDraft({...draft,excel:null,kind:'template',ref:id,description:draft?.description||'',dirty:!!draft?.description,requestId:uuid()});changeRoute({excel:id});setTick(t=>t+1);}} />
+    <WordEvidence api={api} draft={draft} setDraft={setDraft} batchId={route.word || (sourceKind==='word'?d.ref:'')} anchorId={route.wordAnchor} canWrite={cap?.can_create && !draft?.analysisRequest} onRegistered={id=>{setSourceKind('word');setDraft({...draft,word:null,kind:'word',ref:id,description:draft?.description||'',dirty:!!draft?.description,requestId:uuid()});changeRoute({word:id,wordAnchor:''});setTick(t=>t+1);}} />
+    <PdfEvidence api={api} draft={draft} setDraft={setDraft} batchId={route.pdf || (sourceKind==='pdf'?d.ref:'')} anchorId={route.pdfAnchor} canWrite={cap?.can_create && !draft?.analysisRequest} onRegistered={id=>{setSourceKind('pdf');setDraft({...draft,pdf:null,kind:'pdf',ref:id,description:draft?.description||'',dirty:!!draft?.description,requestId:uuid()});changeRoute({pdf:id,pdfAnchor:''});setTick(t=>t+1);}} />
+    <section className="card"><h2>创建分析</h2><p>选择一个原生 V8 或受支持 V7 固定来源、设计交接版本或 Excel、DOCX 证据批次。对象、字段和映射仍通过现有台账入口维护。</p>
+      <form onSubmit={create}><fieldset disabled={busy || !cap?.can_create || !!draft?.analysisRequest || !!draft?.review || !!draft?.task || !!draft?.closure || !!draft?.excel || !!draft?.word || !!draft?.pdf}>
+        <label className="management-input">分析对象<select aria-label="分析对象" value={sourceKind} onChange={e => { if (!guard.confirmLeave()) return; setDraft(null); setSourceKind(e.target.value); }}><option value="ai_offline">单流程与离线 AI 校验（不调用模型）</option><option value="v7_source">V8/V7 固定材料</option><option value="handoff">固定设计交接</option><option value="template">Excel 证据读取核对</option><option value="word">DOCX 证据读取核对</option><option value="pdf">PDF 证据读取核对</option></select></label>
+        <label className="management-input">固定来源<select id="analysis-source" aria-label="固定来源" value={d.ref} onChange={e => edit('ref', e.target.value)}><option value="">请选择来源及版本</option>{sources.map(s => <option value={s.ref_id} key={s.ref_id} disabled={usesNativeProcessRules && !s.deterministic_format?.supported}>{labelSource(s)} · {s.deterministic_format ? formatLabel(s.deterministic_format) + (s.deterministic_format.supported ? '' : '（当前规则尚未支持）') : s.validation_status || '版本 ' + (s.revision_no || s.version_no || s.ref_id)}</option>)}{d.ref && !sources.some(s => s.ref_id === d.ref) && <option value={d.ref}>原选择 {d.ref}（待重新核对）</option>}</select></label>
         <label className="management-input">本轮范围说明<textarea id="analysis-description" aria-label="本轮范围说明" maxLength={1000} value={d.description} onChange={e => edit('description', e.target.value)} /></label>
-        <button className="primary" type="submit">创建并排队分析</button>
+        <button className="primary" type="submit" disabled={!!d.ref && (!fixedSource || !formatAllowed)}>创建并排队分析</button>
       </fieldset></form>
+      {usesNativeProcessRules && <p role="note">当前确定性检查支持 {cap?.adapters.find(a => a.parser_key === 'v7_deterministic')?.native_schema_versions?.join('、') || '读取能力后核对'}；支持原生 V8 及受支持 V7；其他声明格式尚未支持。未声明格式和JSON解析失败仅进入原格式诊断，不据此补造正文格式。</p>}
+      {draft?.analysisRequest && <StatusPanel title="创建结果不明，保留原请求和输入">请先查阅运行记录；需要核对时明确使用同一请求标识，不新建请求。<button className="secondary" disabled={busy || !cap?.can_create} onClick={() => submitAnalysis(draft.analysisRequest)}>核对同一请求结果</button></StatusPanel>}
       {!busy && cap && !cap.can_create && <p>当前身份只读，不能创建或取消分析。</p>}
-      {!busy && !sources.length && <p>当前没有可选固定来源。请先在 V7 来源映射或设计交接入口登记有权访问的材料。</p>}
+      {!busy && !sources.length && <p>当前没有可选固定来源。请先在 固定来源映射或设计交接入口登记有权访问的材料。</p>}
       {d.dirty && <p className="input-notice">本轮输入尚未提交；失败、查看详情和导出不会应用或清空输入。</p>}
       {cap && <details><summary>本轮确定性规则及未覆盖条件</summary>{cap.adapters.find(a => sourceKind==='pdf'?a.parser_key==='pdf_evidence':sourceKind==='word'?a.parser_key==='word_evidence':a.kind===sourceKind&&!['word_evidence','pdf_evidence'].includes(a.parser_key))?.catalog.map(r => <p key={r.rule_id}>{r.title}：{r.prerequisite}；{r.not_applicable}{r.enabled === false ? '（未启用）' : ''}</p>)}</details>}
     </section>
@@ -159,6 +175,8 @@ export function AnalysisWorkbench({ api, draft, setDraft }) {
       <section className="card"><h2>运行 {detail.run_id} · {statuses[detail.status] || detail.status}</h2><p>当前范围：{detail.manifest.check_scope.description}</p><p>创建：{detail.created_at} · 开始：{detail.started_at || '尚未开始'} · 结束：{detail.finished_at || '尚未结束'}</p>
         <p>规则来源：{detail.manifest.rule_version} · AI：{detail.manifest.ai_metadata ? '本记录含 AI 配置，须结合步骤覆盖核对' : '未调用'} · 历史评审意见：未导入</p>
         {detail.manifest.ai_metadata?.provider === 'offline' && <p role="note">本轮仅使用离线替身，未调用真实模型。意见均待核实，引用通过不代表判断正确；真实 AI 分析未覆盖。AI 步骤失败时保留确定性检查结果，不能据此关闭问题。</p>}
+        {detail.input_formats?.map(i => <p key={i.input_key}>固定格式：{i.input_key} · {formatLabel(i)} · 从当前获准固定正文核对，未重写历史manifest。</p>)}
+        {detail.history_limitations?.length > 0 && <StatusPanel kind="error" title="旧结果适用范围受限">该记录的固定正文不在V7规则支持范围内；旧发现和人工结论原样保留，不能据此复用V7格式判断或认定本轮未再检出。</StatusPanel>}
         <ul>{detail.manifest.inputs.map(i => <li key={i.input_key}>{i.input_key} · {labelSource(i.snapshot)}<details><summary>查看固定版本与摘要</summary><p>内容摘要：{i.snapshot.content_digest || '不可用（未解析）'}；原始字节摘要：{i.snapshot.raw_sha256 || '未提供'}</p><p>{text(i.snapshot.source_ref || { ref_id: i.snapshot.ref_id })}</p></details></li>)}</ul>
         <h3>步骤进度与完成覆盖</h3>{detail.manifest.steps.map(step => { const a = detail.attempts.filter(a => a.step_key === step.step_key).sort((a, b) => b.attempt_no - a.attempt_no)[0]; return <p key={step.step_key}>{step.step_key}：{a ? statuses[a.status] || a.status : '尚未开始'}{a?.error_code ? ' · 原因 ' + a.error_code : ''}</p>; })}
         {coverageView(detail.coverage)}<p>完成仅表示本轮已登记检查执行完毕；部分完成、失败或未覆盖不能当作已整改。</p>

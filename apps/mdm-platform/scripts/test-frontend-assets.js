@@ -104,7 +104,7 @@ async function main() {
     '项目组长看到本部门有跨部门衔接风险时',
     'function renderProcessGovernance()',
     '流程治理统一入口',
-    '3001仍可独立使用',
+    '编制由3001独立完成并手工下载上传',
     "key: 'v7Preview'",
     'id="pgV7PreviewSection"',
     'id="pgSubtabs"',
@@ -254,8 +254,9 @@ async function main() {
   assert.ok(html.includes('async function activateAuthenticatedApp'), 'authenticated startup should use a shared route-first boot helper');
   assert.ok(html.includes("api('/api/org/session'"), 'startup session check should use the non-401 session endpoint');
   assert.ok(html.includes("api('/api/org/session', { silentUnauthorized: true })"), 'startup session check should not show an expired-login toast');
-  assert.ok(html.includes('/api/csrf-token'), 'frontend should load a CSRF token for authenticated write requests');
-  assert.ok(html.includes('X-CSRF-Token'), 'frontend should attach CSRF token header to unsafe API requests');
+  const requestProtocol = fs.readFileSync(path.join(root, 'public', 'mdm-protocol.js'), 'utf8');
+  assert.ok(html.includes('MdmProtocol.createRequestClient') && html.includes('requestClient.request') && html.includes('requestClient.fetch'), 'retained API and native fetch should share one request/session owner');
+  assert.ok(requestProtocol.includes('/api/csrf-token') && requestProtocol.includes('X-CSRF-Token'), 'shared transport should load and attach CSRF tokens to unsafe API requests');
   assert.ok(!html.includes('onclick="selectUserForRoles('), 'user role search results must not pass server text through inline onclick handlers');
   assert.ok(html.includes('class="user-role-result"'), 'user role search results should use delegated click handling');
   assert.ok(html.includes('data-user-id'), 'user role search results should bind the selected user through data attributes');
@@ -272,7 +273,7 @@ async function main() {
   assert.ok(html.includes('function loadAllSafely'), 'shared directory failure should be reported without loading unrelated business modules');
   assert.ok(html.includes('function isUnauthorizedError'), 'frontend should identify unauthorized errors with a shared helper');
   assert.ok(html.includes('function handleUnauthorized'), 'frontend should centralize unauthorized session handling');
-  assert.ok(html.includes('handleUnauthorized(path, silentUnauthorized);'), 'API helper should stop the authenticated app loop on 401');
+  assert.ok(html.includes('handleUnauthorized(context.url, context.silentUnauthorized);'), 'shared transport should notify the retained UI on expired authentication');
   const pollingSnippetStart = html.indexOf('async function loadCurrentListData()');
   const pollingSnippet = html.slice(pollingSnippetStart, pollingSnippetStart + 900);
   assert.ok(

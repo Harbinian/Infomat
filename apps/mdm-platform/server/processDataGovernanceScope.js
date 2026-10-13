@@ -50,7 +50,7 @@ function assertProcessVersionScopeConfigured(env = process.env) {
 function assertProcessVersionAllowed(processVersionId, env = process.env) {
   assertProcessVersionScopeConfigured(env);
   if (!isProcessVersionAllowed(processVersionId)) throw scopeError(422, 'PROCESS_DATA_GOVERNANCE_VERSION_REQUIRED', '请选择有效的已发布流程版本');
-  // Actual publication state, native V7 and source digest are checked in MySQL.
+  // Publication state, native V8/compatible V7 and source digest are checked in MySQL.
   return Number(processVersionId);
 }
 
@@ -60,6 +60,8 @@ function featureStatus(env = process.env) {
     read_only: isProcessDataGovernanceReadOnly(env),
     configured_process_version_id: configuredProcessVersionId(env),
     scope_mode: 'published_v7_versions',
+    primary_schema_version: require('./processNativeFormats').PRIMARY_SCHEMA,
+    supported_schema_versions: require('./processNativeFormats').SUPPORTED_SCHEMAS,
     responsibility_model: 'process-data-governance-v1-2026-08-27'
   };
 }

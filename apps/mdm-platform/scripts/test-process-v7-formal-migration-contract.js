@@ -165,7 +165,9 @@ async function main() {
   assert.ok(cliSource.includes("args.has('--apply')"));
   assert.ok(cliSource.includes("args.has('--rollback')"));
 
-  const formalRouteSource = fs.readFileSync(path.join(__dirname, '..', 'server', 'routes', 'processDesignMysql.js'), 'utf8');
+  const formalRepositorySource = fs.readFileSync(path.join(__dirname, '..', 'server', 'processDesignMysqlRepository.js'), 'utf8');
+  const formalRouteSource = ['routes/processDesignMysql.js', 'processDesignMysqlRepository.js', 'processDesignPolicy.js', 'processDesignValidation.js', 'processDesignApplication.js']
+    .map(file => fs.readFileSync(path.join(__dirname, '..', 'server', file), 'utf8')).join('\n');
   const formalMigrationSource = fs.readFileSync(path.join(__dirname, '..', 'server', 'processV7FormalMigration.js'), 'utf8');
   const m1InspectionIndex = formalMigrationSource.indexOf('inspectProcessV7PreviewReview(pool');
   const firstM2DdlIndex = formalMigrationSource.indexOf("await pool.execute('ALTER TABLE process_design_documents");
@@ -203,14 +205,15 @@ async function main() {
   assert.ok(formalRouteSource.includes('V7_FORMAL_BASE_VERSION_CONFLICT'));
   assert.ok(formalRouteSource.includes('V7_FORMAL_PROMOTION_EVIDENCE_MISMATCH'));
   assert.ok(formalRouteSource.includes('V7_FORMAL_BLOCKING_ISSUES'));
-  assert.match(formalRouteSource, /unresolvedBlockingIssues\(preview\.blockingIssues, scopeDecision\)/);
+  assert.match(formalRouteSource, /unresolved\(preview\.blockingIssues, scopeDecision\)/);
+  assert.match(formalRepositorySource, /unresolved:unresolvedBlockingIssues/);
   assert.ok(formalRouteSource.includes('assertV7FormalEnabled'));
   assert.ok(formalRouteSource.includes('assertV7TrialProcessRef'));
   assert.ok(formalRouteSource.includes('FORMAL_V7_TRANSACTION_CONTEXT'));
   assert.ok(formalRouteSource.includes('FORMAL_V7_ACTOR_CONTEXT'));
   assert.ok(formalRouteSource.includes('SESSION_AUTHORIZATION_CHANGED'));
-  assert.match(formalRouteSource, /FROM user_accounts ua[\s\S]*JOIN person p[\s\S]*FOR SHARE/);
-  assert.match(formalRouteSource, /FROM person_roles pr[\s\S]*JOIN roles r[\s\S]*LEFT JOIN role_permissions rp[\s\S]*LEFT JOIN permissions permission[\s\S]*FOR SHARE/);
+  assert.match(formalRepositorySource, /FROM user_accounts ua[\s\S]*JOIN person p[\s\S]*FOR SHARE/);
+  assert.match(formalRepositorySource, /FROM person_roles pr[\s\S]*JOIN roles r[\s\S]*LEFT JOIN role_permissions rp[\s\S]*LEFT JOIN permissions permission[\s\S]*FOR SHARE/);
   await assertForgedFormalTransactionOptionsRejected();
 
   const isolatedRehearsalSource = fs.readFileSync(path.join(__dirname, 'rehearse-process-v7-migrations-isolated.js'), 'utf8');

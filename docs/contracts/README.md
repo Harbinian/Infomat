@@ -1,8 +1,8 @@
 # docs/contracts 说明
 
-## V8 候选兼容说明（2026-09-22）
+## 当前V8与历史版本兼容
 
-V8 候选合同 `process-governance-v8.schema.json` 保持 V7 字段形状，新增 decision + use 的引用允许规则。V7 两个历史摘要继续受支持，V7 Schema 与校验语义不变；来源版本、迁移、目标校验和回读验证见 3001 README 的 V8 候选章节。版本历史中的 candidate 不是正式部署或业务验收。
+V8 候选合同 `process-governance-v8.schema.json` 保持 V7 字段形状，新增 decision + use 的引用允许规则。V7 两个历史摘要继续受支持，V7 Schema 与校验语义不变；来源版本、迁移、目标校验和回读验证见 [3001的当前格式与判断依据](../../apps/structured-output-service/README.md#当前格式与判断依据)。版本历史中的 candidate 不是正式部署或业务验收。
 
 > 状态：自动化校验规则目录
 > 生效日期：2026-06-10  
@@ -54,7 +54,7 @@ npm run test:document-structured-output-schema
 
 ```powershell
 npm --prefix apps/structured-output-service test
-npm --prefix apps/mdm-platform run test:process-design
+npm --prefix apps/mdm-platform run test:v8-transition
 ```
 
 6. 规则文件可以表达检查要求，但不要在这里新增流程、部门职责或业务行为正文。

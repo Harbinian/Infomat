@@ -10,6 +10,7 @@ function fail(res, e) {
   let status = uploadError ? 413 : known ? e.statusCode || 400 : 503;
   // Object existence is not disclosed to an identity outside its source scope.
   if (status === 403 || status === 404) return res.status(404).json({ error: '资源不存在或当前身份无权访问。', code: 'DEFINITION_ANALYSIS_RESOURCE_UNAVAILABLE' });
+  if (e.code === 'DEFINITION_ANALYSIS_SOURCE_FORMAT_UNSUPPORTED') return res.status(409).json({ error: '所选固定来源格式不在本次规则版本支持范围；当前规则支持原生V8及受支持V7，旧规则仍仅支持V7。来源保留，不据此认定材料缺陷。', code: e.code });
   res.status(status).json({ error: e.code === 'DEFINITION_PDF_TYPE' ? '只允许上传有效的 .pdf 文件。' : e.code === 'DEFINITION_WORD_TYPE' ? '只允许上传有效的 .docx 文件，不接受 .doc 或更改扩展名的文件。' : status === 409 ? '来源、修订或请求已变化，请保留输入并重新核对。' : status === 413 ? '材料或请求超出允许大小。' : status === 503 ? '分析依赖暂不可用，请稍后重试。' : '操作未完成，请核对当前身份和输入。',
     code: known ? e.code : uploadError ? 'DEFINITION_ANALYSIS_UPLOAD_LIMIT' : 'DEFINITION_ANALYSIS_UNAVAILABLE' });
 }

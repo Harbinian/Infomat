@@ -1,4 +1,5 @@
-// Read-only projection of an immutable V7 version. No draft lookup, inference,
+const { supports: supportsNativeProcess } = require('./processNativeFormats');
+// Read-only projection of an immutable native V8/V7 version. No draft lookup, inference,
 // persistence, or conversion to an older process schema.
 const labels = {
   action:'业务行为', decision:'条件判断', parallel_split:'并行分支', parallel_join:'并行汇合',
@@ -25,7 +26,7 @@ function escapeMarkdown(value) {
 }
 function processV7ProcedureMarkdown(version) {
   const document=version.document;
-  if (!['process-governance-v7', 'process-governance-v8'].includes(version.schema_version) || document?.schema_version!==version.schema_version) throw new Error('PROCEDURE_V7_REQUIRED');
+  if (!supportsNativeProcess(version.schema_version) || document?.schema_version!==version.schema_version) throw new Error('PROCEDURE_V7_REQUIRED');
   const list=value=>Array.isArray(value)?value:[];
   const names=new Map();
   const register=(items,key,name)=>list(items).forEach(item=>{if(item[key])names.set(item[key],item[name]||item[key]);});

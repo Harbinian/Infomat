@@ -1,12 +1,14 @@
 const crypto = require('node:crypto');
 const { ACCESS_MODEL_VERSION } = require('./roleDefinitions');
 const { failure } = require('./processV7AuthoringMigration');
+const { identityInteger, sameIdentityInteger } = require('./sessionSubject');
+const { assignmentAuthority } = require('./identityMysqlRepository');
 const enabled = () => process.env.PROCESS_V7_AUTHORING_ENABLED === '1';
 const coordinated = new Set(['message', 'supplement_request', 'reminder']);
 const authored = new Set(['fact_note', 'problem_reply', 'governance_suggestion']);
 async function state(db, caseId, lock = false) {
   try {
-    const [[row]] = await db.execute(`SELECT a.*, p.person_name AS compiler_name,
+    const [[row]] = await db.execute(`SELECT a.*, CAST(a.compiler_person_id AS CHAR) AS compiler_person_id, p.person_name AS compiler_name,
       UNIX_TIMESTAMP(a.started_at) AS started_epoch
       FROM process_v7_authoring a LEFT JOIN person p ON p.person_id=a.compiler_person_id
       WHERE a.case_id=? ${lock ? 'FOR UPDATE' : ''}`, [caseId]);
@@ -19,34 +21,34 @@ async function state(db, caseId, lock = false) {
   }
 }
 async function activeActor(db, actor, lock = true) {
-  const [[account]] = await db.execute(`SELECT ua.account_id, ua.auth_version, p.person_id, p.current_department_id
+  const [[account]] = await db.execute(`SELECT CAST(ua.account_id AS CHAR) AS account_id, CAST(ua.auth_version AS CHAR) AS auth_version,
+    CAST(p.person_id AS CHAR) AS person_id, CAST(p.current_department_id AS CHAR) AS current_department_id
     FROM user_accounts ua JOIN person p ON p.person_id=ua.person_id
     JOIN departments d ON d.id=p.current_department_id
-    WHERE ua.account_id=? AND ua.person_id=? AND ua.account_status='active' AND ua.must_change_password=0
-      AND p.status='active' AND p.employment_status='active' AND d.status='active' ${lock ? 'FOR SHARE' : ''}`, [actor.accountId || 0, actor.personId || 0]);
-  if (!account || Number(account.auth_version) !== Number(actor.authVersion)) throw failure('SESSION_AUTHORIZATION_CHANGED', 401);
-  const [grants] = await db.execute(`SELECT r.role_code, pr.scope_type, pr.scope_department_id, permission.perm_code, rp.effect
+    WHERE ua.account_id=CAST(? AS SIGNED) AND ua.person_id=CAST(? AS SIGNED) AND ua.account_status='active' AND ua.must_change_password=0
+      AND p.status='active' AND p.employment_status='active' AND d.status='active' ${lock ? 'FOR SHARE' : ''}`, [String(actor.accountId || 0), String(actor.personId || 0)]);
+  if (!account || !sameIdentityInteger(account.auth_version, actor.authVersion)) throw failure('SESSION_AUTHORIZATION_CHANGED', 401);
+  const [grants] = await db.execute(`SELECT r.role_code, pr.scope_type, CAST(pr.scope_department_id AS CHAR) AS scope_department_id, permission.perm_code, rp.effect
     FROM person_roles pr JOIN roles r ON r.role_id=pr.role_id
     LEFT JOIN role_permissions rp ON rp.role_id=r.role_id LEFT JOIN permissions permission ON permission.perm_id=rp.perm_id
-    WHERE pr.person_id=? AND pr.assignment_status='active' AND pr.authorization_basis IS NOT NULL
+    WHERE pr.person_id=CAST(? AS SIGNED) AND pr.assignment_status='active' AND pr.authorization_basis IS NOT NULL
       AND pr.effective_from IS NOT NULL AND pr.effective_from<=CURRENT_DATE
       AND (pr.effective_to IS NULL OR pr.effective_to>=CURRENT_DATE)
-      AND r.status='active' AND r.model_version=? ${lock ? 'FOR SHARE' : ''}`, [actor.personId, ACCESS_MODEL_VERSION]);
-  const effects = new Map();
-  for (const g of grants) if (g.perm_code && (g.effect === 'deny' || !effects.has(g.perm_code))) effects.set(g.perm_code, g.effect);
-  return { ...account, grants, admin: grants.some(g => g.role_code === 'admin'), effects };
+      AND r.status='active' AND r.model_version=? ${lock ? 'FOR SHARE' : ''}`, [String(actor.personId), ACCESS_MODEL_VERSION]);
+  const { effects, readOnly } = assignmentAuthority(grants);
+  return { ...Object.fromEntries(Object.entries(account).map(([key,value]) => [key,identityInteger(value)])), grants, admin: readOnly, effects };
 }
 function isContact(current, caseRow) {
-  return !current.admin && Number(current.current_department_id) === Number(caseRow.owning_department_id) &&
-    current.effects.get('governance:draft-department') === 'allow' && current.grants.some(g => g.role_code === 'department_contact' && g.scope_type === 'department' && Number(g.scope_department_id) === Number(caseRow.owning_department_id));
+  return !current.admin && sameIdentityInteger(current.current_department_id,caseRow.owning_department_id) &&
+    current.effects.get('governance:draft-department') === 'allow' && current.grants.some(g => g.role_code === 'department_contact' && g.scope_type === 'department' && sameIdentityInteger(g.scope_department_id,caseRow.owning_department_id));
 }
 function isCompiler(current, caseRow, binding) {
-  return !current.admin && current.effects.get('governance:draft-department') !== 'deny' && binding && String(current.person_id) === String(binding.compiler_person_id) && Number(current.current_department_id) === Number(caseRow.owning_department_id);
+  return !current.admin && current.effects.get('governance:draft-department') !== 'deny' && binding && sameIdentityInteger(current.person_id,binding.compiler_person_id) && sameIdentityInteger(current.current_department_id,caseRow.owning_department_id);
 }
 async function initialize(db, caseRow, actor) {
   if (!enabled()) return;
   const current = await activeActor(db, actor);
-  await db.execute('INSERT INTO process_v7_authoring(case_id,compiler_person_id) VALUES (?,?)', [caseRow.id, isContact(current, caseRow) ? actor.personId : null]);
+  await db.execute('INSERT INTO process_v7_authoring(case_id,compiler_person_id) VALUES (?,CAST(? AS SIGNED))', [caseRow.id, isContact(current, caseRow) ? String(identityInteger(actor.personId)) : null]);
 }
 // Caller must already hold the case FOR UPDATE lock, including formal submit callers.
 async function assertCompiler(db, caseRow, actor, { start = false } = {}) {
@@ -127,7 +129,7 @@ async function record(db, caseRow, body, actor, reference = null) {
   } else if (authored.has(kind)) await markStarted(db, caseRow.id);
   else if (!recipient) throw failure('V7_AUTHORING_COMPILER_UNASSIGNED');
   await db.execute(`INSERT INTO process_v7_authoring_records(case_id,request_key,request_hash,record_kind,content_text,actor_person_id,recipient_person_id,revision_no,content_hash,assignment_version)
-    VALUES (?,?,?,?,?,?,?,?,?,?)`, [caseRow.id, key, hash, kind, content, actor.personId, recipient, caseRow.current_revision_no, caseRow.current_content_hash, binding.assignment_version]);
+    VALUES (?,?,?,?,?,CAST(? AS SIGNED),?,?,?,?)`, [caseRow.id, key, hash, kind, content, String(actor.personId), recipient, caseRow.current_revision_no, caseRow.current_content_hash, binding.assignment_version]);
   const [[inserted]] = await db.execute('SELECT CAST(LAST_INSERT_ID() AS CHAR) id');
   return { idempotent: false, record_id: inserted.id };
 }
