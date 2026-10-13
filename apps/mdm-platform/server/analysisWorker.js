@@ -37,8 +37,13 @@ async function work(repo, worker, { stop, log = () => {}, adapter = dispatch, po
       if (!claim) { await sleep(pollMs); continue; }
       log({ event: 'claimed', run_id: claim.run_id, generation: claim.generation });
       while (!await stop()) {
+        // Metadata and fixed-source checks consume lease time as well. Renew
+        // with the same fenced token before/after those round trips; the
+        // hard deadline and the adapter heartbeat interval stay unchanged.
+        await repo.heartbeatAnalysis(claim);
         const task = await repo.nextAnalysisStep(claim);
         if (!task) break;
+        await repo.heartbeatAnalysis(claim);
         log({ event: 'step_started', run_id: claim.run_id, attempt_no: task.attempt_no });
         const controller = new AbortController();
         let heartbeatError, busy = false;

@@ -1,12 +1,15 @@
+const replyEvent = require('./authoringReplyEvent');
 // Exact fixed-source replies only. Existing issues/todos remain the sole entities.
-// Callers own the transaction; lock order is issue -> case -> current identity.
+// Callers own the transaction; context locks issue -> binding -> case -> current identity.
 const authoring = require('./processV7Authoring');
 const { id, parse, digest, json, rows } = require('./dataMapDefinitionValues');
 const { failure } = require('./processV7AuthoringMigration');
 const fail = (name, status = 409) => failure('V7_AUTHORING_ISSUE_' + name, status);
 async function ready(db) {
   if (!authoring.enabled()) throw failure('V7_AUTHORING_DISABLED', 503);
-  for (const key of [require('./processV7AuthoringMigration').MIGRATION_KEY, require('./v7MappingSchema').MIGRATION_KEY, require('./analysisIssueSchema').MIGRATION_KEY, require('./analysisTaskSchema').MIGRATION_KEY]) {
+  for (const key of [require('./processV7AuthoringMigration').MIGRATION_KEY, require('./dataMapDefinitionSchema').MIGRATION_KEY,
+    require('./v7MappingSchema').MIGRATION_KEY, require('./analysisRunSchema').MIGRATION_KEY,
+    require('./analysisIssueSchema').MIGRATION_KEY, require('./officeSchema').MIGRATION_KEY, require('./analysisTaskSchema').MIGRATION_KEY]) {
     if (!(await db.execute('SELECT migration_key FROM schema_migrations WHERE migration_key=?', [key]))[0].length) throw fail('MIGRATION_REQUIRED', 503);
   }
 }
@@ -38,16 +41,19 @@ async function fixedSources(db, issueId, caseRow) {
         if (source.case_id !== String(caseRow.id)) throw fail('SOURCE_UNRESOLVED');
         current &&= String(caseRow.current_revision_id) === source.revision_id;
       } else {
-        const [matches] = await db.execute(`SELECT pr.preview_case_id FROM process_v7_promotions pr JOIN process_design_versions v ON v.draft_id=pr.draft_id
+        const [matches] = await db.execute(`SELECT CAST(pr.preview_revision_id AS CHAR) preview_revision_id FROM process_v7_promotions pr JOIN process_design_versions v ON v.draft_id=pr.draft_id
           WHERE v.id=? AND pr.preview_case_id=? AND pr.content_hash=v.content_hash FOR SHARE`, [source.process_version_id, caseRow.id]);
         if (matches.length !== 1) throw fail('SOURCE_UNRESOLVED');
+        current &&= String(caseRow.current_revision_id) === matches[0].preview_revision_id;
       }
       const live = await require('./v7FixedSource').readReference(db, source.source_kind, source, {}, (_who, department) => {
         if (String(department) !== String(caseRow.owning_department_id)) throw fail('SOURCE_UNRESOLVED');
       });
       const stored = parse(source.content_json);
-      if (require('./processV7PreviewReview').contentHash(stored) !== source.content_digest || live.content_digest !== source.content_digest) throw fail('INTEGRITY_CONFLICT');
-      references.set(id(ref.ref_id), { source_id: id(ref.ref_id), source_kind: source.source_kind, source_ref: sourceRef, content_digest: source.content_digest });
+      if (require('./processPreviewReview').contentHash(stored) !== source.content_digest || live.content_digest !== source.content_digest) throw fail('INTEGRITY_CONFLICT');
+      if (!require('./processNativeFormats').supports(stored.schema_version) || live.document.schema_version !== stored.schema_version || Object.hasOwn(ref, 'schema_version') && ref.schema_version !== stored.schema_version) throw fail('SOURCE_UNRESOLVED');
+      references.set(id(ref.ref_id), { source_id: id(ref.ref_id), source_kind: source.source_kind, source_ref: sourceRef,
+        schema_version: stored.schema_version, content_digest: source.content_digest, digest_algorithm: source.digest_algorithm });
     }
   }
   return { current, references: [...references.values()] };
@@ -55,7 +61,8 @@ async function fixedSources(db, issueId, caseRow) {
 async function context(db, caseId, issueId, actor, writing = false) {
   const value = (await rows(db, 'process_governance_issues', 'issue_id=?', [id(issueId)], true))[0];
   const [[binding]] = await db.execute('SELECT revision_no,issue_digest,CAST(owner_department_id AS CHAR) owner_department_id FROM data_map_analysis_issue_bindings WHERE issue_id=? FOR UPDATE', [issueId]);
-  const [[caseRow]] = await db.execute('SELECT *,CAST(id AS CHAR) id,CAST(current_revision_id AS CHAR) current_revision_id FROM process_v7_preview_cases WHERE id=? FOR UPDATE', [id(caseId)]);
+  // Compare the locked department as an exact identity before driver Number rounding.
+  const [[caseRow]] = await db.execute('SELECT *,CAST(id AS CHAR) id,CAST(current_revision_id AS CHAR) current_revision_id,CAST(owning_department_id AS CHAR) owning_department_id FROM process_v7_preview_cases WHERE id=? FOR UPDATE', [id(caseId)]);
   if (!caseRow) throw fail('NOT_FOUND', 404);
   const current = await authoring.activeActor(db, actor), assignment = await authoring.state(db, caseId, true);
   const compiler = authoring.isCompiler(current, caseRow, assignment);
@@ -98,7 +105,7 @@ async function list(db, caseId, actor, after) {
       const [events] = await db.execute(`SELECT CAST(event_id AS CHAR) event_id,CAST(actor_person_id AS CHAR) actor_person_id,note,payload_json,UNIX_TIMESTAMP(created_at) created_epoch
         FROM process_governance_issue_events WHERE issue_id=? AND JSON_UNQUOTE(JSON_EXTRACT(payload_json,'$.source_type'))='v7_authoring_reply' ORDER BY event_id DESC LIMIT 50 FOR SHARE`, [candidate.issue_id]);
       items.push({ issue_id: candidate.issue_id, title: c.value.title, status: c.value.display_status,
-        revision_no: c.binding.revision_no, issue_digest: c.binding.issue_digest, source_current: c.sources.current,
+        revision_no: c.binding.revision_no, issue_digest: c.binding.issue_digest, source_current: c.sources.current, fixed_sources: c.sources.references,
         can_reply: c.compiler && c.sources.current && c.caseRow.status !== 'closed' && !['closed', 'completed', 'not_in_scope'].includes(c.value.display_status),
         tasks: await tasks(db, candidate.issue_id), replies: events.map(e => ({ ...e, created_at: new Date(Number(e.created_epoch) * 1000).toISOString(), created_epoch: undefined, reference: parse(e.payload_json), payload_json: undefined })) });
     } catch (error) { if (error.code === 'V7_AUTHORING_ISSUE_SOURCE_UNRESOLVED') { excluded++; continue; } throw error; }
@@ -127,11 +134,10 @@ async function reply(db, caseId, issueId, body, actor) {
     const task = (await tasks(db, id(issueId))).find(t => t.todo_id === reference.todo_id);
     if (!task || task.status !== 'pending' || task.revision_no !== body.expected_task_revision) throw fail('TASK_CHANGED');
   } else if (body.expected_task_revision != null) throw fail('INPUT_INVALID', 422);
-  const payload = { source_type: 'v7_authoring_reply', record_id: result.record_id, case_id: id(caseId), request_key: body.request_key,
-    ...reference, revision_no: c.caseRow.current_revision_no, content_hash: c.caseRow.current_content_hash,
-    actor_person_id: String(actor.personId), fixed_sources: c.sources.references };
-  await db.execute("INSERT INTO process_governance_issue_events(issue_id,event_type,actor_person_id,note,payload_json) VALUES (?,'commented',?,?,?)", [issueId, actor.personId, body.content.trim(), json(payload)]);
-  if (reference.todo_id) await db.execute("INSERT INTO mdm_todo_events(todo_id,event_type,actor_person_id,note) VALUES (?,'compiler_replied',?,?)", [reference.todo_id, actor.personId, json({ ...payload, content: body.content.trim() })]);
+  const payload = replyEvent.issuePayload({recordId:result.record_id,caseId:id(caseId),requestKey:body.request_key,reference,revisionNo:c.caseRow.current_revision_no,contentHash:c.caseRow.current_content_hash,actorPersonId:actor.personId,fixedSources:c.sources.references});
+  // Reused prepared INSERTs must consume small and BIGINT actors as exact integers.
+  await db.execute("INSERT INTO process_governance_issue_events(issue_id,event_type,actor_person_id,note,payload_json) VALUES (?,'commented',CAST(? AS SIGNED),?,?)", [issueId, String(actor.personId), body.content.trim(), json(payload)]);
+  if (reference.todo_id) await db.execute("INSERT INTO mdm_todo_events(todo_id,event_type,actor_person_id,note) VALUES (?,'compiler_replied',CAST(? AS SIGNED),?)", [reference.todo_id, String(actor.personId), json(replyEvent.officeNote(payload,body.content.trim()))]);
   await db.execute('UPDATE data_map_analysis_issue_bindings SET revision_no=revision_no+1 WHERE issue_id=?', [issueId]);
   return { ...result, issue_id: id(issueId), todo_id: reference.todo_id, revision_no: c.binding.revision_no + 1, close_enabled: false };
 }

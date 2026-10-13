@@ -3,6 +3,8 @@ const mysql = require('mysql2/promise');
 const { requireAuth, requireAnyPermission, requirePermission } = require('../auth');
 const { makeGovernanceAccessMysqlRepository } = require('../governanceAccessMysqlRepository');
 const { mysqlConfigFromEnv } = require('../mysqlConfig');
+const { logRequestFailure } = require('../securityLog');
+const { createRegisteredPool } = require('../mysqlPoolRegistry');
 
 const router = express.Router();
 let repositoryPromise = null;
@@ -12,7 +14,7 @@ async function repository() {
   if (repositoryFactory) return await repositoryFactory();
   if (!repositoryPromise) {
     repositoryPromise = (async () => {
-      const pool = mysql.createPool(mysqlConfigFromEnv());
+      const pool = createRegisteredPool(process.env, 'governanceAccess');
       return makeGovernanceAccessMysqlRepository(pool);
     })();
   }
@@ -32,7 +34,7 @@ function handleError(res, error) {
       ...(error.details !== undefined ? { details: error.details } : {})
     });
   }
-  console.error(error);
+  logRequestFailure(res, error);
   return res.status(503).json({
     error: '治理责任记录服务暂不可用',
     code: 'GOVERNANCE_DECISION_SERVICE_UNAVAILABLE'

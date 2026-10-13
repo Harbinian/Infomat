@@ -86,7 +86,8 @@ module.exports=async ctx=>{
     const after=await state();assert.equal(after.status,'waiting_my_action');assert.deepEqual(after.tasks,s.tasks);assert.deepEqual(after.events.slice(0,s.events.length),s.events);
     await expect('lead',url+'/review','POST',{...p,request_id:uuid()},409);save('p17-closure-api-history.json',after);
   });
-  await require('./analysisClosureBrowserVerification')({...ctx,state,bind,designate,decision});
+  if (process.argv.includes('--b02-closure')) await require('./b02ClosureVerification')({...ctx,state,bind,designate,decision});
+  if (!process.argv.includes('--repository-only')) await require('./analysisClosureBrowserVerification')({...ctx,state,bind,designate,decision});
   await test('closure evidence integrity and backup restore keep previous appointments reviews and todo results',async()=>{
     const before=await state(),dump=backup();await pool.execute("UPDATE data_map_analysis_issue_closure_events SET snapshot_digest=REPEAT('0',64) WHERE issue_id=? ORDER BY event_id DESC LIMIT 1",[issueId]);await assert.rejects(state(),e=>e.code==='DEFINITION_ANALYSIS_CLOSURE_INTEGRITY_CONFLICT');restore(dump);assert.deepEqual(await state(),before);save('p17-closure-restore.json',{sha256:crypto.createHash('sha256').update(dump).digest('hex'),equal:true,persisted:false});
   });

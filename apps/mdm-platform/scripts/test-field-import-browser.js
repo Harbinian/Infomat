@@ -32,14 +32,19 @@ async function main() {
     const ready = () => page.locator('[data-map-state="ready"]').waitFor();
     const file = () => page.getByLabel('字段台账 Excel', { exact: true });
     const submit = () => page.locator('section[aria-labelledby="field-import-heading"] button[type="submit"]');
-    const refresh = async () => { await page.getByRole('button', { name: '刷新数据地图', exact: true }).click(); await ready(); };
+    const refresh = async () => { const read=page.waitForResponse(r=>r.request().method()==='GET' && new URL(r.url()).pathname==='/api/data-map/contexts');await page.getByRole('button', { name: '刷新数据地图', exact: true }).click();await read;await ready(); };
     const chooseFile = async (buffer, name = '合成字段.xlsx') => {
       if (await page.locator('[data-field-import-file]').count()) page.once('dialog', dialog => dialog.accept());
       await file().setInputFiles({ name, mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer });
     };
     async function login(who) { await page.locator('#login-name').fill('SYNTHETIC_' + who); await page.locator('#login-password').fill(fixture.loginPassword); await page.getByRole('button', { name: '登录', exact: true }).click(); await ready(); }
     async function send() { const response = page.waitForResponse(r => new URL(r.url()).pathname === '/api/import/field-entries'); response.catch(() => {}); await submit().click(); return response; }
-    async function acknowledge() { await refresh(); await page.getByLabel('我已核对目标台账，并已从文件中移除已导入的行').check(); }
+    async function acknowledge() {
+      await refresh();assert.equal(await page.getByRole('button',{name:'按原导入请求核对结果',exact:true}).count(),0,'unknown result requires explicit original-request lookup');
+      const check=page.getByLabel('我已核对目标台账和错误信息');
+      if(await check.count()) await check.check();else {await page.waitForFunction(()=>!document.querySelector('section[aria-labelledby="field-import-heading"] button[type="submit"]').disabled);assert.equal(await submit().isDisabled(),false,'fresh replacement has no prior attempt to acknowledge');}
+    }
+    async function abandonUnknown() { page.once('dialog',d=>d.accept());await page.getByRole('button',{name:'放弃字段文件选择',exact:true}).click();await chooseFile(good); }
     try {
       await page.goto(fixture.baseURL + '/app/data-map?context=' + own.id); await login('contact');
       await chooseFile(good);
@@ -63,10 +68,10 @@ async function main() {
         await page.route('**/api/import/field-entries', route => route.fulfill({ status, json: {} }), { times: 1 });
         assert.equal((await send()).status(), status); await page.locator('[data-field-import-error]').waitFor();
         assert.match(await page.locator('[data-field-import-file]').innerText(), /合成字段.xlsx/); assert.equal(await submit().isDisabled(), true);
-        await acknowledge();
+        if(status===503) await abandonUnknown(); else await acknowledge();
       }
       await context.setOffline(true); await submit().click(); await page.locator('[data-field-import-error]').waitFor();
-      assert.match(await page.locator('[data-field-import-file]').innerText(), /合成字段.xlsx/); await context.setOffline(false); await acknowledge();
+      assert.match(await page.locator('[data-field-import-file]').innerText(), /合成字段.xlsx/); await context.setOffline(false); await abandonUnknown();
       let release; let started; const waiting = new Promise(resolve => { started = resolve; }); const hold = new Promise(resolve => { release = resolve; }); let posts = 0;
       await page.route('**/api/import/field-entries', async route => { posts++; started(); await hold; await route.continue(); }, { times: 1 });
       const response = send(); await waiting;
@@ -92,9 +97,9 @@ async function main() {
         ['合成对象', '允许行', '部分成功字段', 'partial_success'],
         ['合成对象', '应被阻断', '禁止测试字段', 'blocked_field']
       ])); await acknowledge(); assert.equal((await send()).status(), 400); await page.locator('[data-field-import-error]').waitFor();
-      assert.match(await page.locator('[data-field-import-error]').innerText(), /部分行/);
+      assert.match(await page.locator('[data-field-import-error]').innerText(), /没有提交字段或批次/);
       const partial = await expect('contact', '/api/field-entries/mapping/' + own.id, 'GET');
-      assert.ok(partial.some(row => row.field_name_en === 'partial_success')); assert.ok(!partial.some(row => row.field_name_en === 'blocked_field'));
+      assert.ok(!partial.some(row => row.field_name_en === 'partial_success')); assert.ok(!partial.some(row => row.field_name_en === 'blocked_field'));
       assert.equal(await submit().isDisabled(), true);
       await page.locator('section[aria-labelledby="field-import-heading"]').screenshot({ path: path.join(output, 'partial-error.png') });
       await chooseFile(await workbook([['合成对象', '警告仍保留', '警告测试字段', 'warning_field']])); await acknowledge(); assert.equal((await send()).status(), 200);
@@ -102,7 +107,7 @@ async function main() {
       const warning = (await expect('contact', '/api/field-entries/mapping/' + own.id, 'GET')).find(row => row.field_name_en === 'warning_field');
       assert.equal(warning.quality_status, 'warn');
       assert.equal((await pool.query('SELECT * FROM data_map_quality_issues WHERE field_id=?', [warning.id]))[0].length, 1);
-      checks.push('real blocked-name partial write is explicit; warning quality state and issue retained');
+      checks.push('real blocked-name entire batch rollback; warning quality state and issue retained');
       await chooseFile(good, '很长的合成字段台账文件名用于验证桌面视口中文件说明仍然完整可读.xlsx');
       await file().setInputFiles({ name: '不支持.xls', mimeType: 'application/vnd.ms-excel', buffer: good });
       await page.locator('[data-field-import-error]').waitFor(); assert.match(await page.locator('[data-field-import-file]').innerText(), /很长/);
@@ -119,11 +124,12 @@ async function main() {
       checks.push('file limits, replacement cancellation, keyboard, Edge 1699x828 desktop at 100 percent');
       await pool.execute('UPDATE user_accounts SET auth_version=auth_version+1 WHERE account_id=183');
       await submit().click(); await page.getByRole('heading', { name: '请重新登录', exact: true }).waitFor(); await login('contact');
-      assert.match(await page.locator('[data-field-import-file]').innerText(), /很长/); assert.equal(await submit().isDisabled(), true); await acknowledge();
+      assert.match(await page.locator('[data-field-import-file]').innerText(), /很长/); assert.equal(await submit().isDisabled(), true); await abandonUnknown();
       await pool.execute('UPDATE user_accounts SET auth_version=auth_version+1 WHERE account_id=183');
       await submit().click(); await page.getByRole('heading', { name: '请重新登录', exact: true }).waitFor(); await login('adminMulti');
       assert.equal(await page.locator('[data-field-import-file]').count(), 0); assert.equal(await file().count(), 0);
-      checks.push('real session expiry retains file for same person and clears it for different identity');
+      await page.getByText(/原导入请求仍绑定身份/).waitFor();
+      checks.push('real session expiry retains unknown request for same person and freezes it under different identity');
       async function rawImport(who, contextId, withCsrf = true, buffer = good) {
         const client = await runtime().request.newContext({ baseURL: fixture.baseURL });
         try {
@@ -140,9 +146,7 @@ async function main() {
       assert.deepEqual(raced.map(r => r.status()).sort(), [200, 400]);
       const [racedFields] = await pool.query('SELECT * FROM data_map_fields WHERE context_id=?', [other.id]); assert.equal(racedFields.length, 1);
       const [[legacyAfter]] = await pool.query('SELECT * FROM data_map_fields WHERE id=?', [original.id]); assert.deepEqual(legacyAfter, legacyBefore);
-      await page.getByRole('link', { name: '打开原数据地图入口', exact: true }).click(); await page.waitForURL('**/#/dataMap');
-      await page.locator('#dataMapContextSelect').selectOption(String(own.id)); await page.locator('#dataMapFieldRows').getByText('合成导入字段', { exact: true }).waitFor();
-      await page.goBack(); await ready(); assert.match(await page.locator('[aria-label="关联字段台账"]').innerText(), /合成导入字段/);
+      assert.equal(await page.locator('a[href*="/#/"]').count(),0); assert.match(await page.locator('[aria-label="关联字段台账"]').innerText(), /合成导入字段/);
       await page.reload(); await ready(); assert.equal(await page.getByLabel('数据地图上下文', { exact: true }).inputValue(), String(own.id));
       checks.push('real admin/cross-department/CSRF refusal, concurrent unique key, original rows and legacy readback');
       await page.getByRole('button', { name: '退出登录', exact: true }).click(); await login('contact'); await chooseFile(good);
@@ -161,6 +165,6 @@ async function main() {
       fs.writeFileSync(path.join(output, 'failure.json'), JSON.stringify({ message: error.message, stack: error.stack, checks, errors }, null, 2));
       await page.screenshot({ path: path.join(output, 'failure.png'), fullPage: true, timeout: 5000 }).catch(() => {}); throw error;
     } finally { await browser.close(); }
-  }, { evidenceDir: output });
+  }, { evidenceDir: output, randomDatabase:true, createDocument:()=>JSON.parse(fs.readFileSync(path.join(__dirname,'testHelpers/p25-empty-v7.json'),'utf8')) });
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });

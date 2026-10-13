@@ -98,7 +98,7 @@ function main() {
   assert.ok(conflictSource.includes('data_conflict_handler'));
   assert.ok(!conflictSource.includes("'admin:access'"));
 
-  const processSource = fs.readFileSync(path.join(__dirname, '../server/routes/processDesignMysql.js'), 'utf8');
+  const processSource = ['routes/processDesignMysql.js','processDesignPolicy.js','processDesignMysqlRepository.js'].map(file=>fs.readFileSync(path.join(__dirname,'../server',file),'utf8')).join('\n');
   assert.ok(processSource.includes("'governance:publish'"));
   assert.ok(processSource.includes('V7_FORMAL_BLOCKING_ISSUES'));
   assert.ok(processSource.includes('SESSION_AUTHORIZATION_CHANGED'));

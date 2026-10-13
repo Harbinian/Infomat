@@ -3,23 +3,34 @@
 const {source,reference,staticRoutes,formalRoutes,localEvidence,sha}=require('./testHelpers/routeInventory');
 
 const repositories={
+  masterDataTemplate:['dataMapDefinitionRepository','masterDataTemplateImport'],
+  dataMapDefinitions:['dataMapDefinitionRepository','dataMapManagement'],
+  dataMapFacts:['dataMapDefinitionRepository','dataMapFacts'],
+  v7Mappings:['v7Mappings'],designHandoffs:['designHandoffs'],
+  analysis:['analysisApi','analysisRuns','analysisQueue','analysisIssues','analysisIssueTasks','analysisIssueClosure','excelEvidence','wordEvidence','pdfEvidence','v7Mappings'],
   offices:['officeRepository'],
   publications:['publicationRepository'],
   accounts:['governanceAccessMysqlRepository'],governance:['governanceAccessMysqlRepository'],
   conflicts:['conflictMysqlRepository'],dataMap:['dataMapMysqlRepository'],fieldEntries:['dataMapMysqlRepository'],
   fieldIdentities:['dataMapMysqlRepository'],import:['dataMapMysqlRepository'],mappings:['mappingMysqlRepository','governanceAccessMysqlRepository'],
   terminology:['terminologyMysqlRepository'],todos:['todoMysqlRepository'],
-  governanceGuidance:['governanceGuidanceMysqlRepository'],processV7PreviewReview:['processV7PreviewReviewRepository'],
-  processDataGovernance:['processDataGovernanceRepository'],processDesignMysql:['routes/processDesignMysql'],
+  governanceGuidance:['governanceGuidanceMysqlRepository'],processPreviewReview:['processPreviewReviewRepository'],
+  processDataGovernance:['processDataGovernanceRepository'],processDesignMysql:['processDesignMysqlRepository','processDesignApplication','routes/processDesignMysql'],
   processGovernance:['processGovernanceMysqlRepository','processGovernanceIssuePoolRepository','processInputBaselineReviewRepository']
 };
 const notes={
+  masterDataTemplate:'合成/明确上传材料的预览与确认使用定义仓储；按具体方法核对身份、范围、请求及事务，不由静态分类授予权限。',
+  dataMapDefinitions:'对象/字段定义的保存与停用沿定义仓储及管理消费者；按具体方法核对权限、部门、版本和引用。',
+  dataMapFacts:'定向事实问题与答复沿既有消费者；权限、部门、修订和事件按实际方法追溯。',
+  v7Mappings:'原生V8及受支持V7固定来源与明确映射；确认关系不授予流程发布或主数据认定权限。',
+  designHandoffs:'固定设计交接与明确来源关系；只追加其版本与记录，不证明真实接收或采用。',
+  analysis:'分析、证据、问题交办及复核由定义消费者办理；按具体方法核对授权、固定引用、状态、幂等和事务，不能从静态清单推断业务验收。',
   offices:'办公室任务复用mdm_todos。交办沿用治理分派权限；成员分配仅限明确的办公室负责人，办结仅限当前办理人。事务中复核当前身份、办公室和成员状态、修订号，写入任务与人员事件，不授予正式审核或发布权限。',
   publications:'手工导入发布；事务内复核当前账号和发布权限、唯一标识、内容摘要、目录基线及版本指针，追加不可变发布记录和变更日志。组织和人员保留原标识，不批量创建账号。',
   accounts:'身份管理；仓储检查授权依据、生效期、同部门授权、账号状态、最后管理员及撤权，事务更新auth_version并记录identity_access_events。',
   governance:'部门责任记录；仓储检查当前人员、部门最终负责人及依据。无客户端修订令牌，按追加记录保存，不能视为流程审核或发布。',
-  processV7PreviewReview:'预览专表；写入受精确process_ref及开关限制。已有案例写入在事务中锁定案例/当前修订并复核摘要；核对绑定参与部门。提升才写正式草稿，非正式版本。',
-  processDesignMysql:'V7状态转换在同一事务中锁定案例、主档、草稿、审核及版本，复核正式身份、部门、状态、修订和摘要并记录事件；旧结构编辑入口拒绝V7。V3完整内容保存有expected_revision；旧分项编辑没有统一客户端修订令牌，不作V7事务证明。',
+  processPreviewReview:'预览专表；写入受精确process_ref及开关限制。已有案例写入在事务中锁定案例/当前修订并复核摘要；核对绑定参与部门。提升才写正式草稿，非正式版本。',
+  processDesignMysql:'原生流程状态转换在同一事务中锁定案例、主档、草稿、审核及版本，复核正式身份、部门、状态、修订和摘要并记录事件；旧结构编辑入口拒绝原生V8/V7。V3完整内容保存有expected_revision；旧分项编辑没有统一客户端修订令牌，不作V7事务证明。',
   processDataGovernance:'默认关闭；精确不可变process_version_id，锁定工作包，复核来源摘要、expected_revision和当前状态；MDM治理或指定部门事实答复，写事件。',
   processGovernance:'质量单、映射待办及问题池分别检查权限、部门/参与人和对象状态，调用各自事件仓储。旧工单部分动作无统一客户端修订令牌；不能以此清单宣称事务/并发验收。输入基线复核仍读指定artifact批次并写MySQL。',
   mappings:'部门草稿、提交/审核任务、结构门槛和责任证据分别检查；仓储复核状态、记录审核/版本历史。具体锁与条件UPDATE见对应方法，不从路由分类推定原子性。',
@@ -38,13 +49,18 @@ function repositoryEvidence(row,trace) {
   const methods=[];
   for(const name of trace.repositoryCalls) {
     for(const file of files) {
-      const content=source(file);const pattern=new RegExp('(?:async\\s+|function\\s+)'+name+'\\s*\\(');const match=pattern.exec(content);
+      const content=source(file);
+      const alias=new RegExp('\\b'+name+'\\s*:\\s*(\\w+)\\b').exec(content);
+      const definitionName=alias?alias[1]:name;
+      const pattern=new RegExp('(?:(?:async\\s+)?function\\s+'+definitionName+'\\s*\\(|(?:^|[\\n,{}])\\s*(?:async\\s+)?'+definitionName+'\\s*\\()','m');const match=pattern.exec(content);
       if(!match)continue;
       const next=content.slice(match.index+match[0].length).search(/\n    (?:async )?\w+\([^\n]*\)\s*\{|\n  (?:async )?function /);
-      const body=content.slice(match.index,next<0?content.length:match.index+match[0].length+next);
-      const ref={file,line:content.slice(0,match.index).split('\n').length,anchor:name};
+      const definitionStart=match.index+match[0].indexOf(definitionName);
+      const body=content.slice(definitionStart,next<0?content.length:match.index+match[0].length+next);
+      const ref={file,line:content.slice(0,definitionStart).split('\n').length,anchor:definitionName,operation:name};
       const signals=body.split(/\r?\n/).map((s,i)=>({line:ref.line+i,text:s.trim()})).filter(s=>/FOR UPDATE|FOR SHARE|beginTransaction|withTransaction|runFormalV7Transaction|status[=!.]|status\s+(?:IN|NOT)|expected|revision|content_hash|addEvent|insertEvent|record.*Event|audit|affectedRows|commit\(|rollback\(/i.test(s.text));
-      methods.push({...ref,signals});break;
+      const guards=[...new Set(body.match(/\b(?:actor|scope|context|responder|assert\w*|require\w*|authorized\w*|currentActor)\s*(?=\()/g)||[])].map(value=>value.trim());
+      methods.push({...ref,signals,guards,...(alias?{exportReference:reference(file,alias[0])}:{})});break;
     }
   }
   return {files:files.map(file=>({file,sha256:sha(source(file))})),methods};
@@ -54,13 +70,15 @@ function buildAudit() {
   const declarations=staticRoutes();const formal=formalRoutes();const entries=[];const first=new Map();
   for(const row of formal.rows) {
     const trace=localEvidence(row);const code=trace.source;
+    const repository=repositoryEvidence(row,trace);
+    trace.guards=[...new Set([...trace.guards,...repository.methods.flatMap(method=>method.guards)])];
     const key=`${row.base} ${row.method} ${row.path}`;
     const previous=first.get(key);
     let classification;
     if(previous&&previous.category==='retired')classification={category:'shadowed',reason:'同一路径前置终止处理器已拒绝；后方旧实现不可达',blockedBy:previous.id};
     else if(/LEGACY_IDENTITY_API_RETIRED|CORE_GOVERNANCE_MODEL_READ_ONLY|ORGANIZATION_TRUTH_READ_ONLY/.test(row.handlers.map(h=>h.body).join('\n'))) classification={category:'retired',reason:'正式注册但明确拒绝写入'};
     else if(row.file==='org.js'&&['/login','/logout','/me/password'].includes(row.path))classification={category:'publicOrSelfService',reason:'登录或本人会话/口令服务；不能作为业务写权限'};
-    else if((row.file==='publications.js'&&['/parse','/preview'].includes(row.path))||(row.file==='processDesignEditor.js'&&row.path==='/validate')||(row.file==='processDesignMysql.js'&&row.path==='/import-structured-output/preview')||(row.file==='processV7PreviewReview.js'&&row.path.endsWith('/revisions/preview')))classification={category:'validationOnly',reason:'POST承载内存校验/差异预览，不持久化业务记录'};
+    else if((row.file==='publications.js'&&['/parse','/preview'].includes(row.path))||(row.file==='processDesignEditor.js'&&row.path==='/validate')||(row.file==='processDesignMysql.js'&&row.path==='/import-structured-output/preview')||(row.file==='processPreviewReview.js'&&row.path.endsWith('/revisions/preview')))classification={category:'validationOnly',reason:'POST承载内存校验/差异预览，不持久化业务记录'};
     else if(trace.guards.length&&(repositories[row.file.replace(/\.js$/,'')])) classification={category:row.file==='accounts.js'?'identityWrite':'businessWrite',reason:notes[row.file.replace(/\.js$/,'')]};
     else classification={category:'unclassified',reason:'未找到已追溯的权限及仓储路径，须核对后补充具体证据'};
     const entry={id:`${row.file}:${row.line} ${row.method} ${row.path}`,file:row.file,line:row.line,base:row.base,path:row.path,method:row.method,...classification,
@@ -68,7 +86,7 @@ function buildAudit() {
       csrf:'server/index.js在所有路由注册前应用csrfProtection；登录例外；本人会话写入要求令牌',
       permissions:trace.permissions,guards:trace.guards,helperReferences:trace.helpers,
       departmentAndStateChecks:code.split('\n').map(s=>s.trim()).filter(s=>/if\s*\(|assert\w+\(|expected|revision|content_hash/.test(s)).slice(0,100),
-      repository:repositoryEvidence(row,trace),sourceSha256:sha(source('server/routes/'+row.file))};
+      repository,sourceSha256:sha(source('server/routes/'+row.file))};
     const signals=entry.repository.methods.flatMap(method=>method.signals.map(signal=>({file:method.file,...signal})));
     entry.controls={
       permission:{guards:entry.guards,codes:entry.permissions,authentication:entry.authentication},

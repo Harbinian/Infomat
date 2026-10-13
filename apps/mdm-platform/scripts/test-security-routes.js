@@ -1,5 +1,6 @@
 // Real HTTP/session/CSRF middleware, fixed roles; explicitly injected synthetic repositories.
-// Legacy entity APIs are checked at their formal 410 boundary. No database connections.
+// Deleted legacy entity routes must stay absent (404); retained retired APIs keep explicit codes.
+// No database connections. Registration removal is recorded in commit 80774d0d.
 const assert = require('node:assert/strict');
 const { once } = require('node:events');
 const { isolatedEnvironment } = require('./testHelpers/isolatedProcess');
@@ -74,7 +75,8 @@ async function main() {
     const res = await fetch(base + url, {method, headers:{'Content-Type':'application/json', Cookie:client.cookie || '',
       ...(csrf && client.csrf ? {'X-CSRF-Token':client.csrf} : {})}, body:body === undefined ? undefined : JSON.stringify(body)});
     if (res.headers.get('set-cookie')) client.cookie=res.headers.get('set-cookie').split(';')[0];
-    return {status:res.status, body:await res.json(), headers:res.headers};
+    const bodyResult = res.headers.get('content-type')?.includes('application/json') ? await res.json() : await res.text();
+    return {status:res.status, body:bodyResult, headers:res.headers};
   }
   async function login(name, client = {}) {
     const r = await request(client, '/api/org/login','POST',{loginName:name,password});
@@ -126,7 +128,7 @@ async function main() {
     for (const basePath of ['/org-units','/positions','/persons','/product-families','/products','/class-nodes','/attributes','/systems','/external','/integration']) {
       for (const method of ['POST','PUT','PATCH','DELETE']) {
         const result=await request(admin,'/api'+basePath,method,{});
-        assert.equal(result.status,410,basePath); assert.equal(result.body.code,'LEGACY_SQLITE_ROUTE_ISOLATED');
+        assert.equal(result.status,404,basePath+' '+method+' must remain unregistered');
       }
     }
     for (const [url,method,code] of [['/api/org/users','POST','LEGACY_IDENTITY_API_RETIRED'],['/api/import-rbac/full','POST','LEGACY_IDENTITY_API_RETIRED'],['/api/rbac/model','PUT','CORE_GOVERNANCE_MODEL_READ_ONLY'],['/api/roles','POST','CORE_GOVERNANCE_MODEL_READ_ONLY']]) {
@@ -146,6 +148,50 @@ async function main() {
     let limited;
     for(let i=0;i<9;i++) limited=await request({},'/api/org/login','POST',{loginName:'missing',password:'incorrect'});
     assert.equal(limited.status,429);
+
+    // R03: whitespace variants of one account must share a single window. The lookup trims the
+    // submitted name, so the limiter has to trim it too or each variant opens a fresh window.
+    const security=require('../server/security');
+    security.resetLoginRateLimit();
+    const variants=['  missing','missing ','\tmissing','missing\t',' missing','missing ','\nmissing','missing\r','missing','missing\v'];
+    const replies=[];
+    for(const variant of variants) replies.push((await request({},'/api/org/login','POST',{loginName:variant,password:'incorrect'})).status);
+    assert.deepEqual(replies.slice(0,8),[401,401,401,401,401,401,401,401],'the first eight variants are counted in one window');
+    assert.equal(replies[8],429,'the ninth variant is refused: one account, one window');
+    assert.equal(replies[9],429,'and the window does not reopen for another spelling');
+
+    // R03: a concurrent burst must not slip past the counter, and the in-flight bound must be
+    // released even when a request is refused.
+    security.resetLoginRateLimit();
+    const burst=await Promise.all(Array.from({length:16},()=>request({},'/api/org/login','POST',{loginName:'burst_account',password:'incorrect'})));
+    const burstStatuses=burst.map(r=>r.status);
+    assert.ok(burstStatuses.every(status=>[401,429].includes(status)),'every concurrent attempt is either a plain failure or a bounded refusal: '+burstStatuses.join(','));
+    assert.ok(burstStatuses.filter(status=>status===429).length>=8,'concurrent attempts cannot all be admitted');
+    assert.ok(burstStatuses.filter(status=>status===401).length<=8,'no more than one window of attempts reaches the password check');
+    await new Promise(resolve=>setTimeout(resolve,50));
+    assert.equal(security.loginRateLimitStats().inFlight,0,'in-flight admissions are released on both outcomes');
+
+    // R03: a full window refuses even the correct password and says when to come back. A caller
+    // below the limit is unaffected, and a successful login clears that account's own history.
+    security.resetLoginRateLimit();
+    for(let i=0;i<8;i++) await request({},'/api/org/login','POST',{loginName:'department_contact',password:'incorrect'});
+    const blockedOut=await request({},'/api/org/login','POST',{loginName:'department_contact',password});
+    assert.equal(blockedOut.status,429,'a full window is refused regardless of the password offered');
+    assert.ok(Number(blockedOut.headers.get('retry-after'))>0,'a refused caller is told when to retry');
+    security.resetLoginRateLimit();
+    for(let i=0;i<3;i++) await request({},'/api/org/login','POST',{loginName:'mdm_lead',password:'incorrect'});
+    const recovered=await login('mdm_lead',{});
+    assert.equal((await request(recovered,'/api/csrf-token')).status,200,'a correct password below the limit is accepted');
+    assert.equal((await request({},'/api/org/login','POST',{loginName:'mdm_lead',password:'incorrect'})).status,401,'the successful login cleared that account window');
+    assert.equal((await request({},'/api/org/login','POST',{loginName:'department_contact',password:'incorrect'})).status,401,'one account\'s failures do not lock out another account from the same address');
+
+    // R07: a malformed credential is a client error and never reaches the identity repository.
+    security.resetLoginRateLimit();
+    for(const body of [{loginName:{},password:'x'},{loginName:'missing',password:{}},{loginName:'missing'},{loginName:'',password:'x'},{loginName:'missing',password:'x'.repeat(300)}]) {
+      const shaped=await request({},'/api/org/login','POST',body);
+      assert.equal(shaped.status,400,'credential shape: '+JSON.stringify(body).slice(0,60));
+      assert.equal(shaped.body.code,'LOGIN_CREDENTIAL_INVALID');
+    }
     console.log('Formal security HTTP checks passed: real session/CSRF, synthetic fixed-role repositories; no MySQL/SQLite');
   } finally {
     server.closeAllConnections(); await new Promise(resolve=>server.close(resolve)); await app.locals.closeRuntime();

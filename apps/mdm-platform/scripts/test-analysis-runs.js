@@ -258,7 +258,7 @@ async function main() {
     });
     assert((await inspectAnalysisRuns(pool)).ready);
     save('results.json', { passed: true, step: process.argv.includes('--p24') ? 'P24' : process.argv.includes('--p19') ? 'P19' : process.argv.includes('--p18-pdf') ? 'P18-PDF' : process.argv.includes('--p18-word') ? 'P18-DOCX' : process.argv.includes('--p18') ? 'P18' : process.argv.includes('--p17') ? 'P17' : process.argv.includes('--p16') ? 'P16' : process.argv.includes('--p15') ? 'P15' : 'P09', checks, formal_environment: false, worker_started: process.argv.includes('--p24') || process.argv.includes('--p19') || process.argv.includes('--p18-pdf') || process.argv.includes('--p18-word') || process.argv.includes('--p18') || process.argv.includes('--p15') || process.argv.includes('--p16'), human_acceptance: false });
-  }, { evidenceDir: output }); }
+  }, { evidenceDir: output, randomDatabase: true }); }
   finally { for (const [k, v] of Object.entries(oldFlags)) { if (v === undefined) delete process.env[k]; else process.env[k] = v; } }
 }
 main().catch(e => { save('failure.json', { code: e.code, message: e.message, stack: e.stack, inspection: e.inspection, checks }); console.error(e.code || e.message); process.exitCode = 1; });

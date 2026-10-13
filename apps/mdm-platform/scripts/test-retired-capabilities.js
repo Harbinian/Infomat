@@ -54,11 +54,6 @@ app.use(express.static(path.resolve(__dirname, '../public')));
     assert.equal((await retained.json()).document.schema_version, 'process-governance-v7');
     const anonymous = await fetch(base + '/api/process-design/drafts/2/content', { headers: { 'X-Test-Anonymous': '1' } });
     assert.equal(anonymous.status, 401);
-    const html = fs.readFileSync(path.resolve(__dirname, '../public/index.html'), 'utf8');
-    for (const script of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)) new vm.Script(script[1]);
-    for (const id of ['pgNewProcessWorkspace', 'pgLegacyV3History', 'pgCanonicalJsonEditor', 'pgHandoffQueueSection', 'pgHandoffConflictSection']) assert.ok(!html.includes(`id="${id}"`));
-    assert.ok(html.includes('id="pgV7PreviewSection"'));
-    assert.ok(html.includes('id="pdgReconcileBtn"'));
     console.log('Retired capabilities HTTP regression passed; V7 read and authentication retained; zero historical writes');
   } finally {
     await new Promise(resolve => server.close(resolve));

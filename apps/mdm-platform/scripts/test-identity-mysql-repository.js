@@ -42,7 +42,7 @@ function makeFakePool() {
       if (normalized.includes('FROM user_accounts ua JOIN person p') && normalized.includes('WHERE ua.login_name=?')) {
         return [params[0] === 'ADMIN001' && state.accountStatus === 'active' ? [personRow()] : [], undefined];
       }
-      if (normalized.includes('FROM person p LEFT JOIN user_accounts ua') && normalized.includes('WHERE p.person_id=?')) {
+      if (normalized.includes('FROM person p LEFT JOIN user_accounts ua') && /WHERE p\.person_id=(?:\?|CAST\(\? AS SIGNED\))/.test(normalized)) {
         return [Number(params[0]) === 42 ? [personRow()] : [], undefined];
       }
       if (normalized.includes('SELECT r.role_code AS code') && normalized.includes('FROM person_roles pr')) {
@@ -70,11 +70,11 @@ function makeFakePool() {
           }
         ], undefined];
       }
-      if (normalized.startsWith('SELECT pr.role_id FROM person_roles pr')) {
+      if (normalized.startsWith('SELECT pr.role_id, CAST(pr.role_id AS CHAR) AS role_id FROM person_roles pr')) {
         assert.strictEqual(params[1], ACCESS_MODEL_VERSION);
-        return [[{ role_id: 3 }, { role_id: 4 }], undefined];
+        return [[{ role_id: '3' }, { role_id: '4' }], undefined];
       }
-      if (normalized === 'SELECT parent_role_id FROM roles WHERE role_id=?') {
+      if (normalized === 'SELECT parent_role_id, CAST(parent_role_id AS CHAR) AS parent_role_id FROM roles WHERE role_id=CAST(? AS SIGNED)') {
         return [[{ parent_role_id: null }], undefined];
       }
       if (normalized.startsWith('SELECT p.perm_code, p.field_constraints, rp.effect FROM role_permissions rp')) {
@@ -138,15 +138,16 @@ function makeFakePool() {
         state.events.push({ params });
         return [{ insertId: state.events.length, affectedRows: 1 }, undefined];
       }
-      if (normalized === 'SELECT * FROM departments ORDER BY code') {
+      if (normalized.startsWith('SELECT *, CAST(id AS CHAR) AS id,') && normalized.endsWith('FROM departments ORDER BY code')) {
         return [[{ id: 9, code: 'ENG', name: '工程技术部', status: 'active' }], undefined];
       }
-      if (normalized === 'SELECT * FROM departments WHERE id=?') {
+      if (normalized.startsWith('SELECT *, CAST(id AS CHAR) AS id,') && normalized.endsWith('FROM departments WHERE id=CAST(? AS SIGNED)')) {
+        assert.strictEqual(typeof params[0], 'string');
         return [Number(params[0]) === 9
           ? [{ id: 9, code: 'ENG', name: '工程技术部', status: 'active' }]
           : [], undefined];
       }
-      if (normalized === 'SELECT * FROM departments WHERE name=?') {
+      if (normalized.startsWith('SELECT *, CAST(id AS CHAR) AS id,') && normalized.endsWith('FROM departments WHERE name=?')) {
         return [params[0] === '工程技术部'
           ? [{ id: 9, code: 'ENG', name: '工程技术部', status: 'active' }]
           : [], undefined];

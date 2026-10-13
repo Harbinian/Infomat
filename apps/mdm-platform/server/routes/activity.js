@@ -1,5 +1,6 @@
 const { sendMysqlUnavailable } = require('../mysqlRuntimeSchema');
 const express = require('express');
+const { logRequestFailure } = require('../securityLog');
 const router = express.Router();
 const {
   requireAuth,
@@ -173,7 +174,7 @@ router.get('/heatmap', requireAuth, async (req, res) => {
     return res.json(buildPayload({ scope, days, startDate, endDate, rows }));
   } catch (error) {
     if (sendMysqlUnavailable(res, error)) return;
-    console.error(error);
+    logRequestFailure(res, error);
     return res.status(500).json({ error: '服务器错误' });
   }
 });

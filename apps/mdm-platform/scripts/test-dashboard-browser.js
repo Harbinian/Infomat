@@ -56,10 +56,7 @@ async function main() {
       assert.equal(await metric('todos').textContent(), String(todos.filter(x => x.status === 'pending').length));
       assert.equal(await metric('conflicts').textContent(), String(conflicts.filter(x => ['pending', 'coordinating'].includes(x.status)).length));
       checks.push('real historical mapping/field records, pending counts and rendered charts agree with original APIs');
-      await page.getByRole('link', { name: '查看原统计看板', exact: true }).click(); await page.waitForURL('**/#/dashboard');
-      await page.waitForFunction(() => document.getElementById('metricMappings')?.textContent === '2');
-      assert.equal(await page.locator('#metricFields').textContent(), '1');
-      await page.goBack(); await ready(); await page.reload(); await ready();
+ await page.reload(); await ready();
       for (const status of [403, 409, 503]) {
         await page.route('**/api/mappings', route => route.fulfill({ status, json: {} }), { times: 1 });
         await button('刷新统计').click(); await ready();

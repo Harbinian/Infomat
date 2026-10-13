@@ -23,8 +23,8 @@ module.exports=async({fixture,run,issueId,findingId,test,save,output,state})=>{
     });
     await test('Edge designated reviewer rejects then explicitly checks fixed completion evidence and closes',async()=>{
       reviewer=await login('lead');
-      await reviewer.goto(fixture.baseURL+'/#/roleWorkbench');
-      await reviewer.getByRole('button',{name:'复核问题',exact:true}).first().click();
+      await reviewer.goto(fixture.baseURL+'/app/workbench');
+      await reviewer.getByRole('link',{name:'复核问题',exact:true}).first().click();
       await reviewer.waitForURL('**/app/analysis#run='+run.run_id+'&finding='+findingId);
       await button(reviewer,'查看复核与关闭').click();await label(reviewer,'条件 1 依据').fill('尚需核对完整接收条件');await label(reviewer,'复核决定依据').fill('复核不通过，请补充说明');await button(reviewer,'提交逐项复核').click();await wait(async()=>(await state()).events.at(-1).action==='reject');assert.equal((await state()).status,'waiting_my_action');
       await wait(async()=>(await label(reviewer,'复核决定依据').inputValue())==='');

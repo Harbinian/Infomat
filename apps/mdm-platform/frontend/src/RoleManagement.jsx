@@ -10,7 +10,7 @@ function Table({ headers, rows, empty }) {
   return rows.length ? <div className="role-table-scroll" tabIndex={0} aria-label={headers.join('、')}><table><thead><tr>{headers.map(h => <th key={h}>{h}</th>)}</tr></thead><tbody>{rows.map((cells, i) => <tr key={i}>{cells.map((cell, j) => <td key={j}>{cell ?? '未提供'}</td>)}</tr>)}</tbody></table></div> : <p>{empty}</p>;
 }
 
-export function RoleManagement({ api, onLegacy }) {
+export function RoleManagement({ api, onNavigate }) {
   const [selection, setSelection] = useState(selectedId);
   const [revision, setRevision] = useState(0);
   const [catalog, setCatalog] = useState(null);
@@ -58,7 +58,7 @@ export function RoleManagement({ api, onLegacy }) {
   const label = code => catalog?.model.roles.find(item => item.code === code)?.name || code;
   return <div className="role-management">
     <section className="card"><h2>查看角色及权限边界</h2><p>选择角色，核对角色状态、权限、人员授权记录与固定责任。角色定义、权限矩阵和可见标签均为只读；人员记录中的状态不等于当前有效授权判定。</p>
-      <div className="role-management-actions"><button onClick={() => setRevision(value => value + 1)}>刷新角色资料</button><a href="/#/rbac" onClick={onLegacy}>原账号管理与访问审计</a></div>
+      <div className="role-management-actions"><button onClick={() => setRevision(value => value + 1)}>刷新角色资料</button></div>
     </section>
     {catalogError ? <StatusPanel kind="error" title="角色资料暂不可用" onRetry={() => setRevision(value => value + 1)}>{catalogError.message}</StatusPanel> : !catalog ? <StatusPanel kind="loading" title="正在读取角色资料…" /> : <>
       <section className="card"><p>固定模型版本：{catalog.model.modelVersion}</p>

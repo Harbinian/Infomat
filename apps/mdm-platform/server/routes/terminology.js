@@ -1,5 +1,7 @@
 const { sendMysqlUnavailable } = require('../mysqlRuntimeSchema');
+const { sessionOf } = require('../legacyGovernanceWrites');
 const express = require('express');
+const { logRequestFailure } = require('../securityLog');
 const router = express.Router();
 const { requireAuth, requirePermission } = require('../auth');
 const { terminologyScope } = require('../terminologyAccess');
@@ -11,6 +13,7 @@ const {
 } = require('../terminologyMysqlRepository');
 
 function handleDbError(res, error) {
+  if (error?.statusCode) return res.status(error.statusCode).json({ error:error.message, code:error.code });
   if (sendMysqlUnavailable(res, error)) return;
   if (error && (error.code === 'ER_DUP_ENTRY' || String(error.message).includes('Duplicate entry'))) {
     return res.status(409).json({ error: '术语已存在' });
@@ -18,7 +21,7 @@ function handleDbError(res, error) {
   if (error && (String(error.code || '').startsWith('ER_') || String(error.message).includes('constraint'))) {
     return res.status(400).json({ error: '数据不符合约束' });
   }
-  console.error(error);
+  logRequestFailure(res, error);
   return res.status(500).json({ error: '服务器错误' });
 }
 
@@ -106,7 +109,7 @@ router.post('/', requireAuth, requirePermission('governance:draft-department'), 
       scope: req.body.scope,
       forbidden: req.body.forbidden,
       process_id: normalizedProcessId || null
-    }, req.session.userId);
+    }, req.session.userId, sessionOf(req.session));
     res.json({ id: term.id });
   });
 });
@@ -130,8 +133,9 @@ router.put('/:id', requireAuth, requirePermission('governance:draft-department')
       definition: req.body.definition,
       scope: req.body.scope,
       forbidden: req.body.forbidden,
-      process_id: normalizedProcessId || null
-    });
+      process_id: normalizedProcessId || null,
+      expected_token: req.body.expected_token === undefined ? existing.write_token : req.body.expected_token
+    }, sessionOf(req.session));
     if (!updated) return res.status(404).json({ error: '术语不存在' });
     res.json({ success: true });
   });
@@ -148,7 +152,7 @@ router.post('/:id/review', requireAuth, requirePermission('governance:review-dep
     if (Number(existing.process_owner_dept_id || 0) !== Number(req.session.departmentId || 0)) {
       return res.status(403).json({ error: '部门MDM审核员只能审核本部门术语' });
     }
-    await repo.reviewTerm(req.params.id, req.body.action, req.session.userId);
+    await repo.reviewTerm(req.params.id, req.body.action, req.session.userId, sessionOf(req.session), req.body.expected_token === undefined ? existing.write_token : req.body.expected_token);
     res.json({ success: true });
   });
 });
@@ -161,7 +165,7 @@ router.delete('/:id', requireAuth, requirePermission('governance:draft-departmen
     if (Number(existing.process_owner_dept_id || 0) !== Number(req.session.departmentId || 0) || existing.status !== 'pending') {
       return res.status(403).json({ error: '部门主对接人只能删除本部门待审术语' });
     }
-    const deleted = await repo.deleteTerm(req.params.id);
+    const deleted = await repo.deleteTerm(req.params.id, sessionOf(req.session), req.body?.expected_token === undefined ? existing.write_token : req.body.expected_token);
     if (!deleted) return res.status(404).json({ error: '术语不存在' });
     res.json({ success: true });
   });

@@ -10,7 +10,7 @@ function analyze(task){
   const add=(rule,locator,semantic,message)=>{if(!checked.includes(rule))return;const evidence_key='e'+digest([input.input_key,rule,semantic]).slice(0,48);
    evidence.push({evidence_key,input_key:input.input_key,locator_kind:'json_pointer',locator,note:message});
    findings.push({rule_id:rule,finding_type:'not_covered',message,subject_input_keys:[input.input_key],semantic_locator:semantic,evidence_keys:[evidence_key]});};
-  add('word.coverage','/coverage','document:extraction-coverage',`读取 ${doc.coverage.paragraph_count} 段正文、${doc.coverage.table_count} 个表格。${doc.coverage.not_covered.join('；')}。${doc.links.length?'显式关联仅表示固定引用，不表示业务认定。':'未登记对象、字段或V7来源的显式关联。'}`);
+  add('word.coverage','/coverage','document:extraction-coverage',`读取 ${doc.coverage.paragraph_count} 段正文、${doc.coverage.table_count} 个表格。${doc.coverage.not_covered.join('；')}。${doc.links.length?'显式关联仅表示固定引用，不表示业务认定。':'未登记对象、字段或流程固定来源的显式关联。'}`);
   const first=doc.anchors.findIndex(a=>a.kind==='paragraph');
   add('word.structure',first<0?'/coverage':`/anchors/${first}`,'document:structural-reading',first<0?'未提取到正文段落，不据此断言原文件没有内容。':'此处定位首个正文段落；全部结构可在证据浏览中核对。重复标题分别保留，不按名称自动合并。未经渲染，不提供页码；正文文字及缓存未经业务核验。');
  }

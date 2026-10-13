@@ -1,5 +1,6 @@
 const { sendMysqlUnavailable } = require('../mysqlRuntimeSchema');
 const express = require('express');
+const { logRequestFailure } = require('../securityLog');
 const router = express.Router();
 
 const { requireAuth, getUserEffectivePermissionsAsync } = require('../auth');
@@ -7,7 +8,7 @@ const { dataMapRepository } = require('../dataMapMysqlRepository');
 
 function handleDbError(res, error) {
   if (sendMysqlUnavailable(res, error)) return;
-  console.error(error);
+  logRequestFailure(res, error);
   return res.status(500).json({ error: '服务器错误' });
 }
 

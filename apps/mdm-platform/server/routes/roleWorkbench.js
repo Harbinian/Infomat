@@ -7,6 +7,8 @@ let processContextBundleCache = null;
 const { checkRuntimeSchema, sendMysqlUnavailable } = require('../mysqlRuntimeSchema');
 const express = require('express');
 const mysql = require('mysql2/promise');
+const { logRequestFailure, securityLog } = require('../securityLog');
+const { createRegisteredPool } = require('../mysqlPoolRegistry');
 const router = express.Router();
 function legacyDb() { return require('../db'); }
 const { requireAuth, getUserEffectivePermissions } = require('../auth');
@@ -40,11 +42,13 @@ const GOVERNANCE_TYPE_BY_TODO_TYPE = {
 
 function runAsyncAction(res, action, unavailableMessage) {
   return action().catch(error => {
+    // Dependency errors also carry statusCode; classify them before the
+    // application-status branch so driver messages never reach the response.
+    if (sendMysqlUnavailable(res, error)) return;
     if (error && error.statusCode) {
       return res.status(error.statusCode).json({ error: error.message });
     }
-    if (sendMysqlUnavailable(res, error)) return;
-    console.error(error);
+    logRequestFailure(res, error);
     return res.status(unavailableMessage ? 503 : 500).json({ error: unavailableMessage || '服务器错误' });
   });
 }
@@ -63,7 +67,7 @@ async function identityRepository() {
   }
   if (!identityRepoPromise) {
     identityRepoPromise = (async () => {
-      const pool = mysql.createPool(mysqlConfigFromEnv());
+      const pool = createRegisteredPool(process.env, 'identity');
       const repo = makeIdentityMysqlRepository(pool);
       await checkRuntimeSchema(pool, 'identity');
       return repo;
@@ -472,7 +476,7 @@ function buildSankey(activeRoles, contexts, workItems) {
   return { nodes: Array.from(nodes.values()), links: Array.from(links.values()) };
 }
 
-async function loadProcessDataGovernanceWorkItems(identity) {
+async function loadProcessDataGovernanceWorkItems(identity, res) {
   if (!isProcessDataGovernanceEnabled()) return [];
   try {
     const repo = processDataGovernanceRepositoryFactory
@@ -487,9 +491,8 @@ async function loadProcessDataGovernanceWorkItems(identity) {
       permissions: identity.permSet
     });
   } catch (error) {
-    if (process.env.MDM_DB_QUIET !== '1') {
-      console.warn(`process data governance work items unavailable: ${error.message}`);
-    }
+    // R06: recorded as a classification; the driver's text stays out of the log.
+    securityLog(res).write({ event: 'dependency_degraded', code: 'PROCESS_DATA_GOVERNANCE_ITEMS_UNAVAILABLE' });
     throw error;
   }
 }
@@ -501,6 +504,7 @@ router.get('/', requireAuth, (req, res) => {
     const roleCodes = identity.roleCodes;
     const { roles, roleGroups } = buildRoleGroupsCached(roleCodes);
     const ownedRoles = roles.filter(role => role.owned);
+    const administrator = roleCodes.includes('admin') || req.session.identityKind === 'system_admin';
     const permSet = identity.permSet;
     const canViewAll = permSet.has('governance:read-global');
     const canDecideEscalated = permSet.has('governance:decide-escalation');
@@ -508,9 +512,9 @@ router.get('/', requireAuth, (req, res) => {
     const cacheKey = workbenchResponseCacheKey({ mode, identity, roleCodes, permSet });
     const body = await getOrBuildWorkbenchResponse(cacheKey, async () => {
       const [officeWorkItems, processDataGovernance, v7WorkItems] = await Promise.all([
-        useMysqlIdentityReadModel() ? require('./offices').getOfficeRepository().personalWorkItems(req.session) : [],
-        loadProcessDataGovernanceWorkItems(identity),
-        useMysqlProcessGovernanceReadModel() ? require('./processV7PreviewReview').listV7WorkbenchItems({
+        useMysqlIdentityReadModel() && !administrator ? require('./offices').getOfficeRepository().personalWorkItems(req.session) : [],
+        loadProcessDataGovernanceWorkItems(identity, res),
+        useMysqlProcessGovernanceReadModel() ? require('./processPreviewReview').listProcessWorkbenchItems({
           userId: identity.user.id, personId: identity.user.personId, departmentId: identity.user.departmentId,
           accountId: Number(req.session.accountId || 0), authVersion: Number(req.session.authVersion || 0),
           departmentName: identity.user.departmentName, roleCodes: new Set(roleCodes), permissions: permSet,
@@ -595,7 +599,7 @@ router.get('/', requireAuth, (req, res) => {
       };
     });
     // Per-issue authority is revalidated outside the legacy 15-second response cache.
-    const officeRepo=useMysqlIdentityReadModel()?require('./offices').getOfficeRepository():null;
+    const officeRepo=useMysqlIdentityReadModel()&&!administrator?require('./offices').getOfficeRepository():null;
     const closureItems=officeRepo?.closureWorkItems?await officeRepo.closureWorkItems(req.session):[];
     const liveActions=closureItems.length?buildNextActions([...closureItems,...body.workItems.filter(i=>i.type!=='guidance')],ownedRoles):body.nextActions;
     const response=closureItems.length?{...body,workItems:[...closureItems,...body.workItems],

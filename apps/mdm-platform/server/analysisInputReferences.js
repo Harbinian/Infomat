@@ -1,6 +1,6 @@
 // Read existing fixed references; never copy a V7 document into analysis tables.
 const { failure, id, parse, digest, json } = require('./dataMapDefinitionValues');
-const columns = { v7_source: 'source_id', definition: 'definition_version_id', mapping: 'mapping_version_id', handoff: 'handoff_version_id', template: 'batch_id' };
+const columns = Object.freeze({ v7_source: 'source_id', definition: 'definition_version_id', mapping: 'mapping_version_id', handoff: 'handoff_version_id', template: 'batch_id' });
 const integrity = () => failure('DEFINITION_ANALYSIS_REFERENCE_CHANGED', 409);
 module.exports = function ({ scope, entityScope, version, loadSource, target, unpack, mappingSelect }) {
   async function resolve(db, who, kind, refId) {
@@ -8,6 +8,7 @@ module.exports = function ({ scope, entityScope, version, loadSource, target, un
     if (!columns[kind]) throw failure('DEFINITION_ANALYSIS_INPUT_KIND_INVALID');
     let metadata, document;
     if (kind === 'v7_source') {
+      await require('./analysisDependencyReadiness').assertSourceStorage(db);
       const r = await loadSource(db, who, refId);
       if (r.stale) throw integrity();
       metadata = { source_kind: r.source_kind, source_ref: r.source_ref, content_digest: r.content_digest, digest_algorithm: r.digest_algorithm,
@@ -34,6 +35,12 @@ module.exports = function ({ scope, entityScope, version, loadSource, target, un
       const [[raw]] = await db.execute('SELECT snapshot_json FROM data_map_v7_mapping_versions WHERE mapping_version_id=? FOR SHARE', [refId]);
       document = parse(raw.snapshot_json);
     } else if (kind === 'handoff') {
+      // Historical handoff reads consume P08 storage as well. A partial install
+      // must not appear ready merely because surviving rows are still readable.
+      const marker = require('./designHandoffSchema').MIGRATION_KEY, dependency = require('./v7MappingSchema').MIGRATION_KEY;
+      const [markers] = await db.execute('SELECT migration_key FROM schema_migrations WHERE migration_key IN (?,?)', [marker, dependency]);
+      if (!markers.some(m => m.migration_key === marker)) throw failure('DEFINITION_HANDOFF_MIGRATION_REQUIRED', 503);
+      if (!markers.some(m => m.migration_key === dependency)) throw failure('DEFINITION_V7_MIGRATION_REQUIRED', 503);
       const [[r]] = await db.execute('SELECT CAST(handoff_id AS CHAR) handoff_id,revision_no,claim_status,snapshot_json,snapshot_digest FROM data_map_design_handoff_versions WHERE handoff_version_id=? FOR SHARE', [refId]);
       if (!r) throw failure('DEFINITION_ANALYSIS_REFERENCE_NOT_FOUND', 404);
       document = parse(r.snapshot_json);
@@ -85,3 +92,11 @@ module.exports = function ({ scope, entityScope, version, loadSource, target, un
   return resolve;
 };
 module.exports.columns = columns;
+// Only this newly optional projection may be absent in old fixed manifests.
+// Every previously bound attribute still compares exactly. The authorized fixed
+// body is checked by loadSource; no case-latest lookup or history rewrite occurs.
+module.exports.snapshotMatches = (actual, expected, document) => {
+  const view = { ...actual };
+  if (expected.kind === 'v7_source' && Object.hasOwn(expected, 'schema_version')) view.schema_version = typeof document?.schema_version === 'string' ? document.schema_version : null;
+  return json(view) === json(expected);
+};

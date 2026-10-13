@@ -1,6 +1,6 @@
 # 3000 RBAC 与 RACI 数据结构
 
-## 1. 唯一身份链路
+## 1. 人员身份与系统维护主体
 
 ```text
 departments
@@ -10,7 +10,7 @@ person → user_accounts
 person_roles → roles → role_permissions → permissions
 ```
 
-正式运行不从`users/user_roles`补齐身份或权限。
+普通人员按上图关联身份及权限。独立`system_admin`通过`system_admin_accounts`及系统会话维护，不关联真实员工或部门；原人员管理员和历史审计保留。两类主体的精确会话绑定、锁后资格及审计见[身份与事务合同](Identity-Transaction-Contract.md)。正式运行不从`users/user_roles`补齐身份或权限。
 
 ## 2. 核心表
 

@@ -1,0 +1,3 @@
+# Preserve archival snapshot bytes across Git operations for SHA256SUMS.
+docs/archives/2026-10-09-leaf-docs/**/*.before.txt -text
+docs/archives/2026-10-09-repository-docs/*.before.txt -text

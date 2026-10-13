@@ -1,5 +1,6 @@
 const { sendMysqlUnavailable } = require('../mysqlRuntimeSchema');
 const express = require('express');
+const { logRequestFailure } = require('../securityLog');
 const router = express.Router();
 const { requireAuth, getUserEffectivePermissionsAsync } = require('../auth');
 const { dataMapRepository } = require('../dataMapMysqlRepository');
@@ -13,7 +14,7 @@ function handleError(res, error) {
     return res.status(400).json({ error: '数据不符合约束' });
   }
   if (sendMysqlUnavailable(res, error)) return;
-  console.error(error);
+  logRequestFailure(res, error);
   return res.status(500).json({ error: '服务器错误' });
 }
 

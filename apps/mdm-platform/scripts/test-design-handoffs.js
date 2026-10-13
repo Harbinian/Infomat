@@ -137,5 +137,5 @@ async function main(){await withStage05Fixture(async({pool,fixture,expect,reques
     fs.writeFileSync(path.join(output,'results.json'),JSON.stringify({passed:true,step:process.argv.includes('--p12')?'P12':'P08',checks,formal_environment:false,human_acceptance:false},null,2));
   }catch(e){if(page)await page.screenshot({path:path.join(output,'failure.png'),fullPage:true}).catch(()=>{});fs.writeFileSync(path.join(output,'failure.json'),JSON.stringify({message:e.message,checks},null,2));throw e;}
   finally{async function bounded(p){let timer;try{return await Promise.race([p,new Promise((_,r)=>{timer=setTimeout(()=>r(Error('close timeout')),10000);})]);}finally{clearTimeout(timer);}}const cleanup={owned_browser_pid:browserServer?.process().pid||null};if(browser)await bounded(browser.close()).catch(()=>{});if(browserServer){try{await bounded(browserServer.close());cleanup.graceful=true;}catch{await bounded(browserServer.kill());cleanup.forced_owned_only=true;}assert(browserServer.process().exitCode!==null||browserServer.process().signalCode!==null);}fs.writeFileSync(path.join(output,'browser-cleanup.json'),JSON.stringify(cleanup));}
-},{evidenceDir:output});}
+},{evidenceDir:output,randomDatabase:true});}
 main().catch(e=>{console.error(e);if(e.inspection)console.error(JSON.stringify(e.inspection));process.exitCode=1;});

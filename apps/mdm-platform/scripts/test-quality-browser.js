@@ -61,11 +61,8 @@ async function main() {
       await page.reload(); await ready(); assert.equal(await overall(), '2 / 3 条已确认（67%）');
       await page.getByRole('link', { name: '统计看板', exact: true }).click();
       await page.goBack(); await ready();
-      await page.getByRole('link', { name: '打开原数据质量入口', exact: true }).click();
-      await page.waitForURL('**/#/quality');
-      await page.locator('#goldenSourceProgress').getByText(/总体进度：2\/3/).waitFor();
-      await page.goBack(); await ready();
-      checks.push('reload, back and original quality entry use compatible stored records');
+
+      checks.push('reload, back and current quality entry use compatible stored records');
       for (const status of [403, 409, 503]) {
         await page.route('**' + endpoint, route => route.fulfill({ status, json: {} }), { times: 1 });
         await button('刷新确认进度').click(); await page.locator('[data-quality-state="error"]').waitFor();

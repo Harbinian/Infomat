@@ -1,15 +1,18 @@
 // Explicit target; no .env, DDL, HTTP listener or daemon installation.
-// start/status/stop/recover. stop requires this worker's UUID, never a process scan.
+// start/status/inspect/stop/recover. inspect/status are metadata-only, not recovery.
+// stop requires this worker's UUID, never a process scan or PID authorization.
 const crypto = require('node:crypto');
 const fs = require('node:fs');
 const { lazyMysqlPool, withMysqlDeadline } = require('../server/boundedMysql');
+const { operationTimeoutMs } = require('../server/mysqlConfig');
 const { argumentsFor } = require('./manage-data-map-definitions');
 const { inspectAnalysisQueue } = require('../server/analysisQueueMigration');
+const { inspectWorkerDependencies, readWorkerStatus, inspectionScope } = require('../server/analysisDependencyReadiness');
 const { makeDataMapDefinitionRepository } = require('../server/dataMapDefinitionRepository');
 const { work } = require('../server/analysisWorker');
 async function main(args = process.argv.slice(2), env = process.env) {
   const command = args[0];
-  if (!['start', 'status', 'stop', 'recover'].includes(command)) throw Error('ARGUMENT_INVALID');
+  if (!['start', 'status', 'inspect', 'stop', 'recover'].includes(command)) throw Error('ARGUMENT_INVALID');
   const workerArg = args.indexOf('--worker-id');
   let supplied;
   if (workerArg >= 0) {
@@ -19,23 +22,34 @@ async function main(args = process.argv.slice(2), env = process.env) {
   }
   if (command === 'stop' && !supplied) throw Error('ARGUMENT_INVALID');
   argumentsFor(['--inspect', ...args.slice(1)], env);
-  const pool = lazyMysqlPool(env, 4, 5000, { queueLimit: 16 });
+  const timeoutMs = operationTimeoutMs(env);
+  const pool = lazyMysqlPool(env, 4, 5000, { queueLimit: 16, operationTimeoutMs: timeoutMs });
+  // The singleton lock lasts for the worker lifetime; each command on it has its own deadline.
+  const lockPool = lazyMysqlPool(env, 1, 5000);
   let lock, registered, stopped = false;
   const log = entry => console.log(JSON.stringify({ ...entry, at: new Date().toISOString() }));
-  const query = fn => withMysqlDeadline(pool, fn, 10000);
-  const signalStop = () => { stopped = true; };
+  const query = fn => withMysqlDeadline(pool, fn, timeoutMs);
+  const signalStop = () => {
+    stopped = true;
+    pool.cancelActive(Object.assign(new Error('worker stopped'), { code: 'ABORTED' }));
+    if (lock) lock.destroy();
+  };
+  const lockQuery = (sql, params) => withMysqlDeadline({ async getConnection() {
+    return { execute: (...args) => lock.execute(...args), destroy: () => lock.destroy(), release() {} };
+  } }, db => db.execute(sql, params), timeoutMs);
   try {
-    if (!(await query(inspectAnalysisQueue)).ready) throw Error('ANALYSIS_QUEUE_MIGRATION_REQUIRED');
-    if (command === 'status') {
-      const status = await query(async db => ({
-        workers: (await db.execute(`SELECT worker_id,runtime_json,stop_requested,
-          DATE_FORMAT(started_at,'%Y-%m-%dT%H:%i:%s.%fZ') started_at,
-          DATE_FORMAT(heartbeat_at,'%Y-%m-%dT%H:%i:%s.%fZ') heartbeat_at,
-          DATE_FORMAT(stopped_at,'%Y-%m-%dT%H:%i:%s.%fZ') stopped_at
-          FROM data_map_analysis_workers ORDER BY data_map_analysis_workers.started_at DESC LIMIT 100`))[0],
-        queue: (await db.execute('SELECT state,COUNT(*) count FROM data_map_analysis_queue GROUP BY state'))[0]
-      })); log(status); return status;
+    if (['start', 'status', 'inspect'].includes(command)) {
+      const status = await query(db => inspectionScope(db, async () => {
+        const readiness = await inspectWorkerDependencies(db, env);
+        if (!readiness.ready) return { readiness, workers: null, queue: null, worker_state: 'not_checked', worker_process: 'not_checked' };
+        return { readiness, ...await readWorkerStatus(db) };
+      })).catch(() => ({ readiness: { ready: false, state: 'not_checked', reason: 'DIAGNOSTIC_UNAVAILABLE' },
+        workers: null, queue: null, worker_state: 'not_checked', worker_process: 'not_checked' }));
+      if (command !== 'start') { log(status); if (!status.readiness.ready) process.exitCode = 1; return status; }
+      if (!status.readiness.ready) throw Error('ANALYSIS_DEPENDENCY_UNAVAILABLE');
     }
+    // A stopped/disabled fixed source must not prevent an explicit UUID stop.
+    if (['stop', 'recover'].includes(command) && !(await query(inspectAnalysisQueue)).ready) throw Error('ANALYSIS_QUEUE_MIGRATION_REQUIRED');
     if (command === 'stop') {
       const [r] = await query(db => db.execute('UPDATE data_map_analysis_workers SET stop_requested=TRUE WHERE worker_id=? AND stopped_at IS NULL', [supplied]));
       if (!r.affectedRows) throw Error('ANALYSIS_WORKER_NOT_RUNNING');
@@ -44,23 +58,27 @@ async function main(args = process.argv.slice(2), env = process.env) {
     const repo = makeDataMapDefinitionRepository(pool);
     if (command === 'recover') { log(await repo.recoverAnalysisQueue()); return; }
     // Dedicated connection holds a database-specific singleton lock for the process lifetime.
-    lock = await pool.getConnection();
+    lock = await withMysqlDeadline({ async getConnection() {
+      const db = await lockPool.getConnection();
+      return { raw: db, destroy: () => db.destroy(), release() {} };
+    } }, db => db.raw, timeoutMs);
     const lockName = 'mdm_analysis_worker_' + crypto.createHash('sha256').update(env.MYSQL_DATABASE).digest('hex').slice(0, 32);
-    const [[r]] = await lock.execute('SELECT GET_LOCK(?,0) acquired', [lockName]);
+    const [[r]] = await lockQuery('SELECT GET_LOCK(?,0) acquired', [lockName]);
     if (Number(r.acquired) !== 1) throw Error('ANALYSIS_WORKER_BUSY');
     const worker = crypto.randomUUID();
     const runtime = { node_version: process.version, worker_version: 'analysis-worker-v6', ai_offline_version: require('../server/analysisAiOffline').VERSION, pdf_rule_version: require('../server/pdfEvidenceRules').VERSION, word_rule_version: require('../server/wordEvidenceRules').VERSION, excel_rule_version: require('../server/excelEvidenceRules').VERSION, handoff_rule_version: require('../server/handoffAnalysisRules').VERSION, rule_version: require('../server/v7AnalysisRules').VERSION, pid: process.pid,
-      code_sha256: Object.fromEntries([__filename, require.resolve('../server/analysisWorker'), require.resolve('../server/analysisAiOffline'), require.resolve('../server/analysisAiThread'), require.resolve('../server/analysisQueue'), require.resolve('../server/v7AnalysisRules'), require.resolve('../server/v7AnalysisThread'), require.resolve('../server/handoffAnalysisRules'), require.resolve('../server/excelEvidenceRules'), require.resolve('../server/wordEvidenceRules'), require.resolve('../server/pdfEvidenceRules'), require.resolve('../../../scripts/process-governance/v7-validator'), ...require('../server/v7AnalysisRules').schemaFiles].map(file => [require('node:path').basename(file), crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex')])) };
-    await lock.execute('INSERT INTO data_map_analysis_workers(worker_id,runtime_json,started_at,heartbeat_at) VALUES (?,?,UTC_TIMESTAMP(3),UTC_TIMESTAMP(3))', [worker, JSON.stringify(runtime)]);
+      dependency_check_version: 'analysis-dependency-readiness-v1',
+      code_sha256: Object.fromEntries([__filename, require.resolve('../server/analysisDependencyReadiness'), require.resolve('../server/analysisWorker'), require.resolve('../server/analysisAiOffline'), require.resolve('../server/analysisAiThread'), require.resolve('../server/analysisQueue'), require.resolve('../server/v7AnalysisRules'), require.resolve('../server/processContentChecks'), require.resolve('../../structured-output-service/public/structure-score'), require.resolve('../server/v7AnalysisThread'), require.resolve('../server/handoffAnalysisRules'), require.resolve('../server/excelEvidenceRules'), require.resolve('../server/wordEvidenceRules'), require.resolve('../server/pdfEvidenceRules'), require.resolve('../../../scripts/process-governance/v7-validator'), ...require('../server/v7AnalysisRules').schemaFiles].map(file => [require('node:path').basename(file), crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex')])) };
+    await lockQuery('INSERT INTO data_map_analysis_workers(worker_id,runtime_json,started_at,heartbeat_at) VALUES (?,?,UTC_TIMESTAMP(3),UTC_TIMESTAMP(3))', [worker, JSON.stringify(runtime)]);
     registered = worker;
     process.on('SIGINT', signalStop); process.on('SIGTERM', signalStop);
     process.on('message', signalStop);
     const stop = async () => {
       if (stopped) return true;
       // Loss of the singleton connection terminates this process, even if its lease remains.
-      const [[r]] = await lock.execute('SELECT stop_requested FROM data_map_analysis_workers WHERE worker_id=?', [worker]);
+      const [[r]] = await lockQuery('SELECT stop_requested FROM data_map_analysis_workers WHERE worker_id=?', [worker]);
       stopped = !!r.stop_requested;
-      await lock.execute('UPDATE data_map_analysis_workers SET heartbeat_at=UTC_TIMESTAMP(3) WHERE worker_id=?', [worker]);
+      await lockQuery('UPDATE data_map_analysis_workers SET heartbeat_at=UTC_TIMESTAMP(3) WHERE worker_id=?', [worker]);
       return stopped;
     };
     log({ event: 'worker_started', worker_id: worker });
@@ -68,12 +86,23 @@ async function main(args = process.argv.slice(2), env = process.env) {
   } finally {
     process.removeListener('SIGINT', signalStop); process.removeListener('SIGTERM', signalStop); process.removeListener('message', signalStop);
     if (lock) {
-      if (registered) { try { await lock.execute('UPDATE data_map_analysis_workers SET stopped_at=UTC_TIMESTAMP(3) WHERE worker_id=?', [registered]); } catch {} }
+      if (registered) { try { await query(db => db.execute('UPDATE data_map_analysis_workers SET stopped_at=UTC_TIMESTAMP(3) WHERE worker_id=?', [registered])); } catch {} }
       lock.destroy();
     }
-    await pool.end();
+    let timer;
+    try {
+      await Promise.race([Promise.all([pool.end(), lockPool.end()]), new Promise((_, reject) => {
+        timer = setTimeout(() => reject(Object.assign(new Error('worker drain failed'), { code: 'ANALYSIS_WORKER_DRAIN_TIMEOUT' })), timeoutMs);
+      })]);
+    } finally { clearTimeout(timer); }
     if (registered) log({ event: 'worker_stopped', worker_id: registered });
   }
 }
-if (require.main === module) main().catch(e => { console.error(/^ANALYSIS_[A-Z_]+$/.test(e.message) ? e.message : 'ANALYSIS_WORKER_FAILED'); process.exitCode = 1; });
+if (require.main === module) main().catch(e => {
+  const code = /^ANALYSIS_[A-Z_]+$/.test(e.code || '') ? e.code : /^ANALYSIS_[A-Z_]+$/.test(e.message) ? e.message : 'ANALYSIS_WORKER_FAILED';
+  console.error(code);
+  // main already attempted bounded cleanup. A broken driver's still-open socket must not keep
+  // this owned CLI process alive after it reported failure; failure remains visible as exit 1.
+  process.exit(1);
+});
 module.exports = { main };

@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const mysql = require('mysql2/promise');
 const { mysqlConfigFromEnv } = require('./mysqlConfig');
 const { mdmMysqlSchemaSql, splitSqlStatements } = require('./mysqlSchema');
+const { createRegisteredPool } = require('./mysqlPoolRegistry');
 
 let dataMapRepoPromise = null;
 let dataMapRepositoryFactory = null;
@@ -268,7 +269,7 @@ function issueFromRule(fieldName, rule) {
 }
 
 function makeDataMapMysqlRepository(pool) {
-  async function ensureObject(payload, actorUserId) {
+  async function ensureObject(payload, actorUserId, preserveExisting = false) {
     const normalized = normalizeObjectPayload(payload, actorUserId);
     if (!normalized) return null;
     await pool.execute(
@@ -276,7 +277,7 @@ function makeDataMapMysqlRepository(pool) {
         (object_key, object_name_cn, object_name_en, object_type, owner_dept_id, steward_user_id, steward_person_id,
          description, status, source_type, source_ref, created_by, created_by_person_id)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-       ON DUPLICATE KEY UPDATE
+       ON DUPLICATE KEY UPDATE ${preserveExisting ? 'id=id' : `
         object_name_cn=VALUES(object_name_cn),
         object_name_en=VALUES(object_name_en),
         object_type=VALUES(object_type),
@@ -289,7 +290,7 @@ function makeDataMapMysqlRepository(pool) {
         source_ref=VALUES(source_ref),
         updated_by=VALUES(created_by),
         updated_by_person_id=VALUES(created_by_person_id),
-        updated_at=CURRENT_TIMESTAMP`,
+        updated_at=CURRENT_TIMESTAMP`}`,
       [
         normalized.object_key,
         normalized.object_name_cn,
@@ -413,6 +414,9 @@ function makeDataMapMysqlRepository(pool) {
   }
 
   return {
+    async importFieldsBatch(payload, session) {
+      return await require('./legacyFieldImport').importFields(pool, payload, session);
+    },
     // Optional additive contract; legacy routes remain unchanged and no DDL runs.
     definitions() { return require('./dataMapDefinitionRepository').makeDataMapDefinitionRepository(pool); },
     identityGovernance() { return require('./fieldIdentityGovernance').makeFieldIdentityGovernance(pool); },
@@ -526,7 +530,7 @@ function makeDataMapMysqlRepository(pool) {
       };
     },
 
-    async createField(payload = {}, actorUserId = null) {
+    async createField(payload = {}, actorUserId = null, options = {}) {
       const normalized = normalizeFieldPayload(payload, actorUserId);
       const context = await this.getContext(normalized.context_id);
       if (!context) throw httpError(404, '数据地图上下文不存在');
@@ -534,7 +538,7 @@ function makeDataMapMysqlRepository(pool) {
       if (!validation.allowed) {
         throw httpError(400, validation.issues.find(issue => issue.severity === 'block').message);
       }
-      const object = await ensureObject(payload, actorUserId);
+      const object = await ensureObject(payload, actorUserId, options.preserveObject);
       const result = await pool.execute(
         `INSERT INTO data_map_fields
           (context_id, object_id, field_key, field_name_cn, field_name_en, business_definition,
@@ -575,16 +579,18 @@ function makeDataMapMysqlRepository(pool) {
       return await getFieldWithLinks(fieldId);
     },
 
-    async getFieldsByContext(contextId) {
+    async getFieldsByContext(contextId, { maxRows = null } = {}) {
+      const bounded = Number.isSafeInteger(maxRows) && maxRows >= 0;
       const fieldRows = await rows(
         pool,
         `SELECT f.*, o.object_name_cn AS data_object, o.object_key
          FROM data_map_fields f
          LEFT JOIN data_map_objects o ON f.object_id = o.id
          WHERE f.context_id=?
-         ORDER BY f.id`,
+         ORDER BY f.id${bounded ? ` LIMIT ${maxRows + 1}` : ''}`,
         [contextId]
       );
+      if (bounded && fieldRows.length > maxRows) throw Object.assign(new Error('导出规模超过上限'), { code: 'EXPORT_LIMIT_EXCEEDED', statusCode: 413 });
       const links = await getLinksForFields(fieldRows.map(row => row.id));
       return fieldRows.map(row => publicField(row, links.get(Number(row.id)) || []));
     },
@@ -800,18 +806,59 @@ function makeDataMapMysqlRepository(pool) {
       return { id: insertId(result) };
     },
 
-    async exportFieldLedger(scope = {}) {
-      const departmentId = scope.departmentId ? Number(scope.departmentId) : null;
-      const contexts = (await this.listContexts()).filter(context =>
-        !departmentId || Number(context.dept_id || 0) === departmentId
-      );
+    // R09: the second argument is optional and additive. Without it the previous behaviour is
+    // unchanged; with it the row budget is enforced before the caller builds a workbook, and a
+    // departed client stops the reads instead of letting them run to completion in the background.
+    async exportFieldLedger(scope = {}, { signal = null, maxRows = null } = {}) {
+      // Use one cancellable lease for the export. A disconnected client destroys its in-flight
+      // read, rather than waiting for the next context boundary before noticing the departure.
+      if (typeof pool.getConnection === 'function') {
+        const connection = await pool.getConnection({ signal });
+        const onAbort = () => connection.destroy();
+        if (signal) signal.addEventListener('abort', onAbort, { once: true });
+        try {
+          return await makeDataMapMysqlRepository(connection).exportFieldLedger(scope, { signal, maxRows });
+        } finally {
+          if (signal) signal.removeEventListener('abort', onAbort);
+          connection.release();
+        }
+      }
+      const { identityInteger, sameIdentityInteger } = require('./sessionSubject');
+      const departmentId = scope.departmentId == null ? null : identityInteger(scope.departmentId);
+      if (scope.departmentId != null && departmentId === null) throw Object.assign(new Error('部门标识无法精确表示'), { code: 'EXPORT_SCOPE_INVALID', statusCode: 403 });
+      const limit = Number.isInteger(maxRows) && maxRows > 0 ? maxRows : null;
+      const stopped = () => {
+        if (signal && signal.aborted) throw signal.reason instanceof Error ? signal.reason : Object.assign(new Error('导出已取消'), { code: 'EXPORT_ABORTED', statusCode: 499 });
+      };
+      stopped();
+      let contexts;
+      if (limit !== null) {
+        const where = departmentId ? ' WHERE c.dept_id=?' : '';
+        const params = departmentId ? [departmentId] : [];
+        const probe = await rows(pool, `SELECT f.id FROM data_map_fields f JOIN data_map_contexts c ON c.id=f.context_id${where} LIMIT ${limit + 1}`, params);
+        stopped();
+        if (probe.length > limit) throw Object.assign(new Error(`导出规模超过上限 ${limit} 行`), { code: 'EXPORT_LIMIT_EXCEEDED', statusCode: 413 });
+        contexts = (await rows(pool, `SELECT c.* FROM data_map_contexts c WHERE ${departmentId ? 'c.dept_id=? AND ' : ''}EXISTS (SELECT 1 FROM data_map_fields f WHERE f.context_id=c.id) ORDER BY c.updated_at DESC,c.id DESC LIMIT ${limit + 1}`, params)).map(publicContext);
+        if (contexts.length > limit) throw Object.assign(new Error('导出规模超过上限'), { code: 'EXPORT_LIMIT_EXCEEDED', statusCode: 413 });
+      } else contexts = (await this.listContexts()).filter(context => !departmentId || sameIdentityInteger(context.dept_id, departmentId));
       const fields = [];
       for (const context of contexts) {
-        const contextFields = await this.getFieldsByContext(context.id);
+        stopped();
+        const contextFields = await this.getFieldsByContext(context.id, { maxRows: limit === null ? null : limit - fields.length });
         for (const field of contextFields) {
+          stopped();
+          if (limit !== null && fields.length >= limit) {
+            throw Object.assign(new Error(`导出规模超过上限 ${limit} 行`), { code: 'EXPORT_LIMIT_EXCEEDED', statusCode: 413, limit });
+          }
           const identity = await this.getFieldIdentity(field.id);
+          stopped();
           fields.push({
             ...field,
+            identity,
+            authoritative_system_name: identity ? identity.authoritative_system_name : null,
+            maintain_dept_id: identity ? identity.maintain_dept_id : null,
+            authority_system_options: identity ? identity.authority_system_options : null,
+            confirmed_by: identity ? identity.confirmed_by : null,
             context_id: context.id,
             context_key: context.context_key,
             context_title: context.title,
@@ -821,13 +868,14 @@ function makeDataMapMysqlRepository(pool) {
             l3_name: context.l3_name,
             system_name: field.system_name || consumerSystemsFromLinks(field.system_links || [])[0] || '',
             authoritative_system: identity ? identity.authoritative_system : '',
-            maintain_dept: '',
+            maintain_dept: identity ? identity.maintain_dept_id : '',
             confirmed: identity ? identity.confirmed : 0,
-            confirmer: '',
+            confirmer: identity ? identity.confirmed_by : '',
             confirmed_at: identity ? identity.confirmed_at : null
           });
         }
       }
+      stopped();
       return { fields, identities: fields };
     }
   };
@@ -837,7 +885,7 @@ async function dataMapRepository() {
   if (dataMapRepositoryFactory) return await dataMapRepositoryFactory();
   if (!dataMapRepoPromise) {
     dataMapRepoPromise = (async () => {
-      const pool = mysql.createPool(mysqlConfigFromEnv());
+      const pool = createRegisteredPool(process.env, 'dataMap');
       const repo = makeDataMapMysqlRepository(pool);
       await checkRuntimeSchema(pool, 'dataMap');
       return repo;

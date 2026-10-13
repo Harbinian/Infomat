@@ -1,5 +1,6 @@
 const crypto = require('node:crypto');
 const { makeTerminologyMysqlRepository } = require('./terminologyMysqlRepository');
+const { assertTodoTermSourceReady } = require('./todoTermSourceMigration');
 
 function fail(statusCode, code, message) {
   return Object.assign(new Error(message), { statusCode, code });
@@ -33,17 +34,22 @@ async function createTermTodo(pool, payload, actor) {
       (due !== null && (typeof due !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(due) || !Number.isFinite(Date.parse(due)) || new Date(due).toISOString().slice(0, 10) !== due))) {
     throw fail(400, 'TODO_TERM_INVALID', '术语待办类型、内容、截止日期或关联字段不符合要求');
   }
-  const normalized = { type: 'terminology', related_term_id: termId, to_dept_id: departmentId,
-    from_dept_id: actor.actor_dept_id || null, content, due_date: due, urgency };
-  const hash = crypto.createHash('sha256').update(JSON.stringify(normalized)).digest('hex');
   const key = `term_request:${requestId}`;
   const lockName = 'todo-term:' + crypto.createHash('sha256').update(`${personId}:${requestId}`).digest('hex').slice(0, 48);
   const db = await pool.getConnection();
   let locked = false;
   try {
+    await assertTodoTermSourceReady(db);
     const [[lock]] = await db.execute('SELECT GET_LOCK(?,5) AS acquired', [lockName]);
     if (Number(lock.acquired) !== 1) throw fail(409, 'TODO_TERM_BUSY', '同一请求正在处理，请稍后核对结果');
     locked = true;
+    if (actor.resolve_current) actor = await actor.resolve_current();
+    if (!actor.can_assign_work || actor.is_admin || !actor.term_scope || sourceId(actor.actor_person_id || actor.actor_user_id) !== personId) {
+      throw fail(403, 'TODO_TERM_FORBIDDEN', '当前身份无权分派关联术语的待办');
+    }
+    const normalized = { type:'terminology',related_term_id:termId,to_dept_id:departmentId,
+      from_dept_id:actor.actor_dept_id || null,content,due_date:due,urgency };
+    const hash = crypto.createHash('sha256').update(JSON.stringify(normalized)).digest('hex');
     await db.beginTransaction();
     const term = await makeTerminologyMysqlRepository(db).getTerm(termId, actor.term_scope, true);
     if (!term || String(term.id) !== termId) throw fail(404, 'TODO_TERM_UNAVAILABLE', '所选术语不存在或不在当前可读取范围内');
@@ -51,12 +57,14 @@ async function createTermTodo(pool, payload, actor) {
     if (!department) throw fail(400, 'TODO_TERM_INVALID', '请选择当前有效的接收部门');
     // The version log survives todo deletion. It also prevents a retried request
     // from recreating a previously deleted todo. Keep metadata out of todo DTOs.
-    const [[prior]] = await db.execute("SELECT entity_id,metadata_json FROM mdm_version_log WHERE entity_type='todo' AND operation='create' AND field_name=? AND operated_by_person_id=? ORDER BY id LIMIT 1", [key, personId]);
+    const [[prior]] = await db.execute("SELECT CAST(entity_id AS CHAR) AS entity_id,metadata_json FROM mdm_version_log WHERE entity_type='todo' AND operation='create' AND field_name=? AND operated_by_person_id=? ORDER BY id LIMIT 1", [key, personId]);
     if (prior) {
       const saved = typeof prior.metadata_json === 'string' ? JSON.parse(prior.metadata_json) : prior.metadata_json;
       if (saved?.payload_hash !== hash) throw fail(409, 'TODO_TERM_REQUEST_CONFLICT', '本次请求编号已用于不同内容，请先核对已有待办');
+      if (!Number.isSafeInteger(Number(prior.entity_id)) || Number(prior.entity_id) < 1) throw fail(409, 'TODO_TERM_INVALID', '原请求待办编号超出现有接口范围，请核对原请求历史');
       const [[existing]] = await db.execute('SELECT id FROM mdm_todos WHERE id=? FOR SHARE', [prior.entity_id]);
       if (!existing) throw fail(409, 'TODO_TERM_REQUEST_DELETED', '该请求创建的待办已删除，不能重复创建');
+      if (!Number.isSafeInteger(Number(existing.id)) || Number(existing.id) < 1) throw fail(409, 'TODO_TERM_INVALID', '待办编号超出现有接口范围，请核对原请求历史');
       await db.commit();
       return { id: Number(existing.id) };
     }

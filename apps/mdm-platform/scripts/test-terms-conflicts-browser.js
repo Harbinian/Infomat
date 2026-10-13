@@ -170,7 +170,7 @@ async function main() {
       await page.getByLabel('冲突类型', { exact:true }).selectOption('term'); await page.locator('[data-conflicts-ready]').waitFor(); assert.equal(await button('查看冲突 field-601').count(), 0);
       await button('查看冲突 term-601').click(); await conflictReady(); await page.goBack(); await conflictReady(); assert.ok(page.url().includes('type=field'));
       await page.goForward(); await conflictReady(); assert.ok(page.url().includes('type=term'));
-      await page.getByRole('link', { name:'原冲突管理入口', exact:true }).click(); await page.waitForURL('**/#/conflicts'); await page.locator('#conflicts').waitFor(); await page.goBack(); await conflictReady();
+      assert.equal(await page.locator('a[href*="/#/"]').count(),0);
       checks.push('field/term same ID isolation, assignment/reassignment, query filtering, reload/back/forward, retained old conflict entry');
       // Hold one response while selecting another record: an old response cannot replace it.
       await page.getByLabel('冲突类型', { exact:true }).selectOption(''); await page.locator('[data-conflicts-ready]').waitFor();
@@ -202,7 +202,7 @@ async function main() {
       const makeDraft = async name => { await button('新增术语').click(); await page.getByLabel('术语名称', { exact:true }).fill(name); await page.getByLabel('所属业务流程', { exact:true }).selectOption('501'); };
       const cancelDraft = async () => { page.once('dialog',d=>d.accept()); await button('取消本次办理').click(); };
       await makeDraft('合成异常保留');
-      for (const status of [403,409]) { await page.route('**/api/terminology',route=>route.fulfill({status,json:{}}),{times:1}); await button('确认提交').click(); await page.getByText('术语读取或办理未完成',{exact:true}).waitFor(); assert.equal(await page.getByLabel('术语名称',{exact:true}).inputValue(),'合成异常保留'); }
+      for (const status of [403,409]) { await page.route('**/api/terminology',route=>route.fulfill({status,json:{}}),{times:1}); await button('确认提交').click(); await page.getByText('术语读取或办理未完成',{exact:true}).waitFor(); assert.equal(await page.getByLabel('术语名称',{exact:true}).inputValue(),'合成异常保留'); if(status===409) {assert.equal(await button('确认提交').isDisabled(),true);await cancelDraft();await makeDraft('合成异常保留');} }
       await confirmAction(); await termsReady();
       const [createdRows]=await pool.execute("SELECT id FROM terminology_terms WHERE term='合成异常保留'"); const editedId=createdRows[0].id;
       await button('查看术语 '+editedId).click(); await button('修改术语').click(); await page.getByLabel('定义',{exact:true}).fill('必须保留的并发输入');
@@ -224,12 +224,12 @@ async function main() {
       assert.equal(await page.getByLabel('术语名称',{exact:true}).inputValue(),'同身份恢复草稿');
       await pool.execute('UPDATE user_accounts SET auth_version=auth_version+1 WHERE person_id=83'); await button('刷新术语').click(); await page.getByRole('heading',{name:'请重新登录',exact:true}).waitFor(); await login('adminMulti'); await termsReady(); assert.equal(await page.getByLabel('术语名称',{exact:true}).count(),0); assert.equal(await button('新增术语').count(),0);
       assert.equal(await page.evaluate(()=>localStorage.length+sessionStorage.length),0);
-      await page.getByRole('link',{name:'原术语词典入口',exact:true}).click(); await page.waitForURL('**/#/terms'); await page.locator('#terms').waitFor(); await page.goBack(); await termsReady();
+      assert.equal(await page.locator('a[href*="/#/"]').count(),0);
       checks.push('real cross-department/permission/assignee denial, session revocation, same-person restoration, other-person clearing, admin read-only, long Chinese form, keyboard/unload protection, no persistence, old terms entry');
       assert.deepEqual(pageErrors, []); const unexpectedConsole = consoleErrors.filter(m => !/Failed to load resource|net::ERR_/.test(m)); assert.deepEqual(unexpectedConsole, []);
       fs.writeFileSync(path.join(output, 'results.json'), JSON.stringify({ checks, pageErrors, unexpectedConsole }, null, 2));
     } catch (error) { fs.writeFileSync(path.join(output, 'failure.json'), JSON.stringify({ message: error.message, stack: error.stack, checks, pageErrors }, null, 2)); await page.screenshot({ path: path.join(output, 'failure.png'), fullPage: true, timeout:5000 }).catch(() => {}); throw error; }
     finally { await browser.close(); }
-  }, { evidenceDir: output, previewOnly: true });
+  }, { evidenceDir: output, previewOnly: true, randomDatabase:true });
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });

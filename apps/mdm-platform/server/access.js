@@ -1,6 +1,7 @@
 function legacyDb() { return require('./db'); }
 const { getUserEffectivePermissions, getUserEffectivePermissionsAsync, getUserRoleCodesAsync } = require('./auth');
 const { permissionSetHas } = require('./roleDefinitions');
+const { sessionSubject } = require('./sessionSubject');
 
 function isAdmin(req) {
   const personId = req.session && (req.session.personId || req.session.userId);
@@ -10,7 +11,7 @@ function isAdmin(req) {
 }
 
 async function isAdminAsync(req) {
-  const personId = req.session && (req.session.personId || req.session.userId);
+  const personId = sessionSubject(req.session, req.identity).principal;
   if (!personId) return false;
   const { permSet } = await getUserEffectivePermissionsAsync(personId);
   return permSet.has('identity:manage-account');
@@ -24,7 +25,7 @@ function hasGlobalView(req) {
 }
 
 async function hasGlobalViewAsync(req) {
-  const personId = req.session && (req.session.personId || req.session.userId);
+  const personId = sessionSubject(req.session, req.identity).principal;
   if (!personId) return false;
   const { permSet } = await getUserEffectivePermissionsAsync(personId);
   return permissionSetHas(permSet, 'governance:read-global');
@@ -38,7 +39,7 @@ function isReviewerOrAdmin(req) {
 }
 
 async function isReviewerOrAdminAsync(req) {
-  const personId = req.session && (req.session.personId || req.session.userId);
+  const personId = sessionSubject(req.session, req.identity).principal;
   if (!personId) return false;
   const { permSet } = await getUserEffectivePermissionsAsync(personId);
   return permissionSetHas(permSet, 'governance:review-department');
@@ -61,8 +62,9 @@ function getEffectiveRoleCodes(req) {
 
 async function getEffectiveRoleCodesAsync(req) {
   const codes = new Set();
-  if (!req.session || (!req.session.personId && !req.session.userId)) return codes;
-  const roles = await getUserRoleCodesAsync(req.session.personId || req.session.userId);
+  const principal = sessionSubject(req.session, req.identity).principal;
+  if (!principal) return codes;
+  const roles = await getUserRoleCodesAsync(principal);
   for (const role of roles) {
     const code = role.code || role.role_code;
     if (code) codes.add(code);

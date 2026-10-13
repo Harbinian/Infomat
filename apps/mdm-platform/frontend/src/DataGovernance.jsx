@@ -36,7 +36,7 @@ function candidateText(row) {
 const binding = data => data?.package ? JSON.stringify([data.package.id, data.package.process_version_id, data.package.source_content_hash, data.package.rule_version, data.package.revision_no, data.package.status, data.fact_request?.status]) : '';
 function routeSelection() { const q = new URLSearchParams(location.search); return q.get('factRequest') ? { kind:'fact', id:q.get('factRequest') } : q.get('package') ? { kind:'package', id:q.get('package') } : { kind:'', id:'' }; }
 
-export function DataGovernance({ api, draft, setDraft, onLegacy }) {
+export function DataGovernance({ api, draft, setDraft, onNavigate }) {
   const [selection, setSelection] = useState(() => draft?.selection || routeSelection());
   const [workbench, setWorkbench] = useState(null), [detail, setDetail] = useState(null), [departments, setDepartments] = useState([]);
   const [selectedId, setSelectedId] = useState(draft?.detailId || ''), [mode, setMode] = useState('todo');
@@ -121,8 +121,8 @@ export function DataGovernance({ api, draft, setDraft, onLegacy }) {
   }
   return <div className="process-preview data-governance">
     <section className="card"><h2>按固定流程版本办理数据治理</h2><p>MDM工作组核对对象、字段和生命周期，并记录判断依据；业务部门只答复定向的事实问题。系统按固定规则生成待核对内容，不调用AI，也不自动确认。</p>
-      <p>当前工作包支持已发布的原生V7，包括历史已发布版本。每个工作包固定绑定来源版本与摘要，不随最新流程变化。</p>
-      <div className="import-actions"><button className="secondary" disabled={loading || busy} onClick={() => load()}>刷新工作包状态</button><button className="secondary" disabled={busy} onClick={() => choose('')}>返回工作包待办</button><a href={'/#/processGovernance?workspace=dataGovernance' + (selection.id ? '&' + (selection.kind === 'fact' ? 'factRequest' : 'package') + '=' + encodeURIComponent(selection.id) : '')} onClick={onLegacy}>打开原数据治理入口</a></div>
+      <p>当前工作包支持已发布的原生 V8 及受支持 V7，包括历史已发布版本。每个工作包固定绑定来源版本与摘要，不随最新流程变化。</p>
+      <div className="import-actions"><button className="secondary" disabled={loading || busy} onClick={() => load()}>刷新工作包状态</button><button className="secondary" disabled={busy} onClick={() => choose('')}>返回工作包待办</button></div>
     </section>
     {loading && <StatusPanel kind="loading" title="正在读取工作包状态" />}
     {error && <StatusPanel kind="error" title="操作未完成" onRetry={busy ? undefined : () => load()}>{error} 可见输入仍保留；请核对状态后明确重试。</StatusPanel>}
@@ -132,7 +132,7 @@ export function DataGovernance({ api, draft, setDraft, onLegacy }) {
     {!selection.id && feature?.enabled && !loading && <>
       <section className="card"><h2>我现在该做什么</h2>{workbench.work_items?.length ? workbench.work_items.slice(0, 3).map(item => <article className="preview-item" key={item.id}><h3>{item.title}</h3><p>{item.sample}</p><p>{item.nextStep}</p><button disabled={busy} onClick={() => nextItem(item)}>{item.actionLabel || '打开事项'}</button></article>) : <p>当前没有待办事项。</p>}
         {can('create') && <button className="primary" disabled={busy || !workbench.published_versions?.length} onClick={() => start('create')}>建立工作包</button>}
-        {can('create') && !workbench.published_versions?.length && <p>当前没有可选的已发布V7版本。</p>}
+        {can('create') && !workbench.published_versions?.length && <p>当前没有可选的已发布 V8 或受支持 V7 版本。</p>}
       </section>
       <section className="card"><h2>工作包</h2>{workbench.work_packages?.length ? workbench.work_packages.map(p => <article className="preview-item" key={p.id}><h3>{p.process_name || p.document_no || p.package_ref}</h3><p>正式版本 {p.process_version_id} · 修订 {p.revision_no} · {label(p.status)} · {p.risk_level === 'high' ? '高风险' : '普通风险'}</p><p>待答复 {p.fact_request_counts?.open || 0} 项；待MDM核对答复 {p.fact_request_counts?.answered || 0} 项</p><button disabled={busy} onClick={() => choose('package', p.id)}>查看工作包 {p.id}</button></article>) : <p>当前范围没有工作包。</p>}</section>
       <section className="card"><h2>本部门事实问题</h2><label>事实记录范围<select aria-label="事实记录范围" value={mode} disabled={busy} onChange={e => { if (abandon()) { setDraft(null); setMode(e.target.value); } }}><option value="todo">待答复</option><option value="all">全部记录</option></select></label>{workbench.fact_requests?.length ? workbench.fact_requests.map(f => <article className="preview-item" key={f.id}><h3>{f.question_text}</h3><p>{f.process_name} · {label(f.status)}</p><p>{f.request_reason}</p><button disabled={busy} onClick={() => choose('fact', f.id)}>查看事实问题 {f.id}</button></article>) : <p>当前范围没有事实问题。</p>}</section>

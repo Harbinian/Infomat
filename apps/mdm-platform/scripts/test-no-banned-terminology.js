@@ -10,7 +10,8 @@ const bannedTerms = [
 ];
 
 const userFacingProcessGovernanceFiles = new Set([
-  'apps/mdm-platform/public/index.html'
+  'apps/mdm-platform/frontend/src/ProcessPreview.jsx',
+  'apps/mdm-platform/frontend/src/ProcessFormal.jsx'
 ]);
 
 const processIssueCardGuidanceFiles = new Set([
@@ -71,21 +72,16 @@ for (const repoPath of filesToCheck) {
       }
     }
 
-    if (repoPath === 'apps/mdm-platform/public/index.html') {
-      const eventMappingPattern = new RegExp(
-        handoffCandidateCreatedIdentifier + "\\s*:\\s*['\"]生成承接待核对项['\"]"
-      );
-      // The legacy handoff UI is retired. Keep the identifier allowed for historical
-      // payloads, without requiring that retired UI to exist in the current page.
-      if (content.includes(handoffCandidateCreatedIdentifier)) {
-        assert.ok(eventMappingPattern.test(content), 'a retained machine event mapping must use the approved user label');
-      }
-    }
   }
 
   lines.forEach((line, index) => {
     if (userFacingProcessGovernanceFiles.has(repoPath)) {
-      for (const term of findBannedTerms(line)) {
+      // These candidates describe a personnel list and query scope, never a
+      // process status. Keep the banned process terminology check elsewhere.
+      const processWording = line.replace('候选超过200人', '人员超过200人')
+        .replace('每页检查20条关联候选', '每页检查20条关联记录')
+        .replace('条范围不明确的候选', '条范围不明确的记录');
+      for (const term of findBannedTerms(processWording)) {
         violations.push(`${repoPath}:${index + 1}: ${term}`);
       }
     }

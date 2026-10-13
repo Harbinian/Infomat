@@ -14,7 +14,7 @@ function analyze(task){
    evidence.push({evidence_key,input_key:input.input_key,locator_kind:'json_pointer',locator,note:message});
    findings.push({rule_id:rule,finding_type:type,message,subject_input_keys:[input.input_key],semantic_locator:semantic,evidence_keys:[evidence_key]});
   }
-  add('excel.coverage','/coverage','workbook:extraction-coverage',`本文件读取 ${doc.sheets.length} 张工作表、${doc.coverage.cell_count} 个有值或合并引用单元格。${doc.coverage.not_covered.join('；')}。${doc.links.length?'关联仅为显式固定引用，未形成业务认定。':'尚未登记对象、字段或V7来源的显式关联。'}`);
+  add('excel.coverage','/coverage','workbook:extraction-coverage',`本文件读取 ${doc.sheets.length} 张工作表、${doc.coverage.cell_count} 个有值或合并引用单元格。${doc.coverage.not_covered.join('；')}。${doc.links.length?'关联仅为显式固定引用，未形成业务认定。':'尚未登记对象、字段或流程固定来源的显式关联。'}`);
   if(!doc.coverage.cell_count)add('excel.coverage','/coverage','workbook:empty','未提取到单元格内容；不据此断言原文件没有其他内容。');
   doc.sheets.forEach((s,index)=>{
    const formulas=Object.values(s.cells).filter(c=>c.raw_type==='formula');

@@ -245,7 +245,7 @@ function jsonHashEvidence(row, tableName) {
     };
   }
   let calculatedHash;
-  if (text(row.schema_version) === 'process-governance-v7') {
+  if (require('./processNativeFormats').supports(text(row.schema_version))) {
     calculatedHash = digest(candidate);
   } else {
     const normalized = normalizeProcessGovernanceDocument(candidate);

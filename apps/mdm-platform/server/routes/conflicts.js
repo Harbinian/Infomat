@@ -1,5 +1,6 @@
 const { sendMysqlUnavailable } = require('../mysqlRuntimeSchema');
 const express = require('express');
+const { logRequestFailure } = require('../securityLog');
 const router = express.Router();
 const {
   requireAuth,
@@ -14,13 +15,14 @@ const {
 } = require('../conflictMysqlRepository');
 
 function handleDbError(res, error) {
+  if (error?.statusCode) return res.status(error.statusCode).json({error:error.message,code:error.code});
   if (sendMysqlUnavailable(res, error)) return;
   const code = String(error && error.code || '');
   const message = String(error && error.message || '');
   if (code.startsWith('ER_') || message.includes('constraint')) {
     return res.status(400).json({ error: '数据不符合约束' });
   }
-  console.error(error);
+  logRequestFailure(res, error);
   return res.status(500).json({ error: '服务器错误' });
 }
 
@@ -80,6 +82,8 @@ async function conflictScope(req) {
 
 async function conflictActor(req, extra = {}) {
   return {
+    actor_session: { personId:req.session.personId,userId:req.session.userId,accountId:req.session.accountId,authVersion:req.session.authVersion,departmentId:req.session.departmentId,identityKind:req.session.identityKind },
+    expected_token: req.body?.expected_token,
     actor_user_id: req.session.userId,
     actor_person_id: req.session.personId || req.session.userId,
     actor_dept_id: req.session.departmentId || null,

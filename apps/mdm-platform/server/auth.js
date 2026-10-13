@@ -5,6 +5,10 @@ const mysql = require('mysql2/promise');
 const { mysqlConfigFromEnv } = require('./mysqlConfig');
 const { makeIdentityMysqlRepository } = require('./identityMysqlRepository');
 const { permissionSetHas } = require('./roleDefinitions');
+const { sessionSubject, identityInteger } = require('./sessionSubject');
+const { readonlyWriteViolation } = require('./permissionFieldConstraints');
+const { logRequestFailure } = require('./securityLog');
+const { createRegisteredPool } = require('./mysqlPoolRegistry');
 let identityRepoPromise = null;
 let identityRepositoryFactory = null;
 const inFlightPasswordChecks = new Map();
@@ -26,21 +30,53 @@ function passwordCheckKey(password, hash) {
     .digest('hex');
 }
 
+// R03: bound how many password hashes can be computed at once. The login admission gate already
+// caps in-flight attempts per account and per address; this is the process-wide ceiling, so a
+// spread-out burst cannot pin the CPU either. Refused attempts are not queued.
+const LOGIN_PASSWORD_CONCURRENCY = Number(process.env.LOGIN_PASSWORD_CONCURRENCY || 4);
+let activePasswordChecks = 0;
+
 function verifyPasswordAsync(password, hash) {
+  // A credential that is not a string can never match a hash, and must not reach the hasher:
+  // bcrypt stringifies its input, so an object would be compared as "[object Object]".
+  if (typeof password !== 'string') {
+    return Promise.reject(Object.assign(new Error('工号或密码错误'), {
+      statusCode: 400, code: 'LOGIN_CREDENTIAL_INVALID', expected: true
+    }));
+  }
   const key = passwordCheckKey(password, hash);
+  // A coalesced duplicate shares the running comparison and never takes a second slot.
   const pending = inFlightPasswordChecks.get(key);
   if (pending) return pending;
 
+  if (activePasswordChecks >= LOGIN_PASSWORD_CONCURRENCY) {
+    return Promise.reject(Object.assign(new Error('登录请求过多，请稍后再试'), {
+      statusCode: 429, code: 'LOGIN_BUSY', expected: true
+    }));
+  }
+
+  activePasswordChecks += 1;
   const check = new Promise((resolve, reject) => {
     bcrypt.compare(password, hash, (error, matched) => {
       if (error) return reject(error);
       resolve(Boolean(matched));
     });
   }).finally(() => {
+    activePasswordChecks -= 1;
     inFlightPasswordChecks.delete(key);
   });
   inFlightPasswordChecks.set(key, check);
   return check;
+}
+
+// R07: an unusable session must be answered as an authentication failure. Destroying it is best
+// effort -- a session object without a destroy method (an isolated harness, a session store that
+// failed to load) used to raise a TypeError here and turn the refusal into an unhandled 500.
+function rejectSession(req, res, body) {
+  const destroy = req.session && typeof req.session.destroy === 'function'
+    ? callback => req.session.destroy(callback)
+    : callback => callback();
+  return destroy(() => res.status(401).json(body));
 }
 
 function requireAuth(req, res, next) {
@@ -51,9 +87,9 @@ function requireAuth(req, res, next) {
   if (!useMysqlIdentityReadModel() || (require('./runtimeBoundary').legacyTestMode() && (!req.session.accountId || !req.session.authVersion))) {
     return next();
   }
-  if ((!req.session.personId && !systemIdentity) || (systemIdentity && req.session.personId) || !Number.isSafeInteger(Number(req.session.accountId)) || Number(req.session.accountId) < 1 ||
-      !Number.isSafeInteger(Number(req.session.authVersion)) || Number(req.session.authVersion) < 1) {
-    return req.session.destroy(() => res.status(401).json({ error: '登录信息已失效，请重新登录', code: 'SESSION_IDENTITY_INVALID' }));
+  if ((!req.session.personId && !systemIdentity) || (systemIdentity && req.session.personId) || !identityInteger(req.session.accountId) ||
+      !identityInteger(req.session.authVersion)) {
+    return rejectSession(req, res, { error: '登录信息已失效，请重新登录', code: 'SESSION_IDENTITY_INVALID' });
   }
   return identityRepository()
     .then(repo => {
@@ -62,11 +98,9 @@ function requireAuth(req, res, next) {
     })
     .then(result => {
       if (!result || !result.valid) {
-        return req.session.destroy(() => {
-          res.status(401).json({
-            error: '账号状态或授权已经变化，请重新登录',
-            code: 'SESSION_AUTHORIZATION_CHANGED'
-          });
+        return rejectSession(req, res, {
+          error: '账号状态或授权已经变化，请重新登录',
+          code: 'SESSION_AUTHORIZATION_CHANGED'
         });
       }
       req.identity = result.user;
@@ -80,7 +114,7 @@ function requireAuth(req, res, next) {
       return next();
     })
     .catch(error => {
-      console.error('IDENTITY_SERVICE_UNAVAILABLE');
+      logRequestFailure(res, 'IDENTITY_SERVICE_UNAVAILABLE');
       return res.status(503).json({
         error: '身份服务暂不可用',
         code: 'IDENTITY_SERVICE_UNAVAILABLE'
@@ -183,7 +217,7 @@ async function identityRepository() {
   }
   if (!identityRepoPromise) {
     identityRepoPromise = (async () => {
-      const pool = mysql.createPool(mysqlConfigFromEnv());
+      const pool = createRegisteredPool(process.env, 'identity');
       const repo = makeIdentityMysqlRepository(pool);
       await checkRuntimeSchema(pool, 'identity');
       return repo;
@@ -362,10 +396,11 @@ async function getDepartmentByNameAsync(departmentName) {
 function requirePermission(permCode) {
   return (req, res, next) => {
     const checkPermission = () => {
-      if (!req.session || (!req.session.personId && !req.session.userId)) {
+      const subject = sessionSubject(req.session, req.identity);
+      if (!req.session || !subject.principal) {
         return res.status(401).json({ error: '未登录' });
       }
-      const personId = req.session.personId || req.session.userId;
+      const personId = subject.principal;
 
       if (useMysqlIdentityReadModel()) {
         return getUserEffectivePermissionsAsync(personId)
@@ -382,7 +417,7 @@ function requirePermission(permCode) {
             return next();
           })
           .catch(error => {
-            console.error(error);
+            logRequestFailure(res, error);
             return res.status(503).json({ error: '身份 MySQL 读取模型不可用' });
           });
       }
@@ -409,11 +444,12 @@ function requirePermission(permCode) {
 function requireAnyPermission(...permCodes) {
   return (req, res, next) => {
     const checkPermissions = () => {
-      if (!req.session || (!req.session.personId && !req.session.userId)) {
+      const subject = sessionSubject(req.session, req.identity);
+      if (!req.session || !subject.principal) {
         return res.status(401).json({ error: '未登录' });
       }
       const check = useMysqlIdentityReadModel()
-        ? getUserEffectivePermissionsAsync(req.session.personId || req.session.userId)
+        ? getUserEffectivePermissionsAsync(subject.principal)
         : Promise.resolve(getUserEffectivePermissions(req.session.userId));
       return check
         .then(({ permSet, fieldConstraints }) => {
@@ -425,7 +461,7 @@ function requireAnyPermission(...permCodes) {
           return next();
         })
         .catch(error => {
-          console.error(error);
+          logRequestFailure(res, error);
           return res.status(503).json({
             error: '身份服务暂不可用',
             code: 'IDENTITY_SERVICE_UNAVAILABLE'
@@ -437,21 +473,6 @@ function requireAnyPermission(...permCodes) {
     }
     return checkPermissions();
   };
-}
-
-function readonlyWriteViolation(req, permCode, fieldConstraints) {
-  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return [];
-  if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) return [];
-
-  const constraints = fieldConstraints || {};
-  const readonly = new Set();
-  const fc = constraints[permCode];
-  if (fc && Array.isArray(fc.readonly)) {
-    fc.readonly.forEach(field => readonly.add(field));
-  }
-  if (readonly.size === 0) return [];
-
-  return Array.from(readonly).filter(field => Object.prototype.hasOwnProperty.call(req.body, field));
 }
 
 function applyFieldConstraints(resourceType) {

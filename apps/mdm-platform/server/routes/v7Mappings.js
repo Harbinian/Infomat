@@ -5,7 +5,7 @@ const {MAX_BYTES}=require('../v7FixedSource');
 const router=express.Router();
 function fail(res,e){
   const known=String(e.code||'').startsWith('DEFINITION_'),status=e.code==='LIMIT_FILE_SIZE'?413:known?e.statusCode||400:503;
-  res.status(status).json({error:status===503?'V7 来源或映射依赖暂不可用，请稍后重试。':status===409?'固定来源、映射修订或对应关系已变化，请保留输入并重新核对。':'操作未完成，请核对来源、权限、固定版本及依据。',code:known?e.code:status===413?'DEFINITION_V7_UPLOAD_LIMIT':'DEFINITION_V7_UNAVAILABLE'});
+  res.status(status).json({error:e.code==='DEFINITION_V7_NOT_PUBLISHED'?'固定来源须为已发布的原生 V8 或受支持 V7 的 published/superseded 版本。':status===503?'固定来源或映射依赖暂不可用，请稍后重试。':status===409?'固定来源、映射修订或对应关系已变化，请保留输入并重新核对。':'操作未完成，请核对来源、权限、固定版本及依据。',code:known?e.code:status===413?'DEFINITION_V7_UPLOAD_LIMIT':'DEFINITION_V7_UNAVAILABLE'});
 }
 const run=fn=>(req,res)=>Promise.resolve().then(async()=>res.json(await fn(req,(await dataMapRepository()).definitions()))).catch(e=>fail(res,e));
 router.use(requireAuth,(req,res,next)=>{res.set('Cache-Control','no-store');next();});

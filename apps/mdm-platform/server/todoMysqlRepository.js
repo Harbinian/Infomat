@@ -2,6 +2,7 @@ const { checkRuntimeSchema } = require('./mysqlRuntimeSchema');
 const mysql = require('mysql2/promise');
 const { mysqlConfigFromEnv } = require('./mysqlConfig');
 const { mdmMysqlSchemaSql, splitSqlStatements } = require('./mysqlSchema');
+const { createRegisteredPool } = require('./mysqlPoolRegistry');
 
 let todoRepoPromise = null;
 let todoRepositoryFactory = null;
@@ -236,7 +237,7 @@ async function todoRepository() {
   if (todoRepositoryFactory) return await todoRepositoryFactory();
   if (!todoRepoPromise) {
     todoRepoPromise = (async () => {
-      const pool = mysql.createPool(mysqlConfigFromEnv());
+      const pool = createRegisteredPool(process.env, 'todo');
       const repo = makeTodoMysqlRepository(pool);
       await checkRuntimeSchema(pool, 'todo');
       return repo;

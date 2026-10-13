@@ -11,7 +11,7 @@ const { applyV7Mappings } = require('../server/v7MappingMigration');
 const { applyDesignHandoffs } = require('../server/designHandofaNFigration');
 const { applyAnalysisRuns } = require('../server/analysisRunMigration');
 const { applyAnalysisQueue } = require('../server/analysisQueueMigration');
-const { VERSION, PARSER, CHECKS, catalog } = require('../server/v7AnalysisRules');
+const { PREVIOUS_VERSION: VERSION, PARSER, LEGACY_CHECKS: CHECKS, catalog } = require('../server/v7AnalysisRules');
 const { document, node, edge, binding } = require('./testHelpers/v7AnalysisSamples');
 const { digest } = require('../server/dataMapDefinitionValues');
 const arg = process.argv.indexOf('--output'), output = path.resolve(process.argv[arg + 1] || '.');
@@ -111,6 +111,16 @@ async function main() {
         assert.deepEqual(await get(first), first);
         assert.deepEqual(await snapshot(), before); save('protected-assets.json', before);
       });
+      await check('v4 worker persists expanded content coverage without altering v3 findings', async () => {
+        const current = require('../server/v7AnalysisRules');
+        const r = await execute(sources.normal, { rule_version: current.VERSION,
+          parser_versions: { [PARSER]: current.VERSION }, check_scope: { description: 'Synthetic current content checks', check_ids: current.CHECKS },
+          steps: [{ step_key: 'v7', parser_key: PARSER, input_keys: ['source'], check_ids: current.CHECKS }] });
+        assert.equal(r.status, 'succeeded'); assert.equal(r.attempts[0].coverage.checked.length, 11);
+        assert(r.attempts[0].findings.some(f => f.rule_id === 'v7.content_completeness'));
+        assert(r.attempts[0].findings.some(f => f.rule_id === 'v7.action_executability'));
+        assert.deepEqual(await get(first), first); assert.deepEqual(await snapshot(), before); save('v4-content.json', r);
+      });
       const [[worker]] = await pool.execute('SELECT runtime_json FROM data_map_analysis_workers WHERE worker_id=?', [events.find(e => e.event === 'worker_started').worker_id]);
       save('worker-runtime.json', worker); save('catalog.json', catalog);
       save('results.json', { passed: true, checks, real_worker_process: true, owned_mysql: true, no_formal_decisions: true });
@@ -122,6 +132,6 @@ async function main() {
       }
       save('worker-events.json', events); save('cleanup.json', { child_stopped: !child || child.exitCode !== null || child.signalCode !== null });
     }
-  });
+  }, { evidenceDir: output, randomDatabase: true });
 }
 main().catch(e => { save('failure.json', { code: e.code, message: e.message, stack: e.stack, checks }); console.error(e); process.exitCode = 1; });
