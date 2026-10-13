@@ -8,7 +8,7 @@ const stateLabel = task => task.status === 'done' ? '已办结' : task.assignee_
 function completion(task) {
   if (!task.completion_json) return '未记录办理结果';
   try { return (typeof task.completion_json === 'string' ? JSON.parse(task.completion_json) : task.completion_json).note || '未记录办理结果'; }
-  catch { return '办理结果暂不可读，请使用原入口核对。'; }
+  catch { return '办理结果暂不可读，请刷新办公室任务后核对。'; }
 }
 function mayAct(data, task, mode) {
   const office = data?.offices.find(o => same(o.id, task.office_id));
@@ -16,7 +16,7 @@ function mayAct(data, task, mode) {
   return mode === 'assign' ? data.can_assign : data.can_complete && same(task.assignee_person_id, data.actor_person_id);
 }
 
-export function OfficeWorkbench({ api, draft, setDraft, onLegacy }) {
+export function OfficeWorkbench({ api, draft, setDraft, onNavigate }) {
   const [officeId, setOfficeId] = useState(() => draft?.officeId || new URLSearchParams(location.search).get('office_id') || '');
   const [data, setData] = useState(null);
   const [filter, setFilter] = useState('');
@@ -94,7 +94,7 @@ export function OfficeWorkbench({ api, draft, setDraft, onLegacy }) {
   return <div className="process-preview office-workbench">
     <section className="card">
       <h2>办公室任务办理</h2><p>任务交到办公室后，由明确的负责人分配给成员。成员填写结果并办结；任务办结不等于问题关闭或正式审核通过。</p>
-      <div className="import-actions"><button className="secondary" onClick={() => load()} disabled={loading || saving}>刷新办公室任务</button><a href={'/#/officeWorkbench' + (officeId ? '?office_id=' + encodeURIComponent(officeId) : '')} onClick={onLegacy}>使用原办公室入口</a></div>
+      <div className="import-actions"><button className="secondary" onClick={() => load()} disabled={loading || saving}>刷新办公室任务</button></div>
       <div><label htmlFor="office-field-1">办公室</label><select id="office-field-1" value={officeId} disabled={!data || saving} onChange={e => switchOffice(e.target.value)}>{!data && <option value={officeId}>正在核对办公室</option>}{data?.offices.length === 0 && <option value="">暂无办公室</option>}{data?.offices.map(o => <option key={o.id} value={o.id}>{o.department_name || '归口部门待明确'} / {o.name}{o.status !== 'active' ? '（未启用）' : ''}</option>)}</select></div>
       {selected && <p>归口部门：{selected.department_name || '待明确'}；办公室负责人：{selected.manager_name || '尚未指定'}；状态：{selected.status === 'active' ? '启用' : '未启用'}</p>}
       {data?.can_route && data.offices.some(o => o.status === 'active' && o.department_id) && <button className="primary" disabled={saving} onClick={() => start('create')}>交办到办公室</button>}

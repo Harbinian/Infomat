@@ -1,4 +1,4 @@
-// Safe shared browser contract. UMD supports Express, Vite and the retained page.
+// Shared request and page contracts for Express and the current Vite frontend.
 (function(root,factory){ const value=factory(); root.MdmProtocol=value; if(typeof module==='object'&&module.exports)module.exports=value; })(typeof globalThis!=='undefined'?globalThis:this,function(){
   // Two-level navigation: each navigable page declares its parent group; groups
   // and pages are ordered along the actual governance business flow, so the
@@ -185,6 +185,12 @@
     "serverPath": "/fact-checks",
     "navigation": 24,
     "group": "management"
+  },
+  {
+    "href": "/app/password",
+    "title": "修改本人密码",
+    "serverPath": "/password",
+    "navigation": null
   },
   {
     "href": "/app/",
@@ -383,10 +389,31 @@
   function isApiWrite(url,method){return typeof url==='string'&&url.startsWith('/api/')&&url!=='/api/org/login'&&!['GET','HEAD','OPTIONS'].includes(String(method||'GET').toUpperCase());}
 function targetHref(target) {
   if (typeof target !== 'string' || /[\\\s]/.test(target)) return null;
-  if (/^#\/[A-Za-z][A-Za-z0-9]*(?:\?[^#]*)?$/.test(target)) return '/' + target;
-  if (/^\/app\/analysis#run=[1-9][0-9]*&finding=[1-9][0-9]*$/.test(target)) return target;
-  if (/^[A-Za-z][A-Za-z0-9]*$/.test(target)) return '/#/' + target;
-  return null;
+  const aliases = { roleWorkbench:'workbench', todos:'todos', officeWorkbench:'offices',
+    dataMap:'data-map', quality:'quality', publications:'publications', orgUnits:'organization',
+    persons:'roster', rbac:'accounts', roleGuide:'role-guide', dashboard:'dashboard',
+    terms:'terms', conflicts:'conflicts', templateImport:'template-import',
+    objectManagement:'objects', factChecks:'fact-checks', v7Mappings:'v7-mappings',
+    designHandoffs:'design-handoffs', analysis:'analysis', processFormal:'process-formal' };
+  if (!target.startsWith('/app/')) {
+    // Historical stored API targets remain readable, but always resolve to current pages.
+    const match = target.match(/^(?:#\/)?([A-Za-z][A-Za-z0-9]*)(?:\?([^#]*))?$/);
+    if (!match) return null;
+    const query = new URLSearchParams(match[2] || '');
+    let route = aliases[match[1]];
+    if (match[1] === 'processGovernance') {
+      const workspace = query.get('workspace'); query.delete('workspace');
+      route = workspace === 'dataGovernance' ? 'data-governance' : workspace === 'v7Preview' ? 'process-preview' : null;
+      if (query.has('v7Case')) { query.set('case', query.get('v7Case')); query.delete('v7Case'); }
+    }
+    if (!route) return null;
+    target = '/app/' + route + (query.size ? '?' + query.toString() : '');
+  }
+  try {
+    const url = new URL(target, 'http://mdm.invalid');
+    if (url.origin !== 'http://mdm.invalid' || !pages.some(page => page.href === url.pathname)) return null;
+    return url.pathname + url.search + url.hash;
+  } catch { return null; }
 }
   return Object.freeze({pages,navigationGroups,createRequestSession,createRequestClient,RequestError,errorReceipt,isApiWrite,targetHref});
 });

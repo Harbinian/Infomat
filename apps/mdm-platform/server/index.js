@@ -72,7 +72,7 @@ app.use((req, res, next) => {
   next();
 });
 app.use('/app', require('./frontend').frontendRouter());
-app.use(express.static(path.join(__dirname, '../public')));
+app.use(require('./frontend').publicEntryRouter());
 app.use('/api/analysis', express.json({ limit: '256kb' }));
 app.use(express.json({ limit: '2mb' }));
 app.use('/api/analysis', (error, req, res, next) => {

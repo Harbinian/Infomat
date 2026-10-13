@@ -2,7 +2,7 @@
 
 本文件按用途说明当前命令；命令表依据本应用`package.json`核对。阶段进展、验证结论和已废止配置保留在文末历史快照，不能代替当前脚本或目标状态。代码路径以应用目录为基准。
 
-`node --test scripts/test-workbench-availability.js frontend/tests/preview-availability.test.js`使用合成会话、随机回环HTTP服务、SQL和DOM替身，检查管理员个人待办边界、人员ID完整性、预览开关状态及关闭时的请求顺序；不读取私有配置、不连接真实数据库。前端测试也由在`frontend/`目录运行的`npm test`收集。
+`node --test scripts/test-workbench-availability.js`使用合成会话、随机回环HTTP服务、SQL和DOM替身，检查管理员个人待办边界、人员ID完整性、预览开关状态及关闭时的请求顺序；不读取私有配置、不连接真实数据库。当前前端测试由在`frontend/`目录运行的`npm test`收集。
 
 `node scripts/test-workbench-availability-browser.js --build <artifacts内的前端构建目录> --output <artifacts内的新证据目录>`以合成HTTP响应核对实际构建页面，使用Edge100%、1699×828 CSS像素，输出截图和验证记录；不登录真实账号、不连接数据库，不使用3000端口。
 
@@ -175,8 +175,8 @@
 | `test:process-governance-mysql-identity` | `node scripts/test-process-governance-mysql-identity-api.js` | 验证入口；具体IO及夹具边界按源脚本核对 |
 | `test:process-input-baseline-review-mysql` | `node scripts/test-process-input-baseline-review-mysql.js` | 验证入口；具体IO及夹具边界按源脚本核对 |
 | `test:process-input-baseline-review-api` | `node scripts/test-process-input-baseline-review-api.js` | 验证入口；具体IO及夹具边界按源脚本核对 |
-| `test:process-governance-issue-pool` | `node scripts/test-process-governance-issue-pool-mysql-source-resolution.js && node scripts/test-process-governance-issue-pool-mysql-permission-api.js && node scripts/test-process-governance-issue-pool-frontend.js` | 验证入口；具体IO及夹具边界按源脚本核对 |
-| `test:person-identity-rbac` | `node scripts/test-person-identity-schema-contract.js && node scripts/test-person-identity-mysql-repository.js && node scripts/test-governance-guidance-mysql-api.js && node scripts/test-person-permission-frontend.js` | 验证入口；具体IO及夹具边界按源脚本核对 |
+| `test:process-governance-issue-pool` | `node scripts/test-process-governance-issue-pool-mysql-source-resolution.js && node scripts/test-process-governance-issue-pool-mysql-permission-api.js` | 验证入口；具体IO及夹具边界按源脚本核对 |
+| `test:person-identity-rbac` | `node scripts/test-person-identity-schema-contract.js && node scripts/test-person-identity-mysql-repository.js && node scripts/test-governance-guidance-mysql-api.js` | 验证入口；具体IO及夹具边界按源脚本核对 |
 | `test:person-rbac-matrix` | `node scripts/test-person-rbac-matrix-mysql.js` | 验证入口；具体IO及夹具边界按源脚本核对 |
 | `test:person-identity-payload` | `node scripts/test-person-identity-payload-mysql.js` | 验证入口；具体IO及夹具边界按源脚本核对 |
 | `test:department-responsibility` | `node scripts/test-department-responsibility-mysql.js` | 验证入口；具体IO及夹具边界按源脚本核对 |
@@ -184,13 +184,12 @@
 | `test:no-new-user-identity-fields` | `node scripts/test-no-new-user-identity-fields.js` | 验证入口；具体IO及夹具边界按源脚本核对 |
 | `test:legacy-identity-inventory` | `node scripts/test-legacy-identity-inventory.js` | 验证入口；具体IO及夹具边界按源脚本核对 |
 | `test:guidance-workflow` | `node scripts/test-guidance-workflow-mysql-api.js && node scripts/test-guidance-affordances-mysql-repository.js && node scripts/test-guidance-visibility-mysql-repository.js && node scripts/test-guidance-person-validation-mysql-repository.js` | 验证入口；具体IO及夹具边界按源脚本核对 |
-| `test:guidance-workspace` | `node scripts/test-guidance-workspace-mysql-api.js && node scripts/test-guidance-workspace-frontend.js` | 验证入口；具体IO及夹具边界按源脚本核对 |
+| `test:guidance-workspace` | `node scripts/test-guidance-workspace-mysql-api.js` | 验证入口；具体IO及夹具边界按源脚本核对 |
 | `test:person-identity-migration-rehearsal` | `node scripts/test-person-identity-migration-rehearsal-mysql.js` | 验证入口；具体IO及夹具边界按源脚本核对 |
 | `repair:person-identity-mysql` | `node scripts/repair-person-identity-mysql.js` | 维护入口；inspect/dry-run也可能连接目标，写入须有授权和恢复条件 |
 | `test:person-identity-live-schema` | `node scripts/test-person-identity-live-schema-contract.js` | 验证入口；具体IO及夹具边界按源脚本核对 |
 | `test:admin-permission-mysql` | `node scripts/test-admin-permission-mysql-contract.js` | 验证入口；具体IO及夹具边界按源脚本核对 |
-| `test:person-operation-controls` | `node scripts/test-person-operation-controls-frontend.js` | 验证入口；具体IO及夹具边界按源脚本核对 |
-| `test:person-identity-rbac-completion` | `npm run test:person-identity-rbac && npm run test:person-rbac-matrix && npm run test:person-identity-payload && npm run test:department-responsibility && npm run test:no-new-user-identity-fields && npm run test:guidance-workflow && npm run test:person-operation-controls` | 验证入口；具体IO及夹具边界按源脚本核对 |
+| `test:person-identity-rbac-completion` | `npm run test:person-identity-rbac && npm run test:person-rbac-matrix && npm run test:person-identity-payload && npm run test:department-responsibility && npm run test:no-new-user-identity-fields && npm run test:guidance-workflow` | 验证入口；具体IO及夹具边界按源脚本核对 |
 | `test:identity-mysql` | `node scripts/test-identity-mysql-repository.js && node scripts/test-org-me-mysql-api.js && node scripts/test-roles-mysql-api.js && node scripts/test-auth-mysql-permission.js && npm run test:access-mysql && node scripts/test-import-rbac-mysql-api.js` | 验证入口；具体IO及夹具边界按源脚本核对 |
 | `test:auth-mysql` | `node scripts/test-auth-mysql-permission.js` | 验证入口；具体IO及夹具边界按源脚本核对 |
 | `test:access-mysql` | `node scripts/test-access-mysql-role-codes.js && node scripts/test-access-mysql-permissions.js` | 验证入口；具体IO及夹具边界按源脚本核对 |
@@ -223,7 +222,7 @@
 | `migrate:process-data-governance:dry-run` | `node scripts/migrate-process-data-governance.js --dry-run` | 维护入口；inspect/dry-run也可能连接目标，写入须有授权和恢复条件 |
 | `migrate:process-data-governance:apply` | `node scripts/migrate-process-data-governance.js --apply` | 维护入口；inspect/dry-run也可能连接目标，写入须有授权和恢复条件 |
 | `migrate:process-data-governance:rollback` | `node scripts/migrate-process-data-governance.js --rollback` | 维护入口；inspect/dry-run也可能连接目标，写入须有授权和恢复条件 |
-| `test:process-data-governance` | `node scripts/test-process-data-governance.js && node scripts/test-process-data-governance-api.js && node scripts/test-process-data-governance-migration-contract.js && node scripts/test-process-data-governance-frontend.js && node scripts/test-process-data-governance-editing.js` | 验证入口；具体IO及夹具边界按源脚本核对 |
+| `test:process-data-governance` | `node scripts/test-process-data-governance.js && node scripts/test-process-data-governance-api.js && node scripts/test-process-data-governance-migration-contract.js` | 验证入口；具体IO及夹具边界按源脚本核对 |
 | `test:process-design` | `npm run test:retired-capabilities && npm run test:process-v7-preview-review && npm run test:process-v7-procedure` | 验证入口；具体IO及夹具边界按源脚本核对 |
 | `test:process-design-mysql-api` | `npm run test:retired-capabilities && npm run test:stage05-mysql-isolated` | 可能创建临时服务、MySQL或浏览器；先核对源脚本及隔离条件 |
 | `migrate:cross-dept-handoff-v2:dry-run` | `node scripts/migrate-cross-dept-handoff-v2.js --dry-run` | 维护入口；inspect/dry-run也可能连接目标，写入须有授权和恢复条件 |
@@ -241,7 +240,7 @@
 | `service:start` | `node scripts/mdm-service.js start` | 运行操作；核对目标与启停授权 |
 | `service:stop` | `node scripts/mdm-service.js stop` | 运行操作；核对目标与启停授权 |
 | `service:restart` | `node scripts/mdm-service.js restart` | 运行操作；核对目标与启停授权 |
-| `service:check` | `node scripts/mdm-service.js check` | 运行操作；核对目标与启停授权 |
+| `service:check` | `node scripts/mdm-service.js check` | 只读核对自有Windows3000进程、健康、就绪、摘要和当前`/app/`内容；当前Docker按DOCKER.md检查 |
 | `service:supervise` | `node scripts/mdm-service.js --supervise` | 运行操作；核对目标与启停授权 |
 | `migrate:sessions:inspect` | `node scripts/manage-sessions.js --inspect` | 维护入口；inspect/dry-run也可能连接目标，写入须有授权和恢复条件 |
 | `migrate:sessions:apply` | `node scripts/manage-sessions.js --apply` | 维护入口；inspect/dry-run也可能连接目标，写入须有授权和恢复条件 |
@@ -255,7 +254,6 @@
 | `test:stage04-mysql-isolated` | `node scripts/test-stage04-mysql-isolated.js` | 可能创建临时服务、MySQL或浏览器；先核对源脚本及隔离条件 |
 | `test:launch-stage05` | `node scripts/test-stage05-local.js` | 可能创建临时服务、MySQL或浏览器；先核对源脚本及隔离条件 |
 | `test:stage05-mysql-isolated` | `node scripts/test-stage05-mysql-isolated.js` | 可能创建临时服务、MySQL或浏览器；先核对源脚本及隔离条件 |
-| `test:stage05-browser` | `node scripts/test-stage05-browser.js` | 可能创建临时服务、MySQL或浏览器；先核对源脚本及隔离条件 |
 | `migrate:v7-mappings` | `node scripts/manage-v7-mappings.js` | 维护入口；inspect/dry-run也可能连接目标，写入须有授权和恢复条件 |
 | `test:v7-mappings` | `node scripts/test-v7-mappings.js` | 验证入口；具体IO及夹具边界按源脚本核对 |
 | `migrate:design-handoffs` | `node scripts/manage-design-handoffs.js` | 维护入口；inspect/dry-run也可能连接目标，写入须有授权和恢复条件 |
@@ -286,6 +284,8 @@
 
 ## 本轮新增脚本（未注册 npm 入口）
 
+`test-csp-browser.js --output <artifacts下全新目录>`在Edge100%、1699×828验证唯一页面入口、首次及本人改密、拒绝时输入保护、重登、导航和CSP；使用合成API，不连接数据库、不修改真实密码。
+
 以下脚本随 R01–R13 本地整改加入，**没有**写入 `package.json`（新增 npm 入口需要单独授权），一律用 `node scripts/<名称>` 直接调用。需要隔离 MySQL 或浏览器的脚本还要求 `--output` 指向 `artifacts/` 下的全新目录。
 
 | 脚本 | 作用 | 依赖 |
@@ -307,4 +307,4 @@
 | `test-export-read-regressions.js` | 仓储SQL行数预算、精确部门标识、字段与黄金源投影、断连后停止读取 | 无，强制阻断真实MySQL |
 | `test-analysis-visible-page-contract.js` | 可见分页的行数及实际等待预算、游标语义、最终解析超时 | 无 |
 | `test-csp-policy-contract.js` | 内容安全策略回归；LF/CRLF/CR 换行一致、真实脚本变化、缺失/额外脚本，以及事件属性引号形式的 CLI 正负例 | 无 |
-| `audit-inline-script-inventory.js` | 保留页内联脚本与事件处理器清单；哈希按浏览器换行语义计算；`--require-clean` 要求唯一脚本哈希匹配且无内联事件处理器，支持单双引号及无引号属性 | 无 |
+| `audit-inline-script-inventory.js` | 当前前端源码及构建的脚本与事件处理器检查；不允许内联脚本、内联事件和旧UI专用哈希 | 无 |

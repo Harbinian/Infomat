@@ -28,7 +28,7 @@ function selection() {
   return { status: query.get('status') || '', type: query.get('type') || '' };
 }
 
-export function TodoInbox({ api, user, onLegacy, onNavigate, onQueryChange }) {
+export function TodoInbox({ api, user, onNavigate, onQueryChange }) {
   const [filter, setFilter] = useState(selection);
   const [revision, setRevision] = useState(0);
   const [state, setState] = useState({ busy: true });
@@ -105,7 +105,7 @@ export function TodoInbox({ api, user, onLegacy, onNavigate, onQueryChange }) {
       <div className="section-heading"><h1>待办收到</h1><button className="secondary" disabled={action?.phase === 'pending'} onClick={() => { cancelAction(); setState({ busy: true }); setRevision(value => value + 1); }}>刷新待办</button></div>
       <p>按当前身份的数据范围查看收到的待办。列表沿用原接口的紧急程度、截止日期和创建时间排序。</p>
       <p className="muted">本部门有办理权限的人员可确认完成未关联原映射记录的待办；具备结构核对权限的人员可删除待办。有明确来源的术语待办可查看关联术语；其余术语及冲突事项进入相应列表核对，办公室任务请到办公室工作台办理。待办已完成或删除不表示问题关闭或正式审核通过。</p>
-      <div className="identity-actions"><a href="/#/todos" onClick={onLegacy}>打开原待办入口</a><a href="/app/offices" onClick={event => onNavigate(event, '/app/offices')}>进入办公室工作台</a></div>
+      <div className="identity-actions"><a href="/app/offices" onClick={event => onNavigate(event, '/app/offices')}>进入办公室工作台</a></div>
       <div className="identity-fields">
         <label className="identity-field">待办状态<select aria-label="待办状态" disabled={action?.phase === 'pending'} value={filter.status} onChange={event => change('status', event.target.value)}>
           <option value="">全部状态</option>{filter.status && !Object.hasOwn(statuses, filter.status) && <option value={filter.status}>不支持的状态</option>}{Object.entries(statuses).map(([value, label]) => <option key={value} value={value}>{label}</option>)}

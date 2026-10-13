@@ -11,7 +11,7 @@
 
 ## 技术与身份边界
 
-- 保留 Express + MySQL；新增接口放 server/routes/ 并在 server/index.js 注册。同源 React + Vite 前端独立于PMO，保留旧 public/index.html 与本地 ECharts，不使用CDN或共用5173。开发代理只连明确隔离后端，公开构建不得包含材料、用户数据、Secret或服务端源码。
+- 保留 Express + MySQL；新增接口放 server/routes/ 并在 server/index.js 注册。同源 React + Vite 前端独立于PMO，仅开放 /app/ 当前前端，根路径转向该入口；旧 public/index.html 已删除。本地 ECharts、logo 和模板按显式静态白名单提供，不使用CDN或共用5173。开发代理只连明确隔离后端，公开构建不得包含材料、用户数据、Secret或服务端源码。
 - MySQL使用 MYSQL_HOST、MYSQL_PORT、MYSQL_USER、MYSQL_PASSWORD、MYSQL_DATABASE、MYSQL_CONNECTION_LIMIT。SQLite仅保留历史迁移与隔离测试，公开命令须有 legacy-sqlite: 前缀；不得恢复正式回退或新增SQLite能力。表结构、接口、账号、字段或状态变化须说明兼容、历史影响和验证，不能擅自迁移正式库。
 - 人员身份为 person -> user_accounts -> person_roles，一人一账号；独立admin无人员关联且默认关闭，治理只读。users/user_roles、users.role、requireRole与SQLite不作正式授权。
 - RBAC使用 server/auth.js 的现有权限中间件及 server/access.js 的范围核验，不按角色名称直接放行。模型 rbac-raci-v3-2026-07-31、七个MDM角色、十九项权限、标签与RACI由 server/roleDefinitions.js 固定；管理页只读，不自定义角色、继承、通配权限或矩阵。
@@ -34,6 +34,6 @@
 
 ## 页面与验证路由
 
-- 登录默认 roleWorkbench，合并多角色事项并标明来源；优先视图列1至3个下一步动作，完整职责链及问题卡、首次入口、样例和完成标准见 README.md“工作台与问题卡维护约束”。页面不授予权限，不预设审核意见。
+- 登录默认 /app/workbench，合并多角色事项并标明来源；优先视图列1至3个下一步动作，完整职责链及问题卡、首次入口、样例和完成标准见 README.md“工作台与问题卡维护约束”。页面不授予权限，不预设审核意见。
 - 行为、合同、命令或维护边界变化同步对应说明；仍准确的文档不重写。流程治理、字段、术语、冲突、导入导出、通知/待办修改说明状态与审批影响；Excel导入导出兼顾模板、校验、错误提示与权限。
 - 按 package.json、scripts/README.md 选择验证。修改工作台按影响面运行 test:frontend、test:project-roles、test:process-governance、test:mainline、test:role-workbench；纯说明不默认启动平台、连库或跑全套。指令修改运行仓库 test:codex-context，版本整改运行 test:v8-transition、check:native-process-consistency 及相关隔离测试。

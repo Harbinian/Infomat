@@ -16,9 +16,9 @@ async function main() {
   const runtime = path.join(root, 'runtime');
   for (const dir of ['server', 'scripts', 'public', 'runtime']) fs.mkdirSync(path.join(root, dir));
   fs.writeFileSync(path.join(root, 'package.json'), '{"version":"isolated-test"}');
-  fs.writeFileSync(path.join(root, 'public/index.html'), '<html>MDM isolated test</html>');
+  fs.writeFileSync(path.join(root, 'public/version-probe.json'), '<html>MDM isolated test</html>');
   const versionModule = require.resolve('../server/runtimeVersion');
-  const fixture = `const http=require('http');const version=require(${JSON.stringify(versionModule)}).runtimeVersion(${JSON.stringify(root)});const app=http.createServer((req,res)=>{if(req.url==='/_test/crash'){res.end('crash');setTimeout(()=>process.exit(17),20);return;}if(req.url==='/'){res.end('<html>MDM isolated test</html>');return;}res.setHeader('Content-Type','application/json');res.end(JSON.stringify(req.url==='/api/ready'?{ready:true,status:'ready',version}:{status:'ok',version}));});app.listen(Number(process.env.PORT),'127.0.0.1');process.on('message',m=>{if(m==='mdm:stop')app.close(()=>process.exit(0));});`;
+  const fixture = `const http=require('http');const version=require(${JSON.stringify(versionModule)}).runtimeVersion(${JSON.stringify(root)});const app=http.createServer((req,res)=>{res.setHeader('Connection','close');if(req.url==='/_test/crash'){res.end('crash');setTimeout(()=>process.exit(17),20);return;}if(req.url==='/'){res.writeHead(302,{Location:'/app/'});res.end();return;}if(req.url==='/app/'){res.end('<html>MDM isolated test</html>');return;}res.setHeader('Content-Type','application/json');res.end(JSON.stringify(req.url==='/api/ready'?{ready:true,status:'ready',version}:{status:'ok',version}));});app.listen(Number(process.env.PORT),'127.0.0.1');process.on('message',m=>{if(m==='mdm:stop')app.close(()=>process.exit(0));});`;
   fs.writeFileSync(path.join(root, 'server/index.js'), fixture);
   const paths = manager.pathsFor(root, runtime);
   const reserve = http.createServer((req, res) => res.end('other service untouched'));
@@ -46,9 +46,9 @@ async function main() {
     await assert.rejects(manager.stopService(paths), /OWNER_MISMATCH/);
     assert.equal(fs.existsSync(paths.stop), false);
     fs.writeFileSync(paths.state, JSON.stringify(state));
-    fs.appendFileSync(path.join(root, 'public/index.html'), 'changed');
+    fs.appendFileSync(path.join(root, 'public/version-probe.json'), 'changed');
     await assert.rejects(manager.check(paths, env), /SOURCE_MISMATCH/);
-    fs.writeFileSync(path.join(root, 'public/index.html'), '<html>MDM isolated test</html>');
+    fs.writeFileSync(path.join(root, 'public/version-probe.json'), '<html>MDM isolated test</html>');
     await fetch(`http://127.0.0.1:${port}/_test/crash`);
     const deadline = Date.now() + 25000;
     let recovered;

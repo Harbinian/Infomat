@@ -15,7 +15,7 @@ export class ApiError extends Error {
     this.status = status;
     this.code = code;
     this.fieldErrors = fieldErrors || {};
-    if (code === 'PASSWORD_CHANGE_REQUIRED') this.message = '当前账号需要修改密码，请使用原入口完成修改后再继续。';
+    if (code === 'PASSWORD_CHANGE_REQUIRED') this.message = '当前账号需要修改密码，请在当前平台完成修改后重新登录。';
   }
 }
 

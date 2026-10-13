@@ -24,11 +24,11 @@ if(retryIndex>=0) {
 const dir=path.join(root,'artifacts/mdm-3000-launch','stage05-'+new Date().toISOString().replace(/[-:.TZ]/g,''));fs.mkdirSync(dir,{recursive:true});
 const sha=file=>crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 const report={stage:'05',startedAt:new Date().toISOString(),head:execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim(),node:process.version,suites,retryOf:retryIndex>=0?path.resolve(process.argv[retryIndex+1]):null,results:[]};
-function run(file,real=false) {
+function run(file,real=false,args=[]) {
   const blocker=path.join(__dirname,'testHelpers/blockRealMysql.js');
   const env=isolatedEnvironment({npm_execpath:path.join(path.dirname(process.execPath),'node_modules/npm/bin/npm-cli.js'),...(!real?{NODE_OPTIONS:`--require="${blocker.replace(/\\/g,'/')}"`}:{})});
   const start=Date.now();
-  const result=spawnSync(process.execPath,real?[file]:['--require',blocker,file],{cwd:appRoot,env,encoding:'utf8',windowsHide:true,timeout:real?300000:180000,maxBuffer:20*1024*1024});
+  const result=spawnSync(process.execPath,real?[file,...args]:['--require',blocker,file,...args],{cwd:appRoot,env,encoding:'utf8',windowsHide:true,timeout:real?300000:180000,maxBuffer:20*1024*1024});
   const log=path.join(dir,path.basename(file,'.js')+'.log');fs.writeFileSync(log,(result.stdout||'')+(result.stderr||'')+'\nexit='+result.status+'\n');
   report.results.push({script:file,sha256:sha(path.join(appRoot,file)),status:result.status,durationMs:Date.now()-start,dependency:real?'owned real MySQL / HTTP / Edge if browser test':'static / synthetic repositories / owned temporary legacy SQLite; real MySQL blocked',log:path.relative(root,log).replace(/\\/g,'/'),logSha256:sha(log)});
   console.log((result.status===0?'PASS ':'FAIL ')+file);
@@ -38,7 +38,8 @@ function run(file,real=false) {
 for(const file of scripts)run(file);
 if(!process.argv.includes('--simulated-only')) {
   run('scripts/test-stage05-mysql-isolated.js',true);
-  run('scripts/test-stage05-browser.js',true);
+  run('scripts/test-process-preview-browser.js',true,['--output',path.join(dir,'current-preview-browser')]);
+  run('scripts/test-process-formal-browser.js',true,['--output',path.join(dir,'current-formal-browser')]);
 }
 report.finishedAt=new Date().toISOString();report.passed=report.results.every(r=>r.status===0);
 fs.writeFileSync(path.join(dir,'test-results.json'),JSON.stringify(report,null,2)+'\n');

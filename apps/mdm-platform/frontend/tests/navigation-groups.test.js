@@ -10,6 +10,7 @@ test('sidebar groups present every module exactly once under a declared parent, 
   assert.equal(new Set(flattened).size, flattened.length);
   assert.deepEqual(flattened, navigation.map(page => page.href));
   for (const group of navigationGroups) assert.ok(group.items.length >= 1, `${group.code} must not be empty`);
-  // Grouping is presentation only; the retained page registry and deep links stay intact.
-  assert.equal(Object.keys(pages).length, 26);
+  // Workbench root and password editing are registered outside the navigation groups.
+  assert.equal(Object.keys(pages).length, navigation.length + 2);
+  assert.equal(pages['/app/password'], '修改本人密码');
 });

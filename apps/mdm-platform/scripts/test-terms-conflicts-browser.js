@@ -170,7 +170,7 @@ async function main() {
       await page.getByLabel('冲突类型', { exact:true }).selectOption('term'); await page.locator('[data-conflicts-ready]').waitFor(); assert.equal(await button('查看冲突 field-601').count(), 0);
       await button('查看冲突 term-601').click(); await conflictReady(); await page.goBack(); await conflictReady(); assert.ok(page.url().includes('type=field'));
       await page.goForward(); await conflictReady(); assert.ok(page.url().includes('type=term'));
-      await page.getByRole('link', { name:'原冲突管理入口', exact:true }).click(); await page.waitForURL('**/#/conflicts'); await page.locator('#conflicts').waitFor(); await page.goBack(); await conflictReady();
+      assert.equal(await page.locator('a[href*="/#/"]').count(),0);
       checks.push('field/term same ID isolation, assignment/reassignment, query filtering, reload/back/forward, retained old conflict entry');
       // Hold one response while selecting another record: an old response cannot replace it.
       await page.getByLabel('冲突类型', { exact:true }).selectOption(''); await page.locator('[data-conflicts-ready]').waitFor();
@@ -224,7 +224,7 @@ async function main() {
       assert.equal(await page.getByLabel('术语名称',{exact:true}).inputValue(),'同身份恢复草稿');
       await pool.execute('UPDATE user_accounts SET auth_version=auth_version+1 WHERE person_id=83'); await button('刷新术语').click(); await page.getByRole('heading',{name:'请重新登录',exact:true}).waitFor(); await login('adminMulti'); await termsReady(); assert.equal(await page.getByLabel('术语名称',{exact:true}).count(),0); assert.equal(await button('新增术语').count(),0);
       assert.equal(await page.evaluate(()=>localStorage.length+sessionStorage.length),0);
-      await page.getByRole('link',{name:'原术语词典入口',exact:true}).click(); await page.waitForURL('**/#/terms'); await page.locator('#terms').waitFor(); await page.goBack(); await termsReady();
+      assert.equal(await page.locator('a[href*="/#/"]').count(),0);
       checks.push('real cross-department/permission/assignee denial, session revocation, same-person restoration, other-person clearing, admin read-only, long Chinese form, keyboard/unload protection, no persistence, old terms entry');
       assert.deepEqual(pageErrors, []); const unexpectedConsole = consoleErrors.filter(m => !/Failed to load resource|net::ERR_/.test(m)); assert.deepEqual(unexpectedConsole, []);
       fs.writeFileSync(path.join(output, 'results.json'), JSON.stringify({ checks, pageErrors, unexpectedConsole }, null, 2));

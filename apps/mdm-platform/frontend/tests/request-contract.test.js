@@ -1,9 +1,9 @@
-// Shared transport behavior and the actual retained-page adapter. No service,
+// Shared transport and current React request behavior. No service,
 // database, private configuration or browser persistence is accessed.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import vm from 'node:vm';
+
+
 import { protocol } from '../src/protocol.js';
 import { createApiClient, ApiError } from '../src/api.js';
 
@@ -13,30 +13,7 @@ function deferred() {
   const promise = new Promise(done => { resolve = done; });
   return { promise, resolve };
 }
-function retainedClient(fetchImpl) {
-  const source = readFileSync(new URL('../../public/index.html', import.meta.url), 'utf8');
-  const start = source.indexOf('// ===== API helper (with 401 handling and CSRF protection) =====');
-  const end = source.indexOf('// ===== Tag rendering =====', start);
-  assert(start > 0 && end > start);
-  const showLoginStart = source.indexOf('function showLogin(');
-  const showLoginEnd = source.indexOf('function showApp(', showLoginStart);
-  assert(showLoginStart > end && showLoginEnd > showLoginStart);
-  let logins = 0, toasts = 0;
-  const elements = new Map();
-  const observedProtocol = { ...protocol, createRequestClient: options => {
-    assert.equal(options.timeoutMs, 0, 'retained long requests keep their existing duration contract');
-    return protocol.createRequestClient({ ...options, setTimer: () => assert.fail('retained request must not acquire an implicit timeout') });
-  } };
-  const context = vm.createContext({
-    window: { fetch: fetchImpl }, location: { origin: 'http://isolated.invalid' }, MdmProtocol: observedProtocol,
-    Headers, FormData, DOMException, AbortController, AbortSignal, setTimeout, clearTimeout, URL,
-    publicationImport: { mode: 'retained' }, hasV7Edits: () => false,
-    resetSessionUi: () => { logins++; }, showToast: () => { toasts++; },
-    $: id => { if (!elements.has(id)) elements.set(id, { style: {} }); return elements.get(id); }
-  });
-  vm.runInContext(source.slice(start, end) + source.slice(showLoginStart, showLoginEnd) + '\nglobalThis.adapter = { api, fetch: window.fetch, resetSession: requestClient.resetSession, ensureCsrfToken: loadCsrfToken, generation: () => requestClient.generation };', context);
-  return { ...context.adapter, get logins() { return logins; }, get toasts() { return toasts; } };
-}
+
 
 test('construction owns no IO; clients have independent CSRF caches and session generations', async () => {
   const calls = [];
@@ -193,45 +170,9 @@ test('same-origin Request objects preserve headers, body and signal while receiv
   await client.fetch(input);
 });
 
-test('actual old api retains native JSON, multipart, text, empty and error payload contracts', async () => {
-  const calls = [], form = new FormData(); form.append('file', new Blob(['bytes']), 'synthetic.xlsx');
-  const client = retainedClient(async (url, options) => {
-    calls.push({ url, options });
-    if (url === '/api/csrf-token') return response(200, { csrfToken: 'token' });
-    if (url === '/api/text') return new Response('plain text');
-    if (url === '/api/empty') return new Response(null, { status: 204 });
-    if (url === '/api/error') return response(409, { code: 'REVISION_CHANGED', details: [{ message: 'detail' }], extra: 'kept', error: 'original error' });
-    return response(200, { saved: true });
-  });
-  const json = '{"expected_revision":1}';
-  await client.api('/api/write', { method: 'POST', body: json });
-  await client.api('/api/upload', { method: 'POST', body: form });
-  assert.equal(calls[1].options.body, json); assert.equal(calls[1].options.headers['Content-Type'], 'application/json');
-  assert.equal(calls[2].options.body, form); assert.equal(calls[2].options.headers['Content-Type'], undefined);
-  assert.equal(calls.filter(call => call.url === '/api/csrf-token').length, 1);
-  assert.equal(await client.api('/api/text'), 'plain text');
-  assert.equal(Object.keys(await client.api('/api/empty')).length, 0);
-  await assert.rejects(client.api('/api/error'), error => error.status === 409 && error.code === 'REVISION_CHANGED' && error.extra === 'kept' && error.message === 'original error' && error.details[0].message === 'detail');
-});
 
-test('actual old native fetch and api share token invalidation and silent 401 handling', async () => {
-  let tokens = 0; const calls = [];
-  const client = retainedClient(async (url, options) => {
-    calls.push({ url, options });
-    if (url === '/api/csrf-token') return response(200, { csrfToken: 'token-' + ++tokens });
-    if (url === '/api/denied') return response(403, {});
-    if (url === '/api/expired') return response(401, { error: 'expired' });
-    return response(200, { saved: true });
-  });
-  await client.api('/api/write', { method: 'POST', body: '{}' });
-  const denied = await client.fetch('/api/denied', { method: 'DELETE' }); assert.equal(denied.status, 403);
-  await client.api('/api/write', { method: 'POST', body: '{}' }); assert.equal(tokens, 2);
-  await assert.rejects(client.api('/api/expired', { silentUnauthorized: true }), error => error.status === 401);
-  assert.equal(client.logins, 1); assert.equal(client.toasts, 0);
-  assert.equal(client.generation(), 1);
-  const priorCalls = calls.length; await client.fetch('/echarts.min.js'); assert.equal(calls.length, priorCalls + 1);
-  assert.equal(calls.at(-1).options, undefined);
-});
+
+
 
 test('React maps shared receipts to bounded errors while retaining import and field data', async () => {
   const client = createApiClient({ fetchImpl: async () => response(400, { error: 'sensitive SQL', code: 'IMPORT_INVALID', field_errors: { name: 'required' }, import_status: 'invalid' }) });

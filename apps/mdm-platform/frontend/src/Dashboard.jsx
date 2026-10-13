@@ -91,7 +91,7 @@ function Activity({ api, user }) {
     </>}
   </section>;
 }
-export function Dashboard({ api, user, onLegacy }) {
+export function Dashboard({ api, user, onNavigate }) {
   const [revision, setRevision] = useState(0);
   const mappings = useRead(api, '/api/mappings', revision);
   const todos = useRead(api, '/api/todos', revision);
@@ -105,7 +105,7 @@ export function Dashboard({ api, user, onLegacy }) {
   });
   const all = [mappings, todos, conflicts, stats, fields];
   return <div className="dashboard" data-dashboard-ready={!all.some(state => state.busy)}>
-    <section className="card"><h2>治理活跃与统计</h2><p>查看当前身份可访问的记录数量、冲突情况和人员参与情况。统计结果不代表审核通过或业务验收。</p><div className="import-actions"><button className="secondary" onClick={() => setRevision(x => x + 1)}>刷新统计</button><a href="/#/dashboard" onClick={onLegacy}>查看原统计看板</a><a href="/app/workbench" onClick={onLegacy}>前往我的工作台</a></div></section>
+    <section className="card"><h2>治理活跃与统计</h2><p>查看当前身份可访问的记录数量、冲突情况和人员参与情况。统计结果不代表审核通过或业务验收。</p><div className="import-actions"><button className="secondary" onClick={() => setRevision(x => x + 1)}>刷新统计</button><a href="/app/workbench" onClick={onNavigate}>前往我的工作台</a></div></section>
     <div className="dashboard-metrics">
       <Metric code="mappings" name="流程映射" state={mappings} value={mappings.data?.length} />
       <Metric code="fields" name="字段台账" state={fields} value={fields.data} />
@@ -113,7 +113,7 @@ export function Dashboard({ api, user, onLegacy }) {
       <Metric code="conflicts" name="未解决冲突" state={conflicts} value={conflicts.data?.filter(row => ['pending', 'coordinating'].includes(row.status)).length} />
     </div>
     {all.some(state => state.error) && <StatusPanel title="当前仅展示已成功读取的统计">“暂不可用”不表示数量为零。请刷新统计重试；权限仍由原接口核对。</StatusPanel>}
-    <section className="card"><h2>冲突概览</h2>{stats.busy ? <StatusPanel kind="loading" title="正在读取冲突概览…" /> : stats.error ? <StatusPanel kind="error" title="冲突概览暂不可用">{stats.error.message}</StatusPanel> : <ul className="dashboard-summary">{[['coordinating', '待协调'], ['escalated', '已升级'], ['silenced', '静默'], ['resolvedThisMonth', '本月已解决']].map(([key, label]) => <li key={key}><span>{label}</span><strong>{stats.data[key] ?? 0} 条</strong></li>)}</ul>}<a href="/#/conflicts" onClick={onLegacy}>查看冲突</a> · <a href="/#/todos" onClick={onLegacy}>查看待办</a></section>
+    <section className="card"><h2>冲突概览</h2>{stats.busy ? <StatusPanel kind="loading" title="正在读取冲突概览…" /> : stats.error ? <StatusPanel kind="error" title="冲突概览暂不可用">{stats.error.message}</StatusPanel> : <ul className="dashboard-summary">{[['coordinating', '待协调'], ['escalated', '已升级'], ['silenced', '静默'], ['resolvedThisMonth', '本月已解决']].map(([key, label]) => <li key={key}><span>{label}</span><strong>{stats.data[key] ?? 0} 条</strong></li>)}</ul>}<a href="/app/conflicts" onClick={onNavigate}>查看冲突</a> · <a href="/app/todos" onClick={onNavigate}>查看待办</a></section>
     <Activity api={api} user={user} />
     {mappings.data && <Distribution rows={mappings.data} />}
   </div>;

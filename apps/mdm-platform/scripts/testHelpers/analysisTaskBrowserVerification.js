@@ -29,26 +29,25 @@ module.exports=async({fixture,repo,lead,run,issueId,officeId,findingId,test,save
       await button('确认交办').click();await wait(async()=>{task=(await repo.getAnalysisIssueTasks(lead,issueId)).items.find(t=>t.purpose==='correct');return !!task;});
       await wait(async()=>(await label('必要办理说明').inputValue())==='');assert.equal(new URL(page.url()).hash,`#run=${run.run_id}&finding=${findingId}`);
     });
-    const manager=await login('contact','/app');await manager.goto(fixture.baseURL+'/#/officeWorkbench?office_id='+officeId);
-    let row=manager.locator('#officeTaskRows tr').filter({hasText:`问题 ${issueId} · 整改`});
+    const manager=await login('contact','/app');await manager.goto(fixture.baseURL+'/app/offices?office_id='+officeId);
+    let row=manager.locator('article[id^=office-task-]').filter({hasText:`问题 ${issueId} · 整改`});
     await test('Edge existing office manager assigns actual imported member',async()=>{
-      await row.getByRole('button',{name:'分配人员',exact:true}).click();await manager.locator('#officeAssignee').selectOption('85');
-      await manager.getByText('查看本次办理说明',{exact:true}).click();
-      assert((await manager.getByLabel('问题办理上下文').innerText()).includes(instruction));await manager.locator('#officeSaveTask').click();
+      await row.getByRole('button',{name:'分配人员 ' + task.todo_id,exact:true}).click();await manager.getByLabel('办理人',{exact:true}).selectOption('85');
+      await manager.getByLabel('问题办理上下文').getByText('查看本次办理说明',{exact:true}).click();
+      assert((await manager.getByLabel('问题办理上下文').innerText()).includes(instruction));await manager.getByRole('button',{name:'确认提交本次操作',exact:true}).click();
       await wait(async()=>(await repo.getAnalysisIssueTasks(lead,issueId)).items.find(t=>t.todo_id===task.todo_id).assignee_person_id==='85');
     });
-    const member=await login('reviewB','/app');await member.goto(fixture.baseURL+'/#/officeWorkbench?office_id='+officeId);
+    const member=await login('reviewB','/app');await member.goto(fixture.baseURL+'/app/offices?office_id='+officeId);
     await test('Edge assigned member completes via existing workbench; failure retains input and issue remains open',async()=>{
-      row=member.locator('#officeTaskRows tr').filter({hasText:`问题 ${issueId} · 整改`});await row.getByRole('button',{name:'填写结果并办结',exact:true}).click();
-      const note='P17合成办理：已提交条件说明，仍需有权复核。'.repeat(12);await member.locator('#officeCompletionNote').fill(note);
-      await member.getByRole('button',{name:'关闭窗口',exact:true}).click();await member.locator('#publicationKeepEditing').click();assert.equal(await member.locator('#officeCompletionNote').inputValue(),note);
+      row=member.locator('article[id^=office-task-]').filter({hasText:`问题 ${issueId} · 整改`});await row.getByRole('button',{name:'填写结果并办结 ' + task.todo_id,exact:true}).click();
+      const note='P17合成办理：已提交条件说明，仍需有权复核。'.repeat(12);await member.getByLabel('办理结果',{exact:true}).fill(note);
+      member.once('dialog',d=>d.dismiss());await member.getByRole('button',{name:'放弃本次输入',exact:true}).click();assert.equal(await member.getByLabel('办理结果',{exact:true}).inputValue(),note);
       const url=`**/api/offices/tasks/${task.todo_id}/complete`;
-      for(const status of [403,409,503]){await member.route(url,r=>r.fulfill({status,contentType:'application/json',body:JSON.stringify({error:'合成失败'})}));await member.locator('#officeSaveTask').click();await wait(async()=>!(await member.locator('#officeSaveTask').isDisabled()));assert.equal(await member.locator('#officeCompletionNote').inputValue(),note);await member.unroute(url);}
-      await member.route(url,r=>r.fulfill({status:401,contentType:'application/json',body:'{"error":"合成失效"}'}));await member.locator('#officeSaveTask').click();await member.locator('#loginBox').waitFor({state:'visible'});await member.unroute(url);
-      assert.equal(await member.locator('#officeCompletionNote').inputValue(),note);assert.equal(await member.locator('#publicationDialog').isVisible(),false);
-      await member.locator('#employeeNo').fill('SYNTHETIC_reviewB');await member.locator('#password').fill(fixture.loginPassword);await member.locator('#loginBtn').click();await member.locator('#publicationDialog').waitFor({state:'visible'});assert.equal(await member.locator('#officeCompletionNote').inputValue(),note);
-      for(const[width,height,name]of[[1699,828,'desktop']]){await member.setViewportSize({width,height});await member.locator('#officeCompletionNote').focus();const geometry=await member.locator('#publicationDialog').evaluate(e=>({width:e.getBoundingClientRect().width,scroll:e.scrollWidth,client:e.clientWidth,screen:innerWidth}));assert(geometry.width<=width);assert(geometry.scroll<=geometry.client+1);await member.locator('#publicationDialog').screenshot({path:path.join(output,`p17-${name}-complete.png`)});}
-      await member.locator('#officeSaveTask').click();await wait(async()=>(await repo.getAnalysisIssueTasks(lead,issueId)).items.find(t=>t.todo_id===task.todo_id).status==='done');
+      for(const status of [403,409,503]){await member.route(url,r=>r.fulfill({status,contentType:'application/json',body:JSON.stringify({error:'合成失败'})}));await member.getByRole('button',{name:'确认提交本次操作',exact:true}).click();await wait(async()=>!(await member.getByRole('button',{name:'确认提交本次操作',exact:true}).isDisabled()));assert.equal(await member.getByLabel('办理结果',{exact:true}).inputValue(),note);await member.unroute(url);}
+      await member.route(url,r=>r.fulfill({status:401,contentType:'application/json',body:'{"error":"合成失效"}'}));await member.getByRole('button',{name:'确认提交本次操作',exact:true}).click();await member.locator('#login-name').waitFor();await member.unroute(url);
+      await member.locator('#login-name').fill('SYNTHETIC_reviewB');await member.locator('#login-password').fill(fixture.loginPassword);await member.getByRole('button',{name:'登录',exact:true}).click();await member.getByLabel('办理结果',{exact:true}).waitFor();assert.equal(await member.getByLabel('办理结果',{exact:true}).inputValue(),note);
+      for(const[width,height,name]of[[1699,828,'desktop']]){await member.setViewportSize({width,height});await member.getByLabel('办理结果',{exact:true}).focus();const geometry=await member.getByLabel('办公室任务编辑',{exact:true}).evaluate(e=>({width:e.getBoundingClientRect().width,scroll:e.scrollWidth,client:e.clientWidth,screen:innerWidth}));assert(geometry.width<=width);assert(geometry.scroll<=geometry.client+1);await member.getByLabel('办公室任务编辑',{exact:true}).screenshot({path:path.join(output,`p17-${name}-complete.png`)});}
+      await member.getByRole('button',{name:'确认提交本次操作',exact:true}).click();await wait(async()=>(await repo.getAnalysisIssueTasks(lead,issueId)).items.find(t=>t.todo_id===task.todo_id).status==='done');
       assert.equal((await repo.getAnalysisIssue(lead,issueId)).issue.display_status,'waiting_my_action');
       await button('查看办理与交办').click();await page.getByText(note,{exact:true}).waitFor();await page.getByLabel('问题办公室办理',{exact:true}).screenshot({path:path.join(output,'p17-result.png')});
     });

@@ -98,10 +98,9 @@ async function main() {
       await pool.execute('UPDATE user_accounts SET auth_version=auth_version+1 WHERE account_id=183');
       await button().click(); await page.getByRole('heading', { name: '请重新登录', exact: true }).waitFor();
       await login('contact'); await preserved();
-      page.once('dialog', d => d.accept()); await page.getByRole('link', { name: '打开原数据地图入口', exact: true }).click(); await page.waitForURL('**/#/dataMap');
-      assert.deepEqual(await download('legacy', () => page.locator('#dataMap a[href="/api/export/excel"]').click()), scoped);
-      await page.goBack(); await ready(); assert.equal(await select().inputValue(), '913'); await page.reload(); await ready();
-      checks.push('desktop/keyboard, cancelled reload protects inputs, old/new workbook cell parity, browser back and reload');
+      assert.equal(await page.locator('a[href*="/#/"]').count(),0); assert.equal(await select().inputValue(), '913');
+      page.once('dialog', d => d.accept()); await page.reload(); await ready();
+      checks.push('desktop/keyboard, cancelled reload protects inputs,  browser back and reload');
       let finishOld, startedOld;
       const oldHeld = new Promise(resolve => { finishOld = resolve; }), oldEntered = new Promise(resolve => { startedOld = resolve; });
       await page.route('**/api/export/excel', async r => { startedOld(); await oldHeld; await r.fulfill({ contentType: mime, body: bytes }).catch(() => {}); }, { times: 1 });

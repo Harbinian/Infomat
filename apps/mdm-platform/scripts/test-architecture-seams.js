@@ -1,7 +1,7 @@
 // Behavior boundaries only. Preload blockRealMysql; no application, DB or env file.
 const test=require('node:test'),assert=require('node:assert/strict');
 const {createRepositoryResource}=require('../server/repositoryResource');
-const protocol=require('../public/mdm-protocol');
+const protocol=require('../shared/browserProtocol');
 const {sessionSubject}=require('../server/sessionSubject');
 const {identityInteger,sameIdentityInteger}=require('../server/sessionSubject');
 const events=require('../server/authoringReplyEvent');
@@ -65,9 +65,11 @@ test('shared CSRF ownership rejects late login generations and does not coalesce
   a.invalidateToken();assert.equal(await a.csrf(async()=>'next'),'next');
 });
 test('page registry preserves exact server paths and complete supported navigation parameters',()=>{
-  assert.equal(protocol.pages.length,26);assert.equal(new Set(protocol.pages.map(p=>p.href)).size,26);
+  assert.equal(protocol.pages.length,27);assert.equal(new Set(protocol.pages.map(p=>p.href)).size,27);
   assert(protocol.pages.some(p=>p.serverPath==='/process-formal'));assert.equal(protocol.pages.filter(p=>p.navigation!==null).length,25);
-  assert.equal(protocol.targetHref('#/processGovernance?case_id=1&revision_id=2'),'/#/processGovernance?case_id=1&revision_id=2');
+  const target = new URL(protocol.targetHref('#/processGovernance?workspace=v7Preview&v7Case=1&item=2'), 'http://mdm.invalid');
+  assert.equal(target.pathname, '/app/process-preview');
+  assert.deepEqual(Object.fromEntries(target.searchParams), { item: '2', case: '1' });
   assert.equal(protocol.targetHref('/app/analysis#run=1&finding=2'),'/app/analysis#run=1&finding=2');
   assert.equal(protocol.targetHref('https://external.example'),null);
 });

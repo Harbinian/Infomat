@@ -199,10 +199,8 @@ async function main() {
       await page.screenshot({ path: path.join(output, 'desktop.png'), fullPage: true });
       await page.locator('[aria-labelledby="field-identity-heading"]').screenshot({ path: path.join(output, 'identity-detail.png') });
       await button('刷新字段身份').focus(); await page.keyboard.press('Enter'); await identityReady();
-      await page.getByRole('link', { name: '打开原数据地图入口', exact: true }).click(); await page.waitForURL('**/#/dataMap');
-      await page.locator('#dataMapContextSelect option[value="911"]').waitFor({ state: 'attached' }); await page.locator('#dataMapContextSelect').selectOption('911');
-      await page.waitForFunction(() => document.querySelector('#dataMap')?.textContent.includes('合成甲字段'));
-      checks.push('read failures clear stale detail, invalid response blocked, cross-identity draft hidden, unseen target not fetched, keyboard/desktop geometry and old entry preserved');
+
+      checks.push('read failures clear stale detail, invalid response blocked, cross-identity draft hidden, unseen target not fetched, keyboard/desktop geometry and retired entry absent');
       // Prior expiry tests invalidated the fixture's original HTTP client session.
       const freshClients = {};
       request = async (who, url, method = 'GET', body) => {

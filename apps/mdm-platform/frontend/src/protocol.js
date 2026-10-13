@@ -1,4 +1,4 @@
-import '../../public/mdm-protocol.js';
+import '../../shared/browserProtocol.js';
 export const protocol = globalThis.MdmProtocol;
 export const pages = Object.freeze(Object.fromEntries(protocol.pages.map(page=>[page.href,page.title])));
 export const navigation = Object.freeze(protocol.pages.filter(page=>page.navigation!==null).sort((a,b)=>a.navigation-b.navigation));

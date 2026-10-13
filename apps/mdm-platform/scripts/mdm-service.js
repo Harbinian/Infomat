@@ -167,7 +167,7 @@ async function check(paths = pathsFor(), env = fixedEnvironment(), adapters = {}
   if (!health.ok || live.status !== 'ok' || !ready.ok || !body.ready) throw new Error('MDM_NOT_READY');
   if (live.version.sourceDigest !== current.sourceDigest || body.version.sourceDigest !== current.sourceDigest) throw new Error('MDM_RUNNING_SOURCE_MISMATCH');
   const origin = env.MDM_ACCESS_MODE === 'https-proxy' ? env.MDM_PUBLIC_ORIGIN : base;
-  const page = await fetch(origin, { signal: AbortSignal.timeout(5000), redirect: 'error' });
+  const page = await fetch(new URL('/app/', origin), { signal: AbortSignal.timeout(5000), redirect: 'error' });
   if (!page.ok || !(await page.text()).includes('MDM')) throw new Error('MDM_CONTENT_UNAVAILABLE');
   return { status: 'ready', pid: state.child.pid, version: body.version };
 }

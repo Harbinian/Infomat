@@ -18,7 +18,7 @@ const recordKey = (row, terms) => terms ? String(row.id) : `${row.conflict_type}
 
 // One shared request/draft lifecycle for the two existing governance API families.
 // Drafts live in App and remain bound to the current person and department.
-export function GovernanceUtilities({ api, user, kind, draft, setDraft, draftBlocked = false, onLegacy, onQueryChange }) {
+export function GovernanceUtilities({ api, user, kind, draft, setDraft, draftBlocked = false, onNavigate, onQueryChange }) {
   const terms = kind === 'terms', title = terms ? '术语' : '冲突';
   const statusLabel = value => terms && value === 'pending' ? '待审' : label(value);
   const [selection, setSelection] = useState(query), [revision, setRevision] = useState(0);
@@ -151,7 +151,7 @@ export function GovernanceUtilities({ api, user, kind, draft, setDraft, draftBlo
   return <div className="identity-module governance-utilities">
     <section className="card"><h2>{terms ? '查阅和维护术语词典' : '协调和处理冲突'}</h2>
       <p>{terms ? '按现有流程归属申报、维护和审核术语。流程选项沿用已有记录，实际归属仍须以业务确认结果为准。' : '先查看双方内容、当前责任人和处理历史，再选择当前身份可办理的动作。处理决定保留在冲突记录中，不自动修改术语或字段定义。'}</p>
-      <div className="identity-actions"><button disabled={busy} onClick={() => setRevision(n => n + 1)}>刷新{title}</button><a href={terms ? '/#/terms' : '/#/conflicts'} onClick={onLegacy}>原{terms ? '术语词典' : '冲突管理'}入口</a></div>
+      <div className="identity-actions"><button disabled={busy} onClick={() => setRevision(n => n + 1)}>刷新{title}</button></div>
       {message && <StatusPanel title={message}/>}
       {error && <StatusPanel kind="error" title={`${title}读取或办理未完成`} onRetry={() => setRevision(n => n + 1)}>{error.message}</StatusPanel>}
       <div className="identity-fields"><Field label={`${title}状态`}><select disabled={busy} value={selection.status || ''} onChange={e => changeQuery({ status:e.target.value })}><option value="">全部可见状态</option>{(terms ? ['pending','approved','rejected'] : ['pending','coordinating','escalated','resolved',...(can('read-global') ? ['silenced','archived'] : [])]).map(s => <option key={s} value={s}>{statusLabel(s)}</option>)}</select></Field>
@@ -177,7 +177,7 @@ export function GovernanceUtilities({ api, user, kind, draft, setDraft, draftBlo
     {detailError && <StatusPanel kind="error" title={`${title}详情暂不可用`} onRetry={() => setRevision(n => n + 1)}>{detailError.message}</StatusPanel>}
     {detail && <section className="card" {...{ [terms ? 'data-term-detail' : 'data-conflict-detail']:true }}><h3>{terms ? detail.term : subject(detail)} · {statusLabel(detail.status)}</h3>
       {terms ? <><dl><dt>术语类型</dt><dd>{detail.term_type_name || detail.term_type_code}</dd><dt>定义</dt><dd>{detail.definition || '未提供'}</dd><dt>适用范围</dt><dd>{detail.scope || '未提供'}</dd><dt>禁用表述</dt><dd>{detail.forbidden || '未提供'}</dd><dt>流程与归口部门</dt><dd>{detail.process_name || '未提供'} / {detail.process_dept_name || '待明确'}</dd><dt>创建与审核</dt><dd>创建人员 {detail.created_by_person_id || detail.created_by || '未提供'} · {detail.created_at || '未提供'}；审核人员 {detail.approved_by_person_id || detail.approved_by || '未提供'} · {detail.approved_at || '未提供'}</dd></dl>
-        <div className="identity-actions">{sameDepartment && can('draft-department') && detail.status === 'pending' && ['edit','delete'].map(actionButton)}{sameDepartment && can('review-department') && ['approve','reject'].map(actionButton)}{can('assign-work') && !perms.includes('identity:manage-account') && actionButton('term-todo')}<a href="/app/todos?type=terminology" onClick={onLegacy}>查看术语待办</a></div></> : <>
+        <div className="identity-actions">{sameDepartment && can('draft-department') && detail.status === 'pending' && ['edit','delete'].map(actionButton)}{sameDepartment && can('review-department') && ['approve','reject'].map(actionButton)}{can('assign-work') && !perms.includes('identity:manage-account') && actionButton('term-todo')}<a href="/app/todos?type=terminology" onClick={onNavigate}>查看术语待办</a></div></> : <>
         <p data-conflict-summary>冲突编号：{selectedType}-{detail.id}；类型：{selectedType === 'term' ? '术语冲突' : '字段冲突'}；严重程度：{label(detail.severity)}</p>
         <div className="conflict-comparison">{['a','b'].map(side => <section key={side}><h4>{side.toUpperCase()} 方 · {detail[`dept_${side}_name`] || detail[`dept_${side}`] || '部门待明确'}</h4>{selectedType === 'field' && <p>字段名称：{detail[`field_name_${side}`] || '历史记录未提供'}</p>}<p>{selectedType === 'term' ? detail[`dept_${side}_meaning`] || '定义未提供' : detail[`value_${side}`] ?? '值未提供'}</p><p>来源{selectedType === 'term' ? '术语' : '字段'}标识：{detail[selectedType === 'term' ? `term_${side}_id` : `field_entry_${side}_id`] || '历史记录未提供'}</p></section>)}</div>
         <p>当前责任人：{assignee?.assignee_name || '尚未指定'}；截止日期：{detail.deadline || '未设置'}。{detail.escalated ? '记录标记为已升级；未据此推断升级原因或发生时间。' : ''}</p><p>处理决定：{detail.resolution || '尚未记录'} · 处理人员 {detail.resolved_by || '未提供'} · {detail.resolved_at || '未提供'}</p>
