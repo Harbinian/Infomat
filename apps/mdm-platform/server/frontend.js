@@ -3,7 +3,7 @@
 const express = require('express');
 const path = require('node:path');
 const fs = require('node:fs');
-const {pages} = require('../public/mdm-protocol');
+const {pages} = require('../shared/browserProtocol');
 
 function frontendRouter(dist = path.resolve(__dirname, '../frontend/dist')) {
   const router = express.Router();
@@ -13,7 +13,7 @@ function frontendRouter(dist = path.resolve(__dirname, '../frontend/dist')) {
   router.get(pages.map(page=>page.serverPath), (req, res, next) => {
     const index = path.join(dist, 'index.html');
     if (!fs.existsSync(index)) {
-      return res.status(503).type('text').send('新入口尚未构建，请使用原入口。');
+      return res.set('Cache-Control', 'no-store').status(503).type('text').send('平台页面尚未构建，请联系维护人员完成前端构建。');
     }
     res.set('Cache-Control', 'no-store').sendFile(index, error => { if (error) next(error); });
   });
@@ -21,4 +21,17 @@ function frontendRouter(dist = path.resolve(__dirname, '../frontend/dist')) {
   return router;
 }
 
-module.exports = { frontendRouter };
+function publicEntryRouter(directory = path.resolve(__dirname, '../public')) {
+  const router = express.Router();
+  router.get('/', (req, res) => res.set('Cache-Control', 'no-store').redirect(302, '/app/'));
+  router.get(['/index.html', '/mdm-protocol.js'], (req, res) =>
+    res.set('Cache-Control', 'no-store').status(410).type('text').send('旧版页面已退役，请访问 /app/。'));
+  // Only resources consumed by the current frontend are public. A restored old
+  // index file or an accidental new public file cannot reopen another frontend.
+  for (const name of ['logo.png', 'echarts.min.js', 'template.xlsx']) {
+    router.get('/' + name, (req, res, next) => res.sendFile(path.join(directory, name), error => { if (error && !req.aborted && !res.headersSent) next(error); }));
+  }
+  return router;
+}
+
+module.exports = { frontendRouter, publicEntryRouter };

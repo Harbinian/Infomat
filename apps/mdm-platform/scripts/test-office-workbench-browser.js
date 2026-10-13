@@ -108,9 +108,7 @@ async function main() {
       await as('adminMulti'); assert.equal(await button('交办到办公室').count(),0); assert.equal(await button('分配人员 ' + old.id).count(),0);
       await expect('adminMulti','/api/offices/tasks','POST',{request_id:crypto.randomUUID(),office_id:a,content:'禁止'},403);
       await expect('adminMulti','/api/offices/tasks/' + old.id + '/assign','POST',{assignee_person_id:85,expected_revision:1},403);
-      const legacy = await context.newPage(); await legacy.goto(fixture.baseURL + '/#/officeWorkbench?office_id=' + a);
-      const legacyRow = legacy.locator('#officeTaskRows tr').filter({hasText:'合成任务<script>alert(1)</script>'});
-      await legacyRow.waitFor(); assert.ok((await legacyRow.textContent()).includes(note)); await legacy.close();
+
       await as('contact'); await button('分配人员 ' + old.id).click(); await field('办理人').selectOption('85');
       await page.evaluate(async () => { const t = await (await fetch('/api/csrf-token')).json(); await fetch('/api/org/logout',{method:'POST',headers:{'X-CSRF-Token':t.csrfToken}}); });
       await button('确认提交本次操作').click(); await page.locator('#login-name').waitFor(); await login('outsider'); await idle();

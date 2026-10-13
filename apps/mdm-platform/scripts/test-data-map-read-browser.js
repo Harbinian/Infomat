@@ -73,9 +73,7 @@ async function main() {
       await page.getByRole('button', { name: '刷新数据地图', exact: true }).click(); await entered; await refresh(); release();
       await page.waitForTimeout(150); assert.equal(await page.getByText('迟到旧结果', { exact: true }).count(), 0);
       checks.push('injected failure/retry, offline and stale concurrent result protection');
-      await page.getByRole('link', { name: '打开原数据地图入口', exact: true }).click(); await page.waitForURL('**/#/dataMap');
-      await page.locator('#dataMapContextSelect').selectOption('911'); await page.locator('#dataMapFieldRows').getByText(longName, { exact: true }).waitFor();
-      await page.goBack(); await ready();
+      assert.equal(await page.locator('a[href*="/#/"]').count(),0);
       await pool.execute('UPDATE user_accounts SET auth_version=auth_version+1 WHERE account_id=182');
       await page.getByRole('button', { name: '刷新数据地图', exact: true }).click(); await page.getByRole('heading', { name: '请重新登录', exact: true }).waitFor();
       await login('contact'); assert.equal(await select().locator('option[value="912"]').count(), 0);

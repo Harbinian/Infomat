@@ -146,9 +146,7 @@ async function main() {
       assert.deepEqual(raced.map(r => r.status()).sort(), [200, 400]);
       const [racedFields] = await pool.query('SELECT * FROM data_map_fields WHERE context_id=?', [other.id]); assert.equal(racedFields.length, 1);
       const [[legacyAfter]] = await pool.query('SELECT * FROM data_map_fields WHERE id=?', [original.id]); assert.deepEqual(legacyAfter, legacyBefore);
-      page.once('dialog',d=>d.accept());await page.getByRole('link', { name: '打开原数据地图入口', exact: true }).click(); await page.waitForURL('**/#/dataMap');
-      await page.locator('#dataMapContextSelect').selectOption(String(own.id)); await page.locator('#dataMapFieldRows').getByText('合成导入字段', { exact: true }).waitFor();
-      await page.goBack(); await ready(); assert.match(await page.locator('[aria-label="关联字段台账"]').innerText(), /合成导入字段/);
+      assert.equal(await page.locator('a[href*="/#/"]').count(),0); assert.match(await page.locator('[aria-label="关联字段台账"]').innerText(), /合成导入字段/);
       await page.reload(); await ready(); assert.equal(await page.getByLabel('数据地图上下文', { exact: true }).inputValue(), String(own.id));
       checks.push('real admin/cross-department/CSRF refusal, concurrent unique key, original rows and legacy readback');
       await page.getByRole('button', { name: '退出登录', exact: true }).click(); await login('contact'); await chooseFile(good);

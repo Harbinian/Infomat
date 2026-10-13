@@ -3,7 +3,7 @@ import { StatusPanel } from './components.jsx';
 import './role-workbench.css';
 import {protocol} from './protocol.js';
 
-// Keep complete legacy targets, including item/version identifiers. No inferred routing.
+// Keep complete current-page targets, including item/version identifiers.
 const targetHref = protocol.targetHref;
 function Entry({ target, children, onNavigate }) {
   const href = targetHref(target);

@@ -108,18 +108,6 @@ function main() {
     assert.ok(schema.includes(`CREATE TABLE IF NOT EXISTS ${table}`), `${table} must be in MySQL schema`);
   }
 
-  const html = fs.readFileSync(path.join(__dirname, '../public/index.html'), 'utf8');
-  const rbacSection = html.match(/<!-- Fixed RBAC \/ RACI administration -->([\s\S]*?)<!-- Detail Page/);
-  assert.ok(rbacSection, 'fixed RBAC administration section should exist');
-  assert.ok(rbacSection[1].includes('账号管理'));
-  assert.ok(rbacSection[1].includes('角色可见标签'));
-  assert.ok(rbacSection[1].includes('访问审计'));
-  assert.ok(!rbacSection[1].includes('批量导入'));
-  assert.ok(!rbacSection[1].includes('权限矩阵'));
-  assert.ok(!html.includes('data-roles='));
-  assert.ok(html.includes('data-permissions='));
-  assert.ok(!html.includes('注册账号'));
-
   console.log('RBAC/RACI v2 fixed model contract test passed');
 }
 

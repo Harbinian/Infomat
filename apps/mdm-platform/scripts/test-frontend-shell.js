@@ -5,7 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 const express = require('express');
-const { frontendRouter } = require('../server/frontend');
+const { frontendRouter, publicEntryRouter } = require('../server/frontend');
 const { securityHeaders } = require('../server/security');
 const { runtimeVersion } = require('../server/runtimeVersion');
 
@@ -34,7 +34,7 @@ async function main() {
   const app = express(); app.use(securityHeaders);
   app.use('/app', frontendRouter());
   app.use('/unbuilt', frontendRouter(path.join(dist, 'does-not-exist')));
-  app.use(express.static(path.resolve(__dirname, '../public')));
+  app.use(publicEntryRouter());
   const server = await new Promise(resolve => { const s = app.listen(0, '127.0.0.1', () => resolve(s)); });
   assert.ok(![3000, 3001, 5173, 63805, 3306, 3307].includes(server.address().port));
   try {
@@ -52,10 +52,19 @@ async function main() {
     }
     assert.equal((await fetch(base + '/app/identity', { method: 'POST' })).status, 404);
     assert.equal((await fetch(base + '/unbuilt/')).status, 503);
-    assert.ok((await (await fetch(base + '/')).text()).includes('id="appContent"'));
+    const root = await fetch(base + '/', { redirect: 'manual' });
+    assert.equal(root.status, 302); assert.equal(root.headers.get('location'), '/app/');
+    assert.equal(root.headers.get('cache-control'), 'no-store');
+    for (const url of ['/index.html', '/mdm-protocol.js']) {
+      const response = await fetch(base + url); assert.equal(response.status, 410);
+      assert(!(await response.text()).includes('id="appContent"'));
+    }
+    assert.equal((await fetch(base + '/app/password')).status, 200);
+    const unavailable = await fetch(base + '/unbuilt/');
+    assert(!(await unavailable.text()).includes('原入口'));
     assert.equal((await fetch(base + '/echarts.min.js')).status, 200);
     for (const file of files.filter(f => f !== 'index.html')) assert.equal((await fetch(base + '/app/' + file.replaceAll('\\', '/'))).status, 200);
-    console.log('P01_PUBLIC_BUILD_AND_ROUTING_PASS: runtime build identity, page allowlist, API/assets/upload/source 404, old entry, local chart, bounded public build');
+    console.log('CURRENT_PUBLIC_ROUTING_PASS: root redirect, retired resources 410, current pages, asset allowlist and unbuilt 503');
   } finally { await new Promise(resolve => server.close(resolve)); }
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });

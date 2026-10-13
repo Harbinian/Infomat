@@ -57,13 +57,11 @@ async function main() {
       assert.equal(await page.locator('#login-name').evaluate(el => el === document.activeElement), true);
       checks.push('anonymous deep link and required field focus');
       await fillLogin();
-      const leaving = page.waitForEvent('dialog');
-      const leaveClick = page.getByRole('link', { name: '使用原入口', exact: true }).click();
-      await (await leaving).dismiss(); await leaveClick; await assertInput();
+
       const reloading = page.waitForEvent('dialog');
       const reload = page.reload().catch(() => {});
       await (await reloading).dismiss(); await reload; await assertInput();
-      checks.push('cancelled navigation and reload preserve visible login input');
+      checks.push('cancelled reload preserve visible login input');
 
       for (const status of [403, 409, 503]) {
         await page.route('**/api/org/login', route => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify({ code: 'SYNTHETIC_FAILURE', error: 'must not expose internal diagnostics' }) }), { times: 1 });

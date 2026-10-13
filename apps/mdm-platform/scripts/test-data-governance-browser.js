@@ -103,8 +103,7 @@ async function main() {
       assert.equal((await request('adminMulti', root + '/creation-tasks/reconcile', 'POST', { process_version_id: versionId })).status, 403);
       checks.push('administrator combined role remains read-only');
       // Keep original page/API compatibility and historical fixed versions.
-      const legacy = await context.newPage(); await legacy.goto(fixture.baseURL + '/#/processGovernance?workspace=dataGovernance&package=' + work.id);
-      await legacy.locator('#pdgModalTitle').waitFor(); assert.ok((await legacy.locator('#pdgModalSubtitle').textContent()).includes(String(versionId))); await legacy.close();
+
       await as('lead'); await button('返回工作包待办').click(); await idle();
       const [[source]] = await pool.query('SELECT * FROM process_design_versions WHERE id=?', [versionId]);
       const nextDoc = structuredClone(doc); nextDoc.process.process_name = '合成新版不改旧工作包';

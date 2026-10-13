@@ -330,7 +330,7 @@ export function ProcessPreview({ api, draft, setDraft }) {
       {(detail.items || []).map(item => <article className="preview-item" key={item.id}><h4>{item.behavior_name}</h4><p>{item.origin_department_name}：{label(item.origin_status)}；{item.target_department_name}：{label(item.counterparty_status)}；{label(item.carry_state)}</p><p>归口部门依据：{item.origin_basis || '尚未记录'}</p><p>承接部门依据：{item.counterparty_basis || '尚未记录'}</p><a href={'#source-' + item.behavior_ref} onClick={e => { e.preventDefault(); document.getElementById('source-' + item.behavior_ref)?.scrollIntoView({ block: 'center' }); }}>定位当前修订节点与数据依据</a><JsonDetails title="核对项绑定的完整事实快照" value={item.item_snapshot} />{item.allowed_actions?.includes('record_department_decision') ? <button disabled={busy} onClick={() => start('decision', item)}>记录本部门核对结果</button> : <p>当前身份只读，不能代替参与部门核对。</p>}</article>)}
       <SourceContent source={detail.revision.document} />
       <details><summary>操作历史</summary>{(detail.events || []).map((e, i) => <p key={e.id || i}>{e.created_at} · {e.actor_name || e.actor_person_id || e.actor_user_id || '记录人员未提供'} · {e.actor_department_name || '部门未提供'} · {e.event_type} · {label(e.decision)} {e.basis_text}</p>)}{!detail.events?.length && <p>暂无操作记录。</p>}</details>
-      <p><a href={'/#/processGovernance?workspace=v7Preview&v7Case=' + encodeURIComponent(detail.case.id)} onClick={e => { if (draft && !discard()) e.preventDefault(); }}>进入原案例办理正式流转</a></p>
+      <p><a href={'/app/process-formal?case=' + encodeURIComponent(detail.case.id)} onClick={e => { if (draft && !discard()) e.preventDefault(); }}>进入案例正式流转</a></p>
     </section>}
   </div>;
 }

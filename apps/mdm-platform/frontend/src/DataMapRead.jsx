@@ -15,7 +15,7 @@ function systems(value) {
 }
 const selection = () => new URLSearchParams(location.search).get('context') || '';
 
-export function DataMapRead({ api, user, draft, setDraft, fieldDraft, setFieldDraft, isFieldAttemptCurrent, identityDraft, setIdentityDraft, onLegacy, onQueryChange }) {
+export function DataMapRead({ api, user, draft, setDraft, fieldDraft, setFieldDraft, isFieldAttemptCurrent, identityDraft, setIdentityDraft, onNavigate, onQueryChange }) {
   const [contextId, setContextId] = useState(selection);
   const [writeState, setWriteState] = useState({});
   const [importBusy, setImportBusy] = useState(false);
@@ -75,7 +75,7 @@ export function DataMapRead({ api, user, draft, setDraft, fieldDraft, setFieldDr
       <div className="section-heading"><h1>数据地图台账查阅</h1><button className="secondary" disabled={importBusy} onClick={() => setRevision(value => value + 1)}>刷新数据地图</button></div>
       <p>选择一个来源上下文，查看所属字段及原有质量状态。上下文用于定位材料和办理范围，不代表对象身份。</p>
       <p className="muted">具有本部门编制权限的人员可创建上下文并导入字段；台账可按当前权限范围导出，下方可查阅流程与数据关系图。字段身份与黄金源可在下方查阅、维护并由有权限人员确认；原有质量状态不代表新模板对象或权威来源已认定。</p>
-      <a href="/#/dataMap" onClick={onLegacy}>打开原数据地图入口</a>
+
     </section>
     {canCreate && <section className="card"><h2>创建数据地图上下文</h2>
       <p>归口部门：{user.departmentName || '名称未提供'}。上下文只用于定位来源及办理范围，创建成功不表示对象已经认定。</p>

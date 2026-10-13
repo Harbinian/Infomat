@@ -36,7 +36,7 @@ function candidateText(row) {
 const binding = data => data?.package ? JSON.stringify([data.package.id, data.package.process_version_id, data.package.source_content_hash, data.package.rule_version, data.package.revision_no, data.package.status, data.fact_request?.status]) : '';
 function routeSelection() { const q = new URLSearchParams(location.search); return q.get('factRequest') ? { kind:'fact', id:q.get('factRequest') } : q.get('package') ? { kind:'package', id:q.get('package') } : { kind:'', id:'' }; }
 
-export function DataGovernance({ api, draft, setDraft, onLegacy }) {
+export function DataGovernance({ api, draft, setDraft, onNavigate }) {
   const [selection, setSelection] = useState(() => draft?.selection || routeSelection());
   const [workbench, setWorkbench] = useState(null), [detail, setDetail] = useState(null), [departments, setDepartments] = useState([]);
   const [selectedId, setSelectedId] = useState(draft?.detailId || ''), [mode, setMode] = useState('todo');
@@ -122,7 +122,7 @@ export function DataGovernance({ api, draft, setDraft, onLegacy }) {
   return <div className="process-preview data-governance">
     <section className="card"><h2>按固定流程版本办理数据治理</h2><p>MDM工作组核对对象、字段和生命周期，并记录判断依据；业务部门只答复定向的事实问题。系统按固定规则生成待核对内容，不调用AI，也不自动确认。</p>
       <p>当前工作包支持已发布的原生 V8 及受支持 V7，包括历史已发布版本。每个工作包固定绑定来源版本与摘要，不随最新流程变化。</p>
-      <div className="import-actions"><button className="secondary" disabled={loading || busy} onClick={() => load()}>刷新工作包状态</button><button className="secondary" disabled={busy} onClick={() => choose('')}>返回工作包待办</button><a href={'/#/processGovernance?workspace=dataGovernance' + (selection.id ? '&' + (selection.kind === 'fact' ? 'factRequest' : 'package') + '=' + encodeURIComponent(selection.id) : '')} onClick={onLegacy}>打开原数据治理入口</a></div>
+      <div className="import-actions"><button className="secondary" disabled={loading || busy} onClick={() => load()}>刷新工作包状态</button><button className="secondary" disabled={busy} onClick={() => choose('')}>返回工作包待办</button></div>
     </section>
     {loading && <StatusPanel kind="loading" title="正在读取工作包状态" />}
     {error && <StatusPanel kind="error" title="操作未完成" onRetry={busy ? undefined : () => load()}>{error} 可见输入仍保留；请核对状态后明确重试。</StatusPanel>}

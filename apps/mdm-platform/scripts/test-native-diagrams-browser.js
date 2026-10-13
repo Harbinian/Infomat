@@ -192,9 +192,7 @@ async function main() {
       await selectVersion('');
       await page.reload(); await ready(); assert.match(await sourceText(), /已发布/);
       await page.getByRole('link', { name: '当前身份', exact: true }).click(); await page.goBack(); await ready(); assert.match(await sourceText(), /已发布/);
-      await page.getByRole('link', { name: '打开原数据地图入口', exact: true }).click(); await page.waitForURL('**/#/dataMap');
-      await page.locator('#nativeDiagramCase').selectOption(String(id)); await page.locator('#nativeDataDiagramButton').click(); await page.locator('#nativeDiagramCanvas canvas').first().waitFor();
-      await page.getByText('预览修订 1 · 尚未形成正式发布结论', { exact: true }).waitFor(); await page.goBack(); await ready();
+
       // A fixed version is readable without consulting the preview list or draft.
       let caseReads = 0;
       const countCaseReads = r => { if (/\/api\/process-v7-preview\/cases|\/api\/process-design\/drafts/.test(r.url())) caseReads++; };
