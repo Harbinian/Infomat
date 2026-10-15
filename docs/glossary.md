@@ -765,3 +765,16 @@ git commit -m "feat: add rate limiter middleware for API protection"
 |---|---|---|
 | 原生 V8 流程主线 | Native V8 Process Mainline | 3001主动下载、人工上传3000的`process-governance-v8`正文，经预览核对、正式审核发布、固定映射、分析及数据治理办理；受支持V7保持原格式，API或表名中的v7不决定正文格式。 |
 | 原生流程确定性检查 | Native Process Deterministic Checks | `v7-deterministic-v3`按固定正文的实际V8/V7格式执行技术与待核实检查；v1/v2仍仅支持V7，结果不能直接形成业务结论或自动关闭问题。 |
+
+## U8 出入库编号查询（技术实现术语）
+
+以下说明记录用户确认口径与当前只读查询实现，不作为独立业务真源。
+
+| 名称 | 当前实现与适用范围 |
+|---|---|
+| 销售源头质量编号 | 按已捕获销售明细 ID 读取 `SO_SODetails.cDefine29`；`mom_orderdetail.Define29` 为生产复制值，独立比较。 |
+| U8 零件编号 | 读取 `mom_orderdetail.Define28` 原值。当前样本为生产订单号与生产明细 `SortSeq` 直接拼接，不加分隔符、不补零；计算值仅核对，不自动补填原编号。 |
+| 三种行号 | 生产明细行号 `mom_orderdetail.SortSeq`、生产用料行号 `mom_moallocate.SortSeq`、BOM 子件行号 `bom_opcomponent.SortSeq` 分别展示，不互相替代。 |
+| 当前关联编号 | 查询时读取销售和生产当前值，未固化在 `ext_StockOrderAttribution`，不表示具有编号变更历史。材料出库显示实际领用母件编号，不能据此确定领用子件的来源订单。 |
+| 全量质量编号差异告警 | 比较已捕获明细对应的销售源头 `cDefine29` 与生产复制值 `Define29`。仅两个有效且引用可核对的编号不一致时计入差异，按出入库明细计数，不受前端筛选及分页影响；缺失及引用待核查独立筛选。网页展示当前值，尚无告警关闭历史或外部消息推送。 |
+| 同图号质量编号重复 | 本服务独立页按用户确认，以当前账套全部现存 `SO_SODetails` 为范围，按产品图号 `cInvCode` 与质量编号 `cDefine29` 分组；同组存在两个及以上不同有效销售生产编号 `cDefine25` 时判为重复。相同生产编号不因多条源头明细、生产拆单或多次出入库而增加计数。普通前后空格去除、空号单列待核查，判等沿用数据库排序规则；不等同于销售与生产两处编号不一致。 |

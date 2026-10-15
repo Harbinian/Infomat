@@ -1,0 +1,31 @@
+name: ${U8_COMPOSE_PROJECT:-infomat-u8-stock-order-query}
+services:
+  query:
+    image: ${U8_QUERY_IMAGE:-infomat-u8-stock-order-query:quality-alerts-20261014}
+    container_name: ${U8_CONTAINER_NAME:-infomat-u8-stock-order-query-3088}
+    init: true
+    restart: unless-stopped
+    ports:
+      - "${U8_BIND_IP:-0.0.0.0}:${U8_PUBLIC_PORT:-3088}:3088"
+    environment:
+      SQLSERVER_HOST: "192.168.19.222"
+      SQLSERVER_PASSWORD_FILE: /run/secrets/sqlserver_password
+      U8_PUBLIC_PORT: ${U8_PUBLIC_PORT:-3088}
+    secrets:
+      - sqlserver_password
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid
+    mem_limit: 256m
+    cpus: 1.0
+    pids_limit: 100
+    labels:
+      com.infomat.service: u8-stock-order-query
+      com.infomat.port: ${U8_PUBLIC_PORT:-3088}
+secrets:
+  sqlserver_password:
+    file: ${U8_SQL_PASSWORD_FILE:?Set the private password file path}

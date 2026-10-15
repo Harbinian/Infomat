@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>出入库订单归属查询</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <main>
+    <header class="masthead">
+      <div class="identity"><span class="brand">U8</span><div><div class="eyebrow">生产与销售 · 单据追溯</div><h1>出入库订单归属查询</h1></div></div>
+      <div class="header-actions"><span class="zone">北京时间 UTC+8</span><a class="page-link" href="/quality-uniqueness">质量编号唯一性</a><button id="fieldGuide" class="secondary">字段说明</button><button id="usageGuide" class="secondary">使用说明</button></div>
+    </header>
+    <div class="connection"><span id="connectionDot" class="dot"></span><span id="connectionStatus">正在连接账套…</span><span class="divider">/</span><span>原单据来源与实际领用归属，按明细核查</span><span id="lastQuery" class="last-query"></span></div>
+    <section id="qualityAlert" class="quality-alert checking" aria-label="全量质量编号告警" aria-live="polite">
+      <span id="alertIcon" class="alert-icon" aria-hidden="true">!</span>
+      <div class="alert-copy"><strong id="alertTitle">正在核查质量编号…</strong><span id="alertSummary">覆盖全部已捕获明细，不受当前筛选及分页影响。</span></div>
+      <span id="alertCheckedAt" class="alert-checked"></span>
+      <button id="refreshAlerts" class="secondary">刷新告警</button><button id="viewAlerts" class="secondary" disabled>查看告警</button>
+    </section>
+    <section class="stats" aria-label="当前筛选结果统计">
+      <article><div class="stat-label">匹配明细</div><strong id="statTotal">—</strong><span>条订单归属记录</span></article>
+      <article><div class="stat-label">产成品入库</div><strong id="statReceipts">—</strong><span>记录入库来源</span></article>
+      <article><div class="stat-label">材料出库</div><strong id="statIssues">—</strong><span>记录实际领用归属</span></article>
+      <article class="pending-stat"><div class="stat-label">待确认</div><strong id="statPending">—</strong><span>引用缺失或归属待核查</span></article>
+    </section>
+    <section class="query-panel" aria-label="查询条件">
+      <form id="queryForm">
+        <div class="filter-row">
+          <label>单据类型<select name="type"><option value="">全部类型</option><option value="10">产成品入库</option><option value="11">材料出库</option></select></label>
+          <label>单据号<input name="voucher" placeholder="输入单据号" maxlength="120"></label>
+          <label>生产编号<input name="productionNumber" placeholder="原编号或实际归属编号" maxlength="120"></label>
+          <label>生产订单号<input name="productionOrder" placeholder="原订单或归属订单" maxlength="120"></label>
+          <label>销售订单号<input name="salesOrder" placeholder="输入销售订单号" maxlength="120"></label>
+          <label>物料编码<input name="inventory" placeholder="输入出入库物料编码" maxlength="120"></label>
+        </div>
+        <div class="filter-row second-row">
+          <label>质量编号<input name="qualityNumber" placeholder="输入销售源头质量编号" maxlength="120"></label>
+          <label>U8 零件编号<input name="partNumber" placeholder="输入 U8 零件编号" maxlength="120"></label>
+          <label>质量编号核查<select name="qualityCheck"><option value="">全部核查结果</option><option value="different">质量编号不一致</option><option value="same">质量编号一致</option><option value="missing">编号缺失</option><option value="reference_unconfirmed">引用待核查</option></select></label>
+          <label>解析状态<select name="status"><option value="">全部状态</option><option value="resolved">已解析</option><option value="pending">待确认</option></select></label>
+          <label>生产编号差异<select name="difference"><option value="">全部</option><option value="different">不同</option><option value="same">相同</option><option value="unknown">无法比较</option></select></label>
+          <label>单据日期起<input type="date" name="dateFrom" min="1753-01-01" max="9998-12-31"></label>
+          <label>单据日期止<input type="date" name="dateTo" min="1753-01-01" max="9998-12-31"></label>
+          <div class="query-actions"><button type="button" id="resetQuery" class="secondary">重置</button><button type="submit" id="submitQuery" class="primary">查询</button></div>
+        </div>
+      </form>
+    </section>
+    <section class="results" aria-label="映射查询结果">
+      <div class="result-heading"><h2>映射明细</h2><span id="resultSummary">正在读取…</span><span class="row-instruction">质量与零件编号：入库看产出零件，出库看领用母件 · 点击查看注释</span></div>
+      <div id="errorNotice" class="error" role="alert" hidden></div>
+      <div class="table-scroll" id="tableScroll"><table><thead><tr id="tableHead"></tr></thead><tbody id="tableBody"></tbody></table><div id="emptyState" class="empty" hidden><span class="empty-symbol">○</span><h3>没有匹配的明细</h3><p>调整单据号、订单号或日期范围后重新查询。</p></div></div>
+      <div class="pagination"><span id="rangeSummary"></span><div><label>每页 <select id="pageSize"><option value="20">20 条</option><option value="50">50 条</option><option value="100">100 条</option></select></label><button id="previousPage" class="secondary">上一页</button><span id="pageSummary">—</span><button id="nextPage" class="secondary">下一页</button></div></div>
+    </section>
+    <footer><span>一条记录对应一条出入库明细 · 已解析表示订单归属可确定</span><span>原编号为空时，明确的领用引用仍可确定归属</span></footer>
+  </main>
+  <dialog id="detailDialog" class="detail-dialog"><div class="dialog-header"><div><div class="eyebrow">单据明细 · 归属核查</div><h2 id="detailTitle"></h2></div><button class="close secondary" aria-label="关闭明细">关闭</button></div><div id="detailContent" class="dialog-content"></div></dialog>
+  <dialog id="guideDialog" class="guide-dialog"><div class="dialog-header"><div><div class="eyebrow">查询帮助</div><h2 id="guideTitle"></h2></div><button class="close secondary" aria-label="关闭说明">关闭</button></div><div id="guideContent" class="dialog-content"></div></dialog>
+  <dialog id="alertDialog" class="guide-dialog"><div class="dialog-header"><div><div class="eyebrow">全部已捕获明细 · 销售源头与生产复制值</div><h2>质量编号差异告警</h2></div><button class="close secondary" aria-label="关闭告警">关闭</button></div><div id="alertContent" class="dialog-content"></div></dialog>
+</body>
+</html>

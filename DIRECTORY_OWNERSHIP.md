@@ -47,6 +47,7 @@ scripts/AGENTS.md
 | 路径 | 责任 | 维护入口 | 可修改规则 | 禁止事项 |
 |---|---|---|---|---|
 | `apps/` | 可运行应用集合 | 子目录 README | 新应用必须有独立 README、运行命令和数据边界 | 不放业务资料原件 |
+| `apps/u8-stock-order-query/` | U8 出入库订单归属与销售质量编号核查服务 | README、`server.mjs`、`public/`、`scripts/`、`compose.yaml` | 固定账套只读查询、销售质量编号唯一性独立页、中文字段说明、北京时间显示；Docker 3088 全 IPv4 监听，独立启动和停止 | 不写 U8 单据，不用管理员账号提供网页查询，不自动回填或修改归属，不操作其他服务 |
 | `apps/mdm-platform/` | MDM 平台源码 | `package.json`、`server/`、`public/`、`scripts/` | 平台功能、平台测试、平台维护脚本在此修改 | 不放 PMO 甘特图、流程制度原文、历史方案 |
 | `apps/structured-output-service/` | 局域网单流程治理编制工具 | `AGENTS.md`、README、`package.json`、`server.js`、`public/`、`scripts/` | 维护单流程编制、页面输入保护及受支持历史文件兼容；只读目录副本用于录入提示；版本、运行方式和验收门槛由应用入口维护 | 不保存用户内容和图坐标，不写回资料副本，不调用3000或共享数据库，不据目录提示确认组织及责任 |
 | `apps/information-collection-service/` | 内部信息表收集服务 | `package.json`、`server/`、`public/`、`scripts/`、`docs/` | 4000 管理端设计并发布收集任务，4001 填报端保存本人草稿和答卷；只读复用 `person`、`user_accounts`、`departments`，业务数据写入 `collection_*` 表，附件写入仓库外受控目录 | 不修改 MDM 身份、角色或治理业务表；不自动继承 3000 权限；不向浏览器持久化答案或附件 |
