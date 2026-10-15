@@ -21,6 +21,8 @@
 
 ## 纯静态检查与专项选择
 
+`node scripts/test-mainline-stability.js --legacy-smoke-only`只运行主线末段的隔离遗留烟测，不重复前面的聚合检查。该段验证退役组织及人员入口的404边界、旧账号写入的410合同及固定角色模型；不恢复旧接口。它使用临时SQLite和本地测试HTTP，需要可用的原生测试依赖，不连接正式MySQL。
+
 `check:native-process-consistency`只检查当前格式门槛、正式预览模块及用户文案，不启动应用、不连接数据库、不读取私有配置或写文件。`test:architecture-seams`显式阻断真实MySQL。`test:v8-transition`检查格式贯通；其结果不表示业务启用。
 
 事务资格与身份精度按[身份与事务合同](../docs/Identity-Transaction-Contract.md)选择B02纯合同或真实隔离MySQL专项。真实锁等待、回滚、并发和prepared复用需要对应运行证据；静态或替身不能代替。旧`legacy-sqlite:*`、V3和承接工具只供明确的历史兼容任务，不恢复退役在线入口。
