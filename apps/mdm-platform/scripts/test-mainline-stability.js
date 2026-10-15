@@ -149,18 +149,16 @@ async function runMasterDataObjectSmoke() {
         org_mnemonic: 'MANUAL'
       })
     }, cookie);
-    assert.strictEqual(manualOrg.res.status, 403, JSON.stringify(manualOrg.body));
+    assert.strictEqual(manualOrg.res.status, 404, JSON.stringify(manualOrg.body));
+    assert.match(manualOrg.body.raw, /Cannot POST \/api\/org-units/);
 
     const orgList = await request('/api/org-units?status=active&search=%E5%B7%A5%E7%A8%8B%E6%8A%80%E6%9C%AF%E9%83%A8', {}, cookie);
-    assert.strictEqual(orgList.res.status, 200, JSON.stringify(orgList.body));
-    assert.ok(orgList.body.rows.some(row => row.org_unit_code === 'OU-DEP-ENG'));
+    assert.strictEqual(orgList.res.status, 404, JSON.stringify(orgList.body));
+    assert.match(orgList.body.raw, /Cannot GET \/api\/org-units/);
 
     const leadershipPersonList = await request('/api/persons?search=100000', {}, cookie);
-    assert.strictEqual(
-      leadershipPersonList.res.status,
-      200,
-      '此烟测显式启用隔离遗留模式；正式模式的人员接口拒绝由 test:mysql-runtime-boundary 验证'
-    );
+    assert.strictEqual(leadershipPersonList.res.status, 404, JSON.stringify(leadershipPersonList.body));
+    assert.match(leadershipPersonList.body.raw, /Cannot GET \/api\/persons/);
 
     const legacyIdentityWrite = await request('/api/org/users', {
       method: 'POST',
@@ -174,7 +172,7 @@ async function runMasterDataObjectSmoke() {
     assert.strictEqual(fixedModel.body.roles.length, 7);
     assert.strictEqual(fixedModel.body.permissions.length, 19);
 
-    console.log('[mainline] isolated legacy compatibility and retired account writes smoke passed');
+    console.log('[mainline] retired routes, fixed role model and retired account writes smoke passed');
     return;
 
     const leaderPerson = leadershipPersonList.body.rows.find(row => row.employee_no === '100000');
@@ -328,6 +326,7 @@ async function runMasterDataObjectSmoke() {
 }
 
 async function main() {
+  if (process.argv.includes('--legacy-smoke-only')) return runMasterDataObjectSmoke();
   runNpmScript('test:process-governance');
   runNpmScript('test:import');
   runNpmScript('test:export');
