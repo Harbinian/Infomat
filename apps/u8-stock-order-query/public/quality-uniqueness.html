@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>质量编号唯一性核查</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/quality-uniqueness.css">
+  <script type="module" src="/quality-uniqueness.js"></script>
+</head>
+<body>
+  <main>
+    <header class="masthead">
+      <div class="identity"><span class="brand">U8</span><div><div class="eyebrow">产品图号 · 质量编号</div><h1>质量编号唯一性核查</h1></div></div>
+      <div class="header-actions"><span class="zone">北京时间 UTC+8</span><a class="page-link" href="/">出入库订单查询</a><button id="qualityHelp" class="secondary">字段与使用说明</button></div>
+    </header>
+    <div class="connection"><span id="qualityDot" class="dot"></span><span id="qualityConnection">正在核查…</span><span class="divider">/</span><span>下方统计随当前筛选变化</span><span class="last-query" id="qualityCheckedAt"></span></div>
+    <section class="scope-note" aria-label="本页核查口径"><strong>核查口径</strong><span id="qualityRule">正在读取核查范围与判定规则…</span></section>
+    <section class="stats" aria-label="当前筛选结果统计">
+      <article><div class="stat-label">匹配编号组合</div><strong id="qualityTotal">—</strong><span>产品图号＋质量编号</span></article>
+      <article class="duplicate-stat"><div class="stat-label">重复组合</div><strong id="qualityDuplicates">—</strong><span>查看关联源头明细</span></article>
+      <article><div class="stat-label">未发现重复组合</div><strong id="qualityUnique">—</strong><span>仅限本次核查范围</span></article>
+      <article class="pending-stat"><div class="stat-label">待核查组合</div><strong id="qualityPending">—</strong><span>图号、质量编号或核查对象缺失</span></article>
+    </section>
+    <section class="query-panel" aria-label="唯一性筛选条件">
+      <form id="qualityForm" class="quality-filters">
+        <label>产品图号<input name="drawing" maxlength="120" placeholder="按图号字面包含查询"></label>
+        <label>质量编号<input name="qualityNumber" maxlength="120" placeholder="按质量编号字面包含查询"></label>
+        <label>核查结果<select name="status"><option value="duplicate">重复组合</option><option value="all">全部结果</option><option value="unique">未发现重复</option><option value="pending">缺失待核查</option></select></label>
+        <div class="query-actions"><button id="qualityReset" type="button" class="secondary">重置</button><button type="submit" class="primary">核查</button></div>
+      </form>
+    </section>
+    <section class="results" aria-label="质量编号唯一性核查结果">
+      <div class="result-heading"><h2>图号与质量编号组合</h2><span id="qualitySummary">尚未取得核查结果</span><span class="row-instruction">点击查看关联源头明细</span></div>
+      <div id="qualityError" class="error" role="alert" hidden></div>
+      <div class="table-scroll">
+        <table class="quality-table"><colgroup><col><col><col><col><col><col></colgroup><thead><tr><th>产品图号</th><th>质量编号</th><th id="qualityUnitLabel">销售生产编号数</th><th>源头明细数</th><th>销售订单数</th><th>核查结果</th></tr></thead><tbody id="qualityBody"></tbody></table>
+        <div id="qualityEmpty" class="empty" hidden><h3>当前条件下没有匹配组合</h3><p>空结果仅针对当前筛选，不表示其他范围没有重复。</p></div>
+      </div>
+      <div class="pagination"><span id="qualityRange"></span><div><label>每页 <select id="qualityPageSize"><option value="20">20 条</option><option value="50">50 条</option><option value="100">100 条</option></select></label><button id="qualityPrevious" class="secondary" disabled>上一页</button><span id="qualityPages">—</span><button id="qualityNext" class="secondary" disabled>下一页</button></div></div>
+    </section>
+    <footer><span>只读核查 · 编号原值保留在源头明细中</span><span>筛选不改变组合的全范围重复判定</span></footer>
+  </main>
+  <dialog id="qualityHelpDialog" class="guide-dialog"><div class="dialog-header"><h2>字段与使用说明</h2><button class="secondary" aria-label="关闭使用说明">关闭</button></div><div id="qualityHelpContent" class="dialog-content usage"></div></dialog>
+  <dialog id="qualityDetailDialog" class="guide-dialog"><div class="dialog-header"><h2 id="qualityDetailTitle">关联源头明细</h2><button class="secondary" aria-label="关闭关联明细">关闭</button></div><div class="dialog-content"><p id="qualityDetailSummary" class="note"></p><div id="qualityDetailError" class="error" role="alert" hidden></div><div id="qualityDetailRows"></div><div class="detail-pagination"><button id="qualityDetailPrevious" class="secondary">上一页</button><span id="qualityDetailPages"></span><button id="qualityDetailNext" class="secondary">下一页</button></div></div></dialog>
+</body>
+</html>

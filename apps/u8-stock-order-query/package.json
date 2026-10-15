@@ -1,0 +1,12 @@
+{
+  "name": "u8-stock-order-query",
+  "version": "1.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test scripts/query.test.mjs"
+  },
+  "engines": { "node": ">=20" },
+  "dependencies": { "mssql": "12.7.6" }
+}
