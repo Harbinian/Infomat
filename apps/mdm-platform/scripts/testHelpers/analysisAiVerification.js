@@ -126,23 +126,23 @@ module.exports = async function ({ repo, lead, pool, fixture, source, check, sav
       context = await browser.newContext({ viewport: { width: 1699, height: 828 }, deviceScaleFactor: 1 }); page = await context.newPage(); page.setDefaultTimeout(15000);
       page.on('pageerror', e => errors.push(e.message)); page.on('console', e => { if (e.type() === 'error') consoleErrors.push(e.text()); });
       const button = name => page.getByRole('button', { name, exact: true }), label = name => page.getByLabel(name, { exact: true });
-      const idle = async () => { await button('刷新分析记录').waitFor(); await wait(async () => !await button('刷新分析记录').isDisabled()); };
+      const idle = async () => { await button('刷新检查记录').waitFor(); await wait(async () => !await button('刷新检查记录').isDisabled()); };
       await page.goto(fixture.baseURL + '/app/analysis'); await page.locator('#login-name').fill('SYNTHETIC_lead'); await page.locator('#login-password').fill(fixture.loginPassword); await button('登录').click(); await idle();
-      await label('分析对象').selectOption('ai_offline'); await idle(); await label('固定来源').selectOption(source.source_id); await label('本轮范围说明').fill('P19 页面创建离线校验');
+      await label('检查材料类型').selectOption('ai_offline'); await idle(); await label('已保存材料').selectOption(source.source_id); await label('本轮范围说明').fill('P19 页面创建离线校验');
       await page.route('**/api/analysis/runs', async route => route.request().method() === 'POST' ? route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'UNAVAILABLE' }) }) : route.continue());
-      await button('创建并排队分析').click(); await button('核对同一请求结果').waitFor(); await idle(); assert(await button('创建并排队分析').isDisabled()); assert.equal(await label('本轮范围说明').inputValue(), 'P19 页面创建离线校验'); await page.unroute('**/api/analysis/runs');
+      await button('建立检查任务').click(); await button('核对同一请求结果').waitFor(); await idle(); assert(await button('建立检查任务').isDisabled()); assert.equal(await label('本轮范围说明').inputValue(), 'P19 页面创建离线校验'); await page.unroute('**/api/analysis/runs');
       await startWorker(); await button('核对同一请求结果').click(); await idle(); const id = new URL(page.url()).hash.match(/(?:#|&)run=(\d+)/)[1];
-      await wait(async () => (await repo.getAnalysisRun(lead, id)).status === 'partial'); await button('刷新分析记录').click(); await idle();
+      await wait(async () => (await repo.getAnalysisRun(lead, id)).status === 'partial'); await button('刷新检查记录').click(); await idle();
       await page.getByRole('note').filter({ hasText: '本轮仅使用离线替身' }).waitFor(); await wait(async () => (await page.getByRole('heading', { name: '运行 ' + id + ' · 部分完成', exact: true }).count()) === 1);
       assert.match(await page.locator('body').innerText(), /本轮仅使用离线替身/); assert.match(await page.locator('body').innerText(), /未覆盖/);
       await page.screenshot({ path: path.join(output, 'p19-offline-desktop.png'), fullPage: true }); await stopWorker();
-      await label('当前运行').selectOption(accepted); await idle();
+      await label('查看检查记录').selectOption(accepted); await idle();
       const f = (await repo.getAnalysisRun(lead, accepted)).attempts.find(a => a.ai_trace).findings[0];
       await page.goto(fixture.baseURL + '/app/analysis#run=' + accepted + '&finding=' + f.finding_id); await idle();
       await page.getByText(f.message, { exact: true }).first().waitFor();
       assert.match(await page.locator('body').innerText(), /<img src=x/); assert.equal(await page.evaluate(() => window.p19Injected), undefined); assert.equal(await page.locator('img[onerror]').count(), 0);
       for (const [width, height, name] of [[1699, 828, 'desktop']]) { await page.setViewportSize({ width, height }); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false); assert.equal(await page.evaluate(() => visualViewport.scale), 1); await page.screenshot({ path: path.join(output, 'p19-opinion-' + name + '.png'), fullPage: true }); }
-      await label('当前运行').selectOption(invalid); await idle(); await page.getByText(/offline_opinions.*AI_OUTPUT_TRUNCATED_OR_INVALID/).waitFor(); assert.match(await page.locator('body').innerText(), /AI_OUTPUT_TRUNCATED_OR_INVALID/); assert.match(await page.locator('body').innerText(), /确定性检查结果/);
+      await label('查看检查记录').selectOption(invalid); await idle(); await page.getByText(/offline_opinions.*AI_OUTPUT_TRUNCATED_OR_INVALID/).waitFor(); assert.match(await page.locator('body').innerText(), /AI_OUTPUT_TRUNCATED_OR_INVALID/); assert.match(await page.locator('body').innerText(), /确定性检查结果/);
 
       assert.deepEqual(errors, []); assert.equal(consoleErrors.length, 1); assert(consoleErrors.every(e => /503/.test(e))); assert.equal(await issueCount(), originalIssueCount);
       save('p19-browser.json', { passed: true, page_errors: errors, console_errors: consoleErrors, failure_injection: [503], viewports: ['1699x828'], real_worker: true, real_models: false, issue_count_unchanged: true });

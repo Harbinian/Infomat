@@ -1,8 +1,11 @@
-const { supports: supportsNativeProcess } = require('./processNativeFormats');
-const {validateLockedDraft} = require('./processDesignValidation');
+const { supports: supportsNativeProcess, SUPPORTED_SCHEMAS } = require('./processNativeFormats');
+const nativeSchemaPlaceholders = SUPPORTED_SCHEMAS.map(() => '?').join(',');
+const {validateLockedDraft,validateLockedRecoveryDraft} = require('./processDesignValidation');
 const {createProcessDesignApplication} = require('./processDesignApplication');
 // Owns SQL, lock ordering, transaction reauthorization and atomic formal operations.
 const authoring = require('./processV7Authoring');
+const { inspectDepartmentAccountability, assertDepartmentAccountability } = require('./departmentAccountability');
+const { inspectFormalDepartmentDecision, assertPreviewDepartmentDecisions } = require('./processDepartmentDecisions');
 const {contentHash:v7ContentHash,unresolvedBlockingIssues,validateAndProjectProcess} = require('./processPreviewReview');
 const {assertV7FormalEnabled,assertV7TrialProcessRef} = require('./processV7TrialScope');
 const {ACCESS_MODEL_VERSION} = require('./roleDefinitions');
@@ -17,6 +20,28 @@ async function mysqlQuery(pool, sql, params = []) {
 async function mysqlRun(pool, sql, params = []) {
   const [result] = await pool.execute(sql, params);
   return result;
+}
+const formalTimestampFields = Object.freeze({
+  process_design_documents:['created_at','updated_at'],
+  process_design_drafts:['content_updated_at','submitted_at','published_at','created_at','updated_at'],
+  process_design_review_tasks:['decided_at','created_at'],
+  process_design_events:['created_at'],
+  process_design_versions:['published_at','effective_at']
+});
+function timestampProjection(table, alias='', fields=formalTimestampFields[table]) {
+  return fields.map(field=>`UNIX_TIMESTAMP(${alias ? alias+'.' : ''}${field}) AS __formal_${field}_epoch`).join(', ');
+}
+function timestampRow(row, table) {
+  if(!row)return row;
+  const projected={...row};
+  // These columns are TIMESTAMP in the supported MySQL schema. MySQL resolves
+  // their epoch; the Node host must not reinterpret a session wall time.
+  for(const field of formalTimestampFields[table]){
+    const key='__formal_'+field+'_epoch';
+    if(Object.hasOwn(projected,key))projected[field]=projected[key]==null?null:new Date(Number(projected[key])*1000).toISOString();
+    delete projected[key];
+  }
+  return projected;
 }
 
 async function executeIgnoringDuplicateColumn(pool, sql) {
@@ -220,21 +245,26 @@ async function ensureProcessDesignStepTransitionSchema(pool) {
 
 function makeProcessDesignMysqlStore(pool, options = {}) {
   const assertEnabled = draft => assertV7FormalTransitionEnabled(draft, options);
+  const verifiedActorSnapshots = new Map();
   async function getById(table, id) {
-    const [row] = await mysqlQuery(pool, `SELECT * FROM ${table} WHERE id=?`, [id]);
-    return row || null;
+    const [row] = await mysqlQuery(pool, `SELECT *, ${timestampProjection(table)} FROM ${table} WHERE id=?`, [id]);
+    return timestampRow(row,table) || null;
   }
 
   async function getDocumentById(documentId) {
-    const [row] = await mysqlQuery(pool, 'SELECT * FROM process_design_documents WHERE id=?', [documentId]);
-    return row || null;
+    const [row] = await mysqlQuery(pool, `SELECT *, ${timestampProjection('process_design_documents')} FROM process_design_documents WHERE id=?`, [documentId]);
+    return timestampRow(row,'process_design_documents') || null;
   }
 
   async function addEvent(draftId, eventType, actorUserId, note, payload) {
+    const actorSnapshot = verifiedActorSnapshots.get(identityInteger(actorUserId));
+    // Capture the name verified in this transaction. Existing events and
+    // qualification evidence are not rewritten or resolved to current names.
+    const eventPayload = actorSnapshot ? {...payload, actor_snapshot:actorSnapshot} : payload;
     await mysqlRun(pool, `
       INSERT INTO process_design_events (draft_id, event_type, actor_user_id, note, payload_json)
       VALUES (?, ?, ?, ?, ?)
-    `, [draftId, eventType, actorUserId || null, optionalText(note), payload ? JSON.stringify(payload) : null]);
+    `, [draftId, eventType, actorUserId || null, optionalText(note), eventPayload ? JSON.stringify(eventPayload) : null]);
   }
 
   async function locateFormalV7Transition(draftId, taskId = null) {
@@ -265,7 +295,7 @@ function makeProcessDesignMysqlStore(pool, options = {}) {
     };
   }
 
-  async function lockFormalV7Context(locator) {
+  async function lockFormalV7Context(locator, lockOptions = {}) {
     const [previewCase] = await mysqlQuery(pool, `
       SELECT *
       FROM process_v7_preview_cases
@@ -331,7 +361,7 @@ function makeProcessDesignMysqlStore(pool, options = {}) {
     }
 
     const [draftRow] = await mysqlQuery(pool, `
-      SELECT *
+      SELECT *, CAST(submitted_by AS CHAR) AS submitted_by
       FROM process_design_drafts
       WHERE id=?
       FOR UPDATE
@@ -341,14 +371,20 @@ function makeProcessDesignMysqlStore(pool, options = {}) {
       throw v7PromotionEvidenceMismatch(draft, '正式流程草稿与当前提升依据不一致');
     }
     const reviewTasks = await mysqlQuery(pool, `
-      SELECT *
+      SELECT *, CAST(decided_by AS CHAR) AS decided_by
       FROM process_design_review_tasks
       WHERE draft_id=?
       ORDER BY id ASC
       FOR UPDATE
     `, [draft.id]);
+    let promotedRevision = revision;
+    if (lockOptions.recovery && Number(promotion.preview_revision_id) !== Number(revision.id)) {
+      [promotedRevision] = await mysqlQuery(pool, `
+        SELECT * FROM process_v7_preview_revisions WHERE id=? AND case_id=? FOR SHARE
+      `, [promotion.preview_revision_id, previewCase.id]);
+    }
     assertEnabled(draft);
-    return { previewCase, revision, promotion, document, currentVersion, draft, reviewTasks };
+    return { previewCase, revision, promotedRevision, promotion, document, currentVersion, draft, reviewTasks };
   }
 
   async function authorizeFormalV7Actor(options, operation, context, actorUserId) {
@@ -366,7 +402,7 @@ function makeProcessDesignMysqlStore(pool, options = {}) {
 
     const [account] = await mysqlQuery(pool, `
       SELECT CAST(ua.account_id AS CHAR) AS account_id, CAST(ua.person_id AS CHAR) AS person_id, ua.account_status, CAST(ua.auth_version AS CHAR) AS auth_version,
-             CAST(p.current_department_id AS CHAR) AS current_department_id, p.employment_status, p.status AS person_status
+             CAST(p.current_department_id AS CHAR) AS current_department_id, p.employment_status, p.status AS person_status, p.person_name
       FROM user_accounts ua
       JOIN person p ON p.person_id=ua.person_id
       WHERE ua.account_id=CAST(? AS SIGNED) AND ua.person_id=CAST(? AS SIGNED)
@@ -394,7 +430,6 @@ function makeProcessDesignMysqlStore(pool, options = {}) {
       LEFT JOIN permissions permission ON permission.perm_id=rp.perm_id
       WHERE pr.person_id=CAST(? AS SIGNED)
         AND pr.assignment_status='active'
-        AND pr.authorization_basis IS NOT NULL
         AND pr.effective_from IS NOT NULL
         AND pr.effective_from<=CURRENT_DATE
         AND (pr.effective_to IS NULL OR pr.effective_to>=CURRENT_DATE)
@@ -411,16 +446,14 @@ function makeProcessDesignMysqlStore(pool, options = {}) {
       });
     }
 
-    if (operation === 'submit' && await authoring.assertCompiler(pool, context.previewCase, { personId, accountId, authVersion }, { start: true })) {
-      if (assignments.some(g => g.perm_code === 'governance:submit-department' && g.effect === 'deny')) throw httpError(403, '当前身份禁止提交治理材料', { code: 'V7_FORMAL_ACTOR_SCOPE_DENIED' });
-      return { personId, accountId, authVersion, departmentId: identityInteger(account.current_department_id) };
+    if (operation === 'withdraw' && !sameIdentityInteger(context.draft.submitted_by, personId)) {
+      throw httpError(403, '只有当前正式审核的原提交人可以撤回', { code: 'FORMAL_WITHDRAW_SUBMITTER_REQUIRED', error: '只有当前正式审核的原提交人可以撤回' });
     }
-
     const requirements = {
       submit: { role: 'department_contact', permissions: ['governance:draft-department', 'governance:submit-department'], departmentScoped: true },
       review: { role: 'department_mdm_reviewer', permissions: ['governance:review-department'], departmentScoped: true },
       publish: { role: 'mdm_lead', permissions: ['governance:publish'], departmentScoped: false }
-    }[operation];
+    }[operation === 'withdraw' ? 'submit' : operation === 'return-for-changes' ? 'review' : operation];
     const permissionEffects = authority.effects;
     const formalDepartmentId = identityInteger(context && context.draft && context.draft.department_id);
     const currentDepartmentId = identityInteger(account.current_department_id);
@@ -438,7 +471,10 @@ function makeProcessDesignMysqlStore(pool, options = {}) {
         code: 'V7_FORMAL_ACTOR_SCOPE_DENIED'
       });
     }
-    return { personId, accountId, authVersion, departmentId: currentDepartmentId };
+    const departmentAccountability = ['review', 'return-for-changes'].includes(operation)
+      ? await assertDepartmentAccountability(pool, { personId, accountId, authVersion }, formalDepartmentId, { lock: true }) : null;
+    verifiedActorSnapshots.set(personId,{person_id:personId,person_name:account.person_name||null});
+    return { personId, accountId, authVersion, departmentId: currentDepartmentId, departmentAccountability };
   }
 
   async function runFormalV7Transaction(draftId, taskId, operation) {
@@ -463,23 +499,36 @@ function makeProcessDesignMysqlStore(pool, options = {}) {
 
   async function loadEvents(draftId) {
     const rows = await mysqlQuery(pool, `
-      SELECT e.*, u.name AS actor_user_name
+      SELECT e.*, u.name AS actor_user_name, ${timestampProjection('process_design_events','e')}
       FROM process_design_events e
       LEFT JOIN users u ON u.id=e.actor_user_id
       WHERE e.draft_id=?
       ORDER BY e.id
     `, [draftId]);
     return rows.map(row => ({
-      ...row,
+      ...timestampRow(row,'process_design_events'),
       payload: parseJsonObject(row.payload_json)
     }));
   }
 
   async function loadReviewTasks(draftId) {
-    return await mysqlQuery(pool, 'SELECT * FROM process_design_review_tasks WHERE draft_id=? ORDER BY id', [draftId]);
+    return (await mysqlQuery(pool, `SELECT *, CAST(decided_by AS CHAR) AS decided_by, ${timestampProjection('process_design_review_tasks')} FROM process_design_review_tasks WHERE draft_id=? ORDER BY id`, [draftId])).map(row=>timestampRow(row,'process_design_review_tasks'));
   }
 
   async function validateFormalV7Draft(draft, context, options = {}) {
+    // Negative decisions must remain available when a participant reopens the
+    // preview. Authenticate the original promoted source without approving it.
+    if (options.allowBlockingIssues) {
+      const result = validateLockedRecoveryDraft(draft, context, v7ContentHash);
+      assertEnabled(draft);
+      return result;
+    }
+    if (!options.allowBlockingIssues) {
+      await require('./processCaseGovernance').assertFormalReady(pool, context.previewCase);
+      const { assertCaseDisputeResolved } = require('./processCaseDisputes');
+      await assertCaseDisputeResolved(pool, context.previewCase);
+      await assertPreviewDepartmentDecisions(pool, context.previewCase);
+    }
     const departments = await mysqlQuery(pool, `
       SELECT id, name, code
       FROM departments
@@ -488,19 +537,23 @@ function makeProcessDesignMysqlStore(pool, options = {}) {
     `);
     const result=validateLockedDraft(draft,context,departments,{project:validateAndProjectProcess,hash:v7ContentHash,unresolved:unresolvedBlockingIssues},options);
     assertEnabled(draft);
+    if (require('./terminologyGovernancePolicy').enabled()) {
+      const usages=require('./terminologyUsages');
+      await usages.gate(pool,await usages.loadTarget(pool,{target_type:'process_draft',target_id:String(draft.id)},true));
+    }
     return result;
   }
 
   async function getDraft(id) {
     const [row] = await mysqlQuery(pool, `
-      SELECT d.*, dept.name AS department_name, proxyDept.name AS proxy_department_name, creator.name AS created_by_name
+      SELECT d.*, CAST(d.submitted_by AS CHAR) AS submitted_by, dept.name AS department_name, proxyDept.name AS proxy_department_name, creator.name AS created_by_name, ${timestampProjection('process_design_drafts','d')}
       FROM process_design_drafts d
       LEFT JOIN departments dept ON dept.id=d.department_id
       LEFT JOIN departments proxyDept ON proxyDept.id=d.proxy_department_id
       LEFT JOIN users creator ON creator.id=d.created_by
       WHERE d.id=?
     `, [id]);
-    return publicDraft(row);
+    return publicDraft(timestampRow(row,'process_design_drafts'));
   }
 
   async function detailForDraft(draftId) {
@@ -508,11 +561,11 @@ function makeProcessDesignMysqlStore(pool, options = {}) {
     if (!draft) return null;
     const document = draft.document_id ? await getDocumentById(draft.document_id) : null;
     const versions = document ? await mysqlQuery(pool, `
-      SELECT *
+      SELECT *, ${timestampProjection('process_design_versions')}
       FROM process_design_versions
       WHERE document_id=?
       ORDER BY effective_at DESC, id DESC
-    `, [document.id]) : [];
+    `, [document.id]).then(rows=>rows.map(row=>timestampRow(row,'process_design_versions'))) : [];
     const reviewTasks = await loadReviewTasks(draftId);
     const events = await loadEvents(draftId);
     if (supportsNativeProcess(text(draft.schema_version))) {
@@ -522,11 +575,8 @@ function makeProcessDesignMysqlStore(pool, options = {}) {
         text(draft.content_hash) &&
         v7ContentHash(content) === text(draft.content_hash)
       );
-      const approvedCurrentReview = reviewTasks.some(task =>
-        text(task.status) === 'approved' &&
-        Number(task.draft_revision_no) === Number(draft.revision_no) &&
-        text(task.content_hash) === text(draft.content_hash)
-      );
+      const latestTask = reviewTasks[reviewTasks.length - 1];
+      const departmentConfirmation = await inspectFormalDepartmentDecision(pool, draft, latestTask);
       return {
         draft,
         document,
@@ -536,19 +586,21 @@ function makeProcessDesignMysqlStore(pool, options = {}) {
         v7_native: true,
         content,
         content_hash_verified: contentHashVerified,
+        department_confirmation: departmentConfirmation,
         outcome: {
           formed: draft.status === 'published' ? '已形成不可变的原生流程正式版本' : '已形成原生流程正式草稿',
           current: `当前状态为${draft.status}`,
           missing: contentHashVerified ? [] : ['流程正文与内容摘要不一致'],
           next: draft.status === 'published' ? '后续治理对象绑定process_version_id' : '按当前状态完成正式审核或发布'
         },
-        publishable: draft.status === 'approved' && approvedCurrentReview && contentHashVerified
+        publishable: draft.status === 'approved' && departmentConfirmation.valid && contentHashVerified
       };
     }
     throw httpError(410, '旧版流程办理已停用', { code: 'LEGACY_PROCESS_RETIRED' });
   }
 
   const queries = {
+    async departmentAccountability(draft, actor) { return inspectDepartmentAccountability(pool, actor, draft.department_id); },
     async authoringAccess(draftId, actor) {
       const [caseRow] = await mysqlQuery(pool, `SELECT c.* FROM process_v7_promotions p
         JOIN process_v7_preview_cases c ON c.id=p.preview_case_id WHERE p.draft_id=? ORDER BY p.id DESC LIMIT 1`, [draftId]);
@@ -566,13 +618,13 @@ async searchVersions({ query, beforeId, globalRead, departmentId }) {
         CAST(document_id AS CHAR) AS document_id, CAST(department_id AS CHAR) AS department_id,
         document_no, document_title, edition, schema_version, status, content_hash
         FROM process_design_versions
-        WHERE schema_version IN ('process-governance-v7','process-governance-v8')
+        WHERE schema_version IN (${nativeSchemaPlaceholders})
           AND status IN ('published','superseded','retired')
           AND (?=1 OR department_id=?)
           AND (?='' OR LOCATE(?,document_no)>0 OR LOCATE(?,document_title)>0)
           AND (? IS NULL OR id<CAST(? AS SIGNED))
         ORDER BY process_design_versions.id DESC LIMIT 21`,
-      [globalRead ? 1 : 0, departmentId, query, query, query, beforeId, beforeId]);
+      [...SUPPORTED_SCHEMAS, globalRead ? 1 : 0, departmentId, query, query, query, beforeId, beforeId]);
     },
 async getHistoryAnchor(id) {
       const [row] = await mysqlQuery(pool, `SELECT CAST(id AS CHAR) AS id,
@@ -585,25 +637,29 @@ async listDocumentDrafts(documentId, { beforeId, departmentId, globalRead }) {
       return mysqlQuery(pool, `
         SELECT CAST(id AS CHAR) AS id, CAST(document_id AS CHAR) AS document_id,
                CAST(department_id AS CHAR) AS department_id, schema_version, status,
-               revision_no, content_hash, document_no, document_title
+               revision_no, content_hash, document_no, document_title, created_at, updated_at,
+               ${timestampProjection('process_design_drafts','',['created_at','updated_at'])}
         FROM process_design_drafts
-        WHERE document_id=CAST(? AS SIGNED) AND schema_version IN ('process-governance-v7','process-governance-v8')
+        WHERE document_id=CAST(? AS SIGNED) AND schema_version IN (${nativeSchemaPlaceholders})
           AND (?=1 OR department_id=?) AND (? IS NULL OR id<CAST(? AS SIGNED))
         ORDER BY process_design_drafts.id DESC LIMIT 21
-      `, [documentId, globalRead ? 1 : 0, departmentId, beforeId, beforeId]);
+      `, [documentId, ...SUPPORTED_SCHEMAS, globalRead ? 1 : 0, departmentId, beforeId, beforeId]).then(rows=>rows.map(row=>timestampRow(row,'process_design_drafts')));
     },
 async getVersionContent(versionId) {
-      const [version] = await mysqlQuery(pool, `
+      const [rawVersion] = await mysqlQuery(pool, `
         SELECT id, draft_id, document_id, document_no, document_title, edition, version_no,
                department_id, schema_version, process_content_json, content_json, content_hash,
-               source_revision_no, status, UNIX_TIMESTAMP(published_at) AS published_at_epoch,
-               effective_at, supersedes_version_id
+               source_revision_no, status, ${timestampProjection('process_design_versions')},
+               supersedes_version_id
         FROM process_design_versions
         WHERE id=?
         LIMIT 1
       `, [versionId]);
-      if (!version) return null;
+      if (!rawVersion) return null;
+      const version=timestampRow(rawVersion,'process_design_versions');
       const rawContent = version.process_content_json || version.content_json;
+      const [publicationEvent]=await mysqlQuery(pool,`SELECT payload_json FROM process_design_events WHERE draft_id=? AND event_type='publish'
+        AND JSON_UNQUOTE(JSON_EXTRACT(payload_json,'$.process_version_id'))=? ORDER BY id DESC LIMIT 1`,[version.draft_id,String(version.id)]);
       return {
         process_version_id: Number(version.id),
         draft_id: Number(version.draft_id),
@@ -619,8 +675,10 @@ async getVersionContent(versionId) {
         status: version.status,
         // MySQL resolves TIMESTAMP in the session timezone. Reading its epoch
         // avoids interpreting the server wall time in the Node host timezone.
-        published_at: version.published_at_epoch == null ? null : new Date(Number(version.published_at_epoch) * 1000).toISOString(),
+        published_at: version.published_at,
         effective_at: version.effective_at,
+        publication_meaning: require('./processFormalControlPolicy').publicationMeaning(version),
+        publication_context: parseJsonObject(publicationEvent && publicationEvent.payload_json)?.publication_context || null,
         supersedes_version_id: version.supersedes_version_id == null ? null : Number(version.supersedes_version_id),
         document: rawContent ? parseJsonObject(rawContent) : null
       };
@@ -646,10 +704,24 @@ async canonicalContent(draft) {
       }
       throw httpError(410, '旧版流程办理已停用', { code: 'LEGACY_PROCESS_RETIRED' });
     },
-async getReviewTask(taskId) { return await getById("process_design_review_tasks",taskId); }
+async getReviewTask(taskId) { const [row] = await mysqlQuery(pool, `SELECT *, CAST(decided_by AS CHAR) AS decided_by, ${timestampProjection('process_design_review_tasks')} FROM process_design_review_tasks WHERE id=?`, [taskId]); return timestampRow(row,'process_design_review_tasks') || null; }
   };
   return Object.freeze({assertEnabled,queries:Object.freeze(queries),readDraft:getDraft,readReviewTask:queries.getReviewTask,readVersion:id=>getById("process_design_versions",id),
     withTransaction:runFormalV7Transaction,lockContext:lockFormalV7Context,authorizeActor:authorizeFormalV7Actor,validateDraft:validateFormalV7Draft,recordEvent:addEvent,
+    validateRecoveryDraft:(draft,context)=>validateLockedRecoveryDraft(draft,context,v7ContentHash),
+async assertDepartmentConfirmation(draft, task) {
+      const result = await inspectFormalDepartmentDecision(pool, draft, task, { lock: true });
+      if (!result.valid) throw httpError(409, '当前批准尚未取得现任部门负责人本人的有效确认，请退回修改并重新提交确认', {
+        code: 'DEPARTMENT_CONFIRMATION_REQUIRED', error: '当前批准尚未取得现任部门负责人本人的有效确认，请退回修改并重新提交确认', reason: result.reason
+      });
+      return result;
+    },
+async markRecoveryRequired({lockedDraft,binding}) {
+      return mysqlRun(pool, `
+        UPDATE process_design_drafts SET status='needs_changes', updated_at=CURRENT_TIMESTAMP
+        WHERE id=? AND status=? AND revision_no=? AND content_hash=?
+      `, [lockedDraft.id, lockedDraft.status, binding.expectedRevisionNo, binding.expectedContentHash]);
+    },
 async markSubmitted({authorizedActor,lockedDraft,binding}) {
       const updateResult = await mysqlRun(pool, `
           UPDATE process_design_drafts
@@ -683,6 +755,11 @@ async setReviewedDraftStatus({nextStatus,lockedDraft,binding}) {
       return draftUpdate;
     },
 async createPublishedVersion({lockedDraft,document,plannedEdition,versionNo,authorizedActor,currentVersion}) {
+      await require('./processFormalControlMigration').assertReady(pool);
+      const usages=require('./terminologyUsages');
+      const terminologyTarget=require('./terminologyGovernancePolicy').enabled()
+        ? await usages.loadTarget(pool,{target_type:'process_draft',target_id:String(lockedDraft.id)},true) : null;
+      if(terminologyTarget)await usages.gate(pool,terminologyTarget,{department:true});
       const result = await mysqlRun(pool, `
           INSERT INTO process_design_versions
             (draft_id, document_id, document_no, document_title, edition, version_no,
@@ -690,7 +767,7 @@ async createPublishedVersion({lockedDraft,document,plannedEdition,versionNo,auth
              schema_version, process_content_json, content_hash, source_revision_no,
              published_by, effective_at, supersedes_version_id, status)
           VALUES (?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, NULL,
-                  ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, 'published')
+                  ?, ?, ?, ?, ?, NULL, ?, 'published')
         `, [
           lockedDraft.id,
           document.id,
@@ -706,7 +783,18 @@ async createPublishedVersion({lockedDraft,document,plannedEdition,versionNo,auth
           authorizedActor.personId,
           currentVersion && currentVersion.id || null
         ]);
+      if(terminologyTarget){
+        const [published]=await mysqlQuery(pool,'SELECT CAST(LAST_INSERT_ID() AS CHAR) id');
+        await usages.pin(pool,terminologyTarget,{target_type:'process_version',target_id:published.id,source_digest:lockedDraft.content_hash},authorizedActor.personId);
+      }
       return result;
+    },
+async readPublicationContext(caseRow) {
+      const governance=await require('./processCaseGovernance').read(pool,caseRow);
+      const controls=await require('./processFormalControls').readControls(pool,caseRow);
+      return {sources:governance.submission?.sources || [],institution_editions:controls.institution_editions?.materials || [],
+        source_revision_no:Number(caseRow.current_revision_no),source_content_hash:caseRow.current_content_hash,
+        enterprise_approval_status:'unknown',enterprise_effective_status:'unknown'};
     },
 async supersedePublishedVersion({currentVersion,document}) {
       const supersedeResult = await mysqlRun(pool, `
@@ -729,14 +817,14 @@ async advanceDocumentVersion({document,plannedEdition,result,authorizedActor,cur
       const documentUpdate = currentVersion
           ? await mysqlRun(pool, `
               UPDATE process_design_documents
-              SET document_title=?, current_edition=?, current_version_id=?, updated_by=?, updated_at=CURRENT_TIMESTAMP
+              SET document_title=?, current_version_id=?, updated_by=?, updated_at=CURRENT_TIMESTAMP
               WHERE id=? AND current_version_id=?
-            `, [document.document_title, plannedEdition, result.insertId, authorizedActor.personId, document.id, currentVersion.id])
+            `, [document.document_title, result.insertId, authorizedActor.personId, document.id, currentVersion.id])
           : await mysqlRun(pool, `
               UPDATE process_design_documents
-              SET document_title=?, current_edition=?, current_version_id=?, updated_by=?, updated_at=CURRENT_TIMESTAMP
+              SET document_title=?, current_version_id=?, updated_by=?, updated_at=CURRENT_TIMESTAMP
               WHERE id=? AND current_version_id IS NULL
-            `, [document.document_title, plannedEdition, result.insertId, authorizedActor.personId, document.id]);
+            `, [document.document_title, result.insertId, authorizedActor.personId, document.id]);
       return documentUpdate;
     }
   });

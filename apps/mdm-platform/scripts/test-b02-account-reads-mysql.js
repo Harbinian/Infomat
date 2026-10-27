@@ -107,9 +107,9 @@ async function main(){process.env.MDM_IDENTITY_READ_MODEL='mysql';process.env.MD
         const outsider=await ident.getCurrentUserPayload(session(people[4]));assert(outsider.dataScopes.includes('department:92'));assert(!outsider.dataScopes.includes('department:91'));
         assert.equal((await ident.validateSession({...session(people.at(-1)),accountId:A0})).valid,false);assert.equal((await ident.validateSession({...session(people.at(-1)),authVersion:V0})).valid,false);
       });
-      // Writes are compared on the same disposable connection and rolled back
-      // by its transaction proxy. No maintenance source or permissions change.
-      await check('ordinary maintenance responses/errors and transaction traces remain baseline-equivalent',async()=>{
+      // Unchanged writes are compared on the same disposable connection and
+      // rolled back. Retired person edits are checked against the current API.
+      await check('unchanged maintenance remains baseline-equivalent; legacy person edits return an explicit directory conflict',async()=>{
         const [[clock]]=await connection.execute('SELECT UNIX_TIMESTAMP() AS now');await connection.execute('SET timestamp=?',[clock.now]);
         async function attempt(factory,name,args,system=false){const trace=[];const db=new Proxy(connection,{get(target,key){if(key==='execute')return async(sql,params=[])=>{trace.push({sql,params:/INSERT INTO system_admin_events/.test(sql)?params.map((v,i)=>i===2?'<generated-event-id>':v):params});return target.execute(sql,params);};
           if(key==='beginTransaction')return async()=>{trace.push({transaction:'begin'});await target.beginTransaction();};if(key==='commit')return async()=>{trace.push({transaction:'commit-request-rolled-back'});await target.rollback();};if(key==='rollback')return async()=>{trace.push({transaction:'rollback'});await target.rollback();};if(key==='release')return()=>{};return typeof target[key]==='function'?target[key].bind(target):target[key];}});
@@ -119,7 +119,13 @@ async function main(){process.env.MDM_IDENTITY_READ_MODEL='mysql';process.env.MD
         const inputs=[['updateAccount',[81,{name:'Changed',actorPersonId:82}]],['grantRole',[81,{roleCode:'mdm_lead',authorizationBasis:'B02 synthetic',effectiveFrom:new Date(clock.now*1000).toISOString().slice(0,10),actorPersonId:82}]],
           ['disableAccount',[81,{reason:'B02 synthetic',actorPersonId:82}]],['resetPassword',[81,{passwordHash:'synthetic-unused-reset',actorPersonId:82}]],['activateAccount',[88,{passwordHash:'synthetic-unused-activate',actorPersonId:82}]],['enableAccount',[89,{actorPersonId:82}]],
           ['enableAccount',[88,{}]],['updateAccount',[991,{name:'Missing'}]]];
-        for(const [name,args]of inputs){const old=await attempt(prior.makeGovernanceAccessMysqlRepository,name,args),next=await attempt(current.makeGovernanceAccessMysqlRepository,name,args);compare('maintenance-'+name+'-'+args[0],next,old);maintenance.push({method:name,personId:args[0],equivalent:true,rolledBack:true});}
+        for(const [name,args]of inputs){const next=await attempt(current.makeGovernanceAccessMysqlRepository,name,args);
+          if(name==='updateAccount'){
+            assert.equal(next.error?.code,args[0]===991?'ACCOUNT_NOT_FOUND':'PERSON_DIRECTORY_MAINTENANCE_REQUIRED');assert(next.trace.some(entry=>entry.transaction==='rollback'));assert(!next.trace.some(entry=>/^\s*(INSERT|UPDATE|DELETE)/.test(entry.sql||'')));
+            maintenance.push({method:name,personId:args[0],contract:'directory-boundary',error:next.error,rolledBack:true});continue;
+          }
+          const old=await attempt(prior.makeGovernanceAccessMysqlRepository,name,args);compare('maintenance-'+name+'-'+args[0],next,old);maintenance.push({method:name,personId:args[0],equivalent:true,rolledBack:true});}
+        for(const system of [false,true]){const beforePerson=await repo.getAccount(81),noop=await attempt(current.makeGovernanceAccessMysqlRepository,'updateAccount',[81,{name:beforePerson.person_name,departmentId:beforePerson.current_department_id}],system);assert.equal(noop.error,undefined);assert.equal(noop.result.auth_version,beforePerson.auth_version);assert(!noop.trace.some(entry=>/^\s*(INSERT|UPDATE|DELETE)/.test(entry.sql||'')));assert.deepEqual(await repo.getAccount(81),beforePerson);}
         const role=(await current.testReadHelpers.listRoleAssignments(connection,81,true)).find(r=>r.roleCode==='mdm_lead');
         compare('maintenance-revoke',await attempt(current.makeGovernanceAccessMysqlRepository,'revokeRole',[81,role.assignmentId,{reason:'B02 synthetic',actorPersonId:82}]),await attempt(prior.makeGovernanceAccessMysqlRepository,'revokeRole',[81,role.assignmentId,{reason:'B02 synthetic',actorPersonId:82}]));
         compare('system-maintenance-binding',await attempt(current.makeGovernanceAccessMysqlRepository,'resetPassword',[81,{passwordHash:'synthetic-unused-reset'}],true),await attempt(prior.makeGovernanceAccessMysqlRepository,'resetPassword',[81,{passwordHash:'synthetic-unused-reset'}],true));

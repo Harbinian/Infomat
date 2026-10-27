@@ -1,12 +1,17 @@
+import {userMessage} from "./businessPresentation.js";
 import React, { useEffect, useState } from 'react';
 import { StatusPanel } from './components.jsx';
 import './role-management.css';
+import { protocol } from './protocol.js';
+import { authoringRolePresentation } from './workbenchReviewPresentation.js';
+import { qualityEntryNotice, roleSubjectName, roleCompletionPresentation } from './rolePresentation.js';
+import { canNavigatePage } from './navigationAccess.js';
 
 const selectedRole = () => new URLSearchParams(location.search).get('role') || '';
 const guideActions = [
   ['governance:draft-department', '起草或修改部门材料'],
   ['governance:submit-department', '提交部门材料'],
-  ['governance:review-department', '审核或退回部门材料'],
+  ['governance:review-department', '由部门负责人确认或退回部门材料'],
   ['governance:record-department-decision', '记录部门负责人决定'],
   ['governance:handle-assigned-conflict', '处理已分派冲突'],
   ['governance:decide-escalation', '决定已升级争议'],
@@ -28,9 +33,9 @@ export function RoleGuide({ api, user, onNavigate, onQueryChange }) {
   useEffect(() => {
     const controller = new AbortController();
     setState({ loading: true });
-    api.request('/api/rbac/model', { signal: controller.signal }).then(model => {
+    Promise.all([api.request('/api/rbac/model', { signal: controller.signal }), api.request('/api/process-authoring/status', { signal: controller.signal }).catch(() => null)]).then(([model, authoring]) => {
       if (!Array.isArray(model.roles) || !Array.isArray(model.activities) || !Array.isArray(model.permissions)) throw new Error('固定角色模型返回格式不完整，请刷新核对。');
-      if (!controller.signal.aborted) setState({ model });
+      if (!controller.signal.aborted) setState({ model: { ...model, roles: model.roles.map(role => roleCompletionPresentation(authoringRolePresentation(role, authoring?.enabled === true))) } });
     }).catch(error => { if (!controller.signal.aborted) setState({ error }); });
     return () => controller.abort();
   }, [api, revision]);
@@ -56,8 +61,7 @@ export function RoleGuide({ api, user, onNavigate, onQueryChange }) {
   const permissionSet = new Set(user.permissions || []);
   const permissionDescriptions = new Map((model?.permissions || []).map(item => [item.code, item.description]));
   const missing = guideActions.filter(([permission]) => permissionDescriptions.has(permission) && !permissionSet.has(permission));
-  const roleNames = new Map((model?.roles || []).map(item => [item.code, item.name]));
-  const names = codes => list((codes || []).map(item => roleNames.get(item) || item));
+  const names = codes => list((codes || []).map(item => roleSubjectName(item, model?.roles)));
   const roleTodos = role ? (todoState.items || []).filter(item => item.roleCode === role.code || item.role_code === role.code || (item.sourceRoles || []).includes(role.code)) : [];
   const responsibilities = role?.raciResponsibilities || [];
   const roleRaci = responsibilities.map(item => {
@@ -66,24 +70,27 @@ export function RoleGuide({ api, user, onNavigate, onQueryChange }) {
     return `${item.name}（${marks.join('/')}）`;
   });
   const firstEntry = role?.firstEntry?.target;
-  const firstEntryHref = typeof firstEntry === 'string' && /^#\/[A-Za-z][A-Za-z0-9/?=&_-]*$/.test(firstEntry) ? `/${firstEntry}` : '';
+  const firstEntryHref = protocol.targetHref(firstEntry);
+  const readableFirstEntry = firstEntryHref && canNavigatePage(firstEntryHref, user);
   return <div className="role-management" data-role-guide-state={state.loading ? 'loading' : state.error ? 'error' : 'ready'}>
     <section className="card"><h2>角色与责任</h2>
-      <p>查看固定角色的目标、使用说明和责任矩阵。当前账号的有效角色与权限来自登录身份；此页只读，不能授予角色或代替具体事项的服务端核验。</p>
+      <p>查看固定角色的目标、使用说明和责任矩阵。当前账号的有效角色与权限来自登录身份；此页只读，不能授予角色；本人能否办理某项业务，以该事项页面核验的有效职责为准。</p>
+      <p>流程材料由部门主对接人提交，部门负责人核对并最终确认。办理人须同时是本部门已明确的最终负责人，并具有本部门有效角色授权；角色授权、岗位名称或流程业务负责人任命均不能单独代替这两项条件。</p>
       <div className="role-management-actions"><button type="button" onClick={() => setRevision(value => value + 1)}>刷新角色说明</button></div>
     </section>
-    {state.loading ? <StatusPanel kind="loading" title="正在读取固定角色模型…" /> : state.error ? <StatusPanel kind="error" title="角色说明暂不可用" onRetry={() => setRevision(value => value + 1)}>{state.error.message} 读取失败不代表角色或权限已变更。</StatusPanel> : <>
-      <section className="card"><p>固定治理模型：{model.modelVersion || '版本未提供'}</p><p>当前账号角色：{names([...owned])}。</p>
+    {state.loading ? <StatusPanel kind="loading" title="正在读取固定角色模型…" /> : state.error ? <StatusPanel kind="error" title="角色说明暂不可用" onRetry={() => setRevision(value => value + 1)}>{userMessage(state.error)} 读取失败不代表角色或权限已变更。</StatusPanel> : <>
+      <section className="card"><p>当前账号角色：{names([...owned])}。</p>
         {model.roles.length ? <label>查看角色<select aria-label="查看角色" value={currentCode} onChange={event => choose(event.target.value)}>{code && !role && <option value={code}>所选角色已不可用</option>}{model.roles.map(item => <option key={item.code} value={item.code}>{item.name}{owned.has(item.code) ? ' · 我的角色' : ' · 角色说明'}</option>)}</select></label> : <p>固定模型暂无角色。</p>}
         {code && !role && <p role="alert">所选角色不在当前固定模型中，请重新选择。</p>}
       </section>
       {role && <section className="card" data-role-guide-code={role.code}><h3>{role.name}</h3><p>{role.description || '未提供说明'}</p>
-        <dl className="identity-grid"><div><dt>角色目标</dt><dd>{role.goal || '未提供'}</dd></div><div><dt>第一步入口</dt><dd>{firstEntryHref ? <a href={firstEntryHref} onClick={onNavigate}>{role.firstEntry.label}</a> : role.firstEntry?.label || '未提供'}</dd></div><div><dt>可见功能标签</dt><dd>{list((role.visibleTabs || []).map(tab => tab.name))}</dd></div><div><dt>当前待办</dt><dd>{todoState.loading ? '正在读取…' : todoState.error ? '暂不可用，请到我的工作台核对' : `${roleTodos.length} 项`}；<a href="/app/workbench" onClick={onNavigate}>进入我的工作台</a></dd></div><div><dt>允许动作</dt><dd>{list((role.permissions || []).map(permission => permissionDescriptions.get(permission) || permission))}</dd></div><div><dt>角色 RACI 责任</dt><dd>{list(roleRaci)}</dd></div><div><dt>典型样例</dt><dd>{role.sample || '未提供'}</dd></div><div><dt>常见误区</dt><dd>{role.pitfall || '未提供'}</dd></div><div><dt>完成标准</dt><dd>{role.doneCriteria || '未提供'}</dd></div></dl>
-        <p>处理顺序：{list(role.workflow)}</p>
+        {role.code === 'data_quality_auditor' && <p role="note">{qualityEntryNotice}</p>}
+        <dl className="identity-grid"><div><dt>角色目标</dt><dd>{role.goal || '未提供'}</dd></div><div><dt>第一步入口</dt><dd>{readableFirstEntry ? <a href={firstEntryHref} onClick={onNavigate}>{role.firstEntry.label}</a> : role.firstEntry?.label || '未提供'}</dd></div><div><dt>可查看页面</dt><dd>{list((role.visibleTabs || []).map(tab => tab.name))}</dd></div><div><dt>当前待办</dt><dd>{userMessage(todoState.loading ? '正在读取…' : todoState.error ? '暂不可用，请到我的工作台核对' : `${roleTodos.length} 项`)}；<a href="/app/workbench" onClick={onNavigate}>进入我的工作台</a></dd></div><div><dt>允许动作</dt><dd>{list((role.permissions || []).map(permission => permissionDescriptions.get(permission) || '权限说明未记录'))}</dd></div><div><dt>角色 RACI 责任</dt><dd>{list(roleRaci)}</dd></div><div><dt>典型样例</dt><dd>{role.sample || '未提供'}</dd></div><div><dt>常见误区</dt><dd>{role.pitfall || '未提供'}</dd></div><div><dt>完成标准</dt><dd>{role.doneCriteria || '未提供'}</dd></div></dl>
+        <p>处理顺序：{list(role.workflow)}</p><p data-role-result-guidance><strong>完成后去哪查看：</strong>{role.resultGuidance || '当前角色尚未提供准确结果位置，请从本人待办进入原事项核对。'}</p>{!readableFirstEntry && <p>此处仅查阅角色说明；当前账号不能从这里打开该角色的第一步页面。请由具有相应资格的人员办理，不会因此增加当前账号权限。</p>}
       </section>}
       <section className="card"><h3>当前不可直接执行的常见动作</h3>
-        <p>下列动作缺少对应有效权限。具备权限仍须满足部门范围、对象状态、分派关系及责任依据，最终结果以服务端返回为准。</p>
-        {missing.length ? <ul>{missing.map(([permission, action]) => <li key={permission}><strong>{action}</strong>：当前身份未获 {permission}。{permissionDescriptions.get(permission)}</li>)}</ul> : <p>下列常见动作未发现缺失权限；具体事项仍需逐项核对。</p>}
+        <p>下列动作缺少对应有效权限。具备权限仍须满足部门范围、对象状态、分派关系及责任依据，办理前仍会核对当前权限和条件。</p>
+        {missing.length ? <ul>{missing.map(([permission, action]) => <li key={permission}><strong>{action}</strong>：当前账号没有办理此操作的权限。{permissionDescriptions.get(permission)}</li>)}</ul> : <p>下列常见动作未发现缺失权限；具体事项仍需逐项核对。</p>}
       </section>
       <section className="card"><h3>RACI 责任矩阵</h3><p>R 表示执行，A 表示最终负责，C 表示参与，I 表示知悉。矩阵为固定模型的角色责任说明，不是个人办理授权。</p>
         {model.activities.length ? <div className="role-table-scroll" tabIndex={0} aria-label="RACI 责任矩阵"><table><thead><tr>{['治理活动', 'R：执行', 'A：最终负责', 'C：参与', 'I：知悉'].map(label => <th key={label} scope="col">{label}</th>)}</tr></thead><tbody>{model.activities.map((activity, index) => <tr key={activity.activityCode || index}><td>{activity.name}</td><td>{names(activity.responsible)}</td><td>{names(activity.accountable)}</td><td>{names(activity.consulted)}</td><td>{names(activity.informed)}</td></tr>)}</tbody></table></div> : <p>当前模型暂无责任矩阵。</p>}

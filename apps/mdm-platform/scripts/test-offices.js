@@ -16,8 +16,8 @@ async function officeChecks({pool,fixture,expect,request}) {
   const [[legacy]]=await pool.execute("SELECT department_id,parent_org_unit_id FROM org_unit WHERE org_unit_code='LEGACY_OFFICE'");
   assert.equal(legacy.department_id,null);assert.equal(legacy.parent_org_unit_id,777);
   assert.equal((await pool.query('SELECT * FROM office_membership'))[0].length,0);
-  const repo=makePublicationRepository(pool),actor={personId:82,accountId:182,authVersion:1};
-  const publish=async content=>repo.publish({content:content.content,...await repo.preview(content),requestId:crypto.randomUUID()},actor);
+  const repo=makePublicationRepository(pool),actor={personId:19081,accountId:19181,authVersion:1};
+  const publish=async content=>repo.publish({content:content.content,...await repo.preview(content),requestId:crypto.randomUUID(),reason:'合成组织与人员归属变更依据'},actor);
   const orgHeaders=['组织编码','组织名称','组织层级','归口部门编码','办公室负责人工号'];
   const organization=input('organization',orgHeaders,[['SYNTHETIC_NEW','合成新增归口部','部门','',''],['OFFICE_A','合成核对办公室','办公室','SYNTHETIC_91','SYNTHETIC_contact'],['OFFICE_B','合成接收办公室','办公室','SYNTHETIC_NEW','SYNTHETIC_reviewA']]);
   const orgVersion=await publish(organization);
@@ -39,7 +39,9 @@ async function officeChecks({pool,fixture,expect,request}) {
   assert.equal((await pool.query("SELECT * FROM office_membership WHERE person_id=85 AND status='active'"))[0].length,2);
   assert.equal((await expect('reviewB','/api/offices/workbench','GET')).offices.length,2);
   assert.equal((await request('outsider','/api/offices/workbench?office_id='+officeA.org_unit_id)).status,403);
-  await require('./stage05-workbench-scenario')({fixture,expect});
+  // Office compatibility uses an explicit fixed source; the current review and
+  // publication chain has its own qualified, complete-source regression suite.
+  await require('./testHelpers/officePublishedSource')(pool,fixture.document);
   const payload={request_id:crypto.randomUUID(),office_id:officeA.org_unit_id,content:'合成跨办公室任务：核对材料并记录结果',process_version_id:1,behavior_ref:'behavior_check',due_date:'2026-10-01'};
   await expect('admin','/api/offices/tasks','POST',payload,403);
   await expect('reviewB','/api/offices/tasks','POST',payload,403);
@@ -77,7 +79,7 @@ async function officeChecks({pool,fixture,expect,request}) {
   await expect('lead','/api/offices/tasks/'+old.id+'/receive','POST',{office_id:officeA.org_unit_id});
   const stale=await repo.preview(roster);
   await pool.execute("UPDATE office_membership SET status='inactive' WHERE office_id=? AND person_id=85",[officeB.org_unit_id]);
-  await assert.rejects(repo.publish({content:roster.content,...stale,requestId:crypto.randomUUID()},actor),e=>e.code==='PUBLICATION_SOURCE_CHANGED');
+  await assert.rejects(repo.publish({content:roster.content,...stale,requestId:crypto.randomUUID(),reason:'合成组织与人员归属变更依据'},actor),e=>e.code==='PUBLICATION_SOURCE_CHANGED');
   await publish(roster);
   const identity=await expect('admin','/api/org/roster','GET');
   assert.equal(identity.rows.find(p=>Number(p.person_id)===85).offices.length,2);

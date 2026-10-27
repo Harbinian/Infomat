@@ -13,14 +13,15 @@ module.exports = h => {
       const key=kind+':'+ref;if(collected.has(key))return;
       let current=String(ref),headRevision=null;
       if(kind==='definition') {
-        const [[v]]=await db.execute('SELECT CAST(h.current_version_id AS CHAR) ref,h.revision_no FROM data_map_definition_versions v JOIN data_map_definition_heads h ON h.entity_type=v.entity_type AND h.entity_id=v.entity_id WHERE v.version_id=? FOR SHARE',[ref]);
-        if(!v)throw fail('SOURCE_CHANGED');current=v.ref;headRevision=v.revision_no;
+        const reader=require('./dataMapEffectiveReader'),v=await reader.fixedVersion(db,ref);
+        await reader.isVersionReferenceable(db,ref);current=v.version_id;headRevision=v.version_no;
       } else if(kind==='mapping'||kind==='handoff') {
         const prefix=kind==='mapping'?'data_map_v7_mapping':'data_map_design_handoff';
         const [[v]]=await db.execute(`SELECT CAST(n.${kind}_version_id AS CHAR) ref,h.revision_no FROM ${prefix}_versions v JOIN ${prefix}s h ON h.${kind}_id=v.${kind}_id LEFT JOIN ${prefix}_versions n ON n.${kind}_id=h.${kind}_id AND n.revision_no=h.revision_no WHERE v.${kind}_version_id=? FOR SHARE`,[ref]);
         if(!v?.ref)throw fail('SOURCE_CHANGED');current=v.ref;headRevision=v.revision_no;
       }
       const value=await resolve(db,who,kind,current);
+      await resolve.assertNewReference(db,who,kind,current);
       collected.set(key,{kind,original_ref:String(ref),current_ref:current,head_revision:headRevision,snapshot:value.snapshot,...(current!==String(ref)?{changed_document:value.document}:{})});
       if(kind==='mapping'){await visit('definition',value.snapshot.object_version_id);if(value.snapshot.field_version_id)await visit('definition',value.snapshot.field_version_id);}
       if(kind==='handoff')for(const r of value.snapshot.mapping_refs)await visit('mapping',r.mapping_version_id);
@@ -122,6 +123,7 @@ module.exports = h => {
     source_heads:c.source_heads,assignment_revision:c.assignment?.revision_no||null,conditions:c.assignment?.conditions||[]});
   async function execute(session, issueId, payload) {
     const result=await tx(async db=>{
+      await require('./dataMapHandoffControl').assertGraphWriteEnabled(db);
       const c=await context(db,session,issueId), {who}=c;
       // Return denial after committing a detected suspension, instead of rolling it back with the rejected action.
       if(who.readOnly || !payload || (!c.isOwner && (c.suspended || c.assignment?.reviewer.person_id!==who.personId))) return {denied:true};
@@ -131,6 +133,7 @@ module.exports = h => {
       if(payload.action!=='review'&&!c.isOwner) return {denied:true};
       if(payload.action==='review'&&(c.suspended||!c.assignment||c.assignment.reviewer.person_id!==who.personId)) return {denied:true};
       return request(db,who,'analysis_issue_closure',{...payload,issue_id:c.issueId},async()=>{
+        await db.execute('UPDATE data_map_governance_control SET graph_revision=graph_revision+1 WHERE control_id=1');
         if(payload.expected_revision!==c.result.binding.revision_no || payload.expected_issue_digest!==c.result.binding.issue_digest || payload.expected_context_digest!==digest(fixed(c))) throw fail('REVISION_CONFLICT');
         const closed=['closed','completed','not_in_scope'].includes(c.result.value.display_status);
         const reason=text(payload.reason);

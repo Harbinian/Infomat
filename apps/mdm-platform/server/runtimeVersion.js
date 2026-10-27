@@ -16,7 +16,7 @@ function runtimeVersion(root = path.resolve(__dirname, '..')) {
   walk('public');
   if (fs.existsSync(path.join(root, 'shared'))) walk('shared');
   if (fs.existsSync(path.join(root, 'frontend/dist'))) walk('frontend/dist');
-  for (const file of ['package.json', 'package-lock.json']) if (fs.existsSync(path.join(root, file))) files.push(file);
+  for (const file of ['package.json', 'package-lock.json', 'config/department-role-requirements.json']) if (fs.existsSync(path.join(root, file))) files.push(file);
   for (const file of ['public/process-diagram.js','public/data-relation-diagram.js','node_modules/cytoscape/dist/cytoscape.min.js']) {
     const shared = '../structured-output-service/' + file;
     if (fs.existsSync(path.join(root, shared))) files.push(shared);

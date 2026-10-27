@@ -54,36 +54,19 @@ function makeFakeDataMapRepository() {
 
   return {
     state,
-    async listContexts() {
+    async listContexts(query={}) {
+      if(query.view!=='current')throw Object.assign(Error('HANDOFF_CLIENT_UPGRADE_REQUIRED'),{code:'HANDOFF_CLIENT_UPGRADE_REQUIRED',statusCode:409});
       state.calls.push(['listContexts']);
       return state.contexts;
     },
-    async getContext(id) {
+    async getContextScope(id) {return state.contexts.find(x=>String(x.id)===String(id))||null;},
+    async getContext(id,query={}) {
+      if(query.view!=='current')throw Object.assign(Error('HANDOFF_CLIENT_UPGRADE_REQUIRED'),{code:'HANDOFF_CLIENT_UPGRADE_REQUIRED',statusCode:409});
       state.calls.push(['getContext', Number(id)]);
       return state.contexts.find(context => context.id === Number(id)) || null;
     },
-    async createContext(payload, actorUserId) {
-      state.calls.push(['createContext', payload, actorUserId]);
-      const id = state.contexts.length + 11;
-      const context = {
-        ...payload,
-        id,
-        context_id: id,
-        mapping_id: id,
-        created_by: actorUserId,
-        updated_by: actorUserId,
-        status: payload.status || 'active'
-      };
-      state.contexts.push(context);
-      return context;
-    },
-    async updateContext(id, payload, actorUserId) {
-      state.calls.push(['updateContext', Number(id), payload, actorUserId]);
-      const context = state.contexts.find(item => item.id === Number(id));
-      if (!context) return null;
-      Object.assign(context, payload, { updated_by: actorUserId });
-      return context;
-    }
+    async createContext(){state.calls.push(['createContext']);throw Object.assign(Error('HANDOFF_REQUIRED'),{code:'HANDOFF_REQUIRED',statusCode:409});},
+    async updateContext(){state.calls.push(['updateContext']);throw Object.assign(Error('HANDOFF_REQUIRED'),{code:'HANDOFF_REQUIRED',statusCode:409});}
   };
 }
 
@@ -136,74 +119,20 @@ async function main() {
   const baseUrl = `http://127.0.0.1:${server.address().port}`;
 
   try {
-    const listRes = await fetch(`${baseUrl}/api/data-map/contexts`);
-    const listBody = await listRes.json();
-    assert.strictEqual(listRes.status, 200, JSON.stringify(listBody));
-    assert.strictEqual(listBody[0].mapping_id, 10);
-    assert.strictEqual(listBody[0].context_id, 10);
-
-    const adminCreateRes = await fetch(`${baseUrl}/api/data-map/contexts`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        context_key: 'ctx-supplier',
-        context_type: 'process',
-        title: '供应商字段上下文',
-        dept_id: 9,
-        dept_name: '经营发展部',
-        l3_name: '供应商资料维护',
-        a1_code: 'A1-009'
-      })
-    });
-    const adminCreateBody = await adminCreateRes.json();
-    assert.strictEqual(adminCreateRes.status, 403, JSON.stringify(adminCreateBody));
-
-    currentPersonId = 43;
-    const contactListRes = await fetch(`${baseUrl}/api/data-map/contexts`);
-    const contactListBody = await contactListRes.json();
-    assert.strictEqual(contactListRes.status, 200, JSON.stringify(contactListBody));
-    assert.deepStrictEqual(contactListBody.map(row => row.id), [10], '部门主对接人只能读取本部门数据地图');
-
-    const contactCreate = await fetch(`${baseUrl}/api/data-map/contexts`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        context_key: 'ctx-contact-own-dept',
-        context_type: 'process',
-        title: '部门主对接人本部门字段上下文',
-        dept_id: 9,
-        dept_name: '经营发展部'
-      })
-    });
-    const contactBody = await contactCreate.json();
-    assert.strictEqual(contactCreate.status, 201, JSON.stringify(contactBody));
-    assert.strictEqual(contactBody.dept_id, 9);
-
-    const updateRes = await fetch(`${baseUrl}/api/data-map/contexts/${contactBody.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: '本部门字段上下文更新', status: 'active' })
-    });
-    const updateBody = await updateRes.json();
-    assert.strictEqual(updateRes.status, 200, JSON.stringify(updateBody));
-    assert.strictEqual(updateBody.title, '本部门字段上下文更新');
-
-    const crossDeptCreate = await fetch(`${baseUrl}/api/data-map/contexts`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        context_key: 'ctx-contact-cross-dept',
-        context_type: 'process',
-        title: '部门主对接人跨部门字段上下文',
-        dept_id: 10,
-        dept_name: '工程技术部'
-      })
-    });
-    const crossDeptBody = await crossDeptCreate.json();
-    assert.strictEqual(crossDeptCreate.status, 403, JSON.stringify(crossDeptBody));
-
-    assert.ok(repo.state.calls.some(call => call[0] === 'createContext'), 'contexts route should create through Data Map repository');
-    console.log('Data Map contexts API test passed');
+    const original=JSON.stringify(repo.state.contexts);
+    const request=async(path,method='GET',body)=>{const res=await fetch(baseUrl+'/api/data-map'+path,{method,headers:{'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});return {status:res.status,body:await res.json()};};
+    assert.strictEqual((await request('/contexts')).status,409);
+    const global=await request('/contexts?view=current');assert.strictEqual(global.status,200);assert.strictEqual(global.body.length,2);
+    assert.strictEqual((await request('/contexts','POST',{title:'unapproved',dept_id:9})).status,403);
+    currentPersonId=43;
+    const own=await request('/contexts?view=current');assert.strictEqual(own.status,200);assert.deepStrictEqual(own.body.map(x=>x.id),[10]);
+    assert.strictEqual((await request('/contexts/10?view=current')).status,200);
+    assert.strictEqual((await request('/contexts/11?view=current')).status,403);
+    assert.strictEqual((await request('/contexts','POST',{title:'unapproved',dept_id:9})).status,409);
+    assert.strictEqual((await request('/contexts/10','PUT',{title:'unapproved'})).status,409);
+    assert.strictEqual((await request('/contexts','POST',{title:'cross',dept_id:10})).status,403);
+    assert.strictEqual(JSON.stringify(repo.state.contexts),original);
+    console.log('Data Map contexts API current-view and sealed-write scope test passed');
   } finally {
     await closeServer(server);
     resetDataMapRepositoryFactory();

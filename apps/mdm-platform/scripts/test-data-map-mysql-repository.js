@@ -353,104 +353,32 @@ function makeFakePool() {
   };
 }
 
+// Current handoff contract: the shared legacy repository refuses all direct
+// mutations. Full governed publication and compatibility reads are exercised by
+// test-data-map-handoff-{publisher,reader,repository}-mysql.js.
 async function main() {
-  const pool = makeFakePool();
-  const repo = makeDataMapMysqlRepository(pool);
-  await repo.initSchema();
-
-  const context = await repo.createContext({
-    context_key: 'ctx-customer-maintenance',
-    context_type: 'process',
-    title: '客户主数据维护',
-    dept_id: 9,
-    dept_name: '经营发展部',
-    owner_user_id: 42,
-    l3_name: '客户资料维护',
-    a1_code: 'A1-001',
-    source_file: '客户管理程序.docx',
-    source_anchor: 'P7',
-    created_by: 42
-  });
-  assert.strictEqual(context.mapping_id, context.id);
-  assert.strictEqual((await repo.listContexts())[0].title, '客户主数据维护');
-
-  const blocked = await repo.validateFieldName('客户编号');
-  assert.strictEqual(blocked.allowed, false);
-  assert.strictEqual(blocked.issues[0].severity, 'block');
-
-  const created = await repo.createField({
-    context_id: context.id,
-    data_object: '客户',
-    field_name_cn: '客户姓名',
-    field_name_en: 'customer_name',
-    business_definition: '客户展示名称',
-    field_type: '文本',
-    consume_systems: ['CRM', 'ERP'],
-    sync_mode: '实时',
-    note: '来自客户主数据维护',
-    submitted_by: 42
-  }, 42);
-  assert.strictEqual(created.mapping_id, context.id);
-  assert.strictEqual(created.context_id, context.id);
-  assert.strictEqual(created.data_object, '客户');
-  assert.ok(pool.state.qualityIssues.some(issue => issue.severity === 'warn'), 'warn naming rules should create quality issue');
-
-  const fields = await repo.getFieldsByContext(context.id);
-  assert.strictEqual(fields.length, 1);
-  assert.strictEqual(fields[0].consume_systems, JSON.stringify(['CRM', 'ERP']));
-
-  await repo.updateField(created.id, {
-    ...created,
-    field_name_cn: '客户名称',
-    data_object: '客户',
-    field_type: '文本',
-    consume_systems: ['CRM'],
-    sync_mode: '批量'
-  }, 43);
-  assert.ok(pool.state.versionLogs.some(row => row.field_name === 'field_name_cn'), 'field updates should be audited');
-
-  const identity = await repo.upsertFieldIdentity(created.id, {
-    authoritative_system: 'CRM',
-    authoritative_system_code: 'CRM',
-    maintain_dept_id: 9,
-    owner_user_id: 42,
-    confidence_level: 'high',
-    confirmed: false,
-    note: '待确认黄金源'
-  });
-  assert.strictEqual(identity.authoritative_system, 'CRM');
-  assert.strictEqual(identity.confirmed, 0);
-
-  const confirmed = await repo.confirmFieldIdentity(created.id, { authoritative_system: 'CRM', authoritative_system_code: 'CRM' }, 42);
-  assert.strictEqual(confirmed.confirmed, 1);
-  assert.strictEqual(confirmed.confirmed_by, 42);
-
-  const progress = await repo.fieldIdentityProgress();
-  assert.deepStrictEqual(progress.overall, { total: 1, confirmed: 1, pct: 100 });
-  assert.strictEqual(progress.by_domain[0].domain, '客户');
-
-  await repo.recordImportBatch({
-    source_type: 'excel',
-    file_name: 'fields.xlsx',
-    context_id: context.id,
-    imported_by: 42,
-    row_count: 1,
-    status: 'imported',
-    note: '字段台账导入'
-  });
-  assert.strictEqual(pool.state.importBatches.length, 1);
-
-  await repo.deleteField(created.id, 42);
-  assert.strictEqual((await repo.getFieldsByContext(context.id)).length, 0);
-
-  const sqlText = pool.state.statements.map(entry => entry.sql).join('\n');
-  assert.ok(!/\bFROM\s+field_entries\b/i.test(sqlText) && !/\bINTO\s+field_entries\b/i.test(sqlText), 'Data Map repository must not query SQLite field_entries');
-  assert.ok(!/\bFROM\s+field_identities\b/i.test(sqlText) && !/\bINTO\s+field_identities\b/i.test(sqlText), 'Data Map repository must not query SQLite field_identities');
-  assert.ok(!sqlText.includes(' sqlite_master'), 'Data Map repository must not use SQLite catalog tables');
-  assert.ok(!sqlText.includes('PRAGMA'), 'Data Map repository must not use SQLite PRAGMA');
-  assert.ok(!sqlText.includes('lastInsertRowid'), 'Data Map repository must not use SQLite lastInsertRowid');
-
-  console.log('Data Map MySQL repository test passed');
+  const pool=makeFakePool(),repo=makeDataMapMysqlRepository(pool);
+  const initial=JSON.stringify({...pool.state,statements:[]});
+  for(const state of ['legacy','prepared','controlled']){
+    const guarded={execute:async(sql,params)=>{
+      if(sql.includes('FROM data_map_governance_control'))return [[{cutover_state:state,cutover_epoch:'1',graph_revision:'0',next_definition_version_id:'1',contract_version:'data-map-handoff-v1'}]];
+      throw Error('A sealed legacy write reached SQL mutation: '+sql);
+    }};
+    const sealed=makeDataMapMysqlRepository(guarded);
+    for(const method of ['createContext','updateContext','createField','updateField','deleteField','upsertFieldIdentity','confirmFieldIdentity','recordImportBatch']){
+      await assert.rejects(()=>sealed[method](),{code:'HANDOFF_REQUIRED',statusCode:409});
+    }
+  }
+  const unavailable=makeDataMapMysqlRepository({execute:async()=>[[]]});
+  await assert.rejects(()=>unavailable.createContext(),{code:'HANDOFF_CONTROL_UNAVAILABLE',statusCode:503});
+  // Naming checks remain available independently of legacy persistence.
+  const blocked=await repo.validateFieldName('客户编号');
+  assert.strictEqual(blocked.allowed,false);assert.strictEqual(blocked.issues[0].severity,'block');
+  assert.strictEqual(JSON.stringify({...pool.state,statements:[]}),initial);
+  const sqlText=pool.state.statements.map(x=>x.sql).join('\n');
+  assert.ok(!/\b(?:INSERT|UPDATE|DELETE|ALTER|CREATE|DROP)\b/i.test(sqlText));
+  assert.ok(!/sqlite_master|PRAGMA|lastInsertRowid/.test(sqlText));
+  console.log('Data Map shared MySQL boundary test passed: 24 sealed mutations, missing control and read-only naming');
 }
 
 main().catch(error => {

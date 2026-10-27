@@ -47,7 +47,8 @@ async function main() {
    const other = await define({ entity_type: 'object', definition: { name: '同名合成记录', business_meaning: '支持触点独立身份，不合并' } });
    const otherField = await define({ entity_type: 'field', object_id: other.entity_id, object_version_id: other.version_id, definition: { name: '记录编号', data_type: 'text', required: true, enum_values: [] } });
    async function source(key, dept, obj = object, f = field, nativeV8 = false, revision = 1) {
-    const document = nativeV8 ? require('../../structured-output-service/server').createEmptyProcessGovernanceDocument() : structuredClone(fixture.document);
+    const document = nativeV8 ? require('../../structured-output-service/server').createEmptyProcessGovernanceV7Document() : structuredClone(fixture.document);
+    if (nativeV8) { document.schema_version = 'process-governance-v8'; document.migration.source_schema_version = 'process-governance-v8'; }
     if (nativeV8) { document.process = { ...fixture.document.process }; document.terms = structuredClone(fixture.document.terms); document.behaviors = structuredClone(fixture.document.behaviors); document.flow_relations = structuredClone(fixture.document.flow_relations); }
     document.process.process_ref = 'process_set_' + key; document.process.process_name = '合成集合' + key + '流程'; document.process.owning_department = dept;
     if (revision > 1) document.process.purpose = 'SYNTHETIC revised source material ' + revision;

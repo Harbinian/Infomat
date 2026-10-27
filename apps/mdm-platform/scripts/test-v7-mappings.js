@@ -18,8 +18,9 @@ function addObjects(d){
     lifecycle:{applicability:'pending_confirmation',entry_state:{business_validity:'pending_confirmation',custody:'pending_confirmation',identifiability_applicability:'pending_confirmation',identifiability:'pending_confirmation'},routes:[],analysis:{analyzer_version:'',source_fingerprint:'',status:'not_analyzed'},decision_reason:'',decision_notes:''}}));return d;
 }
 function nativeV8(v7){
-  // Use the native factory, then author decision/use evidence in the V8 contract.
-  const d=require('../../structured-output-service/server').createEmptyProcessGovernanceDocument();
+  // Keep this historical fixture explicitly V8 when the current factory advances.
+  const d=require('../../structured-output-service/server').createEmptyProcessGovernanceV7Document();
+  d.schema_version='process-governance-v8';d.migration.source_schema_version='process-governance-v8';
   d.process={...v7.process,process_ref:'p07_native_v8',process_name:'P07原生V8判断依据流程'};
   d.terms=structuredClone(v7.terms);d.behaviors=structuredClone(v7.behaviors);d.flow_relations=structuredClone(v7.flow_relations);
   addObjects(d);

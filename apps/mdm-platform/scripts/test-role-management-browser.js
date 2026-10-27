@@ -30,6 +30,11 @@ async function main() {
     async function layout() { assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false); assert.equal(await page.evaluate(() => visualViewport.scale), 1); }
     try {
       const roles = await expect('admin', '/api/roles', 'GET');
+      const requirements = await expect('admin', '/api/rbac/department-role-requirements', 'GET');
+      assert.equal(requirements.departments.length, 12);
+      assert.equal(requirements.grants_permissions, false);
+      assert.equal(requirements.binds_people, false);
+      assert.equal(requirements.creates_department_records, false);
       const admin = roles.find(r => r.role_code === 'admin');
       const lead = roles.find(r => r.role_code === 'mdm_lead');
       await pool.execute("INSERT INTO roles(role_code,role_name,description,status,parent_role_id) VALUES('SYNTHETIC_HISTORY','历史角色合成记录','长中文说明仅用于隔离兼容验证','legacy',?)", [admin.role_id]);
@@ -38,10 +43,19 @@ async function main() {
       await pool.execute("INSERT INTO person_roles(person_id,role_id,scope_type,scope_department_id,authorization_basis,effective_from,assignment_status) VALUES(81,?,'department',91,'synthetic historical record',CURRENT_DATE,'revoked')", [historicalId]);
       const [before] = await pool.query('SELECT * FROM person_roles ORDER BY person_role_id');
       await page.goto(fixture.baseURL + '/app/roles?role_id=' + admin.role_id); await login('admin'); await ready();
+      const configured = page.locator('[data-department-role-requirements]');
+      await configured.getByText('本配置不绑定人员', { exact: true }).first().waitFor();
+      assert.equal(await configured.getByRole('row').count(), requirements.departments.length + 1);
+      assert.equal(await configured.getByText('已设置', { exact: true }).count(), requirements.departments.reduce((count, department) => count + department.role_codes.length, 0));
+      assert.equal(await configured.locator('input,select').count(), 0);
+      for (const department of requirements.departments) assert.equal(await configured.getByRole('cell', { name: department.name, exact: true }).count(), 1);
+      await layout(); await page.screenshot({ path: path.join(output, 'department-role-requirements-desktop.png') });
+      checks.push(`${requirements.departments.length} source departments each reference two existing department roles; no people or database departments created, no grant controls; source and actual grants remain distinct`);
       const detail = await expect('admin', '/api/roles/' + admin.role_id, 'GET');
       const model = await expect('admin', '/api/rbac/model', 'GET');
       assert.ok((await page.locator('[data-role-ready]').textContent()).includes(detail.role_name));
-      assert.ok((await page.locator('.role-management').textContent()).includes(model.modelVersion));
+      assert.ok(!(await page.locator('.role-management').textContent()).includes(model.modelVersion));
+      for (const permission of detail.permissions) assert.ok(!(await page.locator('.role-management').innerText()).includes(permission.perm_code));
       assert.equal(await page.getByLabel('选择角色').locator('option').count(), roles.length + 1);
       const table = name => page.locator('section').filter({ has: page.getByRole('heading', { name, exact: true }) });
       assert.equal(await table('角色权限详情').locator('tbody tr').count(), detail.permissions.length);
@@ -109,6 +123,6 @@ async function main() {
       fs.writeFileSync(path.join(output, 'failure.json'), JSON.stringify({ message: error.message, stack: error.stack, checks, pageErrors }, null, 2));
       await page.screenshot({ path: path.join(output, 'failure.png'), fullPage: true }).catch(() => {}); throw error;
     } finally { await browser.close(); }
-  }, { evidenceDir: output, previewOnly: true });
+  }, { evidenceDir: output, previewOnly: true, createDocument: () => JSON.parse(fs.readFileSync(path.join(__dirname, 'testHelpers/p25-empty-v7.json'), 'utf8')) });
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });

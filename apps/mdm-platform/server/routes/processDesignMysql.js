@@ -1,4 +1,5 @@
 const { supports: supportsNativeProcess } = require('../processNativeFormats');
+const { formalRecoveryInput, assertFormalRecoveryState } = require('../processDesignPolicy');
 const {checkRuntimeSchema,sendMysqlUnavailable} = require('../mysqlRuntimeSchema');
 const express = require('express');
 const mysql = require('mysql2/promise');
@@ -19,7 +20,8 @@ let repositoryFactory = null;
 function runAction(res, action) {
   return action().catch(error => {
     if (error && error.statusCode) {
-      return res.status(error.statusCode).json(error.payload || { error: error.message });
+      return res.status(error.statusCode).json(error.payload || { error: error.message,
+        ...(error.code ? {code:error.code} : {}),...(Array.isArray(error.findings) ? {findings:error.findings} : {}) });
     }
     if (sendMysqlUnavailable(res, error)) return;
     logRequestFailure(res, error);
@@ -75,13 +77,6 @@ async function assertCanEditDraft(req, repo, draft) {
   await assertCanViewDraft(req, repo, draft);
   assertAdminCannotWrite(await currentRoleCodes(req));
   if (draft.status === 'published') throw httpError(409, '已发布流程不能直接修改草稿');
-  if (repo.authoringAccess) {
-    const access = await repo.authoringAccess(draft.id, authoringActor(req));
-    if (access?.managed) {
-      if (authoring.enabled() && access.compiler) return;
-      throw httpError(403, '该流程只能由当前编制者提交', { code: 'V7_AUTHORING_COMPILER_REQUIRED', error: '该流程只能由当前编制者提交' });
-    }
-  }
   const deptIds = await authorizedDepartmentIds(req);
   if (
     deptIds.has(Number(draft.department_id)) &&
@@ -106,12 +101,12 @@ async function assertCanEditDraftContent(req, repo, draft) {
 async function assertCanReview(req, repo, draft) {
   await assertCanViewDraft(req, repo, draft);
   assertAdminCannotWrite(await currentRoleCodes(req));
-  const deptIds = await authorizedDepartmentIds(req);
-  if (
-    deptIds.has(Number(draft.department_id)) &&
-    await hasCurrentPermission(req, 'governance:review-department')
-  ) return;
-  throw httpError(403, '无权审核该制度结构草稿');
+  const authority = await repo.departmentAccountability(draft, authoringActor(req));
+  if (authority.eligible) return;
+  throw httpError(authority.reason === 'DEPARTMENT_ACCOUNTABILITY_POLICY_REQUIRED' ? 503 : 403,
+    '须由本部门已指定且具备有效授权的部门负责人本人办理', {
+      code: authority.reason, error: '须由本部门已指定且具备有效授权的部门负责人本人办理', department_accountability: authority
+    });
 }
 
 async function currentRoleCodes(req) {
@@ -265,7 +260,7 @@ router.get('/drafts/:id', requireAuth, (req, res) => runAction(res, async () => 
   const draft = await repo.getDraft(req.params.id);
   await assertCanViewDraft(req, repo, draft);
   assertActiveV7Draft(draft);
-  res.json(await repo.detail(draft.id));
+  res.json({ ...await repo.detail(draft.id), department_accountability: await repo.departmentAccountability(draft, authoringActor(req)) });
 }));
 
 router.post('/drafts/:id/submit', requireAuth, (req, res) => runAction(res, async () => {
@@ -307,7 +302,8 @@ router.post('/review-tasks/:id/decision', requireAuth, (req, res) => runAction(r
   }
   const decision = text(req.body.decision);
   if (!{ approve: true, reject: true, needs_changes: true }[decision]) throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'decision', message: '审核结论无效' }] });
-  const repositoryOptions = isNativeProcess ? formalV7RepositoryOptions(req, expectedBinding) : expectedBinding;
+  const review_evidence = require('../processFormalControlPolicy').reviewEvidence(decision, req.body.review_evidence);
+  const repositoryOptions = isNativeProcess ? formalV7RepositoryOptions(req, { ...expectedBinding, review_evidence }) : { ...expectedBinding, review_evidence };
   res.json(await repo.decideReviewTask(task, decision, req.body.note, req.session.userId, repositoryOptions));
 }));
 
@@ -327,6 +323,22 @@ router.post('/drafts/:id/publish', requireAuth, requirePermission('governance:pu
   }
   res.json(await repo.publishDraft(draft, req.body && req.body.note, req.session.userId, options));
 }));
+
+for (const operation of ['withdraw', 'return-for-changes']) {
+  router.post('/drafts/:id/' + operation, requireAuth, (req, res) => runAction(res, async () => {
+    const repo = await repository();
+    const draft = await repo.getDraft(req.params.id);
+    await assertCanViewDraft(req, repo, draft);
+    assertActiveV7Draft(draft);
+    if (operation === 'withdraw') await assertCanEditDraft(req, repo, draft);
+    else await assertCanReview(req, repo, draft);
+    assertV7FormalTransitionEnabled(draft);
+    assertFormalRecoveryState(draft, operation);
+    const input = formalRecoveryInput(operation, req.body && req.body.note, req.body || {});
+    res.json(await repo.recoverDraft(draft, operation, input.reason, req.session.userId,
+      formalV7RepositoryOptions(req, input)));
+  }));
+}
 
 router.setProcessDesignRepositoryFactory = setProcessDesignRepositoryFactory;
 router.resetProcessDesignRepositoryFactory = resetProcessDesignRepositoryFactory;

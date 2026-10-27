@@ -10,7 +10,8 @@ test('maintenance role scope preserves decimal identity and rejects adjacent/rou
   assert.equal(validateRoleAssignmentInput(assignment,D).scopeDepartmentId,Number(D));
   for(const value of [Number(D),'9007199254741000','system-admin:1',{},0,'9223372036854775808'])assert.throws(()=>validateRoleAssignmentInput({...assignment,scopeDepartmentId:value},D,true),{code:'ROLE_SCOPE_DEPARTMENT_MISMATCH'});
   assert.equal(validateRoleAssignmentInput({...assignment,scopeDepartmentId:'91'},91,true).scopeDepartmentId,91);
-  for(const field of ['authorizationBasis','effectiveFrom'])assert.throws(()=>validateRoleAssignmentInput({...assignment,[field]:''},D,true),{code:'ROLE_ASSIGNMENT_EVIDENCE_REQUIRED'});
+  assert.equal(validateRoleAssignmentInput({...assignment,authorizationBasis:''},D,true).authorizationBasis,'');
+  assert.throws(()=>validateRoleAssignmentInput({...assignment,effectiveFrom:''},D,true),{code:'ROLE_ASSIGNMENT_EVIDENCE_REQUIRED'});
 });
 test('invalid supplied actor cannot turn into null audit identity before any transaction',async()=>{
   const repo=makeGovernanceAccessMysqlRepository({async getConnection(){throw Error('TRANSACTION_MUST_NOT_START');}});

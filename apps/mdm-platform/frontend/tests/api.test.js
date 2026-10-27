@@ -5,6 +5,46 @@ import { isolatedBackend, checkDevPort, freeDevPort } from '../devBoundary.js';
 
 const response = (status, body) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 
+test('formal terminology gates retain the real reason and findings without retrying the write', async () => {
+  const calls = [];
+  const api = createApiClient({ fetchImpl: async url => {
+    calls.push(url);
+    return url === '/api/csrf-token' ? response(200, { csrfToken: 'synthetic' }) : response(409, {
+      code: 'TERM_GOVERNANCE_USAGE_REVIEW_REQUIRED', error: '术语核对尚未完成，请处理受影响部分',
+      findings: [{ code: 'REVIEW_REQUIRED', message: '须明确核对本次关键概念' }]
+    });
+  } });
+  await assert.rejects(api.request('/api/process-design/drafts/2/submit', { method: 'POST', body: {} }), error => {
+    assert.equal(error.code, 'TERM_GOVERNANCE_USAGE_REVIEW_REQUIRED');
+    assert.match(error.message, /术语核对.*负责人确认/);
+    assert.equal(error.findings[0].message, '须明确核对本次关键概念');
+    assert.doesNotMatch(error.message, /内容已变化|TERM_GOVERNANCE/);
+    return true;
+  });
+  assert.equal(calls.filter(url => url !== '/api/csrf-token').length, 1);
+});
+
+test('session reset aborts old read transports before another login and leaves new generation usable', async () => {
+  let oldSignal, entered;
+  const started = new Promise(resolve => { entered = resolve; });
+  const calls = [];
+  const api = createApiClient({ fetchImpl: async (url, options) => {
+    calls.push(url);
+    if (url === '/api/old-session-read') return new Promise((resolve, reject) => {
+      oldSignal = options.signal; entered();
+      options.signal.addEventListener('abort', () => reject(new DOMException('old transport cancelled', 'AbortError')), { once: true });
+    });
+    return response(200, { identity: 'new generation' });
+  } });
+  const old = api.request('/api/old-session-read');
+  const rejected = assert.rejects(old, error => error.name === 'AbortError');
+  await started; api.resetSession();
+  assert.equal(oldSignal.aborted, true);
+  assert.deepEqual(await api.request('/api/org/login', { method: 'POST', body: {} }), { identity: 'new generation' });
+  await rejected;
+  assert.deepEqual(calls, ['/api/old-session-read', '/api/org/login']);
+});
+
 test('binary downloads preserve bytes, bounded errors and session/body cancellation', async () => {
   const bytes = new Uint8Array([80, 75, 3, 4, 0, 255]);
   const mime = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
@@ -14,6 +54,13 @@ test('binary downloads preserve bytes, bounded errors and session/body cancellat
   } });
   const blob = await api.request('/api/export/excel', { responseType: 'blob' });
   assert.equal(blob.type, mime); assert.deepEqual(new Uint8Array(await blob.arrayBuffer()), bytes);
+  const jsonBytes = '{"id":7,"title":"合成发布"}';
+  const jsonApi = createApiClient({ fetchImpl: async (url, options) => {
+    assert.equal(options.headers.Accept, 'application/json');
+    return new Response(jsonBytes, { headers: { 'Content-Type': 'application/json; charset=utf-8' } });
+  } });
+  const jsonBlob = await jsonApi.request('/api/publications/7/download?format=json', { responseType: 'blob', headers: { Accept: 'application/json' } });
+  assert.equal(await jsonBlob.text(), jsonBytes);
   let expired = 0;
   for (const status of [401, 403, 409, 503]) {
     const denied = createApiClient({ fetchImpl: async () => response(status, { error: 'sensitive SQL' }), onUnauthorized: () => expired++ });

@@ -16,7 +16,8 @@ Object.assign(process.env, {
   MYSQL_PASSWORD: 'synthetic-not-a-real-credential', MYSQL_DATABASE: 'isolated_runtime_test',
   SESSION_SECRET: 'synthetic-session-secret-for-isolated-tests-only', MDM_DB_QUIET: '1',
   MDM_DB_PATH: path.join(temp, 'must-not-exist.db'), PROCESS_V7_PREVIEW_ENABLED: '0',
-  PROCESS_V7_FORMAL_ENABLED: '0', PROCESS_DATA_GOVERNANCE_ENABLED: '0'
+  PROCESS_V7_FORMAL_ENABLED: '0', PROCESS_DATA_GOVERNANCE_ENABLED: '0',
+  DATA_MAP_HANDOFF_ENABLED: '0', TERMINOLOGY_GOVERNANCE_ENABLED: '0'
 });
 for (const key of ['MDM_ALLOW_LEGACY_TEST_MODE', 'PROCESS_INPUT_BASELINE_REVIEW_STORE', 'PROCESS_CANDIDATE_REVIEW_STORE']) delete process.env[key];
 
@@ -50,6 +51,12 @@ async function syntheticExecute(sql, params = []) {
   sqlCalls.push({ sql: sql.replace(/\s+/g, ' ').trim(), params });
   assert.match(sql.trim(), /^SELECT\b/i, 'runtime must not execute DDL, seeds or migrations');
   if (databaseFailure) throw Object.assign(new Error('synthetic failure; do not expose raw SQL'), { code: databaseFailure });
+  // A disabled, uninstalled extension is absent, rather than a successful empty
+  // query against a supposedly existing contract table. Permission failures are
+  // still handled by databaseFailure above and must never look uninstalled.
+  if (/SELECT 1 FROM `data_map_governance_control` WHERE 1=0/.test(sql)) {
+    throw Object.assign(new Error('synthetic extension table is not installed'),{code:'ER_NO_SUCH_TABLE'});
+  }
   // Office repositories revalidate the person/account and effective roles themselves.
   // Model that actual read contract rather than bypassing it with a default actor.
   if (syntheticIdentityReady) {

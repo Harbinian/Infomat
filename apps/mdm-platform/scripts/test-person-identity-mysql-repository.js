@@ -83,7 +83,7 @@ function makePersonPool() {
       const role = roleById(assignment.role_id);
       return String(assignment.person_id) === String(personId) && role &&
         role.status === 'active' && role.model_version === modelVersion &&
-        assignment.assignment_status === 'active' && assignment.authorization_basis != null &&
+        assignment.assignment_status === 'active' &&
         assignment.effective_from != null && assignment.effective_from <= today &&
         (assignment.effective_to == null || assignment.effective_to >= today);
     });
@@ -313,7 +313,7 @@ function makeMigrationPool() {
         return [[], undefined];
       }
 
-      if (normalizedSql === "UPDATE roles SET role_group='legacy' WHERE role_group NOT IN ('system','mdm','legacy')") {
+      if (normalizedSql === "UPDATE roles SET role_group='legacy' WHERE role_group NOT IN ('system','mdm','directory','legacy')") {
         for (const role of state.roles) {
           if (role.role_group != null && !['system', 'mdm', 'legacy'].includes(role.role_group)) role.role_group = 'legacy';
         }

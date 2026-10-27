@@ -6,7 +6,7 @@ const {normalizePublication,suggestedMapping}=require('../server/publicationSpre
 const {sessionSubject,identityInteger,sameIdentityInteger}=require('../server/sessionSubject');
 const hash=x=>crypto.createHash('sha256').update(JSON.stringify(x)).digest('hex');
 const D='9007199254740992',P='9007199254741000',N='9007199254741001';
-const doc=()=>{const headers=['工号','姓名','部门编码'];return normalizePublication({kind:'roster',title:'synthetic',sourceFileName:'synthetic.csv',headers,rows:[['P','changed','D']],mapping:suggestedMapping('roster',headers)});};
+const doc=()=>{const headers=['工号','姓名','部门编码','在职状态'];return normalizePublication({kind:'roster',title:'synthetic',sourceFileName:'synthetic.csv',headers,rows:[['P','changed','D','leave']],mapping:suggestedMapping('roster',headers)});};
 function fixture({adminCurrent=true,adminSnapshot=false}={}) {
   const departments=[{id:Number(D),code:'D',name:'D',parent_id:null,department_type:null,status:'active',exact_id:D,exact_parent_id:null}];
   const persons=[{person_id:Number(P),employee_no:'P',person_name:'original',current_department_id:Number(D),employment_status:'active',status:'active',mobile:null,email:null,exact_person_id:P,exact_current_department_id:D}];
@@ -34,7 +34,7 @@ async function main(){
   });
   await check('locked plan reads current target admin qualification after original earlier reads',async()=>{
     const db=fixture(),result=await directoryPlan(db,doc(),true);
-    assert.deepEqual(result.errors,[{row:2,message:'系统管理员身份不通过业务花名册修改，请保留原记录'}]);
+    assert.equal(result.errors.length,1);assert.match(result.errors[0].message,/请先调整管理员身份/);
     assert(/FOR (UPDATE|SHARE)$/.test(db.calls.at(-1)));assert.equal(result.changes[0].existing.person_id,P);
     for(const sql of db.calls.slice(0,-1))assert(sql.endsWith(' FOR UPDATE'),'keep original target lock order');
   });
@@ -46,7 +46,10 @@ async function main(){
     assert.equal((await directoryPlan(db,doc(),true)).errors.length,0);
   });
   await check('current admin unchanged roster row keeps original legitimate no-op',async()=>{
-    const db=fixture(),unchanged=doc();unchanged.records[0].person_name='original';const result=await directoryPlan(db,unchanged,true);assert.equal(result.errors.length,0);assert.equal(result.changes[0].same,true);
+    const db=fixture(),unchanged=doc();unchanged.records[0].person_name='original';unchanged.records[0].employment_status='active';const result=await directoryPlan(db,unchanged,true);assert.equal(result.errors.length,0);assert.equal(result.changes[0].same,true);
+  });
+  await check('current admin name correction preserves administrator qualification',async()=>{
+    const db=fixture(),correction=doc();correction.records[0].employment_status='active';const result=await directoryPlan(db,correction,true);assert.equal(result.errors.length,0);assert.equal(result.changes[0].same,false);
   });
   console.log('B02_PUBLICATION_TARGET_CONTRACT_PASSED '+checks.length);
 }

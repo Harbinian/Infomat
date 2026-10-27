@@ -17,6 +17,7 @@ function makeFieldIdentityGovernance(pool) {
     const conn = await pool.getConnection();
     try {
       await conn.beginTransaction();
+      await require('./dataMapHandoffControl').assertLegacyWriteAllowed(conn,{entryId:'W04:fieldIdentityGovernance'});
       const field = await first(conn, 'SELECT id,context_id FROM data_map_fields WHERE id=? FOR UPDATE', [fieldId]);
       if (!field) throw fail(404, '字段不存在');
       const context = await first(conn, 'SELECT id,dept_id FROM data_map_contexts WHERE id=? FOR UPDATE', [field.context_id]);

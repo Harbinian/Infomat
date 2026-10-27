@@ -5,7 +5,8 @@ const MODULES = [
   ['ProcessGovernanceMigration', 'process-governance-migration.js'], ['ImportCompatibility', 'import-compatibility.js'],
   ['WebGridCore', 'web-grid-core.js'], ['ProcessV7GridAdapter', 'process-v7-grid-adapter.js'], ['NativeWebGrid', 'native-web-grid.js'],
   ['ElementReferences', 'element-references.js'], ['ProcessDiagram', 'process-diagram.js'],
-  ['DataRelationDiagram', 'data-relation-diagram.js'], ['LifecycleAnalyzer', 'lifecycle-analyzer.js'], ['StructureLearningScore', 'structure-score.js']
+  ['DataRelationDiagram', 'data-relation-diagram.js'], ['LifecycleAnalyzer', 'lifecycle-analyzer.js'],
+  ['ProcessDataAvailability', 'process-data-availability.js'], ['StructureLearningScore', 'structure-score.js']
 ];
 let loaded;
 export function loadDomainModules() {

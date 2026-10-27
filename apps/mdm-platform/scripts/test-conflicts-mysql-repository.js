@@ -1,3 +1,5 @@
+// SQL-spy compatibility checks with recorded/unknown historical context.
+// No database connection or source writes; run with testHelpers/blockRealMysql.
 const assert = require('assert');
 
 const { makeConflictMysqlRepository } = require('../server/conflictMysqlRepository');
@@ -11,6 +13,7 @@ async function main() {
       termConflicts: [],
       assignments: [],
       history: [],
+      recordedContexts: new Map(),
       todos: []
     },
     async execute(sql, params = []) {
@@ -19,6 +22,10 @@ async function main() {
 
       if (normalizedSql.startsWith('CREATE TABLE')) return [[], undefined];
       if (normalizedSql.includes('AS revision FROM mdm_version_log')) return [[{revision:'0'}], undefined];
+      if (normalizedSql.includes('FROM data_map_legacy_registry')) {
+        assert.match(normalizedSql,/version_ref='recorded_context'/);
+        return [[this.state.recordedContexts.get(params.join(':'))].filter(Boolean),undefined];
+      }
 
       if (normalizedSql.includes('FROM terminology_terms')) {
         return [[
@@ -205,6 +212,18 @@ async function main() {
   assert.strictEqual(fieldConflicts[0].conflict_field, 'authoritative_system');
   assert.strictEqual(fieldConflicts[0].value_a, 'CRM');
   assert.strictEqual(fieldConflicts[0].value_b, 'ERP');
+  assert.strictEqual(fieldConflicts[0].history_context_status,'unknown');
+  assert.strictEqual(fieldConflicts[0].field_name_a,null,'missing history must not borrow a current field name');
+  const recorded={field_name_a:'Recorded Customer A',field_name_b:'Recorded Customer B',a1_code:'RECORDED-A1'};
+  const {digest}=require('../server/dataMapDefinitionValues');
+  const contextKey='field_conflict:'+fieldConflicts[0].id;
+  pool.state.recordedContexts.set(contextKey,{snapshot_json:JSON.stringify(recorded),snapshot_digest:digest(recorded),history_completeness:'recorded_at_creation'});
+  const fixed=(await repo.listConflicts({type:'field'},{canViewAll:true}))[0];
+  assert.strictEqual(fixed.history_context_status,'fixed_recorded_snapshot');
+  assert.strictEqual(fixed.field_name_a,recorded.field_name_a);
+  pool.state.recordedContexts.get(contextKey).snapshot_digest='changed';
+  await assert.rejects(repo.listConflicts({type:'field'},{canViewAll:true}),{code:'HANDOFF_LEGACY_INTEGRITY_CONFLICT'});
+  pool.state.recordedContexts.get(contextKey).snapshot_digest=digest(recorded);
 
   const termConflicts = await repo.listConflicts({ type: 'term' }, { canViewAll: true });
   assert.strictEqual(termConflicts.length, 1);

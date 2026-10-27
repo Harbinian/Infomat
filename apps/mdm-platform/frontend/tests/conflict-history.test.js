@@ -9,7 +9,7 @@ test('keeps real chronology and retained decisions after archive without manufac
     coordinationHistory:[{ created_at:'2026-09-02T02:00:00Z', assignee_person_id:4, result:'B', note:'<img onerror=alert(1)>' }] };
   const before = JSON.stringify(detail), rows = conflictHistory(detail);
   assert.deepEqual(rows.map(row => row.action), ['冲突记录建立','分派记录','提交协调结果','处理决定记录']);
-  assert.equal(rows[3].actor,'人员编号 7');
+  assert.equal(rows[3].actor,'人员未记录');
   assert.ok(rows[2].note.includes('<img onerror=alert(1)>'));
   assert.equal(JSON.stringify(detail),before);
   assert.equal(rows.some(row => row.time === detail.deadline),false);

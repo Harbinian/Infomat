@@ -6,7 +6,7 @@ const { requireAuth, getUserEffectivePermissionsAsync } = require('../auth');
 const { dataMapRepository } = require('../dataMapMysqlRepository');
 
 function handleError(res, error) {
-  if (error && error.statusCode) return res.status(error.statusCode).json({ error: error.message });
+  if (error && error.statusCode) return res.status(error.statusCode).json({ error: error.message,code:error.code });
   if (error && (error.code === 'ER_DUP_ENTRY' || String(error.message).includes('Duplicate entry'))) {
     return res.status(409).json({ error: '字段已存在' });
   }
@@ -48,10 +48,10 @@ function contextIdFromPayload(payload = {}) {
 router.get('/mapping/:contextId', requireAuth, (req, res) => {
   return runAction(res, async () => {
     const repo = await dataMapRepository();
-    const context = await repo.getContext(req.params.contextId);
+    const context = await repo.getContextScope(req.params.contextId);
     if (!context) return res.status(404).json({ error: '数据地图上下文不存在' });
     if (!await canViewContext(req, context)) return res.status(403).json({ error: '无权查看该字段台账' });
-    res.json(await repo.getFieldsByContext(context.id));
+    res.json(await repo.getFieldsByContext(context.id,req.query));
   });
 });
 
@@ -60,7 +60,7 @@ router.post('/', requireAuth, (req, res) => {
     const contextId = contextIdFromPayload(req.body);
     if (!contextId) return res.status(400).json({ error: '缺少 context_id' });
     const repo = await dataMapRepository();
-    const context = await repo.getContext(contextId);
+    const context = await repo.getContextScope(contextId);
     if (!context) return res.status(404).json({ error: '数据地图上下文不存在' });
     if (!await canEditField(req, context)) return res.status(403).json({ error: '只能维护本人部门的字段台账' });
     const field = await repo.createField({ ...req.body, context_id: contextId }, req.session.userId);
@@ -71,9 +71,9 @@ router.post('/', requireAuth, (req, res) => {
 router.put('/:id', requireAuth, (req, res) => {
   return runAction(res, async () => {
     const repo = await dataMapRepository();
-    const field = await repo.getField(req.params.id);
+    const field = await repo.getFieldScope(req.params.id);
     if (!field) return res.status(404).json({ error: '字段不存在' });
-    const context = await repo.getContext(field.context_id);
+    const context = await repo.getContextScope(field.context_id);
     if (!await canEditField(req, context)) {
       return res.status(403).json({ error: '只能由部门主对接人修改本部门字段' });
     }
@@ -86,9 +86,9 @@ router.put('/:id', requireAuth, (req, res) => {
 router.delete('/:id', requireAuth, (req, res) => {
   return runAction(res, async () => {
     const repo = await dataMapRepository();
-    const field = await repo.getField(req.params.id);
+    const field = await repo.getFieldScope(req.params.id);
     if (!field) return res.status(404).json({ error: '字段不存在' });
-    const context = await repo.getContext(field.context_id);
+    const context = await repo.getContextScope(field.context_id);
     if (!await canEditField(req, context)) {
       return res.status(403).json({ error: '只能由部门主对接人删除本部门字段' });
     }

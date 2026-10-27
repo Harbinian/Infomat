@@ -6,7 +6,8 @@ function buildCsp() {
     "img-src 'self' data:",
     // Current chart components set presentation styles at runtime.
     "style-src 'self' 'unsafe-inline'",
-    "script-src 'self'",
+    "script-src 'self' 'wasm-unsafe-eval'",
+    "worker-src 'self'",
     "frame-ancestors 'self'"
   ].join('; ');
 }

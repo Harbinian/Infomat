@@ -43,7 +43,7 @@ async function main() {
       const root = '/api/process-v7-preview';
       const doc = structuredClone(fixture.document);
       doc.data_objects = [{ data_ref: 'data_synthetic', data_name: '合成核对记录', description: '合成原始说明<script>不可执行</script>', information_type: 'file_attachment', fields: [{ field_ref: 'field_result', field_name: '合成结论', field_type: '文本', definition: '合成结果' }], behavior_links: [{ link_ref: 'link_prepare', behavior_ref: 'behavior_prepare', operation: 'create', updated_field_refs: [] }, { link_ref: 'link_receive', behavior_ref: 'behavior_receive', operation: 'use', updated_field_refs: [] }], source_relations: [], lifecycle: require('../../structured-output-service/public/process-governance-migration').pendingLifecycle() }];
-      doc.behaviors[0].behavior_description = '合成长中文核对说明。'.repeat(30);
+      doc.behaviors[0].behavior_description = '合成经办人员逐项核对合成材料，并填写核对记录。'.repeat(30);
       const preview = await expect('contact', root + '/cases', 'POST', { document: doc, source_file_name: 'synthetic-v7.json' }, 201);
       const id = preview.case.id;
       const emptyDoc = structuredClone(fixture.document); emptyDoc.process.process_ref = 'synthetic_empty_diagram'; emptyDoc.process.process_name = '无数据对象的合成流程';
@@ -57,7 +57,7 @@ async function main() {
       const submitted = await expect('contact', '/api/process-design/drafts/' + promotion.draft.id + '/submit', 'POST', binding);
       await expect('reviewA', '/api/process-design/review-tasks/' + submitted.reviewTask.id + '/decision', 'POST', { ...binding, decision: 'approve', note: '仅合成测试审核依据' });
       const historical = await expect('lead', '/api/process-design/drafts/' + promotion.draft.id + '/publish', 'POST', binding);
-      const revised = structuredClone(publishedDoc); revised.behaviors[0].behavior_description = '新版合成说明，与历史版本不同';
+      const revised = structuredClone(publishedDoc); revised.behaviors[0].behavior_description = '合成经办人员填写新版合成核对记录，与历史版本不同';
       const newer = await expect('contact', root + '/cases/' + formal.case.id + '/revisions', 'POST', { ...bind, document: revised, source_file_name: 'synthetic-v8-revised.json' }, 201);
       const newerBind = { expected_revision_no: newer.case.current_revision_no, expected_content_hash: newer.case.current_content_hash };
       for (const who of ['reviewA', 'reviewB']) for (const item of newer.items) await expect(who, root + '/items/' + item.id + '/decision', 'POST', { ...newerBind, decision: 'confirmed', basis: '合成新版图形核对依据' });
@@ -101,7 +101,7 @@ async function main() {
       fs.writeFileSync(path.join(output,'focus-debug.json'),JSON.stringify({clicked,inspector:await page.locator('.native-diagram-inspector').innerText(),source:before.revision.document.behaviors[0]},null,2));
       await page.locator('.native-diagram-inspector').getByText(doc.behaviors[0].behavior_description, { exact: true }).waitFor();
       await page.getByText('键盘查阅原始内容', { exact: true }).click();
-      await button('准备合成材料').focus(); await page.keyboard.press('Enter'); await preserved();
+      await button(doc.behaviors[0].behavior_name).focus(); await page.keyboard.press('Enter'); await preserved();
       await page.getByLabel('图形视图', { exact: true }).selectOption('data'); await ready(); await inspectGraph('data-desktop');
       const fitted = await page.locator('.native-diagram-viewport').evaluate(el => el._cyreg.cy.zoom());
       await button('清晰视图').click();

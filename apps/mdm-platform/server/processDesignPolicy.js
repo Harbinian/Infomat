@@ -46,7 +46,7 @@ function httpError(statusCode, message, payload) {
 
 function assertActiveV7Draft(draft) {
   if (!draft) throw httpError(404, '流程草稿不存在');
-  if (!supportsNativeProcess(text(draft.schema_version))) throw httpError(410, '旧版流程办理入口已删除，历史记录保留；新流程请通过3001编制V8后上传；受支持V7按原格式办理。', { code: 'LEGACY_PROCESS_RETIRED', error: '旧版流程办理入口已删除，历史记录保留。' });
+  if (!supportsNativeProcess(text(draft.schema_version))) throw httpError(410, '旧版流程办理入口已删除，历史记录保留；新流程请通过3001编制当前格式后上传；受支持历史格式按原格式办理。', { code: 'LEGACY_PROCESS_RETIRED', error: '旧版流程办理入口已删除，历史记录保留。' });
 }
 
 function text(value) {
@@ -74,6 +74,28 @@ function v7FormalExpectedBinding(body = {}) {
     });
   }
   return { expectedRevisionNo: revisionNo, expectedContentHash: contentHashValue };
+}
+
+function formalRecoveryInput(operation, note, options = {}) {
+  if (!['withdraw', 'return-for-changes'].includes(operation)) {
+    throw httpError(422, '正式流程恢复操作无效', { code: 'FORMAL_RECOVERY_OPERATION_INVALID', error: '正式流程恢复操作无效' });
+  }
+  const reason = text(note);
+  if (!reason || reason.length > 1000) {
+    throw httpError(422, '请填写1至1000字的撤回或退回原因', { code: 'FORMAL_RECOVERY_REASON_REQUIRED', error: '请填写1至1000字的撤回或退回原因' });
+  }
+  const expectedReviewTaskId = Number(options.expected_review_task_id ?? options.expectedReviewTaskId);
+  if (!Number.isSafeInteger(expectedReviewTaskId) || expectedReviewTaskId < 1) {
+    throw httpError(422, '请绑定当前正式审核任务', { code: 'FORMAL_RECOVERY_TASK_REQUIRED', error: '请绑定当前正式审核任务' });
+  }
+  return { ...v7FormalExpectedBinding(options), expectedReviewTaskId, reason };
+}
+
+function assertFormalRecoveryState(draft, operation) {
+  const allowed = operation === 'withdraw' ? ['submitted', 'under_review'] : ['rejected', 'approved'];
+  if (!allowed.includes(text(draft && draft.status))) {
+    throw v7DraftStateConflict(draft, '当前正式草稿已不符合撤回或退回条件，请刷新办理状态');
+  }
 }
 
 function assertV7FormalTransitionEnabled(draft, options = {}) {
@@ -238,4 +260,4 @@ function publicDraft(row) {
 }
 
 
-module.exports = {httpError,assertActiveV7Draft,text,optionalText,v7FormalExpectedBinding,assertV7FormalTransitionEnabled,v7ActualState,v7ReviewContentStale,v7PromotionEvidenceMismatch,v7DraftStateConflict,v7BaseVersionConflict,v7BlockingIssuesError,assertV7ExpectedContent,editionToNumber,numberToEdition,nextEdition,documentVersionNo,markdownFileSafe,parseJsonArray,parseJsonObject,arrayItems,hasNonEmptyWorkRoleBindings,assertWorkRoleBindingsSupported,publicDraft,isEditableDraftStatus,get EDITABLE_DRAFT_STATUSES(){return new Set(EDITABLE_DRAFT_STATUSES);},get DEFAULT_PROCESS_DESIGN_FIELD_TYPES(){return DEFAULT_PROCESS_DESIGN_FIELD_TYPES.map(pair=>[...pair]);},EVIDENCE_STATUS_MIGRATION_KEY,EDITION_SCHEMA_MIGRATION_KEY,FORM_STRUCTURE_SCHEMA_MIGRATION_KEY,STEP_TRANSITION_SCHEMA_MIGRATION_KEY,STRUCTURED_OUTPUT_SCHEMA_VERSION,FORMAL_V7_TRANSACTION_CONTEXT,FORMAL_V7_ACTOR_CONTEXT};
+module.exports = {formalRecoveryInput,assertFormalRecoveryState,httpError,assertActiveV7Draft,text,optionalText,v7FormalExpectedBinding,assertV7FormalTransitionEnabled,v7ActualState,v7ReviewContentStale,v7PromotionEvidenceMismatch,v7DraftStateConflict,v7BaseVersionConflict,v7BlockingIssuesError,assertV7ExpectedContent,editionToNumber,numberToEdition,nextEdition,documentVersionNo,markdownFileSafe,parseJsonArray,parseJsonObject,arrayItems,hasNonEmptyWorkRoleBindings,assertWorkRoleBindingsSupported,publicDraft,isEditableDraftStatus,get EDITABLE_DRAFT_STATUSES(){return new Set(EDITABLE_DRAFT_STATUSES);},get DEFAULT_PROCESS_DESIGN_FIELD_TYPES(){return DEFAULT_PROCESS_DESIGN_FIELD_TYPES.map(pair=>[...pair]);},EVIDENCE_STATUS_MIGRATION_KEY,EDITION_SCHEMA_MIGRATION_KEY,FORM_STRUCTURE_SCHEMA_MIGRATION_KEY,STEP_TRANSITION_SCHEMA_MIGRATION_KEY,STRUCTURED_OUTPUT_SCHEMA_VERSION,FORMAL_V7_TRANSACTION_CONTEXT,FORMAL_V7_ACTOR_CONTEXT};

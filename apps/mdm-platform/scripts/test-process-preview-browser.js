@@ -50,6 +50,13 @@ async function main() {
     const source = structuredClone(fixture.document); source.schema_version = 'process-governance-v8';
     source.behaviors.push({ ...source.behaviors[0], behavior_ref: 'decision_basis', node_type: 'decision', behavior_name: '是否具备合格证明', actor_assignment_mode: 'company_wide', current_actor_role: '全公司' });
     source.flow_relations.push({ relation_ref: 'relation_decision', relation_type: 'sequence', from_behavior_ref: 'behavior_receive', to_behavior_ref: 'decision_basis', condition: '' });
+    // Complete synthetic decision branches for the current content checker;
+    // the missing-branch rejection belongs to dedicated content-check tests.
+    source.behaviors.push({ ...source.behaviors[2], behavior_ref: 'behavior_archive', behavior_name: '合成接收人员归档合成核对记录' });
+    source.flow_relations.push(
+      { relation_ref: 'relation_proof_present', relation_type: 'condition', from_behavior_ref: 'decision_basis', to_behavior_ref: 'behavior_archive', condition: '合格证明齐全' },
+      { relation_ref: 'relation_proof_missing', relation_type: 'loop', from_behavior_ref: 'decision_basis', to_behavior_ref: 'behavior_prepare', condition: '合格证明缺失' }
+    );
     source.data_objects = [{ data_ref: 'data_basis', data_name: '合成判断依据对象', description: '用于核对判断数据依据', information_type: 'file_attachment', fields: [{ field_ref: 'field_result', field_name: '合格结论', field_type: '文本', definition: '合成结果' }], behavior_links: [{ link_ref: 'link_basis', behavior_ref: 'decision_basis', operation: 'use', updated_field_refs: [] }, { link_ref: 'link_check', behavior_ref: 'behavior_check', operation: 'use', updated_field_refs: [] }], source_relations: [], lifecycle: pendingLifecycle() }];
     fs.writeFileSync(path.join(output, 'source-v8.json'), JSON.stringify(source, null, 2));
     try {
@@ -164,7 +171,11 @@ async function main() {
       const z = (await expect('lead', root + '/cases/' + zeroResult.case.id, 'GET')).case;
       await expect('lead', root + '/cases/' + z.id + '/revisions', 'POST', { document: unresolved, source_file_name: 'unresolved-v8.json', expected_revision_no: z.current_revision_no, expected_content_hash: z.current_content_hash }, 201);
       await page.getByRole('button', { name: '刷新案例与当前修订' }).click(); await idle();
-      await page.getByText('ACTOR_DEPARTMENT_UNRESOLVED', { exact: true }).waitFor(); assert.equal(await page.getByRole('button', { name: '记录范围决定', exact: true }).count(), 0);
+      const actorGate = page.getByText('ACTOR_DEPARTMENT_UNRESOLVED', { exact: true });
+      for (const disclosure of await page.locator('details').filter({ has: actorGate }).all()) {
+        if (!(await disclosure.getAttribute('open'))) await disclosure.locator('summary').first().click();
+      }
+      await actorGate.waitFor(); assert.equal(await page.getByRole('button', { name: '记录范围决定', exact: true }).count(), 0);
       const uz = (await expect('lead', root + '/cases/' + z.id, 'GET')).case;
       assert.equal((await request('lead', root + '/cases/' + z.id + '/scope-decision', 'POST', { decision: 'confirmed_no_cross_department', basis: '不能绕过', expected_revision_no: uz.current_revision_no, expected_content_hash: uz.current_content_hash })).status, 409);
       checks.push('real owner assignment, zero-cross scope decision and unresolved actor gate cannot be bypassed');

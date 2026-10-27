@@ -35,15 +35,15 @@ async function main() {
     const ready = () => page.locator('[data-map-state="ready"]').waitFor();
     const identityReady = () => page.locator('[data-field-identity-state="ready"]').waitFor();
     const detail = () => page.locator('[data-field-identity-detail]');
-    const target = () => page.getByLabel('字段身份目标', { exact: true });
+    const target = () => page.getByLabel('选择字段', { exact: true });
     const button = name => page.getByRole('button', { name, exact: true });
     const writes = () => requests.filter(r => r.method !== 'GET').length;
     async function login(who) { await page.locator('#login-name').fill('SYNTHETIC_' + who); await page.locator('#login-password').fill(fixture.loginPassword); await button('登录').click(); await ready(); }
     async function choose(id) { await target().selectOption(id); await identityReady(); }
-    async function edit(value) { await button('维护黄金源信息').click(); await page.getByLabel('权威系统名称', { exact: true }).fill(value); }
+    async function edit(value) { await button('维护字段来源信息').click(); await page.getByLabel('以哪个系统的记录为准', { exact: true }).fill(value); }
     async function discard() { page.once('dialog', d => d.accept()); await button('放弃本次字段身份输入').click(); }
     async function relogin(who) { await button('退出登录').click(); await login(who); await identityReady(); }
-    async function save() { await button('保存黄金源信息（待核实）').click(); await page.locator('[data-field-identity-success]').waitFor(); await identityReady(); }
+    async function save() { await button('保存字段来源信息（待核实）').click(); await page.locator('[data-field-identity-success]').waitFor(); await identityReady(); }
     const refresh = async () => { await button('刷新字段身份').click(); await identityReady(); };
     try {
       await page.goto(fixture.baseURL + '/app/data-map?context=911&identityField=921'); await login('contact'); await identityReady();
@@ -65,22 +65,22 @@ async function main() {
 
       await page.getByLabel('上下文标题', { exact: true }).fill('保留相邻上下文输入');
       await edit('合成新系统');
-      await page.getByLabel('权威系统代码', { exact: true }).fill('NEW');
-      await page.getByLabel('黄金源备注', { exact: true }).fill('维护后的说明');
+      assert.equal(await page.getByLabel('权威系统代码', { exact: true }).count(), 0);
+      await page.getByLabel('字段来源备注', { exact: true }).fill('维护后的说明');
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
       await page.locator('[data-field-identity-form]').screenshot({ path: path.join(output, 'identity-form.png') });
       await button('刷新数据地图').click(); await ready(); await identityReady();
-      assert.equal(await page.getByLabel('权威系统名称', { exact: true }).inputValue(), '合成新系统');
+      assert.equal(await page.getByLabel('以哪个系统的记录为准', { exact: true }).inputValue(), '合成新系统');
       await page.getByLabel('数据地图上下文', { exact: true }).selectOption('913'); await ready();
-      assert.equal(await button('保存黄金源信息（待核实）').isDisabled(), true);
-      assert.equal(await page.getByLabel('权威系统名称', { exact: true }).inputValue(), '合成新系统');
+      assert.equal(await button('保存字段来源信息（待核实）').isDisabled(), true);
+      assert.equal(await page.getByLabel('以哪个系统的记录为准', { exact: true }).inputValue(), '合成新系统');
       await page.getByLabel('数据地图上下文', { exact: true }).selectOption('911'); await ready(); await identityReady();
       page.once('dialog', d => d.dismiss()); await target().selectOption('923'); assert.equal(await target().inputValue(), '921');
       page.once('dialog', d => d.dismiss()); await page.getByRole('link', { name: '数据质量', exact: true }).click(); assert.match(page.url(), /app\/data-map/);
       page.once('dialog', d => d.dismiss()); await page.reload({ timeout: 1000 }).catch(() => {});
-      assert.equal(await page.getByLabel('权威系统名称', { exact: true }).inputValue(), '合成新系统');
+      assert.equal(await page.getByLabel('以哪个系统的记录为准', { exact: true }).inputValue(), '合成新系统');
       const beforeSave = await row(); await save(); const saved = await row();
-      assert.equal(saved.authoritative_system_name, '合成新系统'); assert.equal(saved.authoritative_system_code, 'NEW');
+      assert.equal(saved.authoritative_system_name, '合成新系统'); assert.equal(saved.authoritative_system_code, beforeSave.authoritative_system_code);
       assert.equal(saved.confirmed, 0); assert.equal(saved.status, 'needs_review');
       await expect('adminMulti','/api/field-identities/921','PUT',{authoritative_system:'管理员叠加编制角色不得写入'},403);
       await expect('adminMulti','/api/field-identities/921/confirm','POST',{},403);
@@ -90,8 +90,8 @@ async function main() {
       checks.push('real maintenance preserves stable IDs/ownership/prior confirmation metadata, resets confirmation only; context switches/refresh/reload/navigation protect inputs');
       // Explicitly discard the neighboring context draft when switching identity.
       page.once('dialog', d => d.accept()); await relogin('reviewA');
-      assert.equal(await button('维护黄金源信息').count(), 0);
-      await button('办理部门确认').click(); assert.equal(await page.getByLabel('权威系统名称', { exact: true }).getAttribute('readonly'), '');
+      assert.equal(await button('维护字段来源信息').count(), 0);
+      await button('办理部门确认').click(); assert.equal(await page.getByLabel('以哪个系统的记录为准', { exact: true }).getAttribute('readonly'), '');
       const browserConfirmBase = await expect('reviewA', '/api/field-identities/field/921', 'GET');
       let browserConfirmBody;
       await page.route('**/api/field-identities/921/confirm', route => {
@@ -99,7 +99,7 @@ async function main() {
         assert.deepEqual(browserConfirmBody.expected_identity, browserConfirmBase);
         return route.continue();
       }, {times:1});
-      await button('确认已保存的黄金源').click(); await page.locator('[data-field-identity-success]').waitFor(); await identityReady();
+      await button('确认已保存的字段来源').click(); await page.locator('[data-field-identity-success]').waitFor(); await identityReady();
       assert.ok(browserConfirmBody); assert.equal(browserConfirmBody.authoritative_system, browserConfirmBase.authoritative_system_name);
       const confirmed = await row(); assert.equal(confirmed.confirmed, 1); assert.equal(confirmed.confirmed_by, 84); assert.equal(confirmed.authoritative_system_name, '合成新系统');
       const progress = await expect('reviewA', '/api/quality/field-identities/progress', 'GET'); assert.equal(progress.overall.confirmed, 1);
@@ -113,15 +113,15 @@ async function main() {
 
       await page.getByLabel('数据地图上下文', { exact: true }).selectOption('913'); await ready(); await choose('924');
       assert.match(await page.locator('[aria-labelledby="field-identity-heading"]').innerText(), /暂停维护/);
-      assert.equal(await button('维护黄金源信息').count(), 0);
+      assert.equal(await button('维护字段来源信息').count(), 0);
       await page.getByLabel('数据地图上下文', { exact: true }).selectOption('911'); await ready();
 
       await choose('921'); await edit('并发前草稿');
       await pool.execute("UPDATE data_map_field_identities SET note='另一办理人已变更' WHERE field_id=921");
-      const beforeConflict = writes(); await button('保存黄金源信息（待核实）').click(); await page.locator('[data-field-identity-error]').waitFor();
+      const beforeConflict = writes(); await button('保存字段来源信息（待核实）').click(); await page.locator('[data-field-identity-error]').waitFor();
       assert.match(await page.locator('[data-field-identity-error]').innerText(), /原记录已变化/); assert.equal(writes(), beforeConflict);
-      await refresh(); assert.match(await detail().innerText(), /另一办理人已变更/); assert.equal(await page.getByLabel('权威系统名称', { exact: true }).inputValue(), '并发前草稿');
-      assert.equal(await button('保存黄金源信息（待核实）').isDisabled(), true); await discard();
+      await refresh(); assert.match(await detail().innerText(), /另一办理人已变更/); assert.equal(await page.getByLabel('以哪个系统的记录为准', { exact: true }).inputValue(), '并发前草稿');
+      assert.equal(await button('保存字段来源信息（待核实）').isDisabled(), true); await discard();
       // Intervene after the UI preflight GET, before the actual locked write.
       await edit('读写间变化保留');
       const preflightSnapshot = await expect('contact', '/api/field-identities/field/921', 'GET');
@@ -135,41 +135,41 @@ async function main() {
       }, { times: 1 });
       const auditCount = async () => (await pool.query("SELECT COUNT(*) n FROM data_map_change_sets WHERE entity_type='data_map_field_identity'"))[0][0].n;
       const countBeforeRace = await auditCount();
-      await button('保存黄金源信息（待核实）').click(); await page.locator('[data-field-identity-error]').waitFor();
+      await button('保存字段来源信息（待核实）').click(); await page.locator('[data-field-identity-error]').waitFor();
       assert.ok(sentSnapshot); assert.match(await page.locator('[data-field-identity-error]').innerText(), /内容已变化或请求冲突/);
       assert.equal((await row()).authoritative_system_name, preflightSnapshot.authoritative_system_name);
       assert.equal(await auditCount(), countBeforeRace);
-      assert.equal(await page.getByLabel('权威系统名称', { exact: true }).inputValue(), '读写间变化保留');
-      assert.equal(await button('保存黄金源信息（待核实）').isDisabled(), true); await refresh(); await discard();
+      assert.equal(await page.getByLabel('以哪个系统的记录为准', { exact: true }).inputValue(), '读写间变化保留');
+      assert.equal(await button('保存字段来源信息（待核实）').isDisabled(), true); await refresh(); await discard();
       checks.push('real frontend sends saved snapshot; a change after preflight is rejected under lock without audit/write or input loss');
       for (const status of [403,409,503]) {
         await edit('错误保留' + status);
         await page.route('**/api/field-identities/921', r => r.fulfill({ status, json: { error: 'sensitive SQL' } }), { times: 1 });
-        await button('保存黄金源信息（待核实）').click(); await page.locator('[data-field-identity-error]').waitFor();
+        await button('保存字段来源信息（待核实）').click(); await page.locator('[data-field-identity-error]').waitFor();
         assert.doesNotMatch(await page.locator('[data-field-identity-error]').innerText(), /SQL/);
-        assert.equal(await button('保存黄金源信息（待核实）').isDisabled(), true);
-        assert.equal(await page.getByLabel('权威系统名称', { exact: true }).inputValue(), '错误保留' + status);
+        assert.equal(await button('保存字段来源信息（待核实）').isDisabled(), true);
+        assert.equal(await page.getByLabel('以哪个系统的记录为准', { exact: true }).inputValue(), '错误保留' + status);
         await refresh(); await discard();
       }
-      await edit('断网保留'); await context.setOffline(true); await button('保存黄金源信息（待核实）').click(); await page.locator('[data-field-identity-error]').waitFor(); await context.setOffline(false);
-      assert.equal(await page.getByLabel('权威系统名称', { exact: true }).inputValue(), '断网保留'); await discard();
+      await edit('断网保留'); await context.setOffline(true); await button('保存字段来源信息（待核实）').click(); await page.locator('[data-field-identity-error]').waitFor(); await context.setOffline(false);
+      assert.equal(await page.getByLabel('以哪个系统的记录为准', { exact: true }).inputValue(), '断网保留'); await discard();
       checks.push('changed record detected before write; injected 403/409/503 and network failures retain input and never replay writes');
 
       await edit('已写入但响应丢失');
       await page.route('**/api/field-identities/921', async route => { const response = await route.fetch(); assert.equal(response.status(), 200); await route.abort('failed'); }, { times: 1 });
-      await button('保存黄金源信息（待核实）').click(); await page.locator('[data-field-identity-error]').waitFor();
-      assert.equal((await row()).authoritative_system_name, '已写入但响应丢失'); assert.equal(await button('保存黄金源信息（待核实）').isDisabled(), true);
+      await button('保存字段来源信息（待核实）').click(); await page.locator('[data-field-identity-error]').waitFor();
+      assert.equal((await row()).authoritative_system_name, '已写入但响应丢失'); assert.equal(await button('保存字段来源信息（待核实）').isDisabled(), true);
       await refresh(); assert.match(await detail().innerText(), /已写入但响应丢失/);
       await pool.execute('UPDATE user_accounts SET auth_version=auth_version+1 WHERE account_id=183');
       await button('刷新字段身份').click(); await page.getByRole('heading', { name: '请重新登录', exact: true }).waitFor(); await login('contact'); await identityReady();
-      assert.equal(await page.getByLabel('权威系统名称', { exact: true }).inputValue(), '已写入但响应丢失'); assert.equal(await button('保存黄金源信息（待核实）').isDisabled(), true);
+      assert.equal(await page.getByLabel('以哪个系统的记录为准', { exact: true }).inputValue(), '已写入但响应丢失'); assert.equal(await button('保存字段来源信息（待核实）').isDisabled(), true);
       await discard();
       checks.push('real write then lost response remains uncertain across same-person session expiry/re-login until explicit reconciliation/discard');
 
       await edit('单次点击写入'); let release, entered;
       const hold = new Promise(resolve => { release = resolve; }), arrived = new Promise(resolve => { entered = resolve; });
       await page.route('**/api/field-identities/921', async route => { entered(); await hold; await route.continue(); }, { times: 1 });
-      const beforeDuplicate = writes(); await button('保存黄金源信息（待核实）').click(); await arrived;
+      const beforeDuplicate = writes(); await button('保存字段来源信息（待核实）').click(); await arrived;
       await button('正在提交…').evaluate(el => el.click()); assert.equal(writes(), beforeDuplicate + 1); release();
       await page.locator('[data-field-identity-success]').waitFor(); await identityReady();
       let releaseRead, enteredRead;
@@ -190,7 +190,7 @@ async function main() {
       await button('刷新字段身份').click(); await page.locator('[data-field-identity-state="error"]').waitFor(); assert.equal(await detail().count(), 0); await refresh();
       await edit('跨身份不可见草稿'); await pool.execute('UPDATE user_accounts SET auth_version=auth_version+1 WHERE account_id=183');
       await button('刷新字段身份').click(); await page.getByRole('heading', { name: '请重新登录', exact: true }).waitFor(); await login('admin'); await identityReady();
-      assert.equal(await page.locator('[data-field-identity-form]').count(), 0); assert.equal(await button('维护黄金源信息').count(), 0); assert.equal(await button('办理部门确认').count(), 0);
+      assert.equal(await page.locator('[data-field-identity-form]').count(), 0); assert.equal(await button('维护字段来源信息').count(), 0); assert.equal(await button('办理部门确认').count(), 0);
       await page.goto(fixture.baseURL + '/app/data-map?context=911&identityField=922'); await ready();
       const forbiddenReads = requests.filter(r => r.path === '/api/field-identities/field/922').length;
       assert.equal(forbiddenReads, 0); assert.equal(await detail().count(), 0);
@@ -234,7 +234,8 @@ async function main() {
       await button('查阅维护与确认记录').click(); await page.locator('[data-field-identity-history]').waitFor();
       assert.match(await page.locator('[data-field-identity-history]').innerText(), /维护字段身份信息/);
       await page.locator('[data-field-identity-history] summary').first().click();
-      assert.match(await page.locator('[data-field-identity-history]').innerText(), /负责人员编号/);
+      assert.match(await page.locator('[data-field-identity-history]').innerText(), /维护负责人/);
+      assert.doesNotMatch(await page.locator('[data-field-identity-history]').innerText(), /负责人员编号/);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
       await page.locator('[aria-labelledby="field-identity-heading"]').screenshot({ path: path.join(output, 'responsibility-history.png') });
       const history = await expect('contact', '/api/field-identities/field/921/history', 'GET');
@@ -322,15 +323,15 @@ async function main() {
         await page.route('**/api/field-identities/field/921/history', r => r.fulfill({ status, json: { error:'injected' } }), { times:1 });
         await button('查阅维护与确认记录').click(); await page.getByText('记录读取失败，请重试；失败不表示没有记录。', { exact:true }).waitFor();
         assert.equal(await page.locator('[data-field-identity-history]').count(), 0);
-        assert.equal(await page.getByLabel('权威系统名称', { exact:true }).inputValue(), '查历史时保留输入');
+        assert.equal(await page.getByLabel('以哪个系统的记录为准', { exact:true }).inputValue(), '查历史时保留输入');
       }
       await button('查阅维护与确认记录').click(); await page.locator('[data-field-identity-history]').waitFor();
       await discard();
       await page.route('**/api/field-identities/field/921/responsibility-options', r => r.fulfill({ status:503, json:{error:'injected'} }), { times:1 });
       await edit('名单失败保留输入'); await button('重试责任名单').waitFor();
-      assert.equal(await button('保存黄金源信息（待核实）').isDisabled(), true);
+      assert.equal(await button('保存字段来源信息（待核实）').isDisabled(), true);
       await button('重试责任名单').click(); await page.getByLabel('维护负责人', { exact:true }).selectOption('84');
-      assert.equal(await page.getByLabel('权威系统名称', { exact:true }).inputValue(), '名单失败保留输入');
+      assert.equal(await page.getByLabel('以哪个系统的记录为准', { exact:true }).inputValue(), '名单失败保留输入');
       await page.locator('[data-field-identity-form]').screenshot({path:path.join(output,'responsibility-form.png')}); await discard();
       checks.push('history read faults clear stale results and preserve active input; responsibility options failure blocks save and explicit retry preserves input');
       let releaseHistory, enteredHistory;
@@ -398,7 +399,7 @@ async function main() {
       await expect('adminMulti','/api/field-identities/921','PUT',{},403);
       await expect('adminMulti','/api/field-identities/921/confirm','POST',{},403);
       await relogin('adminMulti');
-      assert.equal(await button('维护黄金源信息').count(),0); assert.equal(await button('办理部门确认').count(),0);
+      assert.equal(await button('维护字段来源信息').count(),0); assert.equal(await button('办理部门确认').count(),0);
       await button('查阅维护与确认记录').click(); await page.locator('[data-field-identity-history]').waitFor();
       await page.locator('[aria-labelledby="field-identity-heading"]').screenshot({path:path.join(output,'mixed-admin-read-only.png')});
       checks.push('selected readiness detects missing tables/partial audit columns; closed optional preview ignores its marker, enabled preview refuses missing marker; locked field scope changes and mixed admin roles reject writes');
