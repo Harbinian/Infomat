@@ -14,6 +14,7 @@ function legacyDb() { return require('../db'); }
 const { requireAuth, getUserEffectivePermissions } = require('../auth');
 const { mysqlConfigFromEnv } = require('../mysqlConfig');
 const { makeIdentityMysqlRepository } = require('../identityMysqlRepository');
+const { sessionSubject, identityInteger } = require('../sessionSubject');
 
 
 const { ROLE_GUIDES } = require('../roleDefinitions');
@@ -25,6 +26,7 @@ let identityRepoPromise = null;
 let identityRepositoryFactory = null;
 
 let processDataGovernanceRepositoryFactory = null;
+let handoffWorkbenchFactory = null;
 const WORKBENCH_CACHE_TTL_MS = 15 * 1000;
 const roleGroupsCache = new Map();
 const workbenchResponseCache = new Map();
@@ -46,7 +48,7 @@ function runAsyncAction(res, action, unavailableMessage) {
     // application-status branch so driver messages never reach the response.
     if (sendMysqlUnavailable(res, error)) return;
     if (error && error.statusCode) {
-      return res.status(error.statusCode).json({ error: error.message });
+      return res.status(error.statusCode).json(error.payload || { error: error.message, ...(error.code ? {code:error.code} : {}) });
     }
     logRequestFailure(res, error);
     return res.status(unavailableMessage ? 503 : 500).json({ error: unavailableMessage || '服务器错误' });
@@ -211,6 +213,7 @@ function buildRoleGroups(roleCodes) {
     roles,
     roleGroups: [
       { key: 'system', label: '系统管理角色', roles: roles.filter(role => role.group === 'system') },
+      { key: 'directory', label: '组织与人员维护角色', roles: roles.filter(role => role.group === 'directory') },
       { key: 'mdm', label: 'MDM工作角色', roles: roles.filter(role => role.group === 'mdm') }
     ]
   };
@@ -476,25 +479,44 @@ function buildSankey(activeRoles, contexts, workItems) {
   return { nodes: Array.from(nodes.values()), links: Array.from(links.values()) };
 }
 
-async function loadProcessDataGovernanceWorkItems(identity, res) {
+function workbenchActor(identity, session) {
+  const subject = sessionSubject(session);
+  return {
+    userId: identity.user.id,
+    identityKind: subject.kind,
+    personId: identityInteger(subject.personId),
+    accountId: identityInteger(subject.accountId),
+    authVersion: identityInteger(subject.authVersion),
+    departmentId: identityInteger(identity.user.departmentId),
+    departmentName: identity.user.departmentName,
+    roleCodes: new Set(identity.roleCodes || []),
+    permissions: identity.permSet,
+    canReadGlobal: identity.permSet.has('governance:read-global'),
+    canReviewDepartment: identity.permSet.has('governance:review-department')
+  };
+}
+
+async function loadProcessDataGovernanceWorkItems(identity, res, session) {
   if (!isProcessDataGovernanceEnabled()) return [];
   try {
     const repo = processDataGovernanceRepositoryFactory
       ? await processDataGovernanceRepositoryFactory()
       : await require('./processDataGovernance').getProcessDataGovernanceRepository();
-    return await repo.listWorkbenchItems({
-      userId: identity.user.id,
-      personId: identity.user.personId || identity.user.id,
-      departmentId: identity.user.departmentId,
-      departmentName: identity.user.departmentName,
-      roleCodes: new Set(identity.roleCodes || []),
-      permissions: identity.permSet
-    });
+    return await repo.listWorkbenchItems(workbenchActor(identity, session));
   } catch (error) {
     // R06: recorded as a classification; the driver's text stays out of the log.
     securityLog(res).write({ event: 'dependency_degraded', code: 'PROCESS_DATA_GOVERNANCE_ITEMS_UNAVAILABLE' });
     throw error;
   }
+}
+
+async function loadHandoffWorkItems(session) {
+  if(!useMysqlIdentityReadModel())return {availability:{state:'not_applicable',code:'HANDOFF_MYSQL_REQUIRED'},work_items:[]};
+  if(!handoffWorkbenchFactory){
+    if(String(process.env.DATA_MAP_HANDOFF_ENABLED||'0')==='1')throw require('../dataMapHandoffPolicy').failure('HANDOFF_WORKBENCH_UNAVAILABLE',503);
+    return {availability:{state:'disabled',code:'HANDOFF_DISABLED'},work_items:[]};
+  }
+  return (await handoffWorkbenchFactory()).read(session);
 }
 
 router.get('/', requireAuth, (req, res) => {
@@ -513,13 +535,8 @@ router.get('/', requireAuth, (req, res) => {
     const body = await getOrBuildWorkbenchResponse(cacheKey, async () => {
       const [officeWorkItems, processDataGovernance, v7WorkItems] = await Promise.all([
         useMysqlIdentityReadModel() && !administrator ? require('./offices').getOfficeRepository().personalWorkItems(req.session) : [],
-        loadProcessDataGovernanceWorkItems(identity, res),
-        useMysqlProcessGovernanceReadModel() ? require('./processPreviewReview').listProcessWorkbenchItems({
-          userId: identity.user.id, personId: identity.user.personId, departmentId: identity.user.departmentId,
-          accountId: Number(req.session.accountId || 0), authVersion: Number(req.session.authVersion || 0),
-          departmentName: identity.user.departmentName, roleCodes: new Set(roleCodes), permissions: permSet,
-          canReadGlobal: canViewAll, canReviewDepartment: permSet.has('governance:review-department')
-        }) : []
+        loadProcessDataGovernanceWorkItems(identity, res, req.session),
+        useMysqlProcessGovernanceReadModel() ? require('./processPreviewReview').listProcessWorkbenchItems(workbenchActor(identity, req.session)) : []
       ]);
       const activeRoles = roleCodes.includes('admin') ? ownedRoles.filter(role => role.code === 'admin') : ownedRoles;
 
@@ -601,10 +618,16 @@ router.get('/', requireAuth, (req, res) => {
     // Per-issue authority is revalidated outside the legacy 15-second response cache.
     const officeRepo=useMysqlIdentityReadModel()&&!administrator?require('./offices').getOfficeRepository():null;
     const closureItems=officeRepo?.closureWorkItems?await officeRepo.closureWorkItems(req.session):[];
-    const liveActions=closureItems.length?buildNextActions([...closureItems,...body.workItems.filter(i=>i.type!=='guidance')],ownedRoles):body.nextActions;
-    const response=closureItems.length?{...body,workItems:[...closureItems,...body.workItems],
-      nextActions:liveActions,
-      summary:{...body.summary,priorityCount:liveActions.length,actionableCount:body.summary.actionableCount+closureItems.length}}:body;
+    // This discovery and every resource qualification run outside the legacy
+    // response cache. No persistent todo IDs or guessed mapping links are used.
+    const handoff=await loadHandoffWorkItems(req.session);
+    const handoffItems=administrator?[]:normalizeWorkItems(handoff.work_items||[]);
+    const dynamicItems=[...handoffItems,...closureItems];
+    const liveActions=dynamicItems.length?buildNextActions([...dynamicItems,...body.workItems.filter(i=>i.type!=='guidance')],ownedRoles):body.nextActions;
+    const response={...body,workItems:dynamicItems.length?[...dynamicItems,...body.workItems.filter(i=>mode==='all'||i.type!=='guidance')]:body.workItems,
+      nextActions:liveActions,handoff:{availability:handoff.availability,actionableCount:handoffItems.length},
+      summary:{...body.summary,priorityCount:liveActions.length,actionableCount:body.summary.actionableCount+dynamicItems.length,
+        governance:{...body.summary.governance,dataMapHandoffs:handoffItems.length}}};
     res.setHeader('Cache-Control', 'no-store');
     res.json(response);
   }, useMysqlIdentityReadModel() ? '工作台待办暂不可用，请稍后重试' : null);
@@ -625,5 +648,7 @@ router.resetProcessDataGovernanceRepositoryFactory = () => {
   clearWorkbenchCaches();
 };
 router.clearWorkbenchCaches = clearWorkbenchCaches;
+router.setHandoffWorkbenchFactory = factory => { handoffWorkbenchFactory = factory; };
+router.resetHandoffWorkbenchFactory = () => { handoffWorkbenchFactory = null; };
 
 module.exports = router;

@@ -28,7 +28,10 @@ async function currentPublicationActor(req) {
   const principal = subject.principal;
   const [{ permSet }, roles] = await Promise.all([getUserEffectivePermissionsAsync(principal), getUserRoleCodesAsync(principal)]);
   const admin = systemIdentity || roles.some(role => (role.code || role.role_code) === 'admin');
-  return { identityKind: subject.kind, personId, accountId:identityInteger(subject.accountId), authVersion:identityInteger(subject.authVersion), canRead: permSet.has('identity:read') || permSet.has('governance:read-global'), canPrepare: permSet.has('identity:manage-account') || permSet.has('governance:publish'), canPublish: !admin && permSet.has('governance:publish') };
+  const canMaintainDirectory = !admin && permSet.has('directory:maintain');
+  const canPublishMasterData = !admin && permSet.has('governance:publish');
+  const canPrepareMasterData = permSet.has('identity:manage-account') || canPublishMasterData;
+  return { identityKind: subject.kind, personId, accountId:identityInteger(subject.accountId), authVersion:identityInteger(subject.authVersion), canRead: permSet.has('identity:read') || permSet.has('directory:read') || permSet.has('governance:read-global'), canPrepare: canPrepareMasterData || canMaintainDirectory, canPublish: canPublishMasterData || canMaintainDirectory, canMaintainDirectory, canPublishMasterData, canPrepareMasterData };
 }
 
 function run(res, action) {
@@ -59,6 +62,25 @@ function kind(value) {
   return value;
 }
 
+function assertKindWriteAccess(actor, selectedKind, publish = false) {
+  const allowed = selectedKind === 'master_data'
+    ? actor[publish ? 'canPublishMasterData' : 'canPrepareMasterData']
+    : actor.canMaintainDirectory;
+  if (!allowed) {
+    const error = failure(selectedKind === 'master_data' ? '当前账号无权办理此主数据发布' : '组织与人员目录由具备目录维护权限的行政人事人员维护', 'PUBLICATION_ACCESS_DENIED');
+    error.statusCode = 403;
+    throw error;
+  }
+}
+
+function assertDirectoryHistoryAccess(actor, publication) {
+  if (publication.kind !== 'master_data' && !actor.canMaintainDirectory) {
+    const error = failure('组织与人员历史包含维护资料，仅目录维护人员可查看完整内容', 'DIRECTORY_HISTORY_ACCESS_DENIED');
+    error.statusCode = 403;
+    throw error;
+  }
+}
+
 function jsonField(value, fallback) {
   if (!value) return fallback;
   try { return JSON.parse(value); } catch (_) { throw failure('导入核对信息无法读取，请重新选择文件'); }
@@ -78,11 +100,12 @@ async function contentFromFile(req) {
 }
 
 router.get('/status', requireAuth, requirePublicationAccess('canRead'), (req, res) => run(res, async () => {
-  res.json({ ...await repo().status(), canPrepare: req.publicationActor.canPrepare, canPublish: req.publicationActor.canPublish, maxRows: MAX_ROWS, maxColumns: MAX_COLUMNS });
+  const selectedKind = kind(req.query.kind || 'master_data'), actor = req.publicationActor;
+  res.json({ ...await repo().status(), canPrepare:selectedKind === 'master_data' ? actor.canPrepareMasterData : actor.canMaintainDirectory, canPublish:selectedKind === 'master_data' ? actor.canPublishMasterData : actor.canMaintainDirectory, canMaintainDirectory:actor.canMaintainDirectory, canReadDirectoryHistory:actor.canMaintainDirectory, canPublishMasterData:actor.canPublishMasterData, canPrepareMasterData:actor.canPrepareMasterData, maxRows: MAX_ROWS, maxColumns: MAX_COLUMNS });
 }));
 
 router.get('/', requireAuth, requirePublicationAccess('canRead'), (req, res) => run(res, async () => {
-  res.json({ rows: await repo().list(kind(req.query.kind || 'master_data')) });
+  res.json({ rows: await repo().list(kind(req.query.kind || 'master_data'), { includeDirectoryHistory: req.publicationActor.canMaintainDirectory === true }) });
 }));
 
 router.get('/template', requireAuth, requirePublicationAccess('canRead'), (req, res) => run(res, async () => {
@@ -95,20 +118,23 @@ router.get('/template', requireAuth, requirePublicationAccess('canRead'), (req, 
 
 router.post('/parse', requireAuth, requirePublicationAccess('canPrepare'), file, (req, res) => run(res, async () => {
   const selectedKind = kind(req.body.kind);
+  assertKindWriteAccess(req.publicationActor, selectedKind);
   const parsed = await parseSpreadsheet(req.file.buffer, req.file.originalname, req.body.sheetName);
   res.json({ ...parsed, suggestedMapping: suggestedMapping(selectedKind, parsed.headers), fields: FIELDS[selectedKind], datasetKey: selectedKind === 'master_data' ? 'master_' + crypto.randomUUID() : selectedKind });
 }));
 
 router.post('/preview', requireAuth, requirePublicationAccess('canPrepare'), file, (req, res) => run(res, async () => {
   const normalized = await contentFromFile(req);
+  assertKindWriteAccess(req.publicationActor, normalized.content.kind);
   res.json({ ...await repo().preview(normalized, req.body.datasetKey), rowCount: normalized.content.rows.length });
 }));
 
 router.post('/publish', requireAuth, requirePublicationAccess('canPublish'), file, (req, res) => run(res, async () => {
   const normalized = await contentFromFile(req);
+  assertKindWriteAccess(req.publicationActor, normalized.content.kind, true);
   const checked = jsonField(req.body.checked, {});
   if (req.body.confirmed !== 'true') throw failure('请明确确认核对结果后再发布');
-  const published = await repo().publish({ ...checked, content: normalized.content, datasetKey: req.body.datasetKey, requestId: req.body.requestId }, req.publicationActor);
+  const published = await repo().publish({ ...checked, content: normalized.content, datasetKey: req.body.datasetKey, requestId: req.body.requestId, reason:req.body.reason }, req.publicationActor);
   res.status(published.idempotent ? 200 : 201).json(published);
 }));
 
@@ -116,6 +142,7 @@ router.get('/:id/download', requireAuth, requirePublicationAccess('canRead'), (r
   if (!/^\d+$/.test(req.params.id)) throw failure('发布版本标识无效');
   const publication = await repo().get(req.params.id);
   if (!publication) return res.status(404).json({ error: '发布版本不存在' });
+  assertDirectoryHistoryAccess(req.publicationActor,publication);
   const asJson = req.query.format === 'json';
   const filename = `${publication.title}-v${publication.version_no}.${asJson ? 'json' : 'xlsx'}`;
   res.setHeader('Content-Disposition', `attachment; filename="publication.${asJson ? 'json' : 'xlsx'}"; filename*=UTF-8''${encodeURIComponent(filename)}`);
@@ -127,6 +154,7 @@ router.get('/:id', requireAuth, requirePublicationAccess('canRead'), (req, res) 
   if (!/^\d+$/.test(req.params.id)) throw failure('发布版本标识无效');
   const result = await repo().get(req.params.id);
   if (!result) return res.status(404).json({ error: '发布版本不存在' });
+  assertDirectoryHistoryAccess(req.publicationActor,result);
   res.json(result);
 }));
 

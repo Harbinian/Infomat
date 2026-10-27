@@ -1,0 +1,95 @@
+{
+  "schema_version": "department-role-requirements-v1",
+  "access_model_version": "rbac-raci-v5-2026-10-19",
+  "source": {
+    "file_name": "新花名册.xlsx",
+    "sha256": "2845c7f768d922bef7dcc29d2945791a5263c894f4bd9aa41737da91b685d238",
+    "confirmed_date": "2026-10-14"
+  },
+  "departments": [
+    {
+      "name": "复材一车间",
+      "role_codes": [
+        "department_contact",
+        "department_mdm_reviewer"
+      ]
+    },
+    {
+      "name": "复材二车间",
+      "role_codes": [
+        "department_contact",
+        "department_mdm_reviewer"
+      ]
+    },
+    {
+      "name": "复材车间",
+      "role_codes": [
+        "department_contact",
+        "department_mdm_reviewer"
+      ]
+    },
+    {
+      "name": "工程技术部",
+      "role_codes": [
+        "department_contact",
+        "department_mdm_reviewer"
+      ]
+    },
+    {
+      "name": "总经办",
+      "role_codes": [
+        "department_contact",
+        "department_mdm_reviewer"
+      ]
+    },
+    {
+      "name": "物资保障部",
+      "role_codes": [
+        "department_contact",
+        "department_mdm_reviewer"
+      ]
+    },
+    {
+      "name": "经营发展部",
+      "role_codes": [
+        "department_contact",
+        "department_mdm_reviewer"
+      ]
+    },
+    {
+      "name": "行政人事部",
+      "role_codes": [
+        "department_contact",
+        "department_mdm_reviewer"
+      ]
+    },
+    {
+      "name": "财务部",
+      "role_codes": [
+        "department_contact",
+        "department_mdm_reviewer"
+      ]
+    },
+    {
+      "name": "质量管理部",
+      "role_codes": [
+        "department_contact",
+        "department_mdm_reviewer"
+      ]
+    },
+    {
+      "name": "运维安环部",
+      "role_codes": [
+        "department_contact",
+        "department_mdm_reviewer"
+      ]
+    },
+    {
+      "name": "项目管理部",
+      "role_codes": [
+        "department_contact",
+        "department_mdm_reviewer"
+      ]
+    }
+  ]
+}

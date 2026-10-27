@@ -1,3 +1,4 @@
+import {userMessage} from './businessPresentation.js';
 import { useEffect, useRef, useState } from 'react';
 import { FormField, StatusPanel, useUnsavedInput } from './components.jsx';
 
@@ -35,12 +36,12 @@ export function PasswordChange({ api, user, required = false, onChanged, onLogou
   return <section className="card password-change" aria-labelledby="password-required-title">
     <h2 id="password-required-title" tabIndex={-1}>{required ? '请先修改当前账号密码' : '修改本人密码'}</h2>
     <p>当前账号：{user.personName || user.name || user.employeeNo || '系统维护账号'}。{required ? '完成修改并重新登录后才能办理业务。' : '修改成功后需要使用新密码重新登录。'}</p>
-    <p>新密码至少 10 位，同时包含字母和数字，不能包含工号；最终由服务端校验。</p>
+    <p>新密码至少 10 位，同时包含字母和数字，不能包含工号。提交后会核对密码是否符合要求；未通过时，页面会提示重新填写。</p>
     <form onSubmit={submit} noValidate aria-busy={busy}>
       <FormField id="change-password-current" label="当前密码" type="password" autoComplete="current-password" disabled={busy} value={values.current} error={errors.current} onChange={e => update('current', e.target.value)} />
       <FormField id="change-password-next" label="新密码" type="password" autoComplete="new-password" disabled={busy} value={values.next} error={errors.next} onChange={e => update('next', e.target.value)} />
       <FormField id="change-password-repeat" label="再次填写新密码" type="password" autoComplete="new-password" disabled={busy} value={values.repeat} error={errors.repeat} onChange={e => update('repeat', e.target.value)} />
-      {error && <StatusPanel kind="error" title="密码修改未完成">{error}</StatusPanel>}
+      {error && <StatusPanel kind="error" title="密码修改未完成">{userMessage(error)}</StatusPanel>}
       <div className="button-row"><button className="primary" type="submit" disabled={busy}>{busy ? '正在修改…' : '修改密码并重新登录'}</button>{onLogout && <button className="secondary" type="button" disabled={busy} onClick={onLogout}>退出登录</button>}</div>
     </form>
   </section>;

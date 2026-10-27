@@ -11,14 +11,18 @@ const {
 const expectedRoles = [
   'admin',
   'mdm_lead',
+  'mdm_steward',
   'department_contact',
   'department_mdm_reviewer',
   'data_conflict_handler',
   'data_quality_auditor',
-  'decision_group'
+  'decision_group',
+  'hr_directory_manager'
 ];
 
 const expectedPermissions = [
+  'directory:read',
+  'directory:maintain',
   'identity:read',
   'identity:manage-account',
   'identity:assign-role',
@@ -27,6 +31,7 @@ const expectedPermissions = [
   'governance:read-department',
   'governance:read-assigned-context',
   'governance:read-escalated-context',
+  'governance:handle-assigned-work',
   'governance:draft-department',
   'governance:submit-department',
   'governance:review-department',
@@ -52,7 +57,7 @@ function main() {
     model.permissions.map(item => item.code).sort(),
     expectedPermissions.slice().sort()
   );
-  assert.strictEqual(model.activities.length, 11);
+  assert.strictEqual(model.activities.length, 12);
   model.roles.forEach(roleDefinition => {
     assert.ok(Array.isArray(roleDefinition.visibleTabs) && roleDefinition.visibleTabs.length > 0);
   });
@@ -72,6 +77,17 @@ function main() {
   assert.ok(!admin.permissions.includes('governance:publish'));
   assert.ok(!admin.permissions.includes('governance:review-department'));
   assert.ok(!admin.permissions.includes('governance:draft-department'));
+  assert.deepStrictEqual(role(model, 'mdm_steward').permissions, [
+    'governance:read-assigned-context', 'governance:handle-assigned-work'
+  ]);
+  assert.deepStrictEqual(role(model, 'hr_directory_manager').permissions, [
+    'identity:read', 'directory:read', 'directory:maintain'
+  ]);
+  assert.deepStrictEqual(role(model, 'hr_directory_manager').visibleTabs.map(tab => tab.code), [
+    'roleWorkbench', 'orgUnits', 'persons', 'roleGuide'
+  ]);
+  assert.equal(role(model, 'hr_directory_manager').group, 'directory');
+  assert.ok(!admin.permissions.includes('directory:maintain'));
 
   assert.deepStrictEqual(role(model, 'data_conflict_handler').permissions, [
     'governance:read-assigned-context',

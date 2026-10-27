@@ -1,3 +1,4 @@
+import {userMessage} from "./businessPresentation.js";
 import React, { useEffect, useRef, useState } from 'react';
 
 export function FieldExport({ api, user, disabled }) {
@@ -25,7 +26,7 @@ export function FieldExport({ api, user, disabled }) {
       setState({ message: '已将 Excel 文件交给浏览器下载，请查看浏览器下载记录。尚未保存的输入没有提交。' });
     } catch (error) {
       if (controller.signal.aborted || active.current !== controller) return;
-      setState({ error: `${error.message} 未生成下载文件，可手动重试；尚未保存的输入没有提交。` });
+      setState({ error: `${userMessage(error)} 未生成下载文件，可手动重试；尚未保存的输入没有提交。` });
     } finally {
       if (active.current === controller) { active.current = null; setState(previous => ({ ...previous, busy: false })); }
     }
@@ -40,7 +41,7 @@ export function FieldExport({ api, user, disabled }) {
       <button type="button" disabled={!allowed || disabled || state.busy} onClick={download}>{state.busy ? '正在准备台账…' : '下载可见范围台账'}</button>
       {state.busy && <button type="button" className="secondary" onClick={cancel}>取消台账下载</button>}
     </div>
-    {state.error && <p role="alert" data-field-export-error>{state.error}</p>}
-    {state.message && <p role="status" data-field-export-message>{state.message}</p>}
+    {state.error && <p role="alert" data-field-export-error>{userMessage(state.error)}</p>}
+    {state.message && <p role="status" data-field-export-message>{userMessage(state.message)}</p>}
   </section>;
 }

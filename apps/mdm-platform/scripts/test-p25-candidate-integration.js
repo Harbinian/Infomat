@@ -34,7 +34,8 @@ async function main(){
       const health=await (await fetch(fixture.baseURL+'/api/health')).json();
       await check('candidate HTTP health and compiled asset bytes bind to packaged source; server source is not public',async()=>{
         assert.equal(health.version.sourceDigest,require('../server/runtimeVersion').runtimeVersion().sourceDigest);
-        const dist=path.resolve(__dirname,'../frontend/dist'),index=fs.readFileSync(path.join(dist,'index.html'),'utf8');
+        const candidateAt=process.argv.indexOf('--frontend-dist');
+        const dist=candidateAt>0?path.resolve(process.argv[candidateAt+1]):path.resolve(__dirname,'../frontend/dist'),index=fs.readFileSync(path.join(dist,'index.html'),'utf8');
         const asset=index.match(/src="(\/app\/assets\/[^\"]+\.js)"/)[1];
         const response=await fetch(fixture.baseURL+asset);assert.equal(response.status,200);assert.equal(hash(Buffer.from(await response.arrayBuffer())),hash(fs.readFileSync(path.join(dist,asset.slice('/app/'.length)))));
         for(const url of ['/server/index.js','/manifest.json','/package-lock.json'])assert.equal((await fetch(fixture.baseURL+url)).status,404);
@@ -46,7 +47,7 @@ async function main(){
         const page=await browser.newPage({viewport:{width:1699,height:828},deviceScaleFactor:1});
         let protectedReads=0;page.on('request',r=>{if(new URL(r.url()).pathname==='/api/org/accounts')protectedReads++;});
         await page.goto(fixture.baseURL+'/app/accounts');await page.locator('#login-name').fill('admin');await page.locator('#login-password').fill(password);await page.getByRole('button',{name:'登录',exact:true}).click();
-        await page.getByRole('heading',{name:'请先完成首次改密',exact:true}).waitFor();
+        await page.getByRole('heading',{name:'请先修改当前账号密码',exact:true}).waitFor();
         assert.equal(protectedReads,0);assert.equal(await page.evaluate(()=>visualViewport.scale),1);
         assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
         await page.screenshot({path:path.join(output,'admin-gate-desktop.png')});await page.close();
@@ -70,8 +71,10 @@ async function main(){
           fields:[{field_ref:'field_record_id',field_name:'记录编号',field_type:'文本',definition:'合成编号'}],
           behavior_links:[{link_ref:'link_create',behavior_ref:'behavior_prepare',operation:'create',updated_field_refs:[]},{link_ref:'link_use',behavior_ref:'behavior_receive',operation:'use',updated_field_refs:[]}],source_relations:[],
           lifecycle:{applicability:'pending_confirmation',entry_state:{business_validity:'pending_confirmation',custody:'pending_confirmation',identifiability_applicability:'pending_confirmation',identifiability:'pending_confirmation'},routes:[],analysis:{analyzer_version:'',source_fingerprint:'',status:'not_analyzed'},decision_reason:'',decision_notes:''}}];
-        document.behaviors.push({...document.behaviors[0],behavior_ref:'behavior_isolated',behavior_name:'合成孤立行为待核实'});
-        if(nativeV8){document.behaviors[1].node_type='decision';document.data_objects[0].behavior_links.push({link_ref:'link_decision_use',behavior_ref:'behavior_check',operation:'use',updated_field_refs:[]});}
+        document.behaviors.push({...document.behaviors[0],behavior_ref:'behavior_isolated',behavior_name:'合成孤立行为待确认'});
+        if(nativeV8){document.behaviors[1].node_type='decision';document.behaviors[1].behavior_name='是否完成合成内容核对';document.flow_relations[1].relation_type='condition';document.flow_relations[1].condition='合成核对已完成';document.flow_relations.push({relation_ref:'relation_recheck',relation_type:'loop',from_behavior_ref:'behavior_check',to_behavior_ref:'behavior_prepare',condition:'合成核对尚未完成'});document.data_objects[0].behavior_links.push({link_ref:'link_decision_use',behavior_ref:'behavior_check',operation:'use',updated_field_refs:[]});}
+        save('continuous-synthetic-document.json',document);
+        save('continuous-content-checks.json',require('../server/processContentChecks').collectContentChecks(document,[],undefined,{departments:['合成甲部','合成乙部','合成丙部']}));
         const imported=await expect('contact','/api/process-v7-preview/cases','POST',{document,source_file_name:'p25-continuous-synthetic.json'},201);
         const url='/api/process-v7-preview/cases/'+imported.case.id;detail=await expect('contact',url,'GET');
         await expect('contact',url+'/authoring-records','POST',{...bind(detail),record_kind:'transfer',recipient_person_id:'89',content:'合成归口人员明确指定该案例编制者',request_key:uuid()});

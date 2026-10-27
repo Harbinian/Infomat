@@ -2,14 +2,18 @@ import React, { useMemo, useEffect, useRef } from 'react';
 import { Select, Button, Table, Empty, Space, Tag, Typography } from 'antd';
 import FieldInput from './FieldInput.jsx';
 import { catalog, businessLabel, gridTarget } from './model.mjs';
+import { organizationField } from './organization.mjs';
 
 const nameOf = row => row.data_name || row.form_name || row.area_title || row.item_name || row.field_name || '未命名记录';
 export const GRID_NAMES = { data_objects:'数据对象', data_fields:'对象字段', data_behavior_links:'数据与环节关系', data_source_relations:'数据来源', forms:'表单／记录', form_behavior_links:'表单与环节关系', form_areas:'表单区域', form_items:'表单字段', field_source_links:'字段取值来源' };
 
 export function gridOptions(column, state, row) {
+  const organization = organizationField(column, state.enums, row);
+  if (organization.organization) return organization.options;
   const tables = state.session?.tables || {};
   const labels = globalThis.ProcessV7GridAdapter?.LABELS || {};
   const entries=catalog(state.gridDraftDocument||state.document);
+  if (column.lookup === 'collectionFields') return (tables.data_fields || []).filter(x => !x._deleted && x.data_ref === row.data_ref).map(x => ({value:x.field_ref,label:businessLabel(entries,{kind:'data-field',ref:x.field_ref,parentRef:x.data_ref}),disabled:entries.find(entry=>entry.kind==='data-field'&&entry.ref===x.field_ref)?.ambiguous}));
   if (column.editor === 'update-fields') return (tables.data_fields || []).filter(x => !x._deleted && x.data_ref === row.data_ref).map(x => ({value:x.field_ref,label:businessLabel(entries,{kind:'data-field',ref:x.field_ref,parentRef:x.data_ref}),disabled:entries.find(entry=>entry.kind==='data-field'&&entry.ref===x.field_ref)?.ambiguous}));
   if (!column.lookup) return column.values || column.options || [];
   let rows = tables[column.lookup] || [];
@@ -35,14 +39,14 @@ export default function GridWorkspace({ state, dispatch }) {
   const chooseTable = value => dispatch({type:'grid-table',tableId:value,parentRef:''});
   const columns = useMemo(() => !definition ? [] : definition.columns.filter(c => !c.readOnly && c.key !== definition.parentKey && c.key !== 'form_ref').map((column,columnIndex) => ({
     title:column.label, key:column.key, dataIndex:column.key, width:column.editor === 'textarea' ? 280 : column.editor === 'update-fields' ? 240 : 190,
-    render:(value,row) => <FieldInput compact id={`cell-${tableId}-${row._row_id}-${column.key}`} field={{...column,readOnly:column.readOnly||tableId==='form_items'&&column.key==='item_type'&&Boolean(row.data_field_ref),options:gridOptions(column,state,row)}} value={value} onChange={v=>dispatch({type:'grid-update',tableId,rowId:row._row_id,column:column.key,value:v})} onPaste={e=>{
+    render:(value,row) => <FieldInput compact id={`cell-${tableId}-${row._row_id}-${column.key}`} field={{...organizationField(column,state.enums,row),readOnly:column.readOnly||tableId==='form_items'&&column.key==='item_type'&&Boolean(row.data_field_ref),options:gridOptions(column,state,row)}} value={value} onChange={v=>dispatch({type:'grid-update',tableId,rowId:row._row_id,column:column.key,value:v})} onPaste={e=>{
       if (e.nativeEvent?.isComposing) return;
       const text=e.clipboardData.getData('text/plain');
       if (!/[\t\r\n]/.test(text)) return;
       e.preventDefault();
       dispatch({type:'grid-paste',tableId,rowId:row._row_id,column:column.key,text,matrix:globalThis.NativeWebGrid.parseClipboardGrid(text)});
     }} />,
-  })),[definition,tableId,session?.tables,state.document]);
+  })),[definition,tableId,session?.tables,state.document,state.enums]);
   useEffect(()=>{
     if (!state.focus?.rowId || state.focus.tableId!==tableId) return;
     const input=state.focus.field?document.getElementById(`cell-${tableId}-${state.focus.rowId}-${state.focus.field}`):wrapper.current?.querySelector(`[id^="cell-${tableId}-${state.focus.rowId}-"]`);

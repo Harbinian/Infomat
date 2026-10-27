@@ -23,8 +23,8 @@ test('formal V8 and V7 documents verify exact format and digest without converti
  const {versionDocument}=require('../server/processDataGovernanceRepository'),{digest}=require('../server/processDataGovernance');
  for(const d of [native(),document()]){const row={schema_version:d.schema_version,process_content_json:JSON.stringify(d),content_hash:digest(d)};assert.deepEqual(versionDocument(row),d);assert.throws(()=>versionDocument({...row,schema_version:d.schema_version==='process-governance-v8'?'process-governance-v7':'process-governance-v8'}),e=>e.code==='PROCESS_DATA_GOVERNANCE_SOURCE_VERSION_UNSUPPORTED');assert.throws(()=>versionDocument({...row,content_hash:'0'.repeat(64)}),e=>e.code==='PROCESS_DATA_GOVERNANCE_SOURCE_CHANGED');}
 });
-test('current capabilities advertise V8 primary; legacy format admission remains fenced',()=>{
- const f=require('../server/processDataGovernanceScope').featureStatus({});assert.equal(f.primary_schema_version,'process-governance-v8');assert.deepEqual(f.supported_schema_versions,['process-governance-v8','process-governance-v7']);
+test('current capabilities advertise V9 primary while V8 admission stays native and historical rules remain fenced',()=>{
+ const f=require('../server/processDataGovernanceScope').featureStatus({});assert.equal(f.primary_schema_version,'process-governance-v9');assert.deepEqual(f.supported_schema_versions,['process-governance-v9','process-governance-v8','process-governance-v7']);
  const input={input_key:'source',document:native()};const manifest={steps:[{parser_key:rules.PARSER,input_keys:['source']}],parser_versions:{[rules.PARSER]:rules.VERSION}};rules.assertSourceFormats(manifest,[input]);rules.assertSourceFormats({...manifest,parser_versions:{[rules.PARSER]:rules.PREVIOUS_VERSION}},[input]);for(const v of [rules.LEGACY_VERSION,rules.V2_VERSION])assert.throws(()=>rules.assertSourceFormats({...manifest,parser_versions:{[rules.PARSER]:v}},[input]),e=>e.code==='DEFINITION_ANALYSIS_SOURCE_FORMAT_UNSUPPORTED');
 });
 test('preview canonical and historical module paths share one implementation and preserve native bodies',()=>{

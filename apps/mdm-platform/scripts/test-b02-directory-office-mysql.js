@@ -7,7 +7,7 @@ const fs = require('node:fs'), path = require('node:path'), crypto = require('no
 const Module = require('node:module');
 const { withFreshMysql } = require('./testHelpers/freshMysql');
 const { makeIdentityMysqlRepository, readPersonQualification } = require('../server/identityMysqlRepository');
-const { makePublicationRepository, directoryPlan } = require('../server/publicationRepository');
+const { makePublicationRepository, directoryPlan, DIRECTORY_SOURCE_HASH_VERSION } = require('../server/publicationRepository');
 const { makeOfficeRepository } = require('../server/officeRepository');
 const { normalizePublication, suggestedMapping } = require('../server/publicationSpreadsheet');
 const { officeSnapshot, officePublicationState } = require('../server/officePublication');
@@ -46,18 +46,20 @@ async function main() {
       const connection=await pool.getConnection();try{await require('../server/systemAdminMigration').applySystemAdmin(connection);}finally{connection.release();}
       for(const [id,code,parent] of [[91,'SAFE',null],[92,'OTHER',null],[D0,'D0',null],[D1,'D1',D0]])
         await pool.execute('INSERT INTO departments(id,code,name,parent_id,path) VALUES (?,?,?,?,?)',[String(id),code,code,parent,'/'+id+'/']);
-      const actors=[{personId:81,accountId:181,authVersion:1,dept:91,roles:['mdm_lead']},
+      // These two synthetic multi-role actors exercise both directory maintenance
+      // and the independent governance office-work permissions in this suite.
+      const actors=[{personId:81,accountId:181,authVersion:1,dept:91,roles:['mdm_lead','hr_directory_manager']},
         {personId:P0,accountId:'9007199254741300',authVersion:1,dept:D0,roles:['admin']},
         {personId:P1,accountId:'9007199254741301',authVersion:'9007199254741401',dept:D1,roles:[]},
         {personId:P2,accountId:'9007199254741302',authVersion:1,dept:D0,roles:['department_contact']},
         {personId:P3,dept:D1,roles:[]},
-        {personId:85,accountId:185,authVersion:1,dept:91,roles:['admin','mdm_lead']},
+        {personId:85,accountId:185,authVersion:1,dept:91,roles:['admin','mdm_lead','hr_directory_manager']},
         {personId:86,accountId:186,authVersion:1,dept:92,roles:['department_contact']},
-        {personId:'9007199254741200',accountId:'9007199254741500',authVersion:'9007199254741601',dept:D1,roles:['mdm_lead']}];
+        {personId:'9007199254741200',accountId:'9007199254741500',authVersion:'9007199254741601',dept:D1,roles:['mdm_lead','hr_directory_manager']}];
       for(const actor of actors) {
         await pool.execute('INSERT INTO person(person_id,employee_no,person_name,current_department_id) VALUES (?,?,?,?)',[String(actor.personId),'P'+actor.personId,'P'+actor.personId,String(actor.dept)]);
         if(actor.accountId)await pool.execute("INSERT INTO user_accounts(account_id,person_id,login_name,password_hash,account_status,must_change_password,auth_version) VALUES (?,?,?,'synthetic-unused','active',0,?)",[String(actor.accountId),String(actor.personId),'P'+actor.personId,String(actor.authVersion)]);
-        for(const role of actor.roles)await pool.execute("INSERT INTO person_roles(person_id,role_id,scope_type,scope_department_id,authorization_basis,effective_from) SELECT ?,role_id,?,?,'B02 owned synthetic',CURRENT_DATE FROM roles WHERE role_code=?",[String(actor.personId),['admin','mdm_lead'].includes(role)?'global':'department',['admin','mdm_lead'].includes(role)?null:String(actor.dept),role]);
+        for(const role of actor.roles)await pool.execute("INSERT INTO person_roles(person_id,role_id,scope_type,scope_department_id,authorization_basis,effective_from) SELECT ?,role_id,?,?,'B02 owned synthetic',CURRENT_DATE FROM roles WHERE role_code=?",[String(actor.personId),['admin','mdm_lead','hr_directory_manager'].includes(role)?'global':'department',['admin','mdm_lead','hr_directory_manager'].includes(role)?null:String(actor.dept),role]);
       }
       const lead=actors[0], manager=actors[2], bigLead=actors.at(-1), admin=actors[1], overlay=actors[5], outsider=actors[6];
       const system={identityKind:'system_admin',accountId:'9007199254741701',authVersion:1};
@@ -79,14 +81,16 @@ async function main() {
         const value=object[name];return typeof value==='function'?value.bind(object):value;
       }});
       const publications=makePublicationRepository(observed), offices=makeOfficeRepository(observed);
-      const publish=async(doc,actor=lead,review)=>publications.publish({content:doc.content,...(review||await publications.preview(doc)),requestId:crypto.randomUUID()},actor);
+      const publish=async(doc,actor=lead,review)=>publications.publish({content:doc.content,...(review||await publications.preview(doc)),requestId:crypto.randomUUID(),reason:'B02 synthetic directory change'},actor);
       const create=(actor=lead,office=O1)=>offices.createTask(actor,{office_id:office,content:'B02 synthetic task',request_id:crypto.randomUUID()});
       const tables=['departments','person','user_accounts','person_roles','org_unit','office_membership','mdm_todos','mdm_todo_office_assignments','mdm_todo_events','mdm_publications','mdm_version_log'];
       const snapshot=async()=>{const state={};for(const table of tables){const [rows]=await pool.query('SELECT * FROM '+table);state[table]=rows;}return state;};
       async function rejectUnchanged(action,code){const before=hash(await snapshot());await assert.rejects(action,e=>e.code===code);assert.equal(hash(await snapshot()),before);}
       async function compareDigest(doc) {
         const old=await oldPublication.directoryPlan(pool,doc), current=await directoryPlan(pool,doc);
-        assert.equal(current.baseHash,old.baseHash,'exact aliases never change legacy digest inputs');return current;
+        assert.equal(current.baseHash,old.baseHash,'legacy snapshot digest is retained independently from the new transient check');
+        assert.equal(current.sourceHashVersion,DIRECTORY_SOURCE_HASH_VERSION);
+        assert.equal((await publications.preview(doc)).baseHash,current.sourceHash);return current;
       }
       await check('legacy source hash and original physical fields survive separate exact views',async()=>{
         const plain=await oldOffice.officeSnapshot(pool,false),current=await officeSnapshot(pool,false),state=await officePublicationState(pool,false);
@@ -106,7 +110,7 @@ async function main() {
       await check('directory admin preservation applies only to exact person, including overlay',async()=>{
         const adjacent=roster([['P'+P1,'adjacent allowed','D1','O1','在职']]);assert.equal((await publications.preview(adjacent)).errors.length,0);
         await publish(adjacent);
-        for(const personId of [P0,85])assert((await publications.preview(roster([['P'+personId,'admin blocked',personId===P0?'D0':'SAFE','','在职']]))).errors.some(e=>e.message.includes('管理员')));
+        for(const personId of [P0,85])assert((await publications.preview(roster([['P'+personId,'admin blocked','D1','','在职']]))).errors.some(e=>e.message.includes('管理员')));
       });
       await check('exact account and department-role constraints do not attach to adjacent person',async()=>{
         assert((await publications.preview(roster([['P'+P2,'P'+P2,'D1','','在职']]))).errors.some(e=>e.message.includes('撤销')));
@@ -150,8 +154,8 @@ async function main() {
       await check('publication source changes, immutable payload/version chain and idempotency',async()=>{
         const doc=roster([['P'+P1,'new name','D1','O1;SAFE_OFFICE','在职']]),review=await publications.preview(doc);
         await pool.execute("UPDATE office_membership SET status='inactive' WHERE office_id='31' AND person_id=?",[P1]);
-        await rejectUnchanged(()=>publications.publish({content:doc.content,...review,requestId:crypto.randomUUID()},lead),'PUBLICATION_SOURCE_CHANGED');
-        const next=await publications.preview(doc),input={content:doc.content,...next,requestId:crypto.randomUUID()};
+        await rejectUnchanged(()=>publications.publish({content:doc.content,...review,requestId:crypto.randomUUID(),reason:'B02 synthetic directory change'},lead),'PUBLICATION_SOURCE_CHANGED');
+        const next=await publications.preview(doc),input={content:doc.content,...next,requestId:crypto.randomUUID(),reason:'B02 synthetic directory change'};
         const first=await publications.publish(input,bigLead),again=await publications.publish(input,bigLead);assert.equal(first.id,again.id);assert(again.idempotent);assert.equal(first.published_by_person_id,bigLead.personId);
         await rejectUnchanged(()=>publications.publish(input,lead),'PUBLICATION_SOURCE_CHANGED');
         const old=await publications.get(first.id);assert.deepEqual(old.content,doc.content);assert.equal(old.content_hash,doc.contentHash);
@@ -219,12 +223,31 @@ async function main() {
         await lockedLoss('office-revocation',lead,()=>create(lead),db=>db.execute("UPDATE person_roles SET assignment_status='revoked' WHERE person_id='81'"),'OFFICE_ACCESS_DENIED');
         await pool.execute("UPDATE person_roles SET assignment_status='active' WHERE person_id='81'");
       });
-      await check('legacy raw source hash collision is recorded without changing snapshot version',async()=>{
-        const doc=org([['SAFE','SAFE','部门','','','','启用']]),before=await publications.preview(doc);
-        await pool.execute('UPDATE org_unit SET manager_person_id=? WHERE org_unit_id=?',[P0,O1]);const after=await publications.preview(doc);
-        assert.equal(before.baseHash,after.baseHash,'known legacy driver rounding collision');
-        save('legacy-source-hash-limitation.json',{before:before.baseHash,after:after.baseHash,oldPersonId:P1,newPersonId:P0,exactViewsDistinct:!sameIdentityInteger(P0,P1),semanticChangePaused:true,requiredDecision:'Version the transient publication source hash separately from preserved physical snapshots and historical content hashes; define pending old-preview compatibility.'});
+      await check('versioned exact import source detects adjacent IDs while preserving the legacy snapshot digest',async()=>{
+        const doc=org([['SAFE','SAFE','部门','','','','启用']]),before=await publications.preview(doc),oldBefore=await oldPublication.directoryPlan(pool,doc);
+        await pool.execute('UPDATE org_unit SET manager_person_id=? WHERE org_unit_id=?',[P0,O1]);
+        const after=await publications.preview(doc),oldAfter=await oldPublication.directoryPlan(pool,doc);
+        assert.equal(oldBefore.baseHash,oldAfter.baseHash,'historical driver projection still reproduces its known collision');
+        assert.equal(before.sourceHashVersion,DIRECTORY_SOURCE_HASH_VERSION);assert.equal(after.sourceHashVersion,DIRECTORY_SOURCE_HASH_VERSION);
+        assert.notEqual(before.baseHash,after.baseHash,'the current import check binds exact decimal identities');
+        await rejectUnchanged(()=>publish(doc,lead,before),'PUBLICATION_SOURCE_CHANGED');
+        for(const sourceHashVersion of [undefined,'directory-publication-source-v1','directory-publication-source-unknown']) {
+          await rejectUnchanged(()=>publish(doc,lead,{...after,sourceHashVersion}),'PUBLICATION_SOURCE_CHECK_EXPIRED');
+        }
+        save('versioned-source-hash.json',{sourceHashVersion:DIRECTORY_SOURCE_HASH_VERSION,legacyBefore:oldBefore.baseHash,legacyAfter:oldAfter.baseHash,before:before.baseHash,after:after.baseHash,oldPersonId:P1,newPersonId:P0,exactViewsDistinct:!sameIdentityInteger(P0,P1),oldUncommittedChecksRejected:true,staleExactCheckRejected:true});
         await pool.execute('UPDATE org_unit SET manager_person_id=? WHERE org_unit_id=?',[P1,O1]);
+      });
+      await check('successful legacy request recovers the original receipt and preserves published bytes without another write',async()=>{
+        const legacy=oldPublication.makePublicationRepository(observed),doc=org([['SAFE','legacy saved content','部门','','','','启用']]);
+        const reviewed=await legacy.preview(doc),input={content:doc.content,...reviewed,requestId:crypto.randomUUID(),reason:'B02 legacy saved synthetic request'};
+        assert.equal(input.sourceHashVersion,undefined,'the before implementation supplies an unversioned check');
+        const saved=await legacy.publish(input,lead),historical=await legacy.get(saved.id),state=hash(await snapshot());
+        const receipt=await publications.publish(input,lead);assert.equal(receipt.id,saved.id);assert.equal(receipt.idempotent,true);
+        assert.equal(hash(await snapshot()),state,'receipt recovery must not write business or audit rows');
+        const current=await publications.get(saved.id);assert.deepEqual(current.content,historical.content);assert.equal(current.content_hash,historical.content_hash);
+        const [[stored]]=await pool.execute('SELECT payload_json,content_hash FROM mdm_publications WHERE id=?',[saved.id]);
+        assert.equal(stored.payload_json,JSON.stringify(doc.content));assert.equal(stored.content_hash,doc.contentHash);
+        await rejectUnchanged(()=>publications.publish({...input,reason:'different reason'},lead),'PUBLICATION_SOURCE_CHANGED');
       });
       // Identity bindings are checked on both small and large writes sharing the
       // same connection/prepared SQL, in addition to final DB value assertions.
@@ -241,7 +264,7 @@ async function main() {
       assert(bindings.length);save('lock-waits.json',receipts);
       save('binding-shapes.json',bindings.map(e=>({operation:e.sql.split(/\s+/).slice(0,4).join(' '),types:e.params.map(p=>p===null?'null':typeof p)})));
     },{stage:'02',randomDatabase:true});cleanup=true;
-    save('results.json',{passed:true,checks,target,ownedResourcesCleaned:cleanup,lockWaitReceipts:receipts,semanticBranchPaused:'legacy publication source hash precision collision',formalDatabaseAccess:false});
+    save('results.json',{passed:true,checks,target,ownedResourcesCleaned:cleanup,lockWaitReceipts:receipts,sourceHashVersion:DIRECTORY_SOURCE_HASH_VERSION,legacyPublishedContentPreserved:true,formalDatabaseAccess:false});
   } catch(error) {save('results.json',{passed:false,checks,target,error:{code:error.code,message:error.message,stack:error.stack},ownedResourcesCleaned:cleanup});throw error;}
   finally {if(prior===undefined)delete process.env.MDM_SYSTEM_ADMIN_ENABLED;else process.env.MDM_SYSTEM_ADMIN_ENABLED=prior;}
 }

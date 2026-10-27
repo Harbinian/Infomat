@@ -1,3 +1,5 @@
+// --publications-only keeps this regression focused on publication contracts;
+// the default also exercises the separately owned local diagram asset routes.
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
 const { once } = require('node:events');
@@ -38,13 +40,14 @@ async function databaseChecks(pool) {
   assert.equal((await managePublicationSchema(pool,'apply')).state,'applied');
   assert.equal((await managePublicationSchema(pool,'apply')).state,'applied');
   await pool.execute("INSERT INTO departments(id,code,name) VALUES (91,'KEEP','合成保留部')");
-  await pool.execute("INSERT INTO person(person_id,employee_no,person_name,current_department_id) VALUES (81,'SYNTHETIC_ADMIN','合成管理员',91),(82,'SYNTHETIC_LEAD','合成发布人',91)");
-  await pool.execute("INSERT INTO user_accounts(account_id,person_id,login_name,password_hash,account_status) VALUES (181,81,'SYNTHETIC_ADMIN','synthetic-hash-never-a-real-credential','active'),(182,82,'SYNTHETIC_LEAD','synthetic-hash-never-a-real-credential','active')");
+  await pool.execute("INSERT INTO person(person_id,employee_no,person_name,current_department_id) VALUES (81,'SYNTHETIC_ADMIN','合成管理员',91),(82,'SYNTHETIC_LEAD','合成发布人',91),(83,'SYNTHETIC_HR','合成人事维护人',91)");
+  await pool.execute("INSERT INTO user_accounts(account_id,person_id,login_name,password_hash,account_status) VALUES (181,81,'SYNTHETIC_ADMIN','synthetic-hash-never-a-real-credential','active'),(182,82,'SYNTHETIC_LEAD','synthetic-hash-never-a-real-credential','active'),(183,83,'SYNTHETIC_HR','synthetic-hash-never-a-real-credential','active')");
   await pool.execute("INSERT INTO person_roles(person_id,role_id,scope_type,authorization_basis,effective_from) SELECT 81,role_id,'global','synthetic test',CURRENT_DATE FROM roles WHERE role_code='admin'");
   await pool.execute("INSERT INTO person_roles(person_id,role_id,scope_type,authorization_basis,effective_from) SELECT 82,role_id,'global','synthetic test',CURRENT_DATE FROM roles WHERE role_code='mdm_lead'");
-  const actor={personId:82,accountId:182,authVersion:1};
+  await pool.execute("INSERT INTO person_roles(person_id,role_id,scope_type,authorization_basis,effective_from) SELECT 83,role_id,'global','synthetic test',CURRENT_DATE FROM roles WHERE role_code='hr_directory_manager'");
+  const actor={personId:82,accountId:182,authVersion:1},hr={personId:83,accountId:183,authVersion:1};
   const repo=makePublicationRepository(pool);
-  async function publish(normalized,key,review) { return repo.publish({ content:normalized.content,datasetKey:key,...(review || await repo.preview(normalized,key)),requestId:crypto.randomUUID() },actor); }
+  async function publish(normalized,key,review) { return repo.publish({ content:normalized.content,datasetKey:key,...(review || await repo.preview(normalized,key)),requestId:crypto.randomUUID(),reason:'合成目录变更依据' },normalized.content.kind==='master_data'?actor:hr); }
   const org=document('organization',[['O1','合成根组织',''],['O2','合成下级','O1']]);
   const first=await publish(org);
   assert.equal(first.version_no,1);
@@ -63,8 +66,8 @@ async function databaseChecks(pool) {
   assert.equal(changed.person_id,person.person_id); assert.equal(changed.person_name,'合成人员改名');
   assert.equal((await repo.get(rosterVersion.id)).content.rows[0][3],'保留额外列');
   const [[accounts]]=await pool.query('SELECT COUNT(*) AS count,MIN(password_hash) AS hash FROM user_accounts');
-  assert.equal(accounts.count,2); assert.equal(accounts.hash,'synthetic-hash-never-a-real-credential');
-  const blocked=document('roster',[['SYNTHETIC_ADMIN','不得更改管理员','KEEP','']]);
+  assert.equal(accounts.count,3); assert.equal(accounts.hash,'synthetic-hash-never-a-real-credential');
+  const blocked=document('roster',[['SYNTHETIC_ADMIN','合成管理员','O2','']]);
   assert.match((await repo.preview(blocked)).errors[0].message,/管理员/);
   const missing=document('roster',[['P_NEW','新增不应落库','MISSING','']]);
   await assert.rejects(publish(missing),error=>error.code==='PUBLICATION_REVIEW_REQUIRED');
@@ -93,11 +96,12 @@ async function apiChecks(repo) {
   auth.setIdentityRepositoryFactory(()=>({validateSession:async session=>({valid:true,user:{personId:session.personId,accountId:182,authVersion:1}})}));
   const router=require('../server/routes/publications');
   router.setRepositoryFactory(()=>repo);
-  router.setActorFactory(req=>({personId:82,accountId:182,authVersion:1,canRead:req.headers['x-test-role']!=='outsider',canPrepare:['admin','lead'].includes(req.headers['x-test-role']),canPublish:req.headers['x-test-role']==='lead'}));
+  router.setActorFactory(req=>({personId:82,accountId:182,authVersion:1,canRead:req.headers['x-test-role']!=='outsider',canPrepare:['admin','lead'].includes(req.headers['x-test-role']),canPublish:req.headers['x-test-role']==='lead',canPrepareMasterData:['admin','lead'].includes(req.headers['x-test-role']),canPublishMasterData:req.headers['x-test-role']==='lead',canMaintainDirectory:false}));
   const app=express();
   app.use((req,res,next)=>{if(req.headers['x-test-role'])req.session={personId:82,accountId:182,authVersion:1};next();});
   app.use('/api/publications',router);
-  app.use('/api/process-diagrams',require('../server/routes/processDiagrams'));
+  const includeDiagramAssets=!process.argv.includes('--publications-only');
+  if(includeDiagramAssets)app.use('/api/process-diagrams',require('../server/routes/processDiagrams'));
   const server=app.listen(0,'127.0.0.1'); await once(server,'listening');
   const base='http://127.0.0.1:'+server.address().port+'/api/publications';
   const request=async(path,role,fields)=>{
@@ -113,10 +117,11 @@ async function apiChecks(repo) {
     assert.equal(template.status,200);
     const templateBook=new ExcelJS.Workbook();await templateBook.xlsx.load(Buffer.from(await template.arrayBuffer()));
     assert.ok(templateBook.worksheets[0].getRow(1).values.includes('工号'));
-    const assetsBase=base.replace('/api/publications','/api/process-diagrams/assets/');
-    assert.equal((await fetch(assetsBase+'process-diagram.js')).status,401);
-    assert.equal((await fetch(assetsBase+'unknown.js',{headers:{'x-test-role':'admin'}})).status,404);
-    for(const asset of ['process-diagram.js','data-relation-diagram.js','cytoscape.min.js']) assert.equal((await fetch(assetsBase+asset,{headers:{'x-test-role':'admin'}})).status,200);
+    if(includeDiagramAssets){const assetsBase=base.replace('/api/publications','/api/process-diagrams/assets/');
+      assert.equal((await fetch(assetsBase+'process-diagram.js')).status,401);
+      assert.equal((await fetch(assetsBase+'unknown.js',{headers:{'x-test-role':'admin'}})).status,404);
+      for(const asset of ['process-diagram.js','data-relation-diagram.js','cytoscape.min.js']) assert.equal((await fetch(assetsBase+asset,{headers:{'x-test-role':'admin'}})).status,200);
+    }
     const admin=await request('/status','admin'); assert.equal(admin.body.canPrepare,true);assert.equal(admin.body.canPublish,false);
     const fields={kind:'master_data',title:'合成HTTP发布',datasetKey:'http_synthetic',keyHeader:'编码'};
     assert.equal((await request('/parse','admin',fields)).status,200);

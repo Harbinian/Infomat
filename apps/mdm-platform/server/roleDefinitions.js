@@ -1,4 +1,4 @@
-const ACCESS_MODEL_VERSION = 'rbac-raci-v3-2026-07-31';
+const ACCESS_MODEL_VERSION = 'rbac-raci-v5-2026-10-19';
 
 const VISIBLE_TABS = Object.freeze({
   roleWorkbench: {
@@ -81,6 +81,13 @@ const BASE_PERMISSIONS = {
   identityRead: perm('identity:read', 'identity', 'read', '查看账号、角色和责任配置', {
     defaultScope: 'global'
   }),
+  directoryRead: perm('directory:read', 'directory', 'read', '读取3000统一组织与人员基础目录', {
+    defaultScope: 'global'
+  }),
+  directoryMaintain: perm('directory:maintain', 'directory', 'maintain', '维护全公司组织架构与人员信息，保存直接生效并记录变更原因及前后内容', {
+    isDangerous: true,
+    defaultScope: 'global'
+  }),
   identityManageAccount: perm('identity:manage-account', 'identity', 'manage-account', '创建、启用、停用和维护账号', {
     isDangerous: true,
     defaultScope: 'global'
@@ -102,14 +109,17 @@ const BASE_PERMISSIONS = {
   governanceReadEscalatedContext: perm('governance:read-escalated-context', 'governance', 'read-escalated-context', '查看已升级重大争议及必要上下文', {
     defaultScope: 'self_task'
   }),
+  governanceHandleAssignedWork: perm('governance:handle-assigned-work', 'governance', 'handle-assigned-work', '办理本人被明确分派的治理事项，不含审核发布', {
+    defaultScope: 'self_task'
+  }),
   governanceDraftDepartment: perm('governance:draft-department', 'governance', 'draft-department', '起草和修改本部门治理材料'),
   governanceSubmitDepartment: perm('governance:submit-department', 'governance', 'submit-department', '提交本部门治理材料'),
-  governanceReviewDepartment: perm('governance:review-department', 'governance', 'review-department', '审核和退回本部门治理材料'),
+  governanceReviewDepartment: perm('governance:review-department', 'governance', 'review-department', '部门负责人本人核对和退回本部门治理材料'),
   governanceRecordDepartmentDecision: perm(
     'governance:record-department-decision',
     'governance',
     'record-department-decision',
-    '记录部门负责人已经在线下作出的决定',
+    '由部门负责人本人作出并记录本部门最终确认',
     { isDangerous: true }
   ),
   governanceAssignWork: perm('governance:assign-work', 'governance', 'assign-work', '分派治理事项', {
@@ -201,10 +211,10 @@ const ROLE_GUIDES = [
     description: '维护账号、角色授权和访问审计，并只读查看治理材料',
     goal: '保证3000的账号入口、授权记录和审计记录可用。',
     firstEntry: { label: '账号与授权', target: '#/rbac' },
-    workflow: ['手工创建待启用账号', '记录角色授权依据', '启用或停用账号', '检查访问审计'],
-    sample: '管理员收到已确认的账号开通信息后，录入人员、部门和MDM工作角色，记录授权依据，再明确启用账号。',
+    workflow: ['查找由行政人事维护的已有员工，为其开通待启用账号', '设置角色及有效期，按需补充授权依据', '核对后启用账号，必要时另行停用', '在该员工账号行查阅授权记录和访问审计'],
+    sample: '行政人事先保存员工资料；管理员收到该员工姓名和工号后，在账号与授权办理中搜索并核对已有员工，先开通账号，再分别办理角色授权和启用。完成后在同一员工账号行查看状态及授权记录。',
     pitfall: '管理员不能审核、确认、修改或发布流程、数据和术语治理内容。',
-    doneCriteria: '账号状态、部门、有效角色、授权依据和审计记录一致。',
+    doneCriteria: '账号状态、部门、有效角色和审计记录一致；已填写的授权依据保持可追溯。',
     permissions: [
       BASE_PERMISSIONS.identityRead,
       BASE_PERMISSIONS.identityManageAccount,
@@ -220,7 +230,7 @@ const ROLE_GUIDES = [
     group: 'mdm',
     description: '分派治理事项，完成数据对象和生命周期治理，检查结构、证据和责任链，并发布治理版本',
     goal: '在业务流程事实已经明确的前提下，由MDM工作组完成数据对象、关键字段和生命周期治理，使流程地图、数据地图和术语版本具备发布条件。',
-    firstEntry: { label: 'V7/V8流程核对', target: '#/processGovernance?workspace=v7Preview' },
+    firstEntry: { label: '查看数据治理工作包', target: '/app/data-governance' },
     workflow: ['查看全局治理事项', '处理数据生命周期治理工作包', '仅在缺少流程事实时向业务部门定向提问', '执行MDM结构卡口并发布'],
     sample: 'MDM工作组组长打开固定流程版本对应的工作包，核对待定数据对象、匹配建议、关键字段和生命周期规则；只有缺少业务事实时，才向具体部门发出一个可回答的问题。',
     pitfall: 'MDM工作组组长不能代替部门负责人确认业务事实，也不能直接改写部门材料。',
@@ -235,13 +245,27 @@ const ROLE_GUIDES = [
     visibleTabs: visibleTabs('roleWorkbench', 'roleGuide', 'processGovernance', 'dataMap', 'publications', 'conflicts', 'quality')
   },
   {
+    code: 'mdm_steward',
+    name: 'MDM治理经办人',
+    group: 'mdm',
+    description: '办理MDM组长明确分派的流程或工作包，保留治理依据，不审核或发布',
+    goal: '将被分派事项的材料、证据和治理建议整理为可复核结果。',
+    firstEntry: { label: '查看本人收到的待办', target: '/app/todos' },
+    workflow: ['查看本人有效分派事项', '核对材料并记录治理说明', '办理被分派工作包的具体治理', '交由MDM组长审核'],
+    sample: '经办人根据组长的明确分派，核对一个流程案例并记录依据；工作包另行分派后，在该工作包中整理对象和生命周期治理结果。',
+    pitfall: '经办身份不授予全部治理材料读取权，不代替业务确认，也不允许正式审核、发布或完成工作包审核。',
+    doneCriteria: '所办事项有当前来源、明确依据和办理记录，待审核事项交由有权主体处理。',
+    permissions: [BASE_PERMISSIONS.governanceReadAssignedContext, BASE_PERMISSIONS.governanceHandleAssignedWork],
+    visibleTabs: visibleTabs('roleWorkbench', 'roleGuide', 'processGovernance')
+  },
+  {
     code: 'department_contact',
     name: '部门主对接人',
     group: 'mdm',
     description: '起草、修改、提交和整改本部门流程事实，并答复MDM定向提出的业务事实问题',
     goal: '将本部门确认的流程事实整理为可审核材料；收到定向问题时，只补充事实和依据。',
-    firstEntry: { label: '上传与核对V7/V8', target: '#/processGovernance?workspace=v7Preview' },
-    workflow: ['上传3001下载的未审核V7/V8', '在3001补充或修订本部门流程事实后上传原案例', '答复定向业务事实问题', '按当前事项提交部门审核'],
+    firstEntry: { label: '编制、保存和提交本部门流程', target: '/app/process-authoring' },
+    workflow: ['在3000新建流程或从原案例继续编制', '保存草稿并补齐来源及实际参与部门', '提交后查看部门负责人核对结果，按退回意见续修', '答复MDM定向提出的业务事实问题'],
     sample: '部门主对接人收到“该状态在什么条件下失效”的定向问题后，回到制度或表单源文件核对，只填写触发条件和来源位置，不判断它是不是主数据。',
     pitfall: '主对接人不能认定主数据、合并统一对象、决定关键字段或制定生命周期治理规则。',
     doneCriteria: '本部门流程事实已提交；定向问题已有明确答复和可定位依据，未代替MDM作出治理判断。',
@@ -254,15 +278,15 @@ const ROLE_GUIDES = [
   },
   {
     code: 'department_mdm_reviewer',
-    name: '部门MDM审核员',
+    name: '部门负责人',
     group: 'mdm',
-    description: '审核本部门流程事实和定向事实答复，并记录部门负责人已经在线下作出的决定',
-    goal: '保证部门提供的流程事实和依据真实可追溯，不代替MDM工作组开展数据治理。',
-    firstEntry: { label: 'V7/V8部门核对', target: '#/processGovernance?workspace=v7Preview' },
-    workflow: ['核对本部门一侧的流程内容', '记录核对意见及依据', '处理本部门正式审核事项', '记录部门负责人已作出的决定'],
-    sample: '部门MDM审核员按当前案例、修订和内容摘要核对本部门一侧，填写意见及依据；内容变化时重新核对，不代替另一部门决定。',
-    pitfall: '审核员只能记录已经作出的决定，不能把个人判断写成部门负责人决定。',
-    doneCriteria: '审核结果、部门负责人、决定依据和记录人均可追溯。',
+    description: '由部门最终负责人本人核对本部门流程事实并作出最终确认，不设置中间审核员或代记录决定',
+    goal: '由已登记且具有本部门有效授权的部门负责人，对主对接人提交的流程事实和依据直接核对并最终确认。',
+    firstEntry: { label: '查看本部门流程核对事项', target: '/app/process-preview' },
+    workflow: ['查看主对接人提交的本部门事项', '核对当前内容及依据', '本人最终确认或退回修改', '内容变化时重新核对确认'],
+    sample: '部门负责人按当前案例、修订和内容摘要核对本部门一侧，亲自填写决定及依据；内容变化时重新确认，不代替另一部门决定。',
+    pitfall: '角色授权必须与部门最终负责人登记一致；不能由其他人员代确认，也不代替MDM开展数据治理或发布。',
+    doneCriteria: '本部门当前内容具有部门负责人本人确认、来源摘要和依据，未完成或不一致事项明确保留。',
     permissions: [
       BASE_PERMISSIONS.governanceReadDepartment,
       BASE_PERMISSIONS.governanceReviewDepartment,
@@ -294,11 +318,11 @@ const ROLE_GUIDES = [
     group: 'mdm',
     description: '检查数据治理信息并形成审计发现和整改要求',
     goal: '识别数据完整性、准确性和一致性问题，并跟踪整改证据。',
-    firstEntry: { label: '数据质量', target: '#/quality' },
-    workflow: ['查看全局数据治理信息', '记录审计发现', '提出整改要求', '复核整改证据'],
-    sample: '数据质量审计人发现字段来源缺少证据时，记录具体字段、问题依据和整改要求。',
+    firstEntry: { label: '查看字段治理统计', target: '#/quality' },
+    workflow: ['在“数据质量”查阅字段治理统计', '核对统计范围；字段数量不表示质量合格', '需要核对已发布字段时，进入“数据地图台账”查阅'],
+    sample: '数据质量审计人进入“数据质量”，点击“刷新字段统计”，在下方查看当前范围内的现行受控字段和旧资料统计；本页尚未提供审计发现登记、整改要求记录或整改复核办理。',
     pitfall: '审计人不能替部门修改源数据，也不能发布数据地图。',
-    doneCriteria: '审计结论有依据，整改事项有责任部门、处理状态和复核记录。',
+    doneCriteria: '审计职责仍以有依据的结论，以及具备责任部门、处理状态和复核记录的整改事项为完成标准。当前入口只供统计查阅，不能据此认定审计已完成。',
     permissions: [
       BASE_PERMISSIONS.governanceReadGlobal,
       BASE_PERMISSIONS.governanceQualityAudit
@@ -321,10 +345,36 @@ const ROLE_GUIDES = [
       BASE_PERMISSIONS.governanceDecideEscalation
     ],
     visibleTabs: visibleTabs('roleWorkbench', 'roleGuide', 'processGovernance', 'conflicts')
+  },
+  {
+    code: 'hr_directory_manager',
+    name: '行政人事信息维护员',
+    group: 'directory',
+    description: '由行政人事部维护全公司组织架构与人员信息，3000作为全域统一读取的人员真源',
+    goal: '保持组织架构与人员信息准确，并使每次变更可追溯。',
+    firstEntry: { label: '组织架构与花名册', target: '#/persons' },
+    workflow: ['核对组织架构和人员现状', '录入变更内容与原因', '保存后直接生效', '核对修改前后内容及操作记录'],
+    sample: '行政人事信息维护员确认人员所属部门变动后，选择目标部门、填写变更原因并保存；统一目录随后提供当前人员信息。',
+    pitfall: '人员与组织维护不授予账号开通、角色授权或治理审核发布权限。',
+    doneCriteria: '组织与人员信息已保存，修改前后内容、操作人和原因可追溯。',
+    permissions: [BASE_PERMISSIONS.identityRead, BASE_PERMISSIONS.directoryRead, BASE_PERMISSIONS.directoryMaintain],
+    visibleTabs: visibleTabs('roleWorkbench', 'orgUnits', 'persons', 'roleGuide')
   }
 ];
 
 const RACI_ACTIVITIES = Object.freeze([
+  {
+    activityCode: 'governance.assigned.work',
+    domain: 'governance',
+    name: '办理明确分派的治理事项',
+    responsible: ['mdm_steward'],
+    accountable: ['mdm_lead'],
+    consulted: ['department_contact', 'process_business_owner'],
+    informed: ['department_mdm_reviewer'],
+    requiredPermissions: ['governance:handle-assigned-work'],
+    scopeRule: 'assigned_target',
+    evidenceRule: '必须存在有效显式分派；案例办理记录绑定来源修订摘要；不授予审核发布权'
+  },
   {
     activityCode: 'identity.lifecycle',
     domain: 'identity',
@@ -343,7 +393,7 @@ const RACI_ACTIVITIES = Object.freeze([
     name: '部门流程、数据和术语材料起草',
     responsible: ['department_contact'],
     accountable: ['department_final_responsible_person'],
-    consulted: ['department_mdm_reviewer', 'business_expert'],
+    consulted: ['business_expert'],
     informed: ['mdm_lead'],
     requiredPermissions: ['governance:draft-department', 'governance:submit-department'],
     scopeRule: 'own_department',
@@ -352,14 +402,14 @@ const RACI_ACTIVITIES = Object.freeze([
   {
     activityCode: 'department.decision.record',
     domain: 'governance',
-    name: '记录部门决定及跨部门确认',
+    name: '部门负责人本人最终确认及跨部门确认',
     responsible: ['department_mdm_reviewer'],
     accountable: ['department_final_responsible_person'],
-    consulted: ['department_contact', 'related_department_reviewer'],
+    consulted: ['department_contact', 'related_department_final_responsible_person'],
     informed: ['mdm_lead'],
     requiredPermissions: ['governance:record-department-decision'],
     scopeRule: 'own_department',
-    evidenceRule: '必须记录决定、依据、决定时间和系统确认的最终责任人'
+    evidenceRule: '主对接人提交后，由当前部门最终负责人且具备本部门有效授权者本人核对并最终确认；确认人和最终责任人一致，绑定当前修订与摘要，不设中间审核员'
   },
   {
     activityCode: 'department.material.correct',
@@ -413,17 +463,15 @@ const RACI_ACTIVITIES = Object.freeze([
     activityCode: 'process.handoff.acceptance',
     domain: 'process',
     name: '跨部门承接确认',
-    responsible: ['department_contact', 'department_mdm_reviewer', 'mdm_lead'],
+    responsible: ['department_mdm_reviewer'],
     accountable: ['origin_department_final_responsible_person', 'counterparty_department_final_responsible_person'],
-    consulted: ['business_expert'],
+    consulted: ['department_contact', 'business_expert', 'mdm_lead'],
     informed: ['admin'],
     requiredPermissions: [
-      'governance:draft-department',
-      'governance:record-department-decision',
-      'governance:structure-gate'
+      'governance:record-department-decision'
     ],
     scopeRule: 'handoff_participant_and_department',
-    evidenceRule: '故事链必须保留步骤、处理人、部门、时间、依据和退回分支'
+    evidenceRule: '参与部门负责人分别本人确认本部门一侧；保留当前修订、步骤、确认人、部门、时间、依据和退回分支'
   },
   {
     activityCode: 'process.handoff-conflict.coordinate',
@@ -431,7 +479,7 @@ const RACI_ACTIVITIES = Object.freeze([
     name: '承接冲突协调',
     responsible: ['data_conflict_handler'],
     accountable: ['mdm_lead'],
-    consulted: ['origin_department_mdm_reviewer', 'counterparty_department_mdm_reviewer'],
+    consulted: ['origin_department_final_responsible_person', 'counterparty_department_final_responsible_person'],
     informed: ['decision_group'],
     requiredPermissions: ['governance:handle-assigned-conflict', 'governance:escalate-conflict'],
     scopeRule: 'assigned_handoff_conflict_only',

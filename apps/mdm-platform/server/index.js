@@ -25,6 +25,20 @@ app.set('trust proxy', config.proxies.length ? config.proxies : false);
 app.locals.sessionCookie = { name: config.name, options: { path: '/', httpOnly: true, sameSite: 'lax', secure: config.secure } };
 app.locals.readiness = readiness;
 let runtimeClosePromise;
+let handoffGeneratorTimer=null,handoffGeneratorInFlight=null,handoffGeneratorStopping=false;
+function startHandoffGenerator() {
+  if(process.env.DATA_MAP_HANDOFF_ENABLED!=='1'||process.env.PROCESS_DATA_GOVERNANCE_READ_ONLY==='1')return;
+  const generator=require('./dataMapHandoffGenerator').createGenerator(
+    require('./mysqlPoolRegistry').createRegisteredPool(process.env,'dataMapHandoffGenerator'));
+  const run=()=>{
+    if(handoffGeneratorStopping||handoffGeneratorInFlight)return;
+    handoffGeneratorInFlight=generator.runPending({limit:20}).then(result=>{
+      if(result.errors?.length)console.error('MDM_HANDOFF_GENERATOR_PENDING codes='+[...new Set(result.errors.map(x=>x.code))].join(','));
+    }).catch(error=>console.error('MDM_HANDOFF_GENERATOR_UNAVAILABLE code='+String(error.code||'HANDOFF_GENERATION_FAILED')))
+      .finally(()=>{handoffGeneratorInFlight=null;});
+  };
+  handoffGeneratorTimer=setInterval(run,15000);handoffGeneratorTimer.unref();run();
+}
 app.locals.closeRuntime = () => {
   if (runtimeClosePromise) return runtimeClosePromise;
   const parsedBudget = Number(process.env.MDM_SHUTDOWN_DRAIN_MS);
@@ -41,12 +55,14 @@ app.locals.closeRuntime = () => {
     finally { clearTimeout(timer); }
   };
   runtimeClosePromise = (async () => {
+    handoffGeneratorStopping=true;clearInterval(handoffGeneratorTimer);
+    const generatorFailure=await closeDependency('dataMapHandoffGenerator',()=>handoffGeneratorInFlight);
     const [readinessFailure, sessionFailure, drained] = await Promise.all([
       closeDependency('readiness', () => readiness.close()),
       closeDependency('session', () => typeof store.close === 'function' ? store.close() : undefined),
       closeAllPools({ timeoutMs })
     ]);
-    return { ...drained, notDrained: [...new Set([...drained.notDrained, readinessFailure, sessionFailure].filter(Boolean))] };
+    return { ...drained, notDrained: [...new Set([...drained.notDrained, readinessFailure, sessionFailure,generatorFailure].filter(Boolean))] };
   })();
   return runtimeClosePromise;
 };
@@ -74,6 +90,7 @@ app.use((req, res, next) => {
 app.use('/app', require('./frontend').frontendRouter());
 app.use(require('./frontend').publicEntryRouter());
 app.use('/api/analysis', express.json({ limit: '256kb' }));
+app.use('/api/process-authoring', express.json({ limit: '10mb' }));
 app.use(express.json({ limit: '2mb' }));
 app.use('/api/analysis', (error, req, res, next) => {
   if (!error) return next();
@@ -124,6 +141,8 @@ function registerRouteIfExists(basePath, routeName) {
 }
 
 registerRouteIfExists('/api/org/accounts', 'accounts');
+registerRouteIfExists('/api/directory', 'directory');
+registerRouteIfExists('/api/integration/v1', 'directoryIntegration');
 registerRouteIfExists('/api/org', 'org');
 registerRouteIfExists('/api/rbac', 'rbac');
 registerRouteIfExists('/api/governance', 'governance');
@@ -140,6 +159,8 @@ registerRouteIfExists('/api/field-identities', 'fieldIdentities');
 registerRouteIfExists('/api/todos', 'todos');
 registerRouteIfExists('/api/conflicts', 'conflicts');
 registerRouteIfExists('/api/terminology', 'terminology');
+registerRouteIfExists('/api/terminology-governance', 'terminologyUsages');
+registerRouteIfExists('/api/terminology-governance', 'terminologyGovernance');
 registerRouteIfExists('/api/versions', 'versions');
 registerRouteIfExists('/api/publications', 'publications');
 registerRouteIfExists('/api/process-diagrams', 'processDiagrams');
@@ -149,7 +170,26 @@ registerRouteIfExists('/api/process-governance/guidance', 'governanceGuidance');
 registerRouteIfExists('/api/process-governance', 'processGovernance');
 registerRouteIfExists('/api/process-design', 'processDesignMysql');
 registerRouteIfExists('/api/process-v7-preview', 'processPreviewReview');
+registerRouteIfExists('/api/process-authoring', 'processAuthoringEditor');
+registerRouteIfExists('/api/process-authoring', 'processAuthoringWorkspace');
+registerRouteIfExists('/api/process-case-disputes', 'processCaseDisputes');
+registerRouteIfExists('/api/governance-responsibilities', 'governanceResponsibilities');
 registerRouteIfExists('/api/process-data-governance', 'processDataGovernance');
+// Pool creation is lazy and performs no DDL or feature activation. The route's
+// write contract remains disabled unless both the flag and persisted cutover agree.
+let dataMapHandoffRouter;
+function getDataMapHandoffRouter() {
+  if (!dataMapHandoffRouter) dataMapHandoffRouter = require('./routes/dataMapHandoffs').createRouter({
+    pool: require('./mysqlPoolRegistry').createRegisteredPool(process.env,'dataMapHandoffs')
+  });
+  return dataMapHandoffRouter;
+}
+app.use('/api/data-map-handoffs', (req,res,next) => {
+  try {
+    return getDataMapHandoffRouter()(req,res,next);
+  } catch (error) { return next(error); }
+});
+require('./routes/roleWorkbench').setHandoffWorkbenchFactory(()=>getDataMapHandoffRouter().workbench);
 registerRouteIfExists('/api/role-workbench', 'roleWorkbench');
 registerRouteIfExists('/api/page-workflows', 'pageWorkflows');
 registerRouteIfExists('/api/offices', 'offices');
@@ -177,6 +217,7 @@ app.use((error, req, res, next) => {
 if (require.main === module) {
   const server = app.listen(PORT, config.host, () => {
     console.log(`MDM_LISTENING port=${server.address().port} sourceDigest=${version.sourceDigest}`);
+    startHandoffGenerator();
   });
   let stopping = false;
   function shutdown() {

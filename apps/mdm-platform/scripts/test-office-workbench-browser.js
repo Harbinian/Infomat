@@ -33,7 +33,7 @@ async function main() {
       const repo = require('../server/publicationRepository').makePublicationRepository(pool);
       async function publish(kind, headers, rows) {
         const input = spreadsheet.normalizePublication({ kind, title:'合成办公室', sourceFileName:'synthetic.xlsx', headers, rows, mapping:spreadsheet.suggestedMapping(kind, headers) });
-        return repo.publish({ content:input.content, ...await repo.preview(input), requestId:crypto.randomUUID() }, { personId:82, accountId:182, authVersion:1 });
+        return repo.publish({ content:input.content, ...await repo.preview(input), requestId:crypto.randomUUID(), reason:'合成组织与人员归属变更依据' }, { personId:19081, accountId:19181, authVersion:1 });
       }
       await publish('organization', ['组织编码','组织名称','组织层级','归口部门编码','办公室负责人工号'], [
         ['OFFICE_A','合成核对办公室','办公室','SYNTHETIC_91','SYNTHETIC_contact'],

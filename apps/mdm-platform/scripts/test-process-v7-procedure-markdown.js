@@ -14,7 +14,7 @@ const version={process_version_id:82,document_no:'TEST-01',document_title:'到�
 version.published_at=new Date('2026-09-14T05:31:22.000Z');
 const before=JSON.stringify(version);
 const markdown=processV7ProcedureMarkdown(version);
-for(const fact of ['核对采购要求与到货结果','本次到货检查形成的记录','差异已逐项记录','存在差异时重新核对','实际检查结果','合成采购流程','申请部门负责人','核对状态：待确认','仍需核对保管要求','有差异时保留原记录','填写；审核','值使用方式：复用已有值','正式版本标识：82',version.content_hash])assert.ok(markdown.includes(fact),fact+' preserved');
+for(const fact of ['核对采购要求与到货结果','本次到货检查形成的记录','差异已逐项记录','存在差异时重新核对','实际检查结果','合成采购流程','申请部门负责人','核对状态：待确认','仍需核对保管要求','有差异时保留原记录','填写；审核','值使用方式：复用已有值','平台流程版本标识：82','不能单独证明企业制度已经签批或生效',version.content_hash])assert.ok(markdown.includes(fact),fact+' preserved');
 assert.ok(markdown.includes('&lt;script&gt;'));
 assert.ok(!markdown.includes('<script>'));
 assert.ok(markdown.includes('2026\\-09\\-14T05:31:22\\.000Z'),'timestamp uses the same ISO value as version JSON');

@@ -68,7 +68,8 @@ async function main() {
     const body = await response.json();
     assert.strictEqual(response.status, 200, JSON.stringify(body));
     assert.deepStrictEqual(body.user.roleCodes, ['admin']);
-    assert.strictEqual(body.roles.length, 7);
+    assert.strictEqual(body.roles.length, 9);
+    assert.ok(body.roleGroups.some(group => group.key === 'directory' && group.roles.some(role => role.code === 'hr_directory_manager')));
     assert.strictEqual(body.roles.find(role => role.code === 'admin').owned, true);
     assert.strictEqual(body.roles.find(role => role.code === 'department_contact').owned, false);
     assert.ok(body.roleGroups.some(group => group.key === 'system'));
@@ -81,6 +82,15 @@ async function main() {
       ].includes(action.requiredPermission)),
       'admin workbench must not expose business write actions'
     );
+    roleCodes.splice(0,roleCodes.length,'hr_directory_manager');
+    permissionSet.clear();
+    for (const code of ['identity:read','directory:read','directory:maintain']) permissionSet.add(code);
+    roleWorkbenchRouter.clearWorkbenchCaches();
+    const hrResponse = await fetch(`${baseUrl}/api/role-workbench?mode=all`);
+    const hrBody = await hrResponse.json();
+    assert.strictEqual(hrResponse.status,200,JSON.stringify(hrBody));
+    assert.ok(hrBody.roleGroups.find(group=>group.key==='directory').roles.some(role=>role.owned));
+    assert.ok(hrBody.nextActions.some(action=>String(action.target).includes('persons') || String(action.target).includes('roster')));
   } finally {
     await closeServer(server);
     roleWorkbenchRouter.resetIdentityRepositoryFactory();

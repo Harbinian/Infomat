@@ -92,12 +92,12 @@ async function ensureRbacRaciV2Schema(executor) {
   );
   await dropCheckConstraints(executor, 'roles');
   await executor.execute("ALTER TABLE roles MODIFY role_group VARCHAR(32) NOT NULL DEFAULT 'mdm'");
-  await executor.execute("UPDATE roles SET role_group='legacy' WHERE role_group NOT IN ('system','mdm','legacy')");
+  await executor.execute("UPDATE roles SET role_group='legacy' WHERE role_group NOT IN ('system','mdm','directory','legacy')");
   if (!await indexExists(executor, 'roles', 'idx_roles_status')) {
     await executor.execute('ALTER TABLE roles ADD INDEX idx_roles_status (status)');
   }
   if (!await constraintExists(executor, 'roles', 'chk_roles_group_v2')) {
-    await executor.execute("ALTER TABLE roles ADD CONSTRAINT chk_roles_group_v2 CHECK (role_group IN ('system','mdm','legacy'))");
+    await executor.execute("ALTER TABLE roles ADD CONSTRAINT chk_roles_group_v2 CHECK (role_group IN ('system','mdm','directory','legacy'))");
   }
   if (!await constraintExists(executor, 'roles', 'chk_roles_status_v2')) {
     await executor.execute("ALTER TABLE roles ADD CONSTRAINT chk_roles_status_v2 CHECK (status IN ('active','legacy','retired'))");

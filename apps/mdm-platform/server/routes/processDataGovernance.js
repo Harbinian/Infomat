@@ -40,7 +40,7 @@ function runAction(res, action) {
   return action().catch(error => {
     // R04/R06: an unresolved commit is recorded as its own event, so the receipt lookup the
     // caller is asked to perform has a correlation id to search on.
-    if (error && error.code === 'PROCESS_DATA_GOVERNANCE_COMMIT_UNKNOWN') {
+    if (error && ['PROCESS_DATA_GOVERNANCE_COMMIT_UNKNOWN', 'HANDOFF_COMMIT_UNKNOWN'].includes(error.code)) {
       require('../securityLog').securityLog(res).write({ event: 'commit_unknown', code: error.code, status: 503 });
     }
     if (error && (error.statusCode || error.payload)) {
@@ -98,6 +98,7 @@ async function currentActor(req) {
   const permissions = permissionResult && permissionResult.permSet || new Set();
   const department = req.session.departmentId ? await getDepartmentByIdAsync(identityInteger(req.session.departmentId)) : null;
   const roleCode = roleCodes.has('mdm_lead') ? 'mdm_lead'
+    : roleCodes.has('mdm_steward') ? 'mdm_steward'
     : roleCodes.has('data_quality_auditor') ? 'data_quality_auditor'
       : roleCodes.has('department_mdm_reviewer') ? 'department_mdm_reviewer'
         : roleCodes.has('department_contact') ? 'department_contact'
@@ -140,13 +141,14 @@ function assertAdminCannotWrite(actor) {
   }
 }
 
-function assertMdmGovernanceWrite(actor) {
+function assertMdmGovernanceWrite(actor, leadOnly = false) {
   assertAdminCannotWrite(actor);
   if (
     actor.roleCodes.has('mdm_lead') &&
     actor.permissions.has('governance:assign-work') &&
     actor.permissions.has('governance:structure-gate')
   ) return;
+  if (!leadOnly && actor.roleCodes.has('mdm_steward') && actor.permissions.has('governance:handle-assigned-work')) return;
   throw httpError(403, 'PROCESS_DATA_GOVERNANCE_MDM_ONLY', '数据对象归类、匹配、关键字段和生命周期规则只能由MDM工作组处理');
 }
 
@@ -181,6 +183,9 @@ function allowedActions(actor, detail = null) {
   ) {
     actions.push('reconcile', 'generate_candidates', 'decide_detail', 'request_business_fact', 'close_business_fact', 'complete_work_package');
   }
+  if (detail && detail.assigned_steward === true && actor.roleCodes.has('mdm_steward') && actor.permissions.has('governance:handle-assigned-work')) {
+    for (const action of ['generate_candidates', 'decide_detail', 'request_business_fact', 'close_business_fact']) if (!actions.includes(action)) actions.push(action);
+  }
   if (detail && actor.departmentId) {
     const canAnswer = (detail.fact_requests || []).some(item =>
       item.status === 'open' && sameIdentityInteger(item.target_department_id, actor.departmentId)
@@ -212,9 +217,9 @@ function responsibilities() {
 }
 
 async function assertPackageInTrialScope(repo, packageId) {
-  const detail = await repo.getWorkPackageDetail(Number(packageId));
+  const detail = await repo.getWorkPackageDetail(require('../dataMapHandoffPolicy').id(packageId));
   if (!detail) throw httpError(404, 'PROCESS_DATA_GOVERNANCE_PACKAGE_NOT_FOUND', '数据生命周期治理工作包不存在');
-  assertProcessVersionAllowed(detail.package.process_version_id);
+  if(!identityInteger(detail.package.process_version_id)) throw httpError(422,'PROCESS_DATA_GOVERNANCE_VERSION_REQUIRED','工作包固定来源标识无效');
   return detail;
 }
 
@@ -225,9 +230,9 @@ function assertRetainedPackageReadable(workPackage) {
 }
 
 async function assertFactRequestInTrialScope(repo, requestId) {
-  const fact = await repo.getFactRequest(Number(requestId));
+  const fact = await repo.getFactRequest(require('../dataMapHandoffPolicy').id(requestId));
   if (!fact) throw httpError(404, 'PROCESS_DATA_GOVERNANCE_FACT_NOT_FOUND', '业务事实问题不存在');
-  assertProcessVersionAllowed(Number(fact.process_version_id));
+  if(!identityInteger(fact.process_version_id)) throw httpError(422,'PROCESS_DATA_GOVERNANCE_VERSION_REQUIRED','工作包固定来源标识无效');
   return fact;
 }
 
@@ -255,12 +260,16 @@ router.get('/workbench', (req, res) => runAction(res, async () => {
   assertCanRead(actor);
   const repo = await getProcessDataGovernanceRepository();
   const readOnly = isProcessDataGovernanceReadOnly();
-  const scopedPackages = actor.canReadGlobal || readOnly ? await repo.listWorkPackages(req.processDataGovernanceVersionId) : [];
+  const isSteward = actor.roleCodes.has('mdm_steward') && actor.permissions.has('governance:handle-assigned-work');
+  const scopedPackages = actor.canReadGlobal || readOnly ? await repo.listWorkPackages(req.processDataGovernanceVersionId)
+    : isSteward ? await repo.listWorkPackages(req.processDataGovernanceVersionId, actor) : [];
   const retainedPackages = scopedPackages.filter(item => item.status === 'completed');
-  const packages = actor.canReadGlobal ? (readOnly ? retainedPackages : scopedPackages) : [];
-  const factRequests = actor.departmentId
+  const packages = actor.canReadGlobal ? (readOnly ? retainedPackages : scopedPackages)
+    : isSteward ? (readOnly ? await repo.listWorkPackages(req.processDataGovernanceVersionId, actor).then(items => items.filter(item => item.status === 'completed')) : scopedPackages) : [];
+  const canReadDepartmentFacts = actor.permissions.has('governance:read-department') && (actor.roleCodes.has('department_contact') || actor.roleCodes.has('department_mdm_reviewer'));
+  const factRequests = actor.departmentId && canReadDepartmentFacts
     ? (await repo.listBusinessFactRequests(actor.departmentId, req.processDataGovernanceVersionId, { all: readOnly || req.query.mode === 'all' }))
-      .filter(item => !readOnly || retainedPackages.some(workPackage => Number(workPackage.id) === Number(item.work_package_id)))
+      .filter(item => !readOnly || retainedPackages.some(workPackage => sameIdentityInteger(workPackage.id,item.work_package_id)))
     : [];
   const workItems = readOnly ? [] : await repo.listWorkbenchItems(actor, req.processDataGovernanceVersionId);
   res.json({
@@ -281,7 +290,7 @@ router.get('/workbench', (req, res) => runAction(res, async () => {
 
 router.post('/creation-tasks/reconcile', (req, res) => runAction(res, async () => {
   const actor = normalizeActor(await currentActor(req));
-  assertMdmGovernanceWrite(actor);
+  assertMdmGovernanceWrite(actor, true);
   const processVersionId = assertProcessVersionAllowed(req.body && req.body.process_version_id);
   const repo = await getProcessDataGovernanceRepository();
   res.status(201).json(await repo.queueAndMaterialize(processVersionId, actor));
@@ -290,26 +299,29 @@ router.post('/creation-tasks/reconcile', (req, res) => runAction(res, async () =
 router.get('/work-packages/:id', (req, res) => runAction(res, async () => {
   const actor = normalizeActor(await currentActor(req));
   assertCanRead(actor);
-  if (!actor.canReadGlobal) {
+  const repo = await getProcessDataGovernanceRepository();
+  const packageId=require('../dataMapHandoffPolicy').id(req.params.id);
+  const assignedSteward = !actor.canReadGlobal && actor.roleCodes.has('mdm_steward') && await repo.canReadAssignedPackage(packageId, actor);
+  if (!actor.canReadGlobal && !assignedSteward) {
     throw httpError(403, 'PROCESS_DATA_GOVERNANCE_PACKAGE_MDM_CONTEXT_ONLY', '业务部门只查看发给本部门的具体事实问题，不查看MDM治理工作包全量内容');
   }
-  const repo = await getProcessDataGovernanceRepository();
-  const detail = await repo.getWorkPackageDetail(Number(req.params.id));
+  const detail = await repo.getWorkPackageDetail(packageId);
   if (!detail) throw httpError(404, 'PROCESS_DATA_GOVERNANCE_PACKAGE_NOT_FOUND', '数据生命周期治理工作包不存在');
-  assertProcessVersionAllowed(detail.package.process_version_id);
+  if(!identityInteger(detail.package.process_version_id)) throw httpError(422,'PROCESS_DATA_GOVERNANCE_VERSION_REQUIRED','工作包固定来源标识无效');
   assertRetainedPackageReadable(detail.package);
-  res.json({ ...detail, responsibilities: responsibilities(), allowed_actions: allowedActions(actor, detail) });
+  res.json({ ...detail, responsibilities: responsibilities(), allowed_actions: allowedActions(actor, { ...detail, assigned_steward: assignedSteward }) });
 }));
 
 router.get('/fact-requests/:id', (req, res) => runAction(res, async () => {
   const actor = normalizeActor(await currentActor(req));
   assertCanRead(actor);
   const repo = await getProcessDataGovernanceRepository();
-  const context = await repo.getFactRequestContext(Number(req.params.id));
+  const context = await repo.getFactRequestContext(require('../dataMapHandoffPolicy').id(req.params.id));
   if (!context) throw httpError(404, 'PROCESS_DATA_GOVERNANCE_FACT_NOT_FOUND', '业务事实问题不存在');
   const fact = context.fact_request;
-  assertProcessVersionAllowed(Number(fact.process_version_id));
-  if (!actor.canReadGlobal && !sameIdentityInteger(actor.departmentId, fact.target_department_id)) {
+  if(!identityInteger(fact.process_version_id)) throw httpError(422,'PROCESS_DATA_GOVERNANCE_VERSION_REQUIRED','工作包固定来源标识无效');
+  const assignedSteward = !actor.canReadGlobal && actor.roleCodes.has('mdm_steward') && await repo.canReadAssignedPackage(fact.work_package_id || context.package.id, actor);
+  if (!actor.canReadGlobal && !assignedSteward && !(actor.permissions.has('governance:read-department') && sameIdentityInteger(actor.departmentId, fact.target_department_id))) {
     throw httpError(403, 'PROCESS_DATA_GOVERNANCE_FACT_DEPARTMENT_DENIED', '该事实问题不是发给本人所属部门的');
   }
   assertRetainedPackageReadable(context.package);
@@ -319,7 +331,7 @@ router.get('/fact-requests/:id', (req, res) => runAction(res, async () => {
     fact_request: fact,
     source_context: context.source_context,
     responsibilities: responsibilities(),
-    allowed_actions: allowedActions(actor, { fact_requests: [fact] })
+    allowed_actions: allowedActions(actor, { fact_requests: [fact], assigned_steward: assignedSteward })
   });
 }));
 
@@ -328,7 +340,7 @@ router.post('/work-packages/:id/generate-candidates', (req, res) => runAction(re
   assertMdmGovernanceWrite(actor);
   const repo = await getProcessDataGovernanceRepository();
   await assertPackageInTrialScope(repo, req.params.id);
-  const result = await repo.generateCandidates(Number(req.params.id), expectedRevision(req.body), actor);
+  const result = await repo.generateCandidates(req.params.id, expectedRevision(req.body), actor, {request_id:req.body && req.body.request_id});
   res.json(result);
 }));
 
@@ -338,11 +350,12 @@ router.patch('/work-packages/:id/details/:detailId', (req, res) => runAction(res
   const repo = await getProcessDataGovernanceRepository();
   await assertPackageInTrialScope(repo, req.params.id);
   const result = await repo.updateDetail(
-    Number(req.params.id),
-    Number(req.params.detailId),
+    req.params.id,
+    req.params.detailId,
     expectedRevision(req.body),
     req.body || {},
-    actor
+    actor,
+    {request_id:req.body && req.body.request_id}
   );
   res.json(result);
 }));
@@ -352,7 +365,7 @@ router.post('/work-packages/:id/fact-requests', (req, res) => runAction(res, asy
   assertMdmGovernanceWrite(actor);
   const repo = await getProcessDataGovernanceRepository();
   await assertPackageInTrialScope(repo, req.params.id);
-  const result = await repo.createFactRequest(Number(req.params.id), expectedRevision(req.body), req.body || {}, actor);
+  const result = await repo.createFactRequest(req.params.id, expectedRevision(req.body), req.body || {}, actor, {request_id:req.body && req.body.request_id});
   res.status(201).json(result);
 }));
 
@@ -361,7 +374,7 @@ router.post('/fact-requests/:id/respond', (req, res) => runAction(res, async () 
   assertBusinessFactWrite(actor);
   const repo = await getProcessDataGovernanceRepository();
   await assertFactRequestInTrialScope(repo, req.params.id);
-  const result = await repo.respondFactRequest(Number(req.params.id), expectedRevision(req.body), req.body || {}, actor);
+  const result = await repo.respondFactRequest(req.params.id, expectedRevision(req.body), req.body || {}, actor, {request_id:req.body && req.body.request_id});
   res.json(result);
 }));
 
@@ -370,19 +383,19 @@ router.post('/fact-requests/:id/close', (req, res) => runAction(res, async () =>
   assertMdmGovernanceWrite(actor);
   const repo = await getProcessDataGovernanceRepository();
   await assertFactRequestInTrialScope(repo, req.params.id);
-  const result = await repo.closeFactRequest(Number(req.params.id), expectedRevision(req.body), req.body || {}, actor);
+  const result = await repo.closeFactRequest(req.params.id, expectedRevision(req.body), req.body || {}, actor, {request_id:req.body && req.body.request_id});
   res.json(result);
 }));
 
 router.post('/work-packages/:id/complete', (req, res) => runAction(res, async () => {
   const actor = normalizeActor(await currentActor(req));
-  assertMdmGovernanceWrite(actor);
+  assertMdmGovernanceWrite(actor, true);
   if (!actor.permissions.has('governance:publish')) {
     throw httpError(403, 'PROCESS_DATA_GOVERNANCE_COMPLETE_DENIED', '只有具备发布职责的MDM工作组组长可以完成工作包审核');
   }
   const repo = await getProcessDataGovernanceRepository();
   await assertPackageInTrialScope(repo, req.params.id);
-  const result = await repo.completeWorkPackage(Number(req.params.id), expectedRevision(req.body), req.body && req.body.basis, actor);
+  const result = await repo.completeWorkPackage(req.params.id, expectedRevision(req.body), req.body && req.body.basis, actor, {request_id:req.body && req.body.request_id});
   res.json(result);
 }));
 

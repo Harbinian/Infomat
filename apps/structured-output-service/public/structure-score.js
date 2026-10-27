@@ -1,8 +1,10 @@
 (function attachStructureLearningScore(root, factory) {
-  const api = factory();
+  const availability = typeof module === 'object' && module.exports
+    ? require('./process-data-availability') : root?.ProcessDataAvailability;
+  const api = factory(availability);
   if (typeof module === 'object' && module.exports) module.exports = api;
   if (root) root.StructureLearningScore = api;
-}(typeof globalThis === 'undefined' ? this : globalThis, function createStructureLearningScore() {
+}(typeof globalThis === 'undefined' ? this : globalThis, function createStructureLearningScore(availability) {
   'use strict';
 
   const NODE_TYPES = new Set(['action', 'decision', 'parallel_split', 'parallel_join']);
@@ -12,6 +14,7 @@
   const PLACEHOLDER_PATTERN = /待(?:填写|补充|确认)/;
   const EXACT_PLACEHOLDER_PATTERN = /^(?:无|暂无|未知|不适用|N\/?A)$/i;
   const CONCRETE_BUSINESS_ACTION_PATTERN = /(?:核对|校对|核查|比对|查验|检查|检验|测量|计算|统计|汇总|筛选|选择|查询|调取|读取|识别|判断|评审|审核|复核|审批|批准|确认|填写|填报|登记|录入|编制|创建|生成|修改|更新|补充|删除|作废|归档|保存|上传|下载|导出|打印|签署|盖章|提交|发送|下发|转交|移交|交接|接收|领取|发放|分配|安排|通知|反馈|退回|驳回|办理|处理|处置|验收|盘点|清点|入库|出库|结算|付款|开具|分析|拆分|合并|关联|匹配|标记|记录|维护|校验)/;
+  const BEHAVIOR_NAME_ACTION_PATTERN = new RegExp(`(?:${CONCRETE_BUSINESS_ACTION_PATTERN.source}|明确|回传|分派|组织|比较|跟踪|协调|提升|发布|保留)`);
   const DECISION_VERB_PATTERN = /(?:校对|复核|审核|核查|审批|批准|验收|确认)/;
   const ABSTRACT_QUALITATIVE_PATTERNS = Object.freeze([
     Object.freeze({
@@ -25,8 +28,8 @@
   ]);
 
   const RULE = Object.freeze({
-    id: 'structure-learning-score-v5',
-    label: '结构化学习评分 v5（process-governance-v8）',
+    id: 'structure-learning-score-v6',
+    label: '结构化学习评分 v6（原生V9及受支持V8/V7）',
     dimensions: Object.freeze([
       Object.freeze({
         key: 'technical',
@@ -88,8 +91,8 @@
   });
 
   const REVIEW_READINESS = Object.freeze({
-    id: 'process-review-readiness-v7',
-    label: '流程评审六方面标准',
+    id: 'process-review-readiness-v8',
+    label: '流程评审六方面标准 v8',
     aspects: Object.freeze([
       Object.freeze({
         key: 'boundary',
@@ -200,7 +203,7 @@
         missingObject: false
       });
     }
-    const matches = [...name.matchAll(new RegExp(CONCRETE_BUSINESS_ACTION_PATTERN.source, 'g'))];
+    const matches = [...name.matchAll(new RegExp(BEHAVIOR_NAME_ACTION_PATTERN.source, 'g'))];
     const completeMatch = matches.find(match => {
       const subject = name.slice(0, match.index).trim();
       const object = name.slice(match.index + match[0].length).trim();
@@ -390,6 +393,7 @@
       focusKind: target.focusKind || '',
       focusRef: target.focusRef || '',
       focusPath: target.focusPath || '',
+      ...(target.ruleCode ? { ruleCode: target.ruleCode } : {}),
       focusPaths: Array.isArray(target.focusPaths) ? target.focusPaths : []
     };
   }
@@ -939,6 +943,10 @@
 
   function dataFlowConsistencyDetails(documentValue) {
     const data = documentValue && typeof documentValue === 'object' ? documentValue : {};
+    if (data.schema_version === 'process-governance-v9') {
+      if (!availability?.dataFlowConsistencyDetails) throw new Error('V9_DATA_AVAILABILITY_RULES_UNAVAILABLE');
+      return availability.dataFlowConsistencyDetails(data);
+    }
     const behaviors = Array.isArray(data.behaviors) ? data.behaviors : [];
     const relations = Array.isArray(data.flow_relations) ? data.flow_relations : [];
     const dataObjects = Array.isArray(data.data_objects) ? data.data_objects : [];
@@ -1028,8 +1036,9 @@
           dataIndex,
           producerRefs,
           consumerRef: '',
-          message: `${text(item.data_name) || `输出物与数据${dataIndex + 1}`}保留了${producerRefs.length}个历史产生行为，当前无法确定唯一产生行为。`,
-          suggestions: ['进入“输出物与数据”，确认并保留唯一产生行为。']
+          expressionLimitation: true,
+          message: `${text(item.data_name) || `输出物与数据${dataIndex + 1}`}有${producerRefs.length}个新增行为；当前格式未区分记录实例与集合，无法机器核验各次新增及读取先后。`,
+          suggestions: ['保留真实新增及历史记录；使用支持实例粒度和存在性条件的新原生结构逐条表达，不能删除合法新增或默认为覆盖更新。']
         });
       }
       consumerRefs.forEach(consumerRef => {
@@ -1083,6 +1092,22 @@
             `两者没有先后依赖时，从${dataLabel}的使用行为中移除“${consumerLabel}”。`
           ]
         }[reason] || [];
+        const fullAdjacency = new Map([...behaviorRefs].map(ref => [ref, new Set()]));
+        relations.forEach(relation => {
+          if (['sequence', 'condition', 'parallel', 'loop'].includes(relation.relation_type)
+            && behaviorRefs.has(text(relation.from_behavior_ref)) && behaviorRefs.has(text(relation.to_behavior_ref))) {
+            fullAdjacency.get(text(relation.from_behavior_ref)).add(text(relation.to_behavior_ref));
+          }
+        });
+        const fullReachable = new Set(), fullQueue = [...(fullAdjacency.get(effectiveProducerRef) || [])];
+        for (let cursor = 0; cursor < fullQueue.length; cursor += 1) {
+          const ref = fullQueue[cursor];
+          if (fullReachable.has(ref)) continue;
+          fullReachable.add(ref);
+          (fullAdjacency.get(ref) || []).forEach(next => fullQueue.push(next));
+        }
+        const expressionLimitation = modernDataModel && ['future_data', 'unordered_data'].includes(reason)
+          && fullReachable.has(consumerRef) && !canReach(effectiveProducerRef, consumerRef);
         issues.push({
           reason,
           dataRef,
@@ -1090,8 +1115,13 @@
           producerRef: effectiveProducerRef,
           consumerRef,
           availabilityStarts: uniqueAvailabilityStarts,
-          message: reasonMessage,
-          suggestions: reasonSuggestions
+          expressionLimitation,
+          message: expressionLimitation
+            ? `${dataLabel}在返回办理时可能已有记录，但当前格式没有逐关系的实例范围及存在要求，不能证明“${consumerLabel}”首次及其他路径的输入是否可用。`
+            : reasonMessage,
+          suggestions: expressionLimitation
+            ? ['保留真实回轮与读取关系，在新原生结构明确读取当前实例或此前集合、是否允许无记录；不能把回轮产生的记录当作首次必有输入。']
+            : reasonSuggestions
         });
       });
       return {
@@ -1201,7 +1231,18 @@
   const ROUTE_ACTION_WORDS = Object.freeze([
     '无损检测审批', '质量保证核查', '复核', '校对', '审核', '核查', '审批', '批准', '编制', '归档', '发布', '接收'
   ]);
-  const ROUTE_DECLARATION_PATTERN = /(?:直接)?(?:进入|转入|转到|提交至|提交给|退回)([^，。；\n]{1,18})/g;
+  const ROUTE_DECLARATION_PATTERN = /((?:直接)?(?:进入|转入|转到|提交至|提交给|退回))([^，。；\n]{1,18})/g;
+  const RETURNED_OBJECT_PATTERN = /(?:草稿|稿件|稿|材料|文件|记录|申请|意见|任务|版本)$/;
+
+  function routeDestinationText(match) {
+    const targetText = text(match?.[2]);
+    if (!text(match?.[1]).endsWith('退回')) return targetText;
+    const explicitDestination = /(?:到|至)([^，。；\n]+)$/.exec(targetText);
+    if (explicitDestination) return text(explicitDestination[1]);
+    // A returned draft or record is an object, not a declaration of its next action.
+    // Explicit "退回至/到" and bare "退回审核/编制" destinations remain checked.
+    return RETURNED_OBJECT_PATTERN.test(targetText) ? '' : targetText;
+  }
 
   function actionRouteAlias(behavior) {
     if (text(behavior?.node_type) !== 'action') return '';
@@ -1230,17 +1271,18 @@
       ROUTE_DECLARATION_PATTERN.lastIndex = 0;
       let match = ROUTE_DECLARATION_PATTERN.exec(sourceText);
       while (match) {
-        declarations.push(match[0]);
+        const destinationText = routeDestinationText(match);
+        if (destinationText) declarations.push({ declaration: match[0], destinationText });
         match = ROUTE_DECLARATION_PATTERN.exec(sourceText);
       }
-      declarations.forEach(declaration => {
-        if (declaration.includes('判断') && relations.some(relation => {
+      declarations.forEach(({ declaration, destinationText }) => {
+        if (destinationText.includes('判断') && relations.some(relation => {
           if (text(relation?.from_behavior_ref) !== behaviorRef) return false;
           const targetNode = behaviors.find(item => text(item?.behavior_ref) === text(relation?.to_behavior_ref));
           return text(targetNode?.node_type) === 'decision';
         })) return;
         const candidates = actionTargets.filter(item =>
-          text(item.behavior?.behavior_ref) !== behaviorRef && declaration.includes(item.alias)
+          text(item.behavior?.behavior_ref) !== behaviorRef && destinationText.includes(item.alias)
         );
         if (!candidates.length) return;
         const connected = candidates.some(candidate => relations.some(relation =>
@@ -1304,6 +1346,11 @@
     const basicScore = 10 * (basicPassed / basicChecks.length);
 
     const dataFlowDetails = dataFlowConsistencyDetails(data);
+    if (data.schema_version === 'process-governance-v9' && !dataFlowDetails.entriesResolved) {
+      issues.push(issue('流程入口', '未明确有效的流程入口，不能完成前序数据必有性核验。', {
+        editorSection: 'basic', focusPath: 'process.entry_behavior_refs', ruleCode: 'V9_DATA_ENTRY_UNKNOWN'
+      }, '阻止正式流转', ['由编制方明确本流程实际入口；不按名称、数组顺序或入度自动填写。']));
+    }
     const actionBehaviors = behaviors.filter(item => text(item?.node_type) === 'action');
     let behaviorPassed = 0;
     let behaviorTotal = 0;
@@ -1656,14 +1703,18 @@
             fieldTarget(target, `data_objects.${index}.description`)
           ],
           [
-            !['process-governance-v4', 'process-governance-v5', 'process-governance-v6', 'process-governance-v7', 'process-governance-v8'].includes(data.schema_version)
+            !['process-governance-v4', 'process-governance-v5', 'process-governance-v6', 'process-governance-v7', 'process-governance-v8', 'process-governance-v9'].includes(data.schema_version)
               || (complete(item.information_type) && item.information_type !== 'pending_confirmation'),
             `${label}的信息类型待确认`,
             fieldTarget(target, `data_objects.${index}.information_type`)
           ],
           [
             (producerValid || consumerValid) && flowValid,
-            producerValid || consumerValid ? `${label}存在不符合流程先后顺序的数据引用` : `${label}未关联产生行为或使用行为`,
+            producerValid || consumerValid
+              ? flowDetail?.issues.some(item => item.expressionLimitation)
+                ? `${label}的记录实例或条件读取受当前格式表达限制，尚不能完成机器核验`
+                : `${label}存在未满足的数据输入或记录粒度要求`
+              : `${label}未关联产生行为或使用行为`,
             target
           ]
         ];
@@ -1672,10 +1723,14 @@
           else issues.push(issue('数据对象', message, issueTarget, '影响数据对象子项'));
         });
         flowDetail?.issues.forEach(flowIssue => {
+          const linkIndex = flowIssue.linkRef ? (item.behavior_links || []).findIndex(link => link.link_ref === flowIssue.linkRef) : -1;
+          const flowTarget = fieldTarget(target, linkIndex >= 0
+            ? `data_objects.${index}.behavior_links.${linkIndex}` : `data_objects.${index}.behavior_links`);
+          if (data.schema_version === 'process-governance-v9') flowTarget.ruleCode = `V9_DATA_${flowIssue.reason.toUpperCase()}`;
           issues.push(issue(
             '数据时序',
             flowIssue.message,
-            fieldTarget(target, `data_objects.${index}.behavior_links`),
+            flowTarget,
             '影响数据对象子项',
             flowIssue.suggestions
           ));
@@ -1685,7 +1740,7 @@
       let lifecyclePassed = 0;
       const lifecycleTotal = dataObjects.length * 3;
       dataObjects.forEach((item, index) => {
-        if (!['process-governance-v7', 'process-governance-v8'].includes(data.schema_version)) {
+        if (!['process-governance-v7', 'process-governance-v8', 'process-governance-v9'].includes(data.schema_version)) {
           lifecyclePassed += 3;
           return;
         }
@@ -1801,7 +1856,7 @@
         const detailCount = areas.filter(area => area.area_type === '明细清单').length;
         const assignmentChecks = [];
         const formBehaviorLinks = Array.isArray(form.behavior_links) ? form.behavior_links : [];
-        const formBehaviorPassed = !['process-governance-v4', 'process-governance-v5', 'process-governance-v6', 'process-governance-v7', 'process-governance-v8'].includes(data.schema_version) || (
+        const formBehaviorPassed = !['process-governance-v4', 'process-governance-v5', 'process-governance-v6', 'process-governance-v7', 'process-governance-v8', 'process-governance-v9'].includes(data.schema_version) || (
           formBehaviorLinks.length > 0
           && formBehaviorLinks.every(link => behaviorRefs.has(text(link.behavior_ref)) && Array.isArray(link.operations) && link.operations.length > 0)
         );
@@ -1868,13 +1923,13 @@
                 `forms.${formIndex}.areas.${areaIndex}.items.${itemIndex}.required`
               ],
               [
-                !['process-governance-v4', 'process-governance-v5', 'process-governance-v6', 'process-governance-v7', 'process-governance-v8'].includes(data.schema_version)
+                !['process-governance-v4', 'process-governance-v5', 'process-governance-v6', 'process-governance-v7', 'process-governance-v8', 'process-governance-v9'].includes(data.schema_version)
                   || (item.value_origin_mode && item.value_origin_mode !== 'pending_confirmation'),
                 `${formLabel}的字段${itemIndex + 1}取值方式待确认`,
                 `forms.${formIndex}.areas.${areaIndex}.items.${itemIndex}.value_origin_mode`
               ],
               [
-                !['process-governance-v4', 'process-governance-v5', 'process-governance-v6', 'process-governance-v7', 'process-governance-v8'].includes(data.schema_version)
+                !['process-governance-v4', 'process-governance-v5', 'process-governance-v6', 'process-governance-v7', 'process-governance-v8', 'process-governance-v9'].includes(data.schema_version)
                   || item.value_origin_mode !== 'depends_on_data'
                   || (Array.isArray(item.source_links) && item.source_links.length > 0),
                 `${formLabel}的字段${itemIndex + 1}选择依赖数据但未登记来源`,
@@ -1892,7 +1947,7 @@
                 ));
               }
             });
-            if (['process-governance-v5', 'process-governance-v6', 'process-governance-v7', 'process-governance-v8'].includes(data.schema_version)) {
+            if (['process-governance-v5', 'process-governance-v6', 'process-governance-v7', 'process-governance-v8', 'process-governance-v9'].includes(data.schema_version)) {
               (Array.isArray(item.source_links) ? item.source_links : []).forEach((link, linkIndex) => {
                 const externalSystemSource = link.source_type === 'external_system';
                 const sourceComplete = externalSystemSource

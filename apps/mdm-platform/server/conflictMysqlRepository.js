@@ -277,23 +277,22 @@ function makeConflictMysqlRepository(pool) {
         [conflictId]
       ));
     }
-    return publicFieldConflict(await first(
+    const value=publicFieldConflict(await first(
       pool,
       `SELECT fc.*, fc.field_id_a AS field_entry_a_id, fc.field_id_b AS field_entry_b_id,
               'field' AS conflict_type,
-              fa.field_name_cn AS field_name_a,
-              fb.field_name_cn AS field_name_b,
+              NULL AS field_name_a,
+              NULL AS field_name_b,
               da.name AS dept_a_name,
               db.name AS dept_b_name
        FROM mdm_field_conflicts fc
-       LEFT JOIN data_map_fields fa ON fc.field_id_a = fa.id
-       LEFT JOIN data_map_fields fb ON fc.field_id_b = fb.id
        LEFT JOIN departments da ON fc.dept_a = da.id
        LEFT JOIN departments db ON fc.dept_b = db.id
        WHERE fc.id=?
        LIMIT 1`,
       [conflictId]
     ));
+    return value?{...value,...await require('./dataMapHandoffCompatibility').relatedHistoryContext(pool,'field_conflict',value.id)}:null;
   }
 
   async function conflictAssignments(conflictId, conflictType) {
@@ -371,20 +370,19 @@ function makeConflictMysqlRepository(pool) {
       const type = filters.type || '';
       if (type === 'field') {
         const fieldFilter = filterClause('fc', 'field', filters, scope);
-        return (await rows(
+        const values=(await rows(
           pool,
           `SELECT fc.*, fc.field_id_a AS field_entry_a_id, fc.field_id_b AS field_entry_b_id,
                   'field' AS conflict_type,
-                  fa.field_name_cn AS field_name_a,
-                  fb.field_name_cn AS field_name_b
+                  NULL AS field_name_a,
+                  NULL AS field_name_b
            FROM mdm_field_conflicts fc
-           LEFT JOIN data_map_fields fa ON fc.field_id_a = fa.id
-           LEFT JOIN data_map_fields fb ON fc.field_id_b = fb.id
-           WHERE ${fieldFilter.sql}
+                   WHERE ${fieldFilter.sql}
            ORDER BY CASE fc.severity WHEN 'blocking' THEN 0 WHEN 'error' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 WHEN 'warn' THEN 4 ELSE 5 END,
                     fc.created_at DESC, fc.id DESC`,
           fieldFilter.params
         )).map(publicFieldConflict);
+        return Promise.all(values.map(async value=>({...value,...await require('./dataMapHandoffCompatibility').relatedHistoryContext(pool,'field_conflict',value.id)})));
       }
       if (type === 'term') {
         const termFilter = filterClause('tc', 'term', filters, scope);
@@ -460,7 +458,11 @@ function makeConflictMysqlRepository(pool) {
 
     async detectConflicts(filters = {}, actor = {}) {
       let detected = 0;
-      const termRows = await rows(
+      // Semantic similarity is a suggestion in the unified dictionary. Existing
+      // conflict records remain actionable, but detection never creates new term
+      // conflicts or todos from approximate wording after this explicit cutover.
+      const termGovernanceEnabled = require('./terminologyGovernanceCompatibility').enabled();
+      const termRows = termGovernanceEnabled ? [] : await rows(
         pool,
         `SELECT t.id, t.term, t.definition, t.scope, t.process_mapping_record_id,
                 d.id AS process_owner_dept_id
@@ -579,7 +581,7 @@ function makeConflictMysqlRepository(pool) {
           }, 'field', actor.actor_user_id || null);
         }
       }
-      return { detected };
+      return termGovernanceEnabled ? { detected, terminology_mode: 'suggestions_only', terminology_notice: '术语近似匹配仅供人工核对，不自动建立冲突或待办。' } : { detected };
     },
 
     async assignConflict(conflictId, conflictType = 'field', payload = {}) {

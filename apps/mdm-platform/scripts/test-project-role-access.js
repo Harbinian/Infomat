@@ -23,6 +23,10 @@ const rolePermissions = {
     'governance:publish',
     'governance:escalate-conflict'
   ],
+  mdm_steward: [
+    'governance:read-assigned-context',
+    'governance:handle-assigned-work'
+  ],
   department_contact: [
     'governance:read-department',
     'governance:draft-department',
@@ -45,12 +49,17 @@ const rolePermissions = {
   decision_group: [
     'governance:read-escalated-context',
     'governance:decide-escalation'
+  ],
+  hr_directory_manager: [
+    'identity:read',
+    'directory:read',
+    'directory:maintain'
   ]
 };
 
 function main() {
   const model = getAccessModel();
-  assert.strictEqual(ROLE_GUIDES.length, 7);
+  assert.strictEqual(ROLE_GUIDES.length, 9);
   assert.deepStrictEqual(model.roles.map(role => role.code), Object.keys(rolePermissions));
 
   for (const [roleCode, expectedPermissions] of Object.entries(rolePermissions)) {
@@ -74,6 +83,7 @@ function main() {
     'governance:publish',
     'governance:quality-audit',
     'governance:handle-assigned-conflict',
+    'governance:handle-assigned-work',
     'governance:decide-escalation'
   ]) {
     assert.strictEqual(permissionSetHas(adminPermissions, forbidden), false, `admin must not receive ${forbidden}`);

@@ -74,7 +74,8 @@ test('CPU thread dispatch returns real findings and supports cancellation', asyn
 });
 
 test('declared other formats are refused, undeclared and invalid V7 retain format diagnosis', () => {
-  const d = require('../../structured-output-service/server').createEmptyProcessGovernanceDocument();
+  const d = require('../../structured-output-service/server').createEmptyProcessGovernanceV7Document();
+  d.schema_version = 'process-governance-v8'; d.migration.source_schema_version = 'process-governance-v8';
   assert.equal(run(d).status, 'succeeded');
   for (const value of [{ ...document(), schema_version: 'unknown' }, { ...document(), schema_version: null }]) {
     const result = run(value); assert.equal(result.status, 'failed'); assert.equal(result.error_code, 'SOURCE_FORMAT_UNSUPPORTED'); assert.deepEqual(result.findings, []); assert.deepEqual(result.checked_ids, []);

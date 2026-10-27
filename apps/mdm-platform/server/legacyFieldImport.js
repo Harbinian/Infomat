@@ -20,6 +20,7 @@ async function importFields(pool,{contextId,rows,fileName,buffer,requestId},sess
    const [[context]]=await conn.execute('SELECT * FROM data_map_contexts WHERE id=? FOR UPDATE',[contextId]);
    if(!context) throw fail(404,'LEGACY_IMPORT_CONTEXT_MISSING','数据地图上下文不存在');
    const current=await actor(conn,session,'governance:draft-department');
+   await require('./dataMapHandoffControl').assertLegacyWriteAllowed(conn,{entryId:'W05:legacyFieldImport'});
    if(Number(context.dept_id)!==Number(current.current_department_id)) throw fail(403,'LEGACY_WRITE_FORBIDDEN','无权导入该数据地图上下文字段台账');
    const repo=require('./dataMapMysqlRepository').makeDataMapMysqlRepository(conn);
    if(key) {

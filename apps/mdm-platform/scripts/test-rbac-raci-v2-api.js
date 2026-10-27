@@ -190,6 +190,7 @@ async function main() {
   const app = express();
   app.use(express.json());
   app.use((req, res, next) => {
+    if (req.headers['x-no-session']) return next();
     req.session = {
       personId: 42,
       accountId: 142,
@@ -216,7 +217,55 @@ async function main() {
     const modelRes = await fetch(`${baseUrl}/api/rbac/model`);
     const model = await modelRes.json();
     assert.strictEqual(modelRes.status, 200, JSON.stringify(model));
-    assert.strictEqual(model.roles.length, 7);
+    assert.strictEqual(model.roles.length, 9);
+
+    const beforeRequirementCalls = calls.length;
+    const requirementsRes = await fetch(`${baseUrl}/api/rbac/department-role-requirements`);
+    const requirements = await requirementsRes.json();
+    assert.strictEqual(requirementsRes.status, 200, JSON.stringify(requirements));
+    assert.strictEqual(requirements.departments.length, 12);
+    assert.strictEqual(requirements.department_roles.length, 2);
+    assert.strictEqual(requirements.other_roles.length, 7);
+    assert.strictEqual(requirements.grants_permissions, false);
+    assert.strictEqual(requirements.binds_people, false);
+    assert.strictEqual(requirements.creates_department_records, false);
+    assert.deepStrictEqual(requirements.department_roles, model.roles.filter(role => ['department_contact', 'department_mdm_reviewer'].includes(role.code)));
+    assert.deepStrictEqual(requirements.other_roles, model.roles.filter(role => !['department_contact', 'department_mdm_reviewer'].includes(role.code)));
+    const configPath = require.resolve('../config/department-role-requirements.json');
+    const originalConfig = require.cache[configPath].exports;
+    try {
+      require.cache[configPath].exports = { ...originalConfig, access_model_version: 'unsupported-synthetic-version' };
+      const unavailableRes = await fetch(`${baseUrl}/api/rbac/department-role-requirements`);
+      const unavailable = await unavailableRes.json();
+      assert.strictEqual(unavailableRes.status, 503, JSON.stringify(unavailable));
+      assert.strictEqual(unavailable.code, 'DEPARTMENT_ROLE_REQUIREMENTS_UNAVAILABLE');
+      assert.strictEqual(unavailable.departments, undefined, 'invalid configuration must not fall back to an old catalog');
+    } finally {
+      require.cache[configPath].exports = originalConfig;
+    }
+    for (const method of ['POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']) {
+      const response = await fetch(`${baseUrl}/api/rbac/department-role-requirements`, {
+        method, headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ personId: 88, roleCode: 'admin' })
+      });
+      const body = await response.json();
+      assert.strictEqual(response.status, 405, JSON.stringify(body));
+      assert.strictEqual(body.code, 'DEPARTMENT_ROLE_REQUIREMENTS_READ_ONLY');
+    }
+    for (const method of ['GET', 'POST']) {
+      const response = await fetch(`${baseUrl}/api/rbac/department-role-requirements`, { method, headers: { 'x-no-session': '1' } });
+      assert.strictEqual(response.status, 401);
+    }
+    const assignedPermissions = permissions;
+    permissions = new Set();
+    const unassignedRequirementsRes = await fetch(`${baseUrl}/api/rbac/department-role-requirements`);
+    assert.strictEqual(unassignedRequirementsRes.status, 200, 'readable requirements do not require or grant an assigned business role');
+    const unassignedAccountRes = await fetch(`${baseUrl}/api/org/accounts`, { method: 'POST' });
+    assert.strictEqual(unassignedAccountRes.status, 403, 'reading department requirements cannot authorize account creation');
+    permissions = assignedPermissions;
+    assert.strictEqual(calls.length, beforeRequirementCalls, 'read and rejected methods must not call identity writers');
+    const unchangedModel = await (await fetch(`${baseUrl}/api/rbac/model`)).json();
+    assert.deepStrictEqual(unchangedModel, model, 'department requirements preserve the fixed role model and permissions');
 
     const modelWriteRes = await fetch(`${baseUrl}/api/rbac/model`, { method: 'POST' });
     const modelWrite = await modelWriteRes.json();
@@ -238,7 +287,7 @@ async function main() {
     assert.strictEqual(legacyImport.code, 'LEGACY_IDENTITY_API_RETIRED');
 
     const createPayload = {
-      loginName: 'u088',
+      loginName: 'U088',
       employeeNo: 'U088',
       name: '测试账号',
       departmentId: 9,
