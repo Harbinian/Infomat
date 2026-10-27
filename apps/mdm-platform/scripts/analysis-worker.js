@@ -10,6 +10,17 @@ const { inspectAnalysisQueue } = require('../server/analysisQueueMigration');
 const { inspectWorkerDependencies, readWorkerStatus, inspectionScope } = require('../server/analysisDependencyReadiness');
 const { makeDataMapDefinitionRepository } = require('../server/dataMapDefinitionRepository');
 const { work } = require('../server/analysisWorker');
+function runtimeCodeDigests() {
+  const files = [__filename, require.resolve('../server/analysisDependencyReadiness'), require.resolve('../server/analysisWorker'), require.resolve('../server/analysisAiOffline'), require.resolve('../server/analysisAiThread'), require.resolve('../server/analysisQueue'), require.resolve('../server/v7AnalysisRules'), require.resolve('../server/processContentChecks'), require.resolve('../../structured-output-service/public/structure-score'), require.resolve('../../structured-output-service/public/process-data-availability'), require.resolve('../server/v7AnalysisThread'), require.resolve('../server/handoffAnalysisRules'), require.resolve('../server/excelEvidenceRules'), require.resolve('../server/wordEvidenceRules'), require.resolve('../server/pdfEvidenceRules'), require.resolve('../../../scripts/process-governance/v7-validator'), ...require('../server/v7AnalysisRules').schemaFiles];
+  const sha = file => crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+  const hashes = Object.fromEntries(files.map(file => [require('node:path').basename(file), sha(file)]));
+  // Preserve current dependency keys. Historical files have the same basenames,
+  // so retain their scoped paths rather than overwriting the current digests.
+  for (const name of ['index.js', 'processContentChecks.js', 'structure-score.js']) {
+    hashes['rules/v7-content-v4/' + name] = sha(require.resolve('../server/rules/v7-content-v4/' + name));
+  }
+  return hashes;
+}
 async function main(args = process.argv.slice(2), env = process.env) {
   const command = args[0];
   if (!['start', 'status', 'inspect', 'stop', 'recover'].includes(command)) throw Error('ARGUMENT_INVALID');
@@ -68,7 +79,7 @@ async function main(args = process.argv.slice(2), env = process.env) {
     const worker = crypto.randomUUID();
     const runtime = { node_version: process.version, worker_version: 'analysis-worker-v6', ai_offline_version: require('../server/analysisAiOffline').VERSION, pdf_rule_version: require('../server/pdfEvidenceRules').VERSION, word_rule_version: require('../server/wordEvidenceRules').VERSION, excel_rule_version: require('../server/excelEvidenceRules').VERSION, handoff_rule_version: require('../server/handoffAnalysisRules').VERSION, rule_version: require('../server/v7AnalysisRules').VERSION, pid: process.pid,
       dependency_check_version: 'analysis-dependency-readiness-v1',
-      code_sha256: Object.fromEntries([__filename, require.resolve('../server/analysisDependencyReadiness'), require.resolve('../server/analysisWorker'), require.resolve('../server/analysisAiOffline'), require.resolve('../server/analysisAiThread'), require.resolve('../server/analysisQueue'), require.resolve('../server/v7AnalysisRules'), require.resolve('../server/processContentChecks'), require.resolve('../../structured-output-service/public/structure-score'), require.resolve('../server/v7AnalysisThread'), require.resolve('../server/handoffAnalysisRules'), require.resolve('../server/excelEvidenceRules'), require.resolve('../server/wordEvidenceRules'), require.resolve('../server/pdfEvidenceRules'), require.resolve('../../../scripts/process-governance/v7-validator'), ...require('../server/v7AnalysisRules').schemaFiles].map(file => [require('node:path').basename(file), crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex')])) };
+      code_sha256: runtimeCodeDigests() };
     await lockQuery('INSERT INTO data_map_analysis_workers(worker_id,runtime_json,started_at,heartbeat_at) VALUES (?,?,UTC_TIMESTAMP(3),UTC_TIMESTAMP(3))', [worker, JSON.stringify(runtime)]);
     registered = worker;
     process.on('SIGINT', signalStop); process.on('SIGTERM', signalStop);
@@ -105,4 +116,4 @@ if (require.main === module) main().catch(e => {
   // this owned CLI process alive after it reported failure; failure remains visible as exit 1.
   process.exit(1);
 });
-module.exports = { main };
+module.exports = { main, runtimeCodeDigests };

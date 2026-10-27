@@ -141,13 +141,12 @@ function makeTodoMysqlRepository(pool) {
         params.push(filters.type);
       }
 
-      return (await rows(
+      const values=(await rows(
         pool,
-        `SELECT t.*, CAST(t.related_term_id AS CHAR) AS related_term_id, fd.name AS from_dept_name, td.name AS to_dept_name${filters.includeFieldContext ? ', fe.process_governance_a1_code AS a1_code' : ''}
+        `SELECT t.*, CAST(t.related_term_id AS CHAR) AS related_term_id, fd.name AS from_dept_name, td.name AS to_dept_name${filters.includeFieldContext ? ', NULL AS a1_code' : ''}
          FROM mdm_todos t
          LEFT JOIN departments fd ON fd.id = t.from_dept_id
          LEFT JOIN departments td ON td.id = t.to_dept_id
-         ${filters.includeFieldContext ? 'LEFT JOIN data_map_fields fe ON fe.id = t.related_field_id' : ''}
          WHERE ${conditions.join(' AND ')}
          ORDER BY
            CASE t.urgency WHEN 'high' THEN 3 WHEN 'medium' THEN 2 WHEN 'low' THEN 1 ELSE 2 END DESC,
@@ -156,6 +155,8 @@ function makeTodoMysqlRepository(pool) {
            t.created_at ASC`,
         params
       )).map(publicTodo);
+      if(!filters.includeFieldContext)return values;
+      return Promise.all(values.map(async value=>({...value,...await require('./dataMapHandoffCompatibility').relatedHistoryContext(pool,'todo',value.id)})));
     },
 
     async getTodo(todoId) {

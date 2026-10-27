@@ -188,6 +188,11 @@ function qualifiedConnection(connection) {
   const roles = ['department_contact', 'department_mdm_reviewer', 'mdm_lead', 'admin'];
   return new Proxy(connection, { get(target, key) {
     if (key === 'execute') return async (sql, params = []) => {
+      // Legacy fixtures have no case disputes or submitted formal drafts.
+      // Their populated and concurrent variants use the owned real-MySQL tests.
+      if (/SELECT payload_json FROM process_v7_preview_events/.test(sql) && params[1] === 'process_dispute_action') return [[]];
+      if (/AS dispute_event_id FROM process_v7_preview_events/.test(sql) && params[1] === 'process_dispute_action') return [[]];
+      if (/SELECT d.id,d.status FROM process_design_drafts d/.test(sql)) return [[]];
       const person = Object.values(identities).find(p => String(p.personId) === String(params[0]));
       if (/FROM person p\s+LEFT JOIN user_accounts/.test(sql)) return [person ? [{ person_id: String(person.personId), account_id: String(person.personId + 100), auth_version: '1',
         current_department_id: String(person.departmentId), department_name: ['质量管理部', '工程技术部', '财务部'][person.departmentId - 1], person_name: 'synthetic', account_status: 'active', status: 'active', must_change_password: 0 }] : []];

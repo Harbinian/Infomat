@@ -3,6 +3,7 @@ const mysql = require('mysql2/promise');
 const { mysqlConfigFromEnv } = require('./mysqlConfig');
 const { mdmMysqlSchemaSql, splitSqlStatements } = require('./mysqlSchema');
 const { createRegisteredPool } = require('./mysqlPoolRegistry');
+const governanceCompatibility = require('./terminologyGovernanceCompatibility');
 
 let terminologyRepoPromise = null;
 let terminologyRepositoryFactory = null;
@@ -131,6 +132,7 @@ const DEFAULT_TERM_TYPES = [
 ];
 
 async function seedDefaultTerminologyTermTypes(pool) {
+  governanceCompatibility.assertLegacyWriteAllowed();
   for (const termType of DEFAULT_TERM_TYPES) {
     await pool.execute(
       `INSERT INTO terminology_term_types (code, name, description, sort_order, active)
@@ -186,6 +188,7 @@ function makeTerminologyMysqlRepository(pool) {
   }
   return {
     async initSchema() {
+      governanceCompatibility.assertLegacyWriteAllowed();
       for (const statement of splitSqlStatements(mdmMysqlSchemaSql())) {
         await pool.execute(statement);
       }
@@ -247,6 +250,7 @@ function makeTerminologyMysqlRepository(pool) {
     },
 
     async listTerms(filters = {}) {
+      if (governanceCompatibility.enabled()) return governanceCompatibility.listLegacyTerms(pool, filters);
       const params = [];
       const conditions = ['1=1'];
       if (filters.status) {
@@ -270,6 +274,7 @@ function makeTerminologyMysqlRepository(pool) {
     },
 
     async getTerm(termId, scope = null, forShare = false) {
+      if (governanceCompatibility.enabled()) return governanceCompatibility.getLegacyTerm(pool, termId, scope, { forShare });
       const scoped = scope ? scopedTermSql(scope) : { sql: '', params: [] };
       const row = await first(
         pool,
@@ -284,6 +289,7 @@ function makeTerminologyMysqlRepository(pool) {
     },
 
     async createTerm(payload = {}, actorUserId = null, session = null) {
+      governanceCompatibility.assertLegacyWriteAllowed();
       if (session) return await mutate('create', null, payload, session);
       const normalized = normalizeTermPayload(payload);
       const actorPersonId = payload.actor_person_id || payload.actorPersonId || actorUserId || null;
@@ -306,6 +312,7 @@ function makeTerminologyMysqlRepository(pool) {
     },
 
     async updateTerm(termId, payload = {}, session = null) {
+      governanceCompatibility.assertLegacyWriteAllowed();
       if (session) return await mutate('update', termId, payload, session);
       const normalized = normalizeTermPayload(payload);
       const result = await pool.execute(
@@ -331,6 +338,7 @@ function makeTerminologyMysqlRepository(pool) {
     },
 
     async reviewTerm(termId, action, reviewerId, session = null, expectedToken = undefined) {
+      governanceCompatibility.assertLegacyWriteAllowed();
       if (session) return await mutate('review', termId, {action,expected_token:expectedToken}, session);
       const reviewerPersonId = reviewerId;
       const newStatus = action === 'approve' ? 'approved' : 'rejected';
@@ -347,6 +355,7 @@ function makeTerminologyMysqlRepository(pool) {
     },
 
     async deleteTerm(termId, session = null, expectedToken = undefined) {
+      governanceCompatibility.assertLegacyWriteAllowed();
       if (session) return await mutate('delete', termId, {expected_token:expectedToken}, session);
       const result = await pool.execute('DELETE FROM terminology_terms WHERE id=?', [termId]);
       return affectedRows(result) > 0;

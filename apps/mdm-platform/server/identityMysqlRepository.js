@@ -157,7 +157,7 @@ function assignmentAuthority(assignments = []) {
 
 // Caller owns the existing account/person/assignment locks and transaction.
 // Each invocation reads current qualifications on that exact connection.
-async function readPersonAuthority(db, session, personId, { currentRead = false, includeFieldConstraints = false } = {}) {
+async function readPersonAuthority(db, session, personId, { currentRead = false, includeFieldConstraints = false, accessModelVersion = ACCESS_MODEL_VERSION } = {}) {
   const subject = sessionSubject(session);
   if (subject.kind !== 'person' || !sameIdentityInteger(subject.personId, personId)) return { valid: false };
   // Only identity SELECTs pass through this adapter. Locking reads bypass an
@@ -169,7 +169,7 @@ async function readPersonAuthority(db, session, personId, { currentRead = false,
       return db.execute(`${sql.trim()} FOR SHARE`, params);
     }
   } : db;
-  const identity = makeIdentityMysqlRepository(reader);
+  const identity = makeIdentityMysqlRepository(reader, { accessModelVersion });
   const validation = await identity.validateSession(session);
   if (!validation.valid || !validation.user) return includeFieldConstraints ? { valid: false, reason: validation.reason } : { valid: false };
   if (validation.user.must_change_password) return includeFieldConstraints ? { valid: false, passwordChangeRequired: true } : { valid: false };
@@ -422,32 +422,32 @@ async function migrateLegacyIdentityToPersonIdentity(pool) {
   await migrateLegacyBusinessUsersToPersons(pool);
 }
 
-function makeIdentityMysqlRepository(pool) {
+function makeIdentityMysqlRepository(pool, { accessModelVersion = ACCESS_MODEL_VERSION } = {}) {
   async function getUserRoleCodes(userId, legacyRole) {
     if (systemAdmin.accountId(userId)) {
       const user = await systemAdmin.getSystemAdmin(pool, userId);
       return user ? [{ code: 'admin', name: 'MDM系统管理员', scopeType: 'global' }] : [];
     }
+    // Keep role calendar dates independent of the Node host timezone.
     return await rows(pool, `
       SELECT r.role_code AS code, r.role_name AS name,
              pr.person_role_id AS assignmentId,
              pr.scope_type AS scopeType,
              pr.scope_department_id AS scopeDepartmentId,
              pr.authorization_basis AS authorizationBasis,
-             pr.effective_from AS effectiveFrom,
-             pr.effective_to AS effectiveTo
+             DATE_FORMAT(pr.effective_from,'%Y-%m-%d') AS effectiveFrom,
+             DATE_FORMAT(pr.effective_to,'%Y-%m-%d') AS effectiveTo
       FROM person_roles pr
       JOIN roles r ON pr.role_id = r.role_id
       WHERE pr.person_id=CAST(? AS SIGNED)
         AND r.status='active'
         AND r.model_version=?
         AND pr.assignment_status='active'
-        AND pr.authorization_basis IS NOT NULL
         AND pr.effective_from IS NOT NULL
         AND (pr.effective_from IS NULL OR pr.effective_from<=CURRENT_DATE)
         AND (pr.effective_to IS NULL OR pr.effective_to>=CURRENT_DATE)
       ORDER BY r.role_group, r.role_code
-    `, [String(userId), ACCESS_MODEL_VERSION]);
+    `, [String(userId), accessModelVersion]);
   }
 
   async function getDirectRoleIds(userId) {
@@ -459,11 +459,10 @@ function makeIdentityMysqlRepository(pool) {
         AND r.status='active'
         AND r.model_version=?
         AND pr.assignment_status='active'
-        AND pr.authorization_basis IS NOT NULL
         AND pr.effective_from IS NOT NULL
         AND (pr.effective_from IS NULL OR pr.effective_from<=CURRENT_DATE)
         AND (pr.effective_to IS NULL OR pr.effective_to>=CURRENT_DATE)
-    `, [identityReadParam(userId), ACCESS_MODEL_VERSION])).map(role => normalizeIdentityRead(role, ['role_id']).role_id);
+    `, [identityReadParam(userId), accessModelVersion])).map(role => normalizeIdentityRead(role, ['role_id']).role_id);
   }
 
   async function collectRoleAndAncestors(roleIds, executor = pool) {
@@ -513,6 +512,33 @@ function makeIdentityMysqlRepository(pool) {
           const constraints = parseJsonObject(permission.field_constraints, null);
           if (constraints) fieldConstraints[permission.perm_code] = constraints;
         }
+      }
+    }
+
+    // The retained reviewer code now identifies the department's final
+    // accountable person. An old grant alone cannot authorize confirmation.
+    const confirmationPermissions = ['governance:review-department', 'governance:record-department-decision'];
+    if (confirmationPermissions.some(code => permSet.has(code))) {
+      const policyReady = (await require('./departmentAccountability').policyState(pool)).ready;
+      const accountable = policyReady && await first(pool, `
+        SELECT CAST(pr.person_role_id AS CHAR) AS person_role_id
+        FROM person_roles pr JOIN roles r ON r.role_id=pr.role_id
+        JOIN person p ON p.person_id=pr.person_id
+        JOIN departments d ON d.id=pr.scope_department_id AND d.id=p.current_department_id
+        JOIN user_accounts ua ON ua.person_id=p.person_id
+        JOIN schema_migrations sm ON sm.migration_key='2026-10-19-department-accountability-v1'
+        WHERE pr.person_id=CAST(? AS SIGNED) AND r.role_code='department_mdm_reviewer'
+          AND r.status='active' AND r.model_version=? AND pr.assignment_status='active'
+          AND pr.scope_type='department' AND pr.effective_from<=CURRENT_DATE
+          AND (pr.effective_to IS NULL OR pr.effective_to>=CURRENT_DATE)
+          AND d.final_responsible_person_id=p.person_id AND d.status='active'
+          AND p.status='active' AND p.employment_status='active'
+          AND ua.account_status='active' AND ua.must_change_password=0
+        LIMIT 1
+      `, [identityReadParam(userId), accessModelVersion]);
+      if (!accountable) for (const code of confirmationPermissions) {
+        permSet.delete(code);
+        delete fieldConstraints[code];
       }
     }
 
@@ -905,7 +931,6 @@ function makeIdentityMysqlRepository(pool) {
       const roleJoin = roleCode ? `
         JOIN person_roles pr ON pr.person_id=p.person_id
           AND pr.assignment_status='active'
-          AND pr.authorization_basis IS NOT NULL
           AND pr.effective_from<=CURRENT_DATE
           AND (pr.effective_to IS NULL OR pr.effective_to>=CURRENT_DATE)
         JOIN roles r ON r.role_id=pr.role_id
@@ -923,7 +948,7 @@ function makeIdentityMysqlRepository(pool) {
         LEFT JOIN departments d ON p.current_department_id = d.id
         WHERE p.status='active'
         ORDER BY d.name, p.person_name
-      `, roleCode ? [roleCode, ACCESS_MODEL_VERSION] : []);
+      `, roleCode ? [roleCode, accessModelVersion] : []);
       return userRows.map(row => normalizeIdentityRead(row, ['id', 'person_id', 'department_id'])).map(user => ({
         id: user.id,
         personId: user.person_id || user.id,
@@ -937,7 +962,8 @@ function makeIdentityMysqlRepository(pool) {
       const assignments = await rows(pool, `
         SELECT CAST(r.role_id AS CHAR) AS role_id, r.role_code, r.role_name, r.is_system, r.status,
                CAST(pr.person_role_id AS CHAR) AS person_role_id, pr.scope_type, CAST(pr.scope_department_id AS CHAR) AS scope_department_id,
-               pr.authorization_basis, pr.effective_from, pr.effective_to,
+               pr.authorization_basis, DATE_FORMAT(pr.effective_from,'%Y-%m-%d') AS effective_from,
+               DATE_FORMAT(pr.effective_to,'%Y-%m-%d') AS effective_to,
                pr.assignment_status, pr.revocation_reason
         FROM person_roles pr
         JOIN roles r ON pr.role_id = r.role_id
@@ -1150,7 +1176,7 @@ function makeIdentityMysqlRepository(pool) {
         roleCodes,
         permissions,
         dataScopes: deriveDataScopes(user, permissions),
-        governanceModelVersion: ACCESS_MODEL_VERSION
+        governanceModelVersion: accessModelVersion
       };
     },
 

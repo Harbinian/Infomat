@@ -1,0 +1,13 @@
+.office-workbench .office-selection-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+
+.office-workbench .office-selection-check input[type=checkbox] {
+  display: inline-block;
+  width: auto;
+  flex: 0 0 auto;
+  margin-top: 3px;
+  padding: 0;
+}

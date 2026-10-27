@@ -51,6 +51,8 @@ async function createTermTodo(pool, payload, actor) {
       from_dept_id:actor.actor_dept_id || null,content,due_date:due,urgency };
     const hash = crypto.createHash('sha256').update(JSON.stringify(normalized)).digest('hex');
     await db.beginTransaction();
+    // When unified governance is enabled the old stable ID resolves through its
+    // explicit mapping. Never reinterpret a new UUID or infer a link by name.
     const term = await makeTerminologyMysqlRepository(db).getTerm(termId, actor.term_scope, true);
     if (!term || String(term.id) !== termId) throw fail(404, 'TODO_TERM_UNAVAILABLE', '所选术语不存在或不在当前可读取范围内');
     const [[department]] = await db.execute("SELECT id FROM departments WHERE id=? AND status='active' AND (effective_from IS NULL OR effective_from<=CURRENT_DATE) AND (effective_to IS NULL OR effective_to>=CURRENT_DATE) FOR SHARE", [departmentId]);
@@ -74,7 +76,8 @@ async function createTermTodo(pool, payload, actor) {
     [normalized.from_dept_id, departmentId, termId, content, due, urgency, actor.actor_user_id || null, personId]);
     if (!Number.isSafeInteger(Number(result.insertId))) throw fail(409, 'TODO_TERM_INVALID', '待办编号超出现有接口范围，创建已撤销');
     await db.execute("INSERT INTO mdm_todo_events(todo_id,event_type,actor_user_id,actor_person_id,note) VALUES (?,'created',?,?,?)",
-      [result.insertId, actor.actor_user_id || null, personId, JSON.stringify({ related_term_id: termId })]);
+      [result.insertId, actor.actor_user_id || null, personId, JSON.stringify({ related_term_id: termId,
+        ...(term.governance_term_id ? { governance_term_id:term.governance_term_id, governance_version_id:term.governance_version_id } : {}) })]);
     await db.execute(`INSERT INTO mdm_version_log(entity_type,entity_id,field_name,operation,operated_by,operated_by_person_id,metadata_json)
       VALUES ('todo',?,?,'create',?,?,?)`, [result.insertId, key, actor.actor_user_id || null, personId,
       JSON.stringify({ schema_version: 'todo-term-source-v1', payload_hash: hash, todo: { id: String(result.insertId), ...normalized } })]);

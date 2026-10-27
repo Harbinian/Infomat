@@ -6,7 +6,7 @@ const { requireAuth, getUserEffectivePermissionsAsync } = require('../auth');
 const { dataMapRepository } = require('../dataMapMysqlRepository');
 
 function handleError(res, error) {
-  if (error && error.statusCode) return res.status(error.statusCode).json({ error: error.message });
+  if (error && error.statusCode) return res.status(error.statusCode).json({ error: error.message,code:error.code });
   if (sendMysqlUnavailable(res, error)) return;
   if (error && (String(error.code || '').startsWith('ER_') || String(error.message).includes('constraint'))) {
     return res.status(400).json({ error: '数据不符合约束' });
@@ -44,9 +44,9 @@ async function canConfirmIdentity(req, context) {
 }
 
 async function fieldScope(repo, fieldId) {
-  const field = await repo.getField(fieldId);
+  const field = await repo.getFieldScope(fieldId);
   if (!field) return { field: null, context: null };
-  return { field, context: await repo.getContext(field.context_id) };
+  return { field, context: await repo.getContextScope(field.context_id) };
 }
 
 router.get('/field/:fieldEntryId', requireAuth, (req, res) => {
@@ -55,7 +55,7 @@ router.get('/field/:fieldEntryId', requireAuth, (req, res) => {
     const { field, context } = await fieldScope(repo, req.params.fieldEntryId);
     if (!field) return res.status(404).json({ error: '字段不存在' });
     if (!await canViewIdentity(req, context)) return res.status(403).json({ error: '无权查看该字段身份' });
-    const identity = await repo.getFieldIdentity(req.params.fieldEntryId);
+    const identity = await repo.getFieldIdentity(req.params.fieldEntryId,req.query);
     res.json(identity || {});
   });
 });
@@ -75,17 +75,8 @@ router.put('/:fieldEntryId', requireAuth, (req, res) => {
     const repo = await dataMapRepository();
     const { field, context } = await fieldScope(repo, req.params.fieldEntryId);
     if (!field) return res.status(404).json({ error: '字段不存在' });
-    const existing = await repo.getFieldIdentity(req.params.fieldEntryId);
     if (!await canMaintainIdentity(req, context)) {
       return res.status(403).json({ error: '只能由部门主对接人维护本部门黄金源信息' });
-    }
-    // Maintenance cannot assert a reviewer decision through the upsert payload.
-    // Existing confirmed records remain readable; confirmation has its own route.
-    if (req.body.confirmed || String(req.body.status || '').trim() === 'confirmed') {
-      return res.status(403).json({ error: '维护信息不能同时确认黄金源，请使用部门确认入口' });
-    }
-    if (existing && existing.owner_user_id && !existing.owner_person_id) {
-      return res.status(409).json({ error: '历史负责人尚未关联人员，请先明确人员映射后再维护' });
     }
     res.json(await repo.identityGovernance().mutate(req.params.fieldEntryId, req.body, { personId: req.session.userId, departmentId: req.session.departmentId, contextId: context.id }, 'maintain'));
   });
@@ -96,8 +87,6 @@ router.post('/:fieldEntryId/confirm', requireAuth, (req, res) => {
     const repo = await dataMapRepository();
     const { field, context } = await fieldScope(repo, req.params.fieldEntryId);
     if (!field) return res.status(404).json({ error: '字段不存在' });
-    const existing = await repo.getFieldIdentity(req.params.fieldEntryId);
-    if (!existing) return res.status(404).json({ error: '字段身份不存在' });
     if (!await canConfirmIdentity(req, context)) {
       return res.status(403).json({ error: '只能由部门MDM审核员确认本部门权威系统' });
     }

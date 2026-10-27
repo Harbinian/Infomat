@@ -80,33 +80,25 @@ module.exports = function management({transaction,actor,scope,entityScope,curren
       const who=await actor(db,session);
       const [[dept]]=await db.execute("SELECT id FROM departments WHERE id=? AND status='active'",[who.departmentId]);
       const source_labels=Object.fromEntries(Object.entries(require('./masterDataTemplateProfile.json').sections).map(([type,columns])=>[type,Object.fromEntries(columns.map(c=>[c.key,c.label]))]));
-      return {person_id:who.personId,department_id:who.departmentId,can_write:Boolean(dept&&!who.readOnly&&who.permissions.has('governance:draft-department')),can_check:!who.readOnly&&who.permissions.has('governance:structure-gate'),schema,groups,source_labels};
+      return {person_id:who.personId,department_id:who.departmentId,can_write:false,write_blocked_code:'HANDOFF_REQUIRED',can_check:!who.readOnly&&who.permissions.has('governance:structure-gate'),schema,groups,source_labels};
     });},
-    listManagedObjects(session,{after=null,search=''}={}) {return transaction(async db=>{
+    listManagedObjects(session,{after=null,search='',view}={}) {return transaction(async db=>{
       const who=await actor(db,session),cursor=page(after);
       if(!who.permissions.has('governance:read-global'))scope(who,who.departmentId);
       if(typeof search!=='string'||search.length>255)throw failure('DEFINITION_TEXT_INVALID');
-      const params=[],where=[];
-      if(!who.permissions.has('governance:read-global')){where.push('o.owner_dept_id=?');params.push(who.departmentId);}
-      if(cursor){where.push('o.id>?');params.push(cursor);}
-      if(search){where.push('LOCATE(?,o.object_name_cn)>0');params.push(search);}
-      const [items]=await db.execute(`SELECT CAST(o.id AS CHAR) entity_id,o.object_name_cn name,o.status,CAST(o.owner_dept_id AS CHAR) department_id,
-        h.revision_no,CAST(h.current_version_id AS CHAR) version_id FROM data_map_objects o LEFT JOIN data_map_definition_heads h ON h.entity_type='object' AND h.entity_id=o.id
-        ${where.length?'WHERE '+where.join(' AND '):''} ORDER BY o.id LIMIT 101`,params);
-      return {items:items.slice(0,100),next:items.length>100?items[99].entity_id:null};
+      await require('./dataMapHandoffCompatibility').requireExplicitView(db,view);
+      const result=await require('./dataMapHandoffCompatibility').listDefinitions(db,{entityType:'object',departmentId:who.permissions.has('governance:read-global')?null:who.departmentId,after:cursor,search,view});
+      return {...result,items:result.items.map(v=>({entity_id:v.entity_id,name:v.definition.name,status:v.availability,department_id:v.base_snapshot.row.owner_dept_id,revision_no:v.version_no,version_id:v.version_id,view,publication_id:v.publication_id}))};
     });},
-    managedDetail(session,type,entityId,{after=null}={}) {return transaction(async db=>{
+    managedDetail(session,type,entityId,{after=null,view,version:fixedVersion}={}) {return transaction(async db=>{
       const who=await actor(db,session),scoped=await readable(db,who,type,entityId);
-      const v=await current(db,type,entityId);unchanged(v,scoped.source);
+      const v=await require('./dataMapEffectiveReader').readDefinition(db,{entityType:type,entityId,view,versionId:fixedVersion});
       let fields=[],next=null;
-      if(type==='object') {
-        const cursor=page(after);
-        const [found]=await db.execute(`SELECT CAST(f.id AS CHAR) entity_id,f.field_name_cn name,f.status,CAST(h.current_version_id AS CHAR) version_id,h.revision_no
-          FROM data_map_fields f JOIN data_map_contexts c ON c.id=f.context_id LEFT JOIN data_map_definition_heads h ON h.entity_type='field' AND h.entity_id=f.id
-          WHERE f.object_id=? ${who.permissions.has('governance:read-global')?'':'AND c.dept_id=?'} ${cursor?'AND f.id>?':''} ORDER BY f.id LIMIT 101`,[entityId,...(who.permissions.has('governance:read-global')?[]:[who.departmentId]),...(cursor?[cursor]:[])]);
-        fields=found.slice(0,100);next=found.length>100?fields[99].entity_id:null;
+      if(type==='object'&&view==='current') {
+        const found=await require('./dataMapHandoffCompatibility').listDefinitions(db,{entityType:'field',view,objectId:String(entityId),after:page(after),departmentId:who.permissions.has('governance:read-global')?null:who.departmentId});
+        fields=found.items.filter(f=>f.base_snapshot.row.object_id===String(entityId)&&f.object_version_id===v.version_id).map(f=>({entity_id:f.entity_id,name:f.definition.name,status:f.availability,version_id:f.version_id,revision_no:f.version_no,publication_id:f.publication_id}));next=found.next;
       }
-      return {current:v,fields,next};
+      return {current:v,fields,next,view};
     });},
     managedHistory(session,type,entityId,{before=null}={}) {return transaction(async db=>{
       const who=await actor(db,session);await readable(db,who,type,entityId);
@@ -119,6 +111,7 @@ module.exports = function management({transaction,actor,scope,entityScope,curren
       if(!payload||Object.keys(payload).some(k=>!['entity_type','entity_id','expected_revision','object_id','object_version_id','definition','request_id'].includes(k)))throw failure('DEFINITION_PROPERTY_NOT_ALLOWED');
       if(Object.hasOwn(payload,'entity_id'))id(payload.entity_id);
       const who=await actor(db,session,'governance:draft-department'),type=kind(payload.entity_type);
+      await require('./dataMapHandoffControl').assertLegacyWriteAllowed(db,{entryId:'W01:saveManaged'});
       return request(db,who,'manage_definition',payload,async()=>{
         let previous=null,contextId=null;
         if(payload.entity_id){const s=await readable(db,who,type,payload.entity_id,true);scope(who,s.departmentId,true);previous=await current(db,type,payload.entity_id,true);contextId=s.source.row.context_id;}
@@ -143,6 +136,7 @@ module.exports = function management({transaction,actor,scope,entityScope,curren
       kind(type);entityId=id(entityId);
       if(!payload||Object.keys(payload).some(k=>!['request_id','expected_revision','confirm','reason','impact_digest'].includes(k)))throw failure('DEFINITION_PROPERTY_NOT_ALLOWED');
       const who=await actor(db,session,'governance:draft-department');
+      await require('./dataMapHandoffControl').assertLegacyWriteAllowed(db,{entryId:'W02:retireManaged'});
       return request(db,who,'retire_definition',{...payload,entity_type:type,entity_id:entityId},async()=>{
         const scoped=await readable(db,who,type,entityId,true);scope(who,scoped.departmentId,true);
         const head=await current(db,type,entityId,true);unchanged(head,scoped.source);

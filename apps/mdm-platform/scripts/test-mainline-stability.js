@@ -169,8 +169,8 @@ async function runMasterDataObjectSmoke() {
 
     const fixedModel = await request('/api/rbac/model', {}, cookie);
     assert.strictEqual(fixedModel.res.status, 200, JSON.stringify(fixedModel.body));
-    assert.strictEqual(fixedModel.body.roles.length, 7);
-    assert.strictEqual(fixedModel.body.permissions.length, 19);
+    assert.strictEqual(fixedModel.body.roles.length, 9);
+    assert.strictEqual(fixedModel.body.permissions.length, 22);
 
     console.log('[mainline] retired routes, fixed role model and retired account writes smoke passed');
     return;

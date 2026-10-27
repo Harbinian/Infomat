@@ -5,6 +5,7 @@ const { permissionSetHas } = require('./roleDefinitions');
 
 const OPERATION_PERMISSIONS = Object.freeze({
   createAccount: ['identity:manage-account', 'identity:assign-role'],
+  assignAccount: ['identity:manage-account'],
   updateAccount: ['identity:manage-account'],
   grantRole: ['identity:assign-role'], revokeRole: ['identity:assign-role'],
   activateAccount: ['identity:manage-account'], enableAccount: ['identity:manage-account'],
@@ -60,7 +61,7 @@ async function lockAndAssertMaintenanceAuthority(db, context, operation, actorPe
       !sameIdentityInteger(context.personId, actorPersonId)) {
     throw failure(401, {error:'登录信息已失效，请重新登录',code:'SESSION_IDENTITY_INVALID'});
   }
-  // All eight chains: actor account X -> actor person X -> qualification S
+  // Maintenance chains: actor account X -> actor person X -> qualification S
   // -> original target chain. X avoids a self-maintenance S-to-X upgrade.
   // Reciprocal operations can deadlock; the existing transaction owns rollback
   // and service-error propagation, with no automatic request replay.

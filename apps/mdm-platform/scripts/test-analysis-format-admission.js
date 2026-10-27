@@ -16,7 +16,8 @@ const save = (name, value) => fs.writeFileSync(path.join(output, name), JSON.str
 const uuid = () => crypto.randomUUID(), checks = [], sleep = ms => new Promise(r => setTimeout(r, ms));
 async function check(name, fn) { await fn(); checks.push(name); console.log('PASS ' + name); }
 function nativeV8() {
-  const d = require('../../structured-output-service/server').createEmptyProcessGovernanceDocument(), v7 = binding();
+  const d = require('../../structured-output-service/server').createEmptyProcessGovernanceV7Document(), v7 = binding();
+  d.schema_version = 'process-governance-v8'; d.migration.source_schema_version = 'process-governance-v8';
   d.process = { ...v7.process, process_ref: 'p11_native_v8', process_name: 'P11原生V8合成材料' };
   d.behaviors = [...v7.behaviors, { ...node('decision_basis', 'decision'), current_actor_role: '全公司', actor_assignment_mode: 'company_wide' }];
   d.flow_relations = [...v7.flow_relations, edge('relation_basis', 'behavior_b', 'decision_basis')];

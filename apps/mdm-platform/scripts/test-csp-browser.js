@@ -21,7 +21,9 @@ function runtime() {
 }
 async function main() {
   const distAt = process.argv.indexOf('--dist');
-  const app = express(); app.use(securityHeaders); app.use('/app', frontendRouter(distAt > 0 ? path.resolve(process.argv[distAt + 1]) : undefined)); app.use(publicEntryRouter());
+  const app = express(); app.use(securityHeaders);
+  app.get('/app/assets/test-security-probe.js', (req, res) => res.type('js').send("window.evalProbe=false;window.evalBlocked=false;try{window.eval('window.evalProbe=true')}catch{window.evalBlocked=true}window.blobWorkerBlocked=false;const url=URL.createObjectURL(new Blob(['self.close()'],{type:'application/javascript'}));try{const worker=new Worker(url);worker.onerror=event=>{event.preventDefault();window.blobWorkerBlocked=true;worker.terminate();URL.revokeObjectURL(url);}}catch{window.blobWorkerBlocked=true;URL.revokeObjectURL(url)}window.securityProbeComplete=true;"));
+  app.use('/app', frontendRouter(distAt > 0 ? path.resolve(process.argv[distAt + 1]) : undefined)); app.use(publicEntryRouter());
   app.use((req, res) => res.sendStatus(404));
   const server = await new Promise(resolve => { const listener = app.listen(0, '127.0.0.1', () => resolve(listener)); });
   const base = 'http://127.0.0.1:' + server.address().port;
@@ -57,7 +59,7 @@ async function main() {
     });
     const response = await page.goto(base + '/');
     assert.equal(new URL(page.url()).pathname, '/app/');
-    assert.match(response.headers()['content-security-policy'], /script-src 'self';/);
+    assert.match(response.headers()['content-security-policy'], /script-src 'self' 'wasm-unsafe-eval'; worker-src 'self';/);
     await page.getByRole('heading', { name: '请先修改当前账号密码' }).waitFor();
     assert.deepEqual([...new Set(calls)].sort(), ['/api/org/me', '/api/org/me/password-status', '/api/org/session'].sort());
     assert.equal(await page.locator('a[href*="/#/"], a.legacy-link').count(), 0);
@@ -103,6 +105,14 @@ async function main() {
     assert.equal(await page.evaluate(() => window.inlineProbe), false);
     assert.ok((await page.evaluate(() => window.cspViolations)).includes('script-src-elem'));
     checks.push('unapproved inline script is blocked');
+    await page.evaluate(() => { const script=document.createElement('script');script.src='/app/assets/test-security-probe.js';document.head.appendChild(script); });
+    await page.waitForFunction(() => window.securityProbeComplete);
+    assert.equal(await page.evaluate(() => window.evalProbe), false);
+    assert.equal(await page.evaluate(() => window.evalBlocked), true);
+    await page.waitForFunction(() => window.blobWorkerBlocked);
+    assert.equal(await page.evaluate(() => window.blobWorkerBlocked), true);
+    assert((await page.evaluate(() => window.cspViolations)).includes('worker-src'));
+    checks.push('same-origin external probe confirms JS eval and blob Worker are blocked while WASM permission remains separate');
     for (const endpoint of ['/index.html', '/mdm-protocol.js']) assert.equal((await context.request.get(base + endpoint)).status(), 410);
     await page.screenshot({ path: path.join(output, 'desktop.png') });
     fs.writeFileSync(path.join(output, 'results.json'), JSON.stringify({ passed: true, checks, viewport: { width: 1699, height: 828 }, databaseConnected: false, realPasswordsChanged: false }, null, 2));

@@ -1,5 +1,5 @@
 {
-  "current_version": "process-governance-v8",
+  "current_version": "process-governance-v9",
   "current_status": "candidate",
   "versions": [
     {
@@ -70,6 +70,13 @@
       "status": "candidate",
       "title": "判断节点使用数据作为判断依据",
       "summary": "允许 decision + use；其他数据操作仍要求 action。V7历史校验保持原规则，旧文件在导入内存中迁移，保持业务内容和稳定标识。候选版本尚未部署或业务验收。"
+    },
+    {
+      "version": "process-governance-v9",
+      "candidate_on": "2026-10-20",
+      "status": "candidate",
+      "title": "显式记录粒度与数据使用条件",
+      "summary": "新增显式流程入口、单实例或独立记录集合、集合元数据字段、数据关系记录范围及存在条件、来源存在条件。旧V7/V8固定正文与摘要保留；3001只在页面内存迁移，未知新语义保持待确认。候选技术验证不表示运行实例已切换或业务已验收。"
     }
   ]
 }

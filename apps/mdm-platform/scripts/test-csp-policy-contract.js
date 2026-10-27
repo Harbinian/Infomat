@@ -6,8 +6,12 @@ const path = require('node:path');
 const { buildCsp, DEPLOYED_CSP } = require('../server/cspPolicy');
 const { securityHeaders } = require('../server/security');
 test('scripts are same-origin only with no inline hashes, eval or re-enable option', () => {
-  assert.match(DEPLOYED_CSP, /(?:^|; )script-src 'self'(?:;|$)/);
-  assert(!/script-src[^;]*(unsafe-inline|unsafe-eval|sha256-)/.test(DEPLOYED_CSP));
+  const directives = Object.fromEntries(DEPLOYED_CSP.split('; ').map(value => { const [name, ...tokens] = value.split(' '); return [name, tokens]; }));
+  assert.deepEqual(directives['script-src'], ["'self'", "'wasm-unsafe-eval'"]);
+  assert.deepEqual(directives['worker-src'], ["'self'"]);
+  assert(!directives['script-src'].includes("'unsafe-eval'"));
+  assert(!directives['script-src'].includes("'unsafe-inline'"));
+  assert(!directives['script-src'].some(token => token.startsWith("'sha256-")));
   assert.equal(buildCsp({ allowInlineScript: true, scriptHash: 'old' }), DEPLOYED_CSP);
   const headers = {}; let called = false;
   securityHeaders({}, { setHeader: (key, value) => { headers[key] = value; } }, () => { called = true; });

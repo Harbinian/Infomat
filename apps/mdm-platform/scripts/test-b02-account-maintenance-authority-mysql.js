@@ -47,6 +47,7 @@ async function main(){process.env.MDM_IDENTITY_READ_MODEL='mysql';process.env.MD
     };
     await seed(P,A,D,['admin','mdm_lead'],'active',V);await seed(N,NA,D2,['admin'],'active',NV);
     await seed(81,181,D2,['mdm_lead','data_conflict_handler']);await seed(82,182,D,['admin']);await seed(83,183,D,['admin','department_contact']);await seed(84,184,D,[]);await seed(85,185,D2,['department_contact']);await seed(88,188,D2,['mdm_lead'],'pending_activation');await seed(89,189,D2,['mdm_lead'],'disabled');
+    await pool.execute("INSERT INTO person(employee_no,person_name,current_department_id) VALUES ('HttpAuthority','HttpAuthority',?)",[D2]);
     const repo=makeGovernanceAccessMysqlRepository(pool);auth=require('../server/auth');accounts=require('../server/routes/accounts');auth.setIdentityRepositoryFactory(()=>identity);accounts.setRepositoryFactory(()=>repo);
     const fixedSessions=new Map([[P,{personId:P,accountId:A,authVersion:V}],[N,{personId:N,accountId:NA,authVersion:NV}]]);
     for(const id of [81,82,83,84,85])fixedSessions.set(String(id),{personId:id,accountId:id+100,authVersion:1});
@@ -56,7 +57,7 @@ async function main(){process.env.MDM_IDENTITY_READ_MODEL='mysql';process.env.MD
     const call=async(actor,url,method,body)=>{const response=await fetch('http://127.0.0.1:'+server.address().port+'/api/org/accounts'+url,{method,headers:{'content-type':'application/json','x-b02-person':String(actor),'X-CSRF-Token':'synthetic-csrf'},body:JSON.stringify(body)});const payload=await response.json();if(payload.initialPassword)payload.initialPassword='<generated>';return{status:response.status,body:payload};};
     const revokeId=(await repo.getAccount(81)).roleAssignments.find(role=>role.roleCode==='data_conflict_handler').assignmentId;
     const routes=[['createAccount','','POST',{loginName:'HttpAuthority',employeeNo:'HttpAuthority',name:'HttpAuthority',departmentId:D2,roleAssignments:[assignment()],actorPersonId:N}],
-      ['updateAccount','/81','PATCH',{name:'HTTP synthetic'}],['grantRole','/81/role-assignments','POST',assignment()],['revokeRole','/81/role-assignments/'+revokeId+'/revoke','POST',{reason:'synthetic revoke'}],
+      ['updateAccount','/81','PATCH',{name:'Person81'}],['grantRole','/81/role-assignments','POST',assignment()],['revokeRole','/81/role-assignments/'+revokeId+'/revoke','POST',{reason:'synthetic revoke'}],
       ['activateAccount','/88/activate','POST',{}],['enableAccount','/89/enable','POST',{}],['disableAccount','/81/disable','POST',{reason:'synthetic disable'}],['resetPassword','/81/reset-password','POST',{}]];
     const rolledPool=(states,trace=[])=>({async getConnection(){const connection=await pool.getConnection();return new Proxy(connection,{get(db,key){
       if(key==='execute')return async(sql,params=[])=>{trace.push({sql,connectionId:db.connection.threadId});return db.execute(sql,params);};
@@ -66,10 +67,12 @@ async function main(){process.env.MDM_IDENTITY_READ_MODEL='mysql';process.env.MD
     for(const [operation,url,method,body]of routes){const result=await call(P,url,method,body);assert.equal(result.status,operation==='createAccount'||operation==='grantRole'?201:200,operation);httpResults.push({operation,actor:P,result});}
     assert(states.filter(s=>s.identity_access_events.length).every(s=>s.identity_access_events.every(e=>e.actor_person_id===P)));
     assert(trace.filter(t=>/FROM user_accounts WHERE account_id=.*FOR UPDATE/.test(t.sql)).length===8);
+    const unchangedDirectory=await physical(pool),blockedDirectory=await call(P,'/81','PATCH',{name:'HTTP synthetic'});
+    assert.equal(blockedDirectory.status,409);assert.equal(blockedDirectory.body.code,'PERSON_DIRECTORY_MAINTENANCE_REQUIRED');assert.deepEqual(await physical(pool),unchangedDirectory);
     const adjacent=await call(P,'/'+N+'/reset-password','POST',{});assert.equal(adjacent.status,200);assert.equal(adjacent.body.account.account_id,NA);assert.equal(adjacent.body.account.auth_version,(BigInt(NV)+1n).toString());
     assert.equal(states.at(-1).user_accounts.find(row=>row.person_id===P).auth_version,V);
     assert(states.at(-1).identity_access_events.some(e=>e.actor_person_id===P&&e.target_person_id===N&&e.account_id===NA));
-    checks.push('all eight ordinary HTTP maintenance operations use current locked authority and exact audit actor');
+    checks.push('eight HTTP operations use current locked authority; legacy PATCH is a no-op and directory changes return 409 without writes');
     for(const actor of [82,83])assert.equal((await call(actor,'/81/reset-password','POST',{})).status,200);
     for(const actor of [81,84,85,'absent'])assert.equal((await call(actor,'/81/reset-password','POST',{})).status,actor==='absent'?401:403);
     assert.equal((await call(P,'/81oops','PATCH',{})).body.code,'ACCOUNT_NOT_FOUND');
@@ -112,7 +115,8 @@ async function main(){process.env.MDM_IDENTITY_READ_MODEL='mysql';process.env.MD
     await race('forced-password-change',routes[7],accountRecord,db=>db.execute('UPDATE user_accounts SET must_change_password=1 WHERE account_id=?',[A]),{status:403,code:'PASSWORD_CHANGE_REQUIRED'});
     await race('password-generation',routes[7],accountRecord,db=>db.execute("UPDATE user_accounts SET password_hash='synthetic-changed',auth_version=auth_version+1 WHERE account_id=?",[A]),{status:401,code:'SESSION_AUTHORIZATION_CHANGED'});
     await race('department-change-with-generation',routes[1],accountRecord,async db=>{await db.execute('UPDATE person SET current_department_id=? WHERE person_id=?',[D2,P]);await db.execute('UPDATE user_accounts SET auth_version=auth_version+1 WHERE account_id=?',[A]);},{status:401,code:'SESSION_AUTHORIZATION_CHANGED'});
-    for(const [name,sql]of [['role-revoked',"UPDATE person_roles SET assignment_status='revoked' WHERE person_id=?"],['role-expired',"UPDATE person_roles SET effective_to=DATE_SUB(CURRENT_DATE,INTERVAL 1 DAY) WHERE person_id=?"],['role-not-yet-effective',"UPDATE person_roles SET effective_from=DATE_ADD(CURRENT_DATE,INTERVAL 1 DAY) WHERE person_id=?"],['role-evidence-removed',"UPDATE person_roles SET authorization_basis=NULL WHERE person_id=?"]])await race(name,routes[2],roleRecord,db=>db.execute(sql,[P]),{status:403,body:{error:'权限不足'}});
+    for(const [name,sql]of [['role-revoked',"UPDATE person_roles SET assignment_status='revoked' WHERE person_id=?"],['role-expired',"UPDATE person_roles SET effective_to=DATE_SUB(CURRENT_DATE,INTERVAL 1 DAY) WHERE person_id=?"],['role-not-yet-effective',"UPDATE person_roles SET effective_from=DATE_ADD(CURRENT_DATE,INTERVAL 1 DAY) WHERE person_id=?"]])await race(name,routes[2],roleRecord,db=>db.execute(sql,[P]),{status:403,body:{error:'权限不足'}});
+    await race('optional-role-evidence-removed',routes[2],roleRecord,db=>db.execute('UPDATE person_roles SET authorization_basis=NULL WHERE person_id=?',[P]),{status:201});
     await race('field-readonly-current',routes[1],permissionRecord,db=>db.execute('UPDATE permissions SET field_constraints=? WHERE perm_id=?',[JSON.stringify({readonly:['name']}),manage.perm_id]),{status:403,body:{error:'字段只读，不允许写入',readonly_fields:['name']}});
     await pool.execute('UPDATE permissions SET field_constraints=? WHERE perm_id=?',[manage.field_constraints,manage.perm_id]);
     const permissionAssignment=perm=>({table:'role_permissions',sql:'SELECT role_id,perm_id FROM role_permissions WHERE role_id=? AND perm_id=? FOR UPDATE',params:[admin.role_id,perm]});
@@ -169,18 +173,18 @@ async function main(){process.env.MDM_IDENTITY_READ_MODEL='mysql';process.env.MD
       locksHeld.push({heldConnectionId,heldLocks,waits,trace:heldTrace,writerBlockedUntilMaintenanceTransactionEnded:true});save('qualification-lock-retention.json',locksHeld);
     }finally{releaseHeld.resolve();await writer.rollback();writer.release();if(holderPending)await holderPending;if(writerPending)await writerPending;accounts.setRepositoryFactory(()=>repo);await pool.execute('UPDATE permissions SET field_constraints=? WHERE perm_id=?',[manage.field_constraints,manage.perm_id]);}
     checks.push('account, person, department, assignments, roles and permission locks retained until maintenance transaction ends');
-    // Each of the eight HTTP consumers rolls back all target/role/audit state on
-    // the original audit failure path; no successful response masks the error.
+    // The seven writing consumers roll back target/role/audit state on audit
+    // failure. Legacy PATCH is read-only and has no audit insert to fail.
     const auditFailures=[];
     for(const route of routes){const [operation,url,method,originalBody]=route;
-      const body=operation==='updateAccount'?{departmentId:D,changeReason:'synthetic audit rollback',roleAssignments:[assignment('department_contact',D)]}:originalBody;
+      const body=originalBody;
       const before=await physical(pool),auditTrace=[];
       const failingPool={async getConnection(){const db=await pool.getConnection();return new Proxy(db,{get(db,key){
         if(key==='execute')return async(sql,params)=>{auditTrace.push(sql);if(sql.includes('INSERT INTO identity_access_events'))throw Object.assign(Error('B02_AUDIT_FAILURE'),{code:'B02_AUDIT_FAILURE'});return db.execute(sql,params);};
         if(key==='rollback')return async()=>{auditTrace.push('ROLLBACK');await db.rollback();};return typeof db[key]==='function'?db[key].bind(db):db[key];}});}};
-      accounts.setRepositoryFactory(()=>makeGovernanceAccessMysqlRepository(failingPool));const result=await call(P,url,method,body);assert.equal(result.status,503,operation);assert.deepEqual(await physical(pool),before,operation);assert(auditTrace.includes('ROLLBACK'));auditFailures.push({operation,result,rolledBack:true,trace:auditTrace});
+      accounts.setRepositoryFactory(()=>makeGovernanceAccessMysqlRepository(failingPool));const result=await call(P,url,method,body);assert.equal(result.status,operation==='updateAccount'?200:503,operation);assert.deepEqual(await physical(pool),before,operation);if(operation==='updateAccount')assert(!auditTrace.some(sql=>/^\s*(INSERT|UPDATE|DELETE)/.test(sql)));else assert(auditTrace.includes('ROLLBACK'));auditFailures.push({operation,result,rolledBack:operation!=='updateAccount',readOnly:operation==='updateAccount',trace:auditTrace});
     }
-    accounts.setRepositoryFactory(()=>repo);save('ordinary-http-audit-failures.json',auditFailures);checks.push('all eight qualified ordinary HTTP audit failures roll back writes and preserve service failure response');
+    accounts.setRepositoryFactory(()=>repo);save('ordinary-http-audit-failures.json',auditFailures);checks.push('seven qualified HTTP audit failures roll back; legacy PATCH has no directory, account or audit write');
     // Two operators hold their own account/person locks. Release the first,
     // observe its real target wait, then release the reciprocal operation.
     const gates=new Map([[P,{ready:deferred(),release:deferred()}],[N,{ready:deferred(),release:deferred()}]]),peerTraces=new Map();
@@ -200,7 +204,7 @@ async function main(){process.env.MDM_IDENTITY_READ_MODEL='mysql';process.env.MD
     checks.push('reciprocal maintenance real lock wait/deadlock yields one commit and one complete rollback, original service failure and no replay');
     // Self maintenance holds X locks and does not lose its own audited identity.
     const selfStates=[];accounts.setRepositoryFactory(()=>makeGovernanceAccessMysqlRepository(rolledPool(selfStates)));
-    for(const operation of ['updateAccount','resetPassword']){const route=operation==='updateAccount'?['/'+P,'PATCH',{name:'Self synthetic'}]:['/'+P+'/reset-password','POST',{}];assert.equal((await call(P,...route)).status,200);}
+    for(const operation of ['updateAccount','resetPassword']){const route=operation==='updateAccount'?['/'+P,'PATCH',{name:'Person'+P}]:['/'+P+'/reset-password','POST',{}];assert.equal((await call(P,...route)).status,200);}
     assert(selfStates.at(-1).identity_access_events.some(event=>event.actor_person_id===P&&event.target_person_id===P));checks.push('self maintenance succeeds without shared-to-exclusive upgrade and exact actor-target identity');
     accounts.setRepositoryFactory(()=>repo);
     // HTTP cannot fall back when the factory omits binding or identity reading fails.

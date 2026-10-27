@@ -5,6 +5,7 @@ const {validateLockedDraft}=require('../server/processDesignValidation');
 const {createRepositoryResource}=require('../server/repositoryResource');
 const {FORMAL_V7_TRANSACTION_CONTEXT,isEditableDraftStatus,EDITABLE_DRAFT_STATUSES,assertV7FormalTransitionEnabled}=require('../server/processDesignPolicy');
 const binding={expected_revision_no:3,expected_content_hash:'a'.repeat(64)};
+const negativeBinding={...binding,review_evidence:{problem:'合成必要责任未明确',basis:'合成当前修订第2动作',revision_request:'请由实际部门明确责任并回3001修订'}};
 function fixture(schema='process-governance-v8') {
   let state={draft:{id:1,schema_version:schema,process_content_json:'{"process":{"process_ref":"process_synthetic"}}',status:'draft',revision_no:3,content_hash:binding.expected_content_hash,document_id:4,base_version_id:null,department_id:91},
     tasks:[],document:{id:4,document_no:'SYNTHETIC',document_title:'合成流程'},currentVersion:null,version:null};
@@ -15,9 +16,11 @@ function fixture(schema='process-governance-v8') {
     readDraft:record('read',async()=>structuredClone(state.draft)),
     readReviewTask:async id=>structuredClone(state.tasks.find(t=>t.id===id)),
     readVersion:async()=>structuredClone(state.version),
+    readPublicationContext:async()=>({sources:[],institution_editions:[],enterprise_approval_status:'unknown'}),
     lockContext:record('lock',async()=>({draft:structuredClone(state.draft),reviewTasks:structuredClone(state.tasks),document:state.document,currentVersion:state.currentVersion})),
     authorizeActor:record('authorize',async(options)=>{if(options.denied)throw Object.assign(Error('DENIED'),{code:'V7_FORMAL_ADMIN_READ_ONLY'});return {personId:83};}),
     validateDraft:record('validate',async()=>{}),
+    assertDepartmentConfirmation:async()=>{},
     markSubmitted:record('markSubmitted',async()=>{state.draft.status='submitted';return {affectedRows:1};}),
     createDepartmentReview:record('createReview',async()=>{state.tasks.push({id:2,status:'pending',draft_revision_no:3,content_hash:binding.expected_content_hash});return {insertId:2};}),
     recordReviewDecision:record('decideTask',async({nextStatus})=>{state.tasks[0].status=nextStatus;return {affectedRows:1};}),
@@ -69,7 +72,7 @@ test('audit failure rolls back the complete operation and independent instances 
 });
 test('already decided reviews and invalid transaction capabilities are refused',async()=>{
   const f=fixture();await f.app.submitDraft({id:1},'',83,binding);
-  await f.app.decideReviewTask({id:2},'reject','合成拒绝',83,binding);
+  await f.app.decideReviewTask({id:2},'reject','合成拒绝',83,negativeBinding);
   f.calls.length=0;
   await assert.rejects(f.app.decideReviewTask({id:2},'approve','',83,binding),{code:'REVIEW_TASK_ALREADY_DECIDED'});
   assert.deepEqual(f.calls,['read','begin','lock','authorize','rollback']);
@@ -98,7 +101,7 @@ test('every conditional write refuses zero affected rows and rolls back prior ch
     assert.deepEqual(f.state(),before,operation);
   }
 });
-test('publication replaces an existing version in order and advances its expected edition',async()=>{
+test('publication replaces an existing platform version without advancing enterprise institution edition',async()=>{
   const f=fixture();await f.app.submitDraft({id:1},'',83,binding);
   await f.app.decideReviewTask({id:2},'approve','',83,binding);
   f.state().currentVersion={id:8,edition:'A'};f.state().draft.base_version_id=8;
@@ -108,7 +111,7 @@ test('publication replaces an existing version in order and advances its expecte
   f.store.advanceDocumentVersion=args=>{anchor=args.currentVersion.id;return advance(args);};
   f.calls.length=0;
   await f.app.publishDraft({id:1},'',83,binding);
-  assert.equal(planned,'B');assert.equal(anchor,8);
+  assert.equal(planned,null);assert.equal(anchor,8);
   assert.deepEqual(f.calls,['read','begin','lock','authorize','validate','createVersion','supersede','publishDraft','advanceDocument','event','read','commit']);
 });
 test('needs-changes and rejection permit blocking issues while approval still requires their resolution',async()=>{
@@ -117,9 +120,16 @@ test('needs-changes and rejection permit blocking issues while approval still re
     let allowance;
     f.store.validateDraft=async(draft,context,options)=>{allowance=options.allowBlockingIssues;if(!allowance)throw Error('BLOCKING_ISSUES');};
     if(decision==='approve')await assert.rejects(f.app.decideReviewTask({id:2},decision,'',83,binding),/BLOCKING_ISSUES/);
-    else await f.app.decideReviewTask({id:2},decision,'',83,binding);
+    else await f.app.decideReviewTask({id:2},decision,'',83,negativeBinding);
     assert.equal(allowance,decision!=='approve');
     assert.equal(f.state().draft.status,decision==='needs_changes'?'needs_changes':decision==='reject'?'rejected':'submitted');
+  }
+});
+test('negative review requires specific problem, evidence and revision request before any write',async()=>{
+  for(const decision of ['reject','needs_changes'])for(const evidence of [undefined,{}, {problem:'问题',basis:'依据'}, {problem:' ',basis:'依据',revision_request:'修改'}]){
+    const f=fixture();await f.app.submitDraft({id:1},'',83,binding);f.calls.length=0;
+    await assert.rejects(f.app.decideReviewTask({id:2},decision,'通用拒绝意见',83,{...binding,review_evidence:evidence}),e=>e.payload?.code==='FORMAL_REVIEW_EVIDENCE_REQUIRED');
+    assert.deepEqual(f.calls,[]);assert.equal(f.state().draft.status,'submitted');
   }
 });
 function validationFixture() {

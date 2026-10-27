@@ -25,7 +25,7 @@ function isProcessDataGovernanceEnabled(env = process.env) {
 }
 
 function isProcessVersionAllowed(processVersionId, env = process.env) {
-  return /^[1-9]\d*$/.test(String(processVersionId || '')) && Number.isSafeInteger(Number(processVersionId));
+  return /^[1-9]\d*$/.test(String(processVersionId || '')) && require('./sessionSubject').identityInteger(processVersionId) !== null;
 }
 
 function scopeError(statusCode, code, message) {
@@ -51,7 +51,7 @@ function assertProcessVersionAllowed(processVersionId, env = process.env) {
   assertProcessVersionScopeConfigured(env);
   if (!isProcessVersionAllowed(processVersionId)) throw scopeError(422, 'PROCESS_DATA_GOVERNANCE_VERSION_REQUIRED', '请选择有效的已发布流程版本');
   // Publication state, native V8/compatible V7 and source digest are checked in MySQL.
-  return Number(processVersionId);
+  return require('./sessionSubject').identityInteger(processVersionId);
 }
 
 function featureStatus(env = process.env) {

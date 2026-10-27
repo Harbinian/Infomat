@@ -1,3 +1,4 @@
+import {userMessage} from './businessPresentation.js';
 import {protocol} from './protocol.js';
 const messages = {
   401: '登录状态已失效，请重新登录。当前输入仍保留。',
@@ -21,15 +22,26 @@ export class ApiError extends Error {
 
 export function createApiClient({ fetchImpl = globalThis.fetch, onUnauthorized = () => {}, timeoutMs = 15000 } = {}) {
   const client = protocol.createRequestClient({ fetchImpl, onUnauthorized, timeoutMs });
-  async function request(url, { method = 'GET', body, signal, responseType = 'json' } = {}) {
+  async function request(url, { method = 'GET', body, signal, responseType = 'json', headers = {} } = {}) {
     try {
       return await client.request(url, {
         method, body, signal, responseType, bodyEncoding: 'json',
-        headers: { Accept: responseType === 'blob' ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : 'application/json' }
+        headers: { Accept: responseType === 'blob' ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : 'application/json', ...headers }
       });
     } catch (error) {
       if (!(error instanceof protocol.RequestError)) throw error;
       const presented = new ApiError(error.status, error.code, error.fieldErrors);
+      if (Array.isArray(error.body?.findings)) presented.findings = error.body.findings.map(item => ({ code: item.code, message: userMessage(item.message, '此项术语核对尚未完成，请查看本份材料的术语核对。') }));
+      if (error.code === 'TERM_GOVERNANCE_USAGE_REVIEW_REQUIRED') {
+        presented.message = '请先完成本份材料的术语核对及所需的负责人确认，再提交。填写的内容仍保留。';
+        presented.serverMessage = presented.message;
+      }
+      if ((url.startsWith('/api/terminology-governance/') || url.startsWith('/api/process-v7-preview/') || url.startsWith('/api/process-authoring/')) && typeof error.body?.error === 'string') presented.serverMessage = userMessage(error.body.error,presented.message);
+      if (url.startsWith('/api/directory/') && error.status >= 400 && error.status < 500 && typeof error.body?.error === 'string') {
+        presented.directoryMessage = userMessage(error.body.error,presented.message);
+      }
+      // A lost write receipt does not prove that the operation failed.
+      if(method.toUpperCase()!=='GET'&&(error.status===0||error.status>=500||['NETWORK_ERROR','REQUEST_TIMEOUT','INVALID_RESPONSE'].includes(error.code))){presented.resultUnknown=true;presented.message='本次提交结果尚未确认，请先查看最新记录再继续办理。填写的内容仍保留。';presented.serverMessage=presented.message;presented.directoryMessage=presented.message;}
       presented.importStatus = error.importStatus;
       throw presented;
     }

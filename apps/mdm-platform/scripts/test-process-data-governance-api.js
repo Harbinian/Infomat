@@ -151,6 +151,11 @@ async function request(baseUrl, method, path, user, body) {
     result = await request(baseUrl, 'POST', '/api/process-data-governance/creation-tasks/reconcile', 'lead', { process_version_id: 78 });
     assert.strictEqual(result.status, 201, 'an old trial setting must not block another selected version');
     assert.ok(calls.some(call => call[0] === 'reconcile' && call[1] === 78));
+    result = await request(baseUrl, 'POST', '/api/process-data-governance/creation-tasks/reconcile', 'lead', { process_version_id: '9007199254740993' });
+    assert.strictEqual(result.status,201);
+    assert.ok(calls.some(call=>call[0]==='reconcile'&&call[1]==='9007199254740993'));
+    result = await request(baseUrl, 'POST', '/api/process-data-governance/creation-tasks/reconcile', 'lead', { process_version_id: Number('9007199254740993') });
+    assert.strictEqual(result.status,422,'already rounded numeric IDs must never be recovered by guessing');
     result = await request(baseUrl, 'POST', '/api/process-data-governance/creation-tasks/reconcile', 'lead', { process_version_id: '*' });
     assert.strictEqual(result.status, 422);
 
@@ -190,6 +195,20 @@ async function request(baseUrl, method, path, user, body) {
       assert.strictEqual(result.body.summary.my_action_items, 0);
       assert.strictEqual(result.body.work_packages.length, actor === 'contact' ? 0 : 1);
     }
+    const originalPackages=repository.listWorkPackages,originalFacts=repository.listBusinessFactRequests;
+    try {
+      const completed='9007199254741199',unfinished='9007199254741200';
+      assert.strictEqual(Number(completed),Number(unfinished),'fixture must exercise an actual numeric collision');
+      repository.listWorkPackages=async()=>[{id:completed,status:'completed'},{id:unfinished,status:'mdm_governing'}];
+      repository.listBusinessFactRequests=async department=>department===10?[
+        {id:'901',work_package_id:completed,target_department_id:10,status:'closed'},
+        {id:'902',work_package_id:unfinished,target_department_id:10,status:'open'}
+      ]:[];
+      result=await request(baseUrl,'GET','/api/process-data-governance/workbench','contact');
+      assert.deepStrictEqual(result.body.fact_requests.map(row=>row.id),['901'],'only exact completed package facts enter the archive');
+      result=await request(baseUrl,'GET','/api/process-data-governance/workbench','otherContact');
+      assert.deepStrictEqual(result.body.fact_requests,[],'exact archive matching preserves department isolation');
+    } finally {repository.listWorkPackages=originalPackages;repository.listBusinessFactRequests=originalFacts;}
     result = await request(baseUrl, 'GET', '/api/process-data-governance/fact-requests/91', 'contact');
     assert.strictEqual(result.status, 200);
     assert.deepStrictEqual(result.body.allowed_actions, ['view']);

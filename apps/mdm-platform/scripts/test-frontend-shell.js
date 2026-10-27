@@ -1,5 +1,6 @@
 // Local public-build and routing regression. No database or real service.
-// Requires frontend build. Uses one ephemeral loopback HTTP server, closed in finally.
+// Requires frontend build; --frontend-dist selects an artifacts candidate without
+// replacing frontend/dist. Uses one ephemeral loopback HTTP server, closed in finally.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -23,16 +24,25 @@ async function main() {
     assert.ok(path.basename(temporaryRoot).startsWith('mdm-p01-version-'));
     fs.rmSync(temporaryRoot, { recursive: true, force: true });
   }
-  const dist = path.resolve(__dirname, '../frontend/dist');
+  const argument = process.argv.indexOf('--frontend-dist');
+  const dist = argument < 0 ? path.resolve(__dirname, '../frontend/dist') : path.resolve(process.argv[argument + 1]);
+  if (argument >= 0) assert.ok(dist.startsWith(path.resolve(__dirname, '../../../artifacts') + path.sep), 'candidate must be in artifacts');
   const files = fs.readdirSync(dist, { recursive: true }).filter(f => fs.statSync(path.join(dist, f)).isFile());
   assert.ok(files.includes('index.html'));
   for (const file of files) {
-    assert.ok(file === 'index.html' || /^assets[\\/][\w.-]+\.(js|css)$/.test(file), 'unexpected public build file: ' + file);
+    const softwareWasm = /^assets[\\/]dotlottie-player-[\w-]+\.wasm$/.test(file);
+    const feedbackJson = /^assets[\\/](loading|error|success)-[\w-]+\.json$/.test(file);
+    assert.ok(file === 'index.html' || /^assets[\\/][\w.-]+\.(js|css)$/.test(file) || softwareWasm || feedbackJson, 'unexpected public build file: ' + file);
+    if (softwareWasm) {
+      assert.deepEqual(fs.readFileSync(path.join(dist, file)).subarray(0, 8), Buffer.from([0,97,115,109,1,0,0,0]), 'software renderer must be a WASM module');
+      continue;
+    }
     const content = fs.readFileSync(path.join(dist, file), 'utf8');
+    if (feedbackJson) assert.doesNotThrow(() => JSON.parse(content), 'feedback asset must be valid JSON');
     assert.ok(!/SYNTHETIC_|Stage05-Synthetic|MYSQL_PASSWORD|SESSION_SECRET|192\.168\.19\.220/.test(content));
   }
   const app = express(); app.use(securityHeaders);
-  app.use('/app', frontendRouter());
+  app.use('/app', frontendRouter(dist));
   app.use('/unbuilt', frontendRouter(path.join(dist, 'does-not-exist')));
   app.use(publicEntryRouter());
   const server = await new Promise(resolve => { const s = app.listen(0, '127.0.0.1', () => resolve(s)); });
@@ -41,7 +51,7 @@ async function main() {
     const base = 'http://127.0.0.1:' + server.address().port;
     for (const route of ['todos','data-map','quality','publications','terms','conflicts','accounts','access-audit','organization','roster']) assert.equal((await fetch(base + '/app/' + route)).status, 200, route + ' route');
     assert.equal((await fetch(base + '/app/roles')).status, 200, 'role detail route');
-    for (const url of ['/app/', '/app/workbench', '/app/identity', '/app/template-import', '/app/objects', '/app/fact-checks', '/app/v7-mappings', '/app/design-handoffs', '/app/process-preview', '/app/process-formal', '/app/data-governance', '/app/offices', '/app/dashboard']) {
+    for (const url of ['/app/', '/app/workbench', '/app/identity', '/app/template-import', '/app/objects', '/app/fact-checks', '/app/v7-mappings', '/app/design-handoffs', '/app/process-preview', '/app/process-formal', '/app/data-governance', '/app/data-map-handoffs', '/app/data-map-handoffs?package=synthetic', '/app/offices', '/app/dashboard']) {
       const res = await fetch(base + url); assert.equal(res.status, 200);
       assert.ok((await res.text()).includes('id="root"'));
       assert.equal(res.headers.get('cache-control'), 'no-store');
@@ -63,6 +73,10 @@ async function main() {
     const unavailable = await fetch(base + '/unbuilt/');
     assert(!(await unavailable.text()).includes('原入口'));
     assert.equal((await fetch(base + '/echarts.min.js')).status, 200);
+    const favicon = await fetch(base + '/favicon.ico');
+    assert.equal(favicon.status, 200);
+    assert.match(favicon.headers.get('content-type'), /^image\/png(?:;|$)/);
+    assert.deepEqual(Buffer.from(await favicon.arrayBuffer()), fs.readFileSync(path.resolve(__dirname, '../public/logo.png')));
     for (const file of files.filter(f => f !== 'index.html')) assert.equal((await fetch(base + '/app/' + file.replaceAll('\\', '/'))).status, 200);
     console.log('CURRENT_PUBLIC_ROUTING_PASS: root redirect, retired resources 410, current pages, asset allowlist and unbuilt 503');
   } finally { await new Promise(resolve => server.close(resolve)); }

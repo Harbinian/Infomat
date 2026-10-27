@@ -1,5 +1,5 @@
 // Pure diagnostics shared with 3001. Never fills source facts or writes governance records.
-const RULE_VERSION = 'process-content-checks-v1';
+const RULE_VERSION = 'process-content-checks-v2';
 const pointer = value => !value || value.startsWith('/') ? value || ''
   : '/' + value.split('.').map(part => part.replaceAll('~', '~0').replaceAll('/', '~1')).join('/');
 function valueAt(document, at) {
@@ -23,9 +23,11 @@ function normalize(document, issue, options = {}) {
     || issue.category === '表单结构' && !document.forms?.length;
   const value = valueAt(document, path);
   const actorNeedsCatalog = path.endsWith('/current_actor_role') && typeof value === 'string' && value.trim() && !Array.isArray(options.departments);
+  const v9DataRule = document.schema_version === 'process-governance-v9' && /^V9_DATA_[A-Z_]+$/.test(issue.ruleCode || '');
   const pending = absentObjects || actorNeedsCatalog || ['pending_confirmation', 'needs_recheck', 'unspecified'].includes(value)
     || typeof value === 'string' && /待确认|待核对/.test(value)
-    || /待确认|尚未确认|尚未回答|需要重新核对/.test(issue.message);
+    || /待确认|尚未确认|尚未回答|需要重新核对/.test(issue.message)
+    || v9DataRule && /(?:_PENDING|_ENTRY_UNKNOWN)$/.test(issue.ruleCode);
   const behavior = /^\/behaviors\/(\d+)/.exec(path);
   const relation = /^\/flow_relations\/(\d+)/.exec(path);
   let identity = issue.ruleCode || issue.message.replace(/流程关系\d+|第\d+项/g, '<item>');
@@ -34,6 +36,10 @@ function normalize(document, issue, options = {}) {
     .flatMap(item => [item.behavior_name, item.data_name, item.form_name]).filter(Boolean).sort((a, b) => b.length - a.length)) identity = identity.replaceAll(name, '<subject>');
   return { category: issue.category, message: actorNeedsCatalog ? '执行部门及岗位需要结合3000当前有效部门核对；固定来源分析不推断部门身份。' : issue.message, path,
     group: pending ? 'confirmation' : 'incomplete', rule_code: issue.ruleCode || null, identity,
+    // Existence and record-scope unknowns remain visible as confirmations, but
+    // cannot pass a formal gate. This flag is derived from the server evaluator,
+    // never copied from a field or claimed approval in the uploaded document.
+    ...(v9DataRule ? { blocking: true } : {}),
     behavior_ref: issue.focusKind === 'behavior' ? issue.focusRef : behavior ? document.behaviors[Number(behavior[1])]?.behavior_ref : null,
     relation_ref: issue.focusKind === 'relation' ? issue.focusRef : relation ? document.flow_relations[Number(relation[1])]?.relation_ref : null,
     suggestions: issue.suggestions || [],
@@ -76,7 +82,7 @@ function collectContentChecks(document, technicalErrors = [], scoring, options =
 }
 function contentBlockingIssues(checks) {
   if (checks.status !== 'ready') return [{ code: 'CONTENT_CHECK_UNAVAILABLE', message: '当前修订的业务内容检查未完成，不能继续正式流转。' }];
-  return checks.issues.filter(issue => issue.group === 'incomplete').map(issue => ({ ...issue,
-    code: 'CONTENT_INCOMPLETE', message: issue.message }));
+  return checks.issues.filter(issue => ['incomplete', 'confirmation'].includes(issue.group) || issue.blocking === true).map(issue => ({ ...issue,
+    code: issue.group === 'confirmation' ? 'CONTENT_CONFIRMATION_REQUIRED' : 'CONTENT_INCOMPLETE', message: issue.message }));
 }
 module.exports = { RULE_VERSION, collectContentChecks, contentBlockingIssues };

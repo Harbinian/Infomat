@@ -36,12 +36,13 @@ test('blank or company-wide text in fixed assignment cannot bypass actor blocker
   const d = completeDocument(); d.behaviors[0].actor_assignment_mode = 'company_wide'; d.behaviors[0].current_actor_role = '全公司';
   assert(!validateAndProjectProcess(d, departments).blockingIssues.some(issue => issue.code === 'ACTOR_DEPARTMENT_UNRESOLVED'));
 });
-test('confirmation does not invent objects or block a complete source; current revision is recomputed', () => {
+test('unconfirmed absence does not invent objects and remains a formal blocker; current revision is recomputed', () => {
   const d = completeDocument(), before = JSON.stringify(d);
   const ready = validateAndProjectProcess(d, departments);
   assert.equal(ready.contentChecks.counts.incomplete, 0);
   assert.equal(ready.contentChecks.counts.confirmation, 2);
-  assert.equal(caseStatusFromItems([], true, ready.blockingIssues, 'confirmed_no_cross_department'), 'review_complete');
+  assert.equal(caseStatusFromItems([], true, ready.blockingIssues, 'confirmed_no_cross_department'), 'under_review');
+  assert(ready.blockingIssues.some(issue=>issue.code==='CONTENT_CONFIRMATION_REQUIRED'));
   d.behaviors[0].behavior_description = '';
   const changed = validateAndProjectProcess(d, departments);
   assert.equal(caseStatusFromItems([], true, changed.blockingIssues, 'confirmed_no_cross_department'), 'under_review');

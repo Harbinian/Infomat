@@ -29,24 +29,24 @@ module.exports = async function ({ repo, lead, pool, run, historical, fixture, s
     context = await browser.newContext({ viewport: { width: 1699, height: 828 }, deviceScaleFactor: 1 }); page = await context.newPage(); page.setDefaultTimeout(15000);
     page.on('pageerror', e => errors.push(e.message)); page.on('console', e => { if (e.type() === 'error') consoleErrors.push(e.text()); });
     const button = n => page.getByRole('button', { name: n, exact: true }), label = n => page.getByLabel(n, { exact: true });
-    const idle = async () => { await button('刷新分析记录').waitFor(); await wait(async () => !(await button('刷新分析记录').isDisabled())); };
+    const idle = async () => { await button('刷新检查记录').waitFor(); await wait(async () => !(await button('刷新检查记录').isDisabled())); };
     const overflow = async () => { assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false); assert.equal(await page.evaluate(() => visualViewport.scale), 1); };
     const screenshot = async n => { await page.screenshot({ path: path.join(output, n), fullPage: true }); };
     async function login(who = 'lead') { await page.locator('#login-name').fill('SYNTHETIC_' + who); await page.locator('#login-password').fill(fixture.loginPassword); await button('登录').click(); await idle(); }
     const runId = () => new URL(page.url()).hash.match(/(?:#|&)run=(\d+)/)?.[1];
-    async function choose(id) { await label('当前运行').selectOption(id); await idle(); }
-    async function create(kind, ref, description) { if (await label('分析对象').inputValue() !== kind) { await label('分析对象').selectOption(kind); await idle(); } await label('固定来源').selectOption(ref); await label('本轮范围说明').fill(description); await button('创建并排队分析').click(); await idle(); return runId(); }
-    async function finished(id) { const result = await wait(async () => { const r = await repo.getAnalysisRun(lead, id); return ['succeeded', 'partial', 'failed'].includes(r.status) ? r : null; }); await button('刷新分析记录').click(); await idle(); return result; }
+    async function choose(id) { await label('查看检查记录').selectOption(id); await idle(); }
+    async function create(kind, ref, description) { if (await label('检查材料类型').inputValue() !== kind) { await label('检查材料类型').selectOption(kind); await idle(); } await label('已保存材料').selectOption(ref); await label('本轮范围说明').fill(description); await button('建立检查任务').click(); await idle(); return runId(); }
+    async function finished(id) { const result = await wait(async () => { const r = await repo.getAnalysisRun(lead, id); return ['succeeded', 'partial', 'failed'].includes(r.status) ? r : null; }); await button('刷新检查记录').click(); await idle(); return result; }
     let first, second, cancelled;
     await test('Edge creates a real queued run and cancels with revision; input and navigation guard', async () => {
       await page.goto(fixture.baseURL + '/app/analysis'); await login();
-      await label('固定来源').selectOption(source.source_id); await label('本轮范围说明').fill('合成未提交范围');
+      await label('已保存材料').selectOption(source.source_id); await label('本轮范围说明').fill('合成未提交范围');
       const dialog = page.waitForEvent('dialog'); const click = page.getByRole('link', { name: '对象与字段', exact: true }).click(); await (await dialog).dismiss(); await click;
       assert.equal(await label('本轮范围说明').inputValue(), '合成未提交范围');
       const reloadDialog = page.waitForEvent('dialog'); const reloading = page.reload().catch(() => {}); await (await reloadDialog).dismiss(); await reloading;
       assert.equal(await label('本轮范围说明').inputValue(), '合成未提交范围');
-      await button('创建并排队分析').click(); await idle(); cancelled = runId(); assert(cancelled); assert.equal((await repo.getAnalysisRun(lead, cancelled)).status, 'queued');
-      await button('取消本次运行').click(); await idle(); assert.equal((await repo.getAnalysisRun(lead, cancelled)).status, 'cancelled');
+      await button('建立检查任务').click(); await idle(); cancelled = runId(); assert(cancelled); assert.equal((await repo.getAnalysisRun(lead, cancelled)).status, 'queued');
+      await button('取消本次检查').click(); await idle(); assert.equal((await repo.getAnalysisRun(lead, cancelled)).status, 'cancelled');
       assert.equal(await label('本轮范围说明').inputValue(), '');
     });
     const c = pool.pool.config.connectionConfig;
@@ -79,8 +79,8 @@ module.exports = async function ({ repo, lead, pool, run, historical, fixture, s
       await button('清除筛选').click(); await overflow(); await page.setViewportSize({ width: 1699, height: 828 });
     });
     await test('second real run comparison and filtered export contains only selected authorized evidence locators', async () => {
-      second = await create('handoff', h.handoff_version_id, '同一固定来源的第二次合成分析'); await finished(second);
-      await label('对比运行').selectOption(first); await idle(); assert((await page.locator('body').textContent()).includes('对照不完整'));
+      second = await create('handoff', h.handoff_version_id, '同一已保存材料的第二次合成分析'); await finished(second);
+      await label('对比检查记录').selectOption(first); await idle(); assert((await page.locator('body').textContent()).includes('对照不完整'));
       await label('发现类别').selectOption('not_covered'); const n = await page.locator('[data-finding]').count(); assert(n > 0);
       const downloading = page.waitForEvent('download'); await button('导出当前筛选范围').click(); const download = await downloading; const file = path.join(output, 'p15-filtered-export.json'); await download.saveAs(file);
       const result = JSON.parse(fs.readFileSync(file, 'utf8')); assert.equal(result.findings.length, n); assert(result.findings.every(f => f.finding_type === 'not_covered')); assert(result.evidence.every(e => !Object.hasOwn(e, 'excerpt'))); assert.equal(result.changes_governance, false);
@@ -88,30 +88,30 @@ module.exports = async function ({ repo, lead, pool, run, historical, fixture, s
     });
     await test('V7 parse failure is partial or failed with explicit uncovered checks and safe evidence', async () => {
       const id = await create('v7_source', broken.source_id, '仅核对合成损坏 JSON'); const r = await finished(id); assert(['partial', 'failed'].includes(r.status)); assert(r.coverage.some(c => c.missing.length));
-      await button('清除筛选').click(); assert((await page.locator('body').textContent()).includes('固定来源未能解析为JSON')); assert((await page.locator('body').textContent()).includes('INPUT_INCOMPLETE')); save('p15-parse-result.json', r);
+      await button('清除筛选').click(); assert((await page.locator('body').textContent()).includes('已保存材料未能解析为JSON')); assert((await page.locator('body').textContent()).includes('INPUT_INCOMPLETE')); save('p15-parse-result.json', r);
     });
     await test('401 403 409 503 network failures retain creation input; relogin and stale async rejection', async () => {
-      await label('固定来源').selectOption(source.source_id); await label('本轮范围说明').fill('受限失败仍保留的合成中文输入');
+      await label('已保存材料').selectOption(source.source_id); await label('本轮范围说明').fill('受限失败仍保留的合成中文输入');
       const longInput = '受限失败仍保留的合成中文输入'.repeat(30);
       await label('本轮范围说明').fill(longInput); await overflow(); await screenshot('p15-long-input-1699.png');
       const url = '**/api/analysis/runs';
-    const submitOrReconcile = () => button('核对同一请求结果').count().then(n => n ? button('核对同一请求结果').click() : button('创建并排队分析').click());
+    const submitOrReconcile = () => button('核对同一请求结果').count().then(n => n ? button('核对同一请求结果').click() : button('建立检查任务').click());
       for (const status of [403, 409, 503]) {
         await page.route(url, route => route.request().method() === 'POST' ? route.fulfill({ status, contentType: 'application/json', body: JSON.stringify({ error: 'synthetic', code: 'SYNTHETIC_FAILURE' }) }) : route.continue());
         await submitOrReconcile(); await idle(); assert.equal(await label('本轮范围说明').inputValue(), longInput); await page.unroute(url);
       }
       await page.route(url, route => route.request().method() === 'POST' ? route.abort('failed') : route.continue()); await submitOrReconcile(); await idle(); assert.equal(await label('本轮范围说明').inputValue(), longInput); await page.unroute(url);
       await page.route(url, route => route.request().method() === 'POST' ? route.fulfill({ status: 401, contentType: 'application/json', body: '{}' }) : route.continue()); await submitOrReconcile(); await page.locator('#login-name').waitFor(); await page.unroute(url); await login(); assert.equal(await label('本轮范围说明').inputValue(), longInput);
-      const accept = page.waitForEvent('dialog'); const selected = label('当前运行').selectOption(first); await (await accept).accept(); await selected; await idle();
+      const accept = page.waitForEvent('dialog'); const selected = label('查看检查记录').selectOption(first); await (await accept).accept(); await selected; await idle();
       let release; const gate = new Promise(r => { release = r; }); let seen; const observed = new Promise(r => { seen = r; });
       await page.route('**/api/analysis/runs/' + first, async route => { seen(); await gate; await route.continue().catch(() => {}); });
-      await button('刷新分析记录').click(); await observed;
+      await button('刷新检查记录').click(); await observed;
       await page.getByRole('link', { name: '当前身份', exact: true }).click(); release(); await page.unroute('**/api/analysis/runs/' + first); assert.equal(await page.getByRole('heading', { name: '当前身份', exact: true }).count(), 1);
       await page.getByRole('link', { name: '分析检查台', exact: true }).click(); await idle(); assert.equal(await label('本轮范围说明').inputValue(), '');
     });
     await test('admin read only outsider hidden data and static asset isolation', async () => {
-      await button('退出登录').click(); await login('adminMulti'); assert(await button('创建并排队分析').isDisabled());
-      await button('退出登录').click(); await login('outsider'); assert.equal(await label('当前运行').locator('option').count(), 1);
+      await button('退出登录').click(); await login('adminMulti'); assert(await button('建立检查任务').isDisabled());
+      await button('退出登录').click(); await login('outsider'); assert.equal(await label('查看检查记录').locator('option').count(), 1);
       for (const suffix of ['', '/findings', '/export']) { const r = await context.request.get(fixture.baseURL + '/api/analysis/runs/' + first + suffix); assert.equal(r.status(), 404); assert(!(await r.text()).includes('合成订单')); }
       for (const url of ['/app/src/AnalysisWorkbench.jsx', '/artifacts/p15.json', '/server/analysisApi.js']) assert.equal((await context.request.get(fixture.baseURL + url)).status(), 404);
       const dist = path.resolve(__dirname, '../../frontend/dist'); for (const file of fs.readdirSync(path.join(dist, 'assets'))) { const value = fs.readFileSync(path.join(dist, 'assets', file), 'utf8'); for (const sentinel of ['P15-SYNTHETIC-UNPARSEABLE', 'P09合成订单', 'P15 合成交接两端']) assert(!value.includes(sentinel)); }

@@ -28,8 +28,9 @@ function publicEntryRouter(directory = path.resolve(__dirname, '../public')) {
     res.set('Cache-Control', 'no-store').status(410).type('text').send('旧版页面已退役，请访问 /app/。'));
   // Only resources consumed by the current frontend are public. A restored old
   // index file or an accidental new public file cannot reopen another frontend.
-  for (const name of ['logo.png', 'echarts.min.js', 'template.xlsx']) {
-    router.get('/' + name, (req, res, next) => res.sendFile(path.join(directory, name), error => { if (error && !req.aborted && !res.headersSent) next(error); }));
+  const publicFiles = { 'favicon.ico': 'logo.png', 'logo.png': 'logo.png', 'echarts.min.js': 'echarts.min.js', 'template.xlsx': 'template.xlsx' };
+  for (const [route, name] of Object.entries(publicFiles)) {
+    router.get('/' + route, (req, res, next) => res.sendFile(path.join(directory, name), error => { if (error && !req.aborted && !res.headersSent) next(error); }));
   }
   return router;
 }

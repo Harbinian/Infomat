@@ -5,6 +5,7 @@ const { makeGovernanceAccessMysqlRepository } = require('../governanceAccessMysq
 const { mysqlConfigFromEnv } = require('../mysqlConfig');
 const { logRequestFailure } = require('../securityLog');
 const { createRegisteredPool } = require('../mysqlPoolRegistry');
+const { sessionSubject } = require('../sessionSubject');
 
 const router = express.Router();
 let repositoryPromise = null;
@@ -80,8 +81,10 @@ router.post(
   (req, res) => run(res, async () => {
     const repo = await repository();
     const body = req.body || {};
+    const subject = sessionSubject(req.session, req.identity);
     const record = await repo.recordGovernanceDecision({
-      recorderPersonId: Number(req.session.personId || 0),
+      recorderPersonId: subject.personId,
+      actor: { personId: subject.personId, accountId: subject.accountId, authVersion: subject.authVersion },
       departmentId: body.departmentId,
       subjectDomain: body.subjectDomain,
       subjectType: body.subjectType,
