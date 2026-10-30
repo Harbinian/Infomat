@@ -1,69 +1,102 @@
 # Infomat
 
-Infomat 是航空复材制造领域的信息化资料与工具仓库，保存业务资料、可运行应用、PMO 工具和仓库级脚本。
+面向航空复材制造企业的信息化建设与数据治理工作仓库。
 
-## 当前治理边界
+Infomat 集中维护流程与数据治理平台、PMO 协作工具、系统查询服务及配套工程资产。项目围绕实际业务材料和明确确认开展工作，将流程编制、部门核对、审核发布与后续数据治理衔接起来，并保留版本、变更依据和办理记录。
 
-当前工作主线为：用户指定的外部原始材料和业务确认，经 3001 编制单流程，由用户下载未审核 JSON 并手动上传 3000，完成治理、核对和审核后形成正式版本，再据此生成程序文件。具体职责和权限依据业务确认及任命，程序实现不能反向确定业务要求。
+## 当前重点
 
-所有 `docs/` 文件均不作为业务真源或治理依据；技术说明、校验合同和历史消费关系用于定位实现及兼容边界。当前阶段和全仓硬规则见 [AGENTS.md](AGENTS.md)。
+当前开发重点是 **3000 内的单流程编制与治理**：在同一平台完成流程图和表格编辑、草稿保存、修订提交、核对、退回续修及审核发布，前后端通过 API 分离。
 
-## 仓库级入口
+```text
+用户指定的原始材料与业务说明
+  → 3000 编制与保存草稿
+  → 主对接人提交修订
+  → 部门核对，需修改时退回续修
+  → 审核发布，形成固定流程版本
+  → 基于已发布版本开展数据治理与受控承接
+```
 
-| 任务需要 | 入口及职责 |
-|---|---|
-| 当前规则和任务路由 | [AGENTS.md](AGENTS.md) |
-| 实施、文档维护、兼容和验证方法 | [CODEX.md](CODEX.md) |
-| 仓库收纳、生成物和历史资产 | [REPOSITORY_BOUNDARY.md](REPOSITORY_BOUNDARY.md) |
-| 目录责任和局部指令注册 | [DIRECTORY_OWNERSHIP.md](DIRECTORY_OWNERSHIP.md) |
-| 流程治理、PMO、资料消费和生成关系 | [MAINLINE_MAP.md](MAINLINE_MAP.md) |
-| 稳定术语和仓库概念 | [CONTEXT.md](CONTEXT.md) |
-| 指令分层、预算和按需读取 | [上下文管理说明](docs/architecture/context-management.md) |
+用户也可以主动下载 JSON 草稿，在知识库 AI 对话中编辑后重新导入；导回内容不继承审核状态。3001 保留独立、无状态的单流程编制与人工文件交接兼容，用户下载后手动上传 3000，两者不自动互写或共享数据库。
 
-按任务选择相关入口，详细操作和应用规格由主责目录维护。
+本轮开发与验证限本地及隔离环境。源码能力、目标实例的功能开启和业务验收分别核对；具体实现、部署方式和恢复条件见各应用说明。
 
-## 应用和工具入口
+## 主要应用与工具
 
-| 对象 | 主责入口 | 维护边界 |
+| 应用 | 用途与边界 | 入口 |
 |---|---|---|
-| MDM 平台（3000） | [应用 README](apps/mdm-platform/README.md) | 身份、数据和流程治理；具体实现、权限、版本与运行门槛按应用入口核对 |
-| 单流程编制工具（3001） | [应用 README](apps/structured-output-service/README.md) | 当前页面内存中编制和兼容导入；用户主动下载，不与 3000 自动互写或共享数据库 |
-| 信息表收集服务（4000 / 4001） | [应用 README](apps/information-collection-service/README.md) | 只读复用身份数据，收集权限、答卷和附件按应用边界维护 |
-| PMO 计划和展示 | [PMO README](pmo/README.md) | 计划维护、任务数据生成和展示；不据展示快照确定当前业务事实 |
-| 历史流程地图驾驶舱 | [目录 README](pmo/procedure-management/README.md) | 展示已有内嵌数据；旧消费链更新须显式选择输入、输出及授权范围 |
-| 仓库级脚本 | [脚本 README](scripts/README.md) | 查询输入、输出、副作用和验证入口；修改前按该目录指令路由 |
+| **流程与数据治理平台（3000）** | 流程编制、核对与正式版本；组织与员工目录、账号授权、统一术语、数据治理及受控承接。模块权限与开启条件由平台维护 | [平台说明](apps/mdm-platform/README.md) |
+| **单流程编制工具（3001）** | 独立编制和兼容导入；用户内容仅保存在当前页面内存中，主动下载是唯一持久化动作 | [应用说明](apps/structured-output-service/README.md) |
+| **PMO 协作工具** | 甘特图、管控看板、周会行动台账及交付物维护；流程地图驾驶舱保留历史展示用途 | [PMO 说明](pmo/README.md) · [前端开发](pmo/gantt-react/README.md) |
+| **U8 出入库订单归属查询（3088）** | 只读查询订单归属、质量编号差异及销售质量编号唯一性，不修改 U8 单据或编号 | [应用说明](apps/u8-stock-order-query/README.md) |
+| **信息表收集服务（4000 / 4001）** | 管理端设计表单和发布任务，填报端保存草稿及提交答卷；当前暂缓开发与正式启用 | [应用说明](apps/information-collection-service/README.md) |
+| **Slack 问答机器人** | 通过 Claude Code CLI 检索仓库并回答问题；默认只读，写入能力按提问者单独授权 | [应用说明](apps/slack-bot/README.md) |
 
-资料、副本、样例和历史记录分别按 [目录责任](DIRECTORY_OWNERSHIP.md) 定位。目录级指令的唯一清单在该文件的注册块，其他入口不复制清单。
+应用端口是各自的运行入口，不表示这些服务必须同时启动。信息表收集服务只读复用人员身份，业务数据写入独立的 `collection_*` 表，不继承 3000 的业务权限。
 
-## 运行与配置入口
+## 从哪里开始
 
-仅操作一个应用或端口时，使用该应用 README 的专用入口并核对目标。3000 的独立运维使用应用的 `service:start|stop|restart|check`；具体前置条件按应用 README 核对。
+### 了解和使用
 
-以下仓库级命令操作 MDM、PMO 和 MySQL 的共同开发环境，任务授权覆盖该组合且前置条件满足时才使用：
+- 使用或开发 3000：从[平台说明](apps/mdm-platform/README.md)了解编制、草稿和 JSON 往返；部署与恢复见[Docker 说明](apps/mdm-platform/DOCKER.md)。
+- 维护项目计划和协作事项：从[PMO 说明](pmo/README.md)定位计划维护入口、行动台账和生成命令。
+- 使用独立工具：从上表选择对应应用，按其配置、权限和启动条件操作。
 
-```powershell
-npm run start:infomat-services
-npm run smoke:infomat-services
+### 本地开发与运行
+
+各应用有独立的依赖和配置，根目录安装依赖不能替代应用目录的安装步骤。3000 使用 **Express + MySQL** 后端和 **React + Vite** 前端；SQLite 仅保留为明确命名的历史迁移与隔离测试路径。凭据通过受控环境或已忽略的私有配置提供，不写入源码、文档或命令参数。
+
+| 目标 | 运行与配置入口 |
+|---|---|
+| 3000 Docker 部署 | [Docker 说明](apps/mdm-platform/DOCKER.md)，按目标核对构建、启动、健康检查与恢复条件 |
+| 3000 Windows 部署副本 | [平台运行与验证](apps/mdm-platform/README.md#运行与验证)，使用专用 `service:start`、`service:stop`、`service:restart`、`service:check` 命令；这些命令不管理 Docker 容器 |
+| 3001 独立运行 | [应用说明](apps/structured-output-service/README.md)，按应用要求安装依赖、构建工作台并检查健康和文件合同 |
+| PMO 开发 | [前端快速开始](pmo/gantt-react/README.md#快速开始)；应用开发默认端口为 5174，共同开发配置使用 5173 |
+| MDM、PMO 与 MySQL 共同开发环境 | [仓库级脚本说明](scripts/README.md)，核对组合启动、初始化及配置的影响范围 |
+
+仅维护一个应用时使用其专用入口。桌面界面以 **Microsoft Edge、100% 缩放、1699 × 828 CSS 像素内容可视区**为验证基准。
+
+## 业务依据与数据边界
+
+业务事实、流程职责和审批要求来自用户指定的外部原始材料、实际业务说明及明确确认。程序、数据库、页面和 AI 输出用于辅助核对，不能单独确定业务规则。
+
+**3000 是组织与员工信息的唯一维护源**，由行政人事维护；保存直接生效，并记录修改前后内容、操作人和原因。Excel 仅作为明确的导入材料，花名册 Markdown 和只读目录快照保留副本用途。其他系统逐个接入统一读取接口，接口与接入条件见平台的[组织目录、部门角色与人员授权](apps/mdm-platform/README.md#组织目录部门角色与人员授权)。
+
+`docs/` 保存技术合同、资料副本、方案和历史记录，**所有 `docs/` 文件均不作为业务真源或治理依据**。技术合同用于说明格式、校验及兼容边界；历史资料和展示快照用于追溯。
+
+流程 JSON、预览材料、审核记录和已发布版本分别维护。结构、标识、权限或导入导出格式变化时，同一版本工作须处理受支持旧数据，不能静默删除、清空或猜测迁移内容。
+
+## 仓库结构
+
+```text
+Infomat/
+├── apps/           应用源码、应用测试与维护脚本
+├── pmo/            项目计划、协作工具与受控交付物
+├── scripts/        仓库级生成、校验与运行脚本
+├── docs/           技术说明、资料副本、方案与历史记录
+├── ai_materials/   有来源的 AI 处理输入材料及历史索引
+├── .agents/        项目技能与提示材料
+└── artifacts/      本地生成物与验证输出，默认不提交
 ```
 
-共同开发配置的 MySQL 入口为 `localhost:3307`，非敏感配置在 `scripts/infomat-services.config.json`，本机私有配置路径为 `scripts/infomat-services.local.env`。详细配置和副作用由 [脚本 README](scripts/README.md) 维护。配置描述不代表目标服务当前可用；运行结论须取得对应健康和内容证据。
+目录责任、局部入口和维护范围见[目录职责](DIRECTORY_OWNERSHIP.md)；生成物及历史资产的保留边界见[仓库职责边界](REPOSITORY_BOUNDARY.md)。
 
-## 技术合同与验证
+## 维护与验证
 
-文档结构化 v2 证据草稿的技术兼容合同见 [schema](docs/contracts/document-structured-output.schema.json) 和 [合同说明](docs/contracts/document-structured-output-schema.md)。它们说明机器格式，不确认业务事实。修改该合同或消费兼容行为时，按影响运行 `test:document-structured-output-schema` 和 `test:work-role-contract`。
+修改前核对 Git 状态并保留已有工作。行为、接口、配置、操作方式或维护边界变化时，同步受影响的当前说明；新增术语或改变含义时同步 `docs/glossary.md`。
 
-修改项目指令、路由、注册或上下文预算后，从仓库根目录运行：
+验证按改动范围选择：
 
-```powershell
-npm run test:codex-context
-```
+- 应用功能、权限和兼容：使用对应应用 `package.json` 与测试说明中的检查，数据库验证使用隔离环境。
+- 项目指令、任务路由或目录注册：在根目录运行 `npm run test:codex-context`。
+- 纯文档：核对事实、状态、引用、命令和 Markdown 格式。
 
-应用改动的验证入口由应用 README、package.json 和测试说明维护；文档改动按受影响的事实、引用和格式检查。技术检查与业务验收分别报告。
+验证结果应明确区分“已实现”“已准备”“已开启”和“已验收”。静态检查、自动化测试、候选运行或软件部署均不能代替业务验收。
 
-## 当前说明与历史追溯
-
-当前文档直接维护有效正文；详细维护方法见 [CODEX.md](CODEX.md)。设计经过、历史决策和阶段记录按需查询 [归档索引](docs/archives/README.md)、[ADR](docs/adr/) 和历史 [MEMORY.md](MEMORY.md)，不作为每次任务的默认阅读内容。仍然有效的要求保留在当前入口。
-
-本轮整理前的仓库级原文及校验清单见 [历史快照索引](docs/archives/2026-10-09-repository-docs/README.md)。历史快照只用于追溯。
-
-生成物、必要样例和已有受控派生文件的边界见 [仓库职责边界](REPOSITORY_BOUNDARY.md)，本入口不扩大纳管范围或改变 ADR 评审状态。
+| 维护问题 | 对应说明 |
+|---|---|
+| 当前规则与任务路由 | [AGENTS.md](AGENTS.md) |
+| 实施、排障与审查方法 | [CODEX.md](CODEX.md) |
+| 稳定术语与仓库概念 | [CONTEXT.md](CONTEXT.md) |
+| 资料、应用、PMO 与生成器的消费关系 | [MAINLINE_MAP.md](MAINLINE_MAP.md) |
+| 跨目录脚本的输入、输出和副作用 | [scripts/README.md](scripts/README.md) |
