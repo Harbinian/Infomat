@@ -39,7 +39,7 @@ const companyData = JSON.parse(readFileSync(resolve(root, 'docs', 'company-sanke
 const dcmBbmChecker = readFileSync(resolve(root, 'scripts', 'check-dcm-bbm.mjs'), 'utf8');
 const sourceFiles = companyData.sourceManifest.files;
 const gltx = sourceFiles.find((file) => /GLTX-CW-01/.test(file.path));
-const dopc = sourceFiles.find((file) => /(?:DOPC706364-71|[G][L][B][1][2][0][1][0][1][-][0][1])/.test(file.path) && /IPT 团队工作管理标准\.docx$/.test(file.path));
+const dopc = sourceFiles.find((file) => /(?:DOPC706364-71|[G][L][B][1][2][0][1][0][1][-][0][1])/.test(file.path) && /IPT 团队工作管理标准\.docx(?:\.md)?$/.test(file.path));
 const anf = sourceFiles.find((file) => /(?:ANF4202-62|[F][M][1][2][0][1][-][1][0])/.test(file.path));
 
 assert.equal(gltx?.source_boundary_flag, 'changxing_owned', 'GLTX files should be protected in sourceManifest');
