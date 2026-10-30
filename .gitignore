@@ -3,6 +3,9 @@ node_modules/
 Thumbs.db
 ~$*.docx
 
+# Private department business materials (local only)
+/docs/
+
 # Generated artifacts (do not commit)
 artifacts/
 output/
