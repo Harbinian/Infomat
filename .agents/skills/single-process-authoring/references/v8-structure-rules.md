@@ -1,5 +1,7 @@
 # V8 结构与映射规则
 
+仅适用于V8文件的兼容参考，不作V9候选模板。当前目标、摘要和切版边界见[结构版本与兼容](structure-versioning.md)。
+
 本文件约束生成文件的结构与语义，不赋予技能业务决策权。结构以 `docs/contracts/process-governance-v8.schema.json` 为准，语义以 `scripts/process-governance/v7-validator.js` 为准；两者也是 3001 和 3000 共用的同一份规则。
 
 ## 1 顶层结构与身份

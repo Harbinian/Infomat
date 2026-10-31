@@ -125,3 +125,8 @@ yarn-error.log*
 !/apps/mdm-platform/docs/*-DB-Schema.md
 !/apps/mdm-platform/docs/*-Migration-Runbook.md
 /apps/mdm-platform/docs/Process-Governance-V3-Migration-Runbook.md
+
+# Local caches, conversation attachments and personal tool permissions
+/.cache/
+/.codex-remote-attachments/
+/.claude/settings.local.json

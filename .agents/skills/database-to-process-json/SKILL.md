@@ -5,6 +5,8 @@ description: 仅在显式调用 $database-to-process-json 时，从指定的 CXS
 
 # Database to Process JSON
 
+这是保留的 V7 兼容工具，不是当前 V9 候选编制入口。目标系统的接收支持须另核对；不因版本较旧而改写既有草稿或猜测迁移。
+
 本技能只在用户明确写出 `$database-to-process-json` 时运行。一次只处理一个明确指定的表单流程，输出未审核的 `process-governance-v7` 草稿和证据包。
 
 ## 不可突破的边界
@@ -44,7 +46,7 @@ description: 仅在显式调用 $database-to-process-json 时，从指定的 CXS
    - `pending-issues.md`
    - `generation-summary.json`
    - 可选 `read-only-verification.json`
-8. 核对生成器返回的 3001 V7 结构校验结果及本批输出；该生成器在写出前调用现有纯校验入口，不需要为此启动 3001。只有生成器、映射、旧草稿合并或实时核验逻辑变化时，才运行 `node .agents/skills/database-to-process-json/scripts/test-database-to-process-json.mjs`。输出仍为未审核草稿，不得自动导入 3000 或发布。
+8. 核对生成器返回的 3001 V7 结构校验结果及本批输出；该生成器在写出前调用现有纯校验入口，不需要为此启动 3001。只有生成器、映射、旧草稿合并或实时核验逻辑变化时，才按改动面使用维护者本机保留的隔离验证材料；公开仓库不分发对应测试脚本。输出仍为未审核草稿，不得自动导入 3000 或发布。
 
 ## 交付口径
 

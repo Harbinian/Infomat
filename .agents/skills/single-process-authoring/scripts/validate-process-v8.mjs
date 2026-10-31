@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * 单流程离线校验器（V8 为主，兼容续编中的 V7 草稿）。
+ * 单流程离线校验器（V7/V8/V9按文件版本校验，保留兼容命令名）。
  *
  * 不启动 3001，直接调用 3001 与 3000 共用的同一份规则：
- *   - 结构：docs/contracts/process-governance-v{7,8}.schema.json（JSON Schema 2020-12）
+ *   - 结构：docs/contracts/process-governance-v{7,8,9}.schema.json（JSON Schema 2020-12）
  *   - 语义：scripts/process-governance/v7-validator.js（引用、端点、节点类型、字段归属）
  * 两者由 apps/structured-output-service/server.js 按 schema_version 分派。
  *
@@ -34,8 +34,8 @@ const USAGE = `单流程离线校验器
 
   --json           以 JSON 输出结果，便于后续处理
   --expect-digest  要求结构摘要等于给定值，不一致视为失败（用于切换目标版本）
-                   摘要按文件的 schema_version 取：V8 用服务常量，V7 用本地结构文件哈希
-  --emit-template  输出当前 3001 的空白 V8 模板，不校验文件
+                   摘要按文件的 schema_version 取，不混用V9/V8/V7摘要
+  --emit-template  输出本机应用模块返回的空白模板，并报告实际结构版本
   --promote        把 V7 草稿转成 V8 版本标识并写出新文件；拒绝覆盖已有文件。
                    只改 schema_version，保留 migration.source_schema_version。
                    这不是迁移完成：3001 导入时的规范化与差异核对仍需人工执行。
@@ -95,21 +95,12 @@ function loadService() {
   }
 }
 
-/**
- * 按文件版本给出 3001 实际使用的结构摘要，口径与 apps/structured-output-service/server.js 一致：
- * V8 用服务导出常量，V7 用 docs/contracts 下结构文件的 SHA-256。
- * 两个摘要不同（V7 e1d5b33b…、V8 3b68c1fd…），不能混用。
- */
+// Hash the schema matching the declared version; this is local metadata, not live-service proof.
 function schemaDigestFor(version) {
-  if (version === 'process-governance-v8') {
-    return { value: service.PROCESS_GOVERNANCE_SCHEMA_DIGEST, version: 'V8' };
-  }
-  if (version === 'process-governance-v7') {
-    const schemaPath = path.join(REPO_ROOT, 'docs', 'contracts', 'process-governance-v7.schema.json');
-    if (!fs.existsSync(schemaPath)) return null;
-    return { value: crypto.createHash('sha256').update(fs.readFileSync(schemaPath)).digest('hex'), version: 'V7' };
-  }
-  return null;
+  if (!['process-governance-v7', 'process-governance-v8', 'process-governance-v9'].includes(version)) return null;
+  const schemaPath = path.join(REPO_ROOT, 'docs', 'contracts', `${version}.schema.json`);
+  if (!fs.existsSync(schemaPath)) return null;
+  return { value: crypto.createHash('sha256').update(fs.readFileSync(schemaPath)).digest('hex'), version: version.replace('process-governance-v', 'V') };
 }
 
 function parseArgs(argv) {
@@ -180,10 +171,12 @@ if (options.emitTemplate) {
   if (fs.existsSync(target)) {
     fail(`目标已存在，不覆盖：${target}`);
   }
+  const template = service.createEmptyProcessGovernanceDocument();
+  const digest = schemaDigestFor(template?.schema_version);
+  if (!digest) fail(`模板对应的本机结构摘要不可用：${template?.schema_version ?? '未知版本'}；未写出文件。`);
   fs.mkdirSync(path.dirname(target), { recursive: true });
-  fs.writeFileSync(target, `${JSON.stringify(service.createEmptyProcessGovernanceDocument(), null, 2)}\n`, 'utf8');
-  const digest = schemaDigestFor('process-governance-v8');
-  process.stdout.write(`已写出空白 process-governance-v8 模板：${target}\n结构摘要（V8）：${digest.value}\n`);
+  fs.writeFileSync(target, `${JSON.stringify(template, null, 2)}\n`, 'utf8');
+  process.stdout.write(`已写出空白 ${template.schema_version} 模板：${target}\n结构摘要（${digest.version}）：${digest.value}\n`);
   process.exit(0);
 }
 
@@ -221,14 +214,14 @@ if (options.asJson) {
   const lines = [
     `文件：${filePath}`,
     `结构版本：${version ?? '（缺少 schema_version）'}`,
-    digest ? `3001 结构摘要（${digest.version}）：${digest.value}` : '3001 结构摘要：本脚本只核对 V7／V8，其他版本未取摘要',
+    digest ? `3001 结构摘要（${digest.version}）：${digest.value}` : '3001 结构摘要：本脚本只核对 V7／V8／V9，其他版本未取摘要',
     `3001 应用提交：${service.APP_COMMIT}（取自 ${APP_COMMIT_SOURCE === 'env' ? 'STRUCTURED_OUTPUT_APP_COMMIT 环境变量' : 'git HEAD；会被无关提交顶掉'}）`,
     RULES_COMMIT
       ? `规则文件提交：${RULES_COMMIT}（${RULES_PATHS.join('、')} 最后一次变更；跨批次比对这个）`
       : '规则文件提交：未取到（非 git 工作区或 git 不可用）'
   ];
   if (digestMismatch) lines.push(`结构摘要不一致：期望 ${options.expectDigest}，实际 ${digest.value}`);
-  if (digestUnavailable) lines.push(`无法核对结构摘要：本脚本只支持 V7／V8，当前为 ${version ?? '未知版本'}`);
+  if (digestUnavailable) lines.push(`无法核对结构摘要：本脚本只支持 V7／V8／V9，当前为 ${version ?? '未知版本'}`);
   if (valid) {
     lines.push('结果：通过');
   } else if (digestMismatch || digestUnavailable) {
