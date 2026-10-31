@@ -1,5 +1,8 @@
 # AGENTS.md — 甘特图 / PMO 周会看板
 
+测试脚本及辅助历史资料仅保留在维护者本机，不随 Git 分发；公开包不提供对应测试命令。本地验证须使用已有工具或明确取得的测试材料，并遵守隔离、权限和验收边界。
+
+
 `pmo/gantt-react/` 是 React + Vite 单页应用，包含 WBS 甘特图、任务清单、交付物台账、阶段门、本周交付物、延期交付物、PMO 周会视图和周会事项台账。
 
 ## 当前真源
@@ -32,7 +35,7 @@ python build_pmo_task_data.py
 3. 回到仓库根目录运行：
 
 ```powershell
-npm run test:pmo-task-data
+# 本地测试入口不随 Git 分发。
 ```
 
 脚本会写入 `tasks.json`、`pmo-source-manifest.json`、`gantt-react/public/tasks.json` 和 `gantt-react/public/pmo-source-manifest.json`。不要手改这些生成文件。

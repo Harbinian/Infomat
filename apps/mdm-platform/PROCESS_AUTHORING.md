@@ -1,5 +1,8 @@
 # 3000内流程编制实施合同
 
+测试脚本及辅助历史资料仅保留在维护者本机，不随 Git 分发；公开包不提供对应测试命令。本地验证须使用已有工具或明确取得的测试材料，并遵守隔离、权限和验收边界。
+
+
 2026-10-21已按用户部署授权在3000开启流程编制、保存及续修入口；正式目标新增三张草稿表，当前运行与恢复证据见[Docker说明](DOCKER.md)。本轮未停止3001，既有无状态编制和人工JSON交接仍可使用。业务分工依据用户明确确认；软件部署、隔离技术验证与业务验收分别记录，本轮未代替真实业务办理或业务验收。
 
 ## 使用与职责
@@ -52,11 +55,11 @@ V9、V8、V7正文按原生格式保存，不降级或重写已有正式摘要�
 
 ## 隔离验证与候选检查
 
-在应用目录运行`npm run test:process-authoring-editor`检查纯编辑合同；`npm run test:process-authoring-mysql -- --output <artifacts内全新目录>`使用自有临时MySQL与合成账号验证保存、提交及原治理链。运行前核对对应脚本及参数，不传私有配置。
+在应用目录运行本机保留的对应验证入口检查纯编辑合同；本机保留的对应验证入口使用自有临时MySQL与合成账号验证保存、提交及原治理链。运行前核对对应脚本及参数，不传私有配置。
 
-在`frontend/`执行`npm test`。候选构建使用`npm run build -- --outDir <artifacts内构建目录>`，不覆盖其他候选产物。真实Edge浏览器验证使用`node scripts/test-process-authoring-browser.js --frontend-dist <artifacts构建目录> --output <全新证据目录>`；仅Edge100%、1699×828桌面，自动化不等于人工IME或业务验收。
+在`frontend/`执行本机保留的对应验证入口。候选构建使用`npm run build -- --outDir <artifacts内构建目录>`，不覆盖其他候选产物。真实Edge浏览器验证使用`node scripts/test-process-authoring-browser.js --frontend-dist <artifacts构建目录> --output <全新证据目录>`；仅Edge100%、1699×828桌面，自动化不等于人工IME或业务验收。
 
-供用户检查候选：`node scripts/serve-process-authoring-candidate.js --frontend-dist <artifacts构建目录> --output <全新候选目录> --serve`。该命令只创建带所有权标签的临时MySQL与随机回环HTTP，输出合成登录入口，关闭时只清理自己创建的容器。合成候选数据是临时的，重要试编成果先下载JSON；不能用作正式治理记录。
+供用户检查候选：本机保留的对应验证入口。该命令只创建带所有权标签的临时MySQL与随机回环HTTP，输出合成登录入口，关闭时只清理自己创建的容器。合成候选数据是临时的，重要试编成果先下载JSON；不能用作正式治理记录。
 
 ## 正式切换条件
 

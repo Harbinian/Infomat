@@ -1,5 +1,8 @@
 # AGENTS.md - PMO 交付物
 
+测试脚本及辅助历史资料仅保留在维护者本机，不随 Git 分发；公开包不提供对应测试命令。本地验证须使用已有工具或明确取得的测试材料，并遵守隔离、权限和验收边界。
+
+
 本文件约束 `pmo/deliverables/` 下的受控交付物。根目录规则和 `pmo/AGENTS.md` 同时适用。
 
 ## 真源边界
@@ -36,9 +39,9 @@
 
 ```powershell
 cd pmo/gantt-react
-npm run test:frontmatter
-npm run test:writeback
-npm run test:plugin
+# 本地测试入口不随 Git 分发。
+# 本地测试入口不随 Git 分发。
+# 本地测试入口不随 Git 分发。
 ```
 
 交付物内容影响 PMO 计划或任务数据：
@@ -47,7 +50,7 @@ npm run test:plugin
 
 ```powershell
 npm run build:pmo-task-data
-npm run test:pmo-task-data
+# 本地测试入口不随 Git 分发。
 ```
 
 仅修改叙述性正文时，核对受影响的版本记录、交叉引用和 DLV 编号；不运行应用测试。

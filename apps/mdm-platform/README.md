@@ -1,5 +1,8 @@
 # MDM 平台（3000）
 
+测试脚本及辅助历史资料仅保留在维护者本机，不随 Git 分发；公开包不提供对应测试命令。本地验证须使用已有工具或明确取得的测试材料，并遵守隔离、权限和验收边界。
+
+
 2026-10-27 11:57:17（北京时间），3000已部署N01—N07整改，沿用R01—R10、HR v5及既有流程编制、术语、正式治理和受控承接开启状态。仅替换27项前端资源，不改服务端、依赖、结构或真实人员权限。当前运行、备份和兼容恢复见[Docker说明](DOCKER.md)。合成角色复验已完成，正式业务验收尚未完成。
 
 3000内部入口见[受控承接说明](DATA_MAP_HANDOFF.md#3000-内部集成路径)：工作台和待办展示当前有权办理事项，工作包和台账按准确标识进入，办完返回并重新读取；台账旧直写入口已撤下。
@@ -10,7 +13,7 @@
 
 启用后的 `/app/terms` 是术语唯一维护入口。GB来源核对后生效，GB/T及自定义须组长采纳；GB/Z须按自定义提报。旧词典及字段词表保留历史快照，旧写入口封闭。流程正文需要改词时仍回3001修订上传；数据定义的引用随受控交接发布固定，不修改物理表名或原系统字段。
 
-修订词条必须填写原因，原因随不可变定义版本留痕；草案不改变当前生效定义。对象与字段页在受控承接模式下区分已发布定义和固定历史，历史术语引用只读。前端验证命令为`npm run test:terminology-frontend-mysql -- --output <artifacts内全新目录>`，其合成会话及外层页面夹具边界见实施合同。
+修订词条必须填写原因，原因随不可变定义版本留痕；草案不改变当前生效定义。对象与字段页在受控承接模式下区分已发布定义和固定历史，历史术语引用只读。前端验证命令为本机保留的对应验证入口，其合成会话及外层页面夹具边界见实施合同。
 
 
 ## 数据地图受控承接
@@ -30,7 +33,7 @@
 
 3000仅开放同源`/app/`当前前端，访问根路径`/`会转向该入口。旧版`public/index.html`及其页面脚本已经删除，`/index.html`和`/mdm-protocol.js`返回410；不再提供旧页面或未构建时的旧页回退。登录、首次改密和本人改密均在当前前端办理。既有业务API、历史正文、稳定标识、权限和数据库结构保留。服务端历史办理目标由`shared/browserProtocol.js`转到当前页面并保留案例、核对项、办公室等定位参数；该转换不开放旧UI。实际运行版本查[Docker部署说明](DOCKER.md)及健康状态。
 
-第一期桌面科技视觉已于2026-10-14经用户明确授权替换到3000：登录、工作台和统计看板强化展示，业务表格、审核与录入使用实色暗色面板。登录前后均可选择自动、增强、减少动态效果并暂停；系统减少动态效果优先，设置仅在页面会话内保留。Lottie软件Worker反馈、Three.js局部场景、同源WASM和最小CSP已随当前镜像启用，业务开关保持原状态。实际运行版本与恢复入口见[Docker说明](DOCKER.md)；设计、功能覆盖、证据和人工/硬件限制见[桌面设计规格](docs/Frontend-Tech-UI-Design.md)及[性能与验证报告](docs/Frontend-Tech-UI-Performance-Report.md)。人工体验和业务验收尚未完成，第二期完整多端保留，本期没有窄屏开发或测试。
+第一期桌面科技视觉已于2026-10-14经用户明确授权替换到3000：登录、工作台和统计看板强化展示，业务表格、审核与录入使用实色暗色面板。登录前后均可选择自动、增强、减少动态效果并暂停；系统减少动态效果优先，设置仅在页面会话内保留。Lottie软件Worker反馈、Three.js局部场景、同源WASM和最小CSP已随当前镜像启用，业务开关保持原状态。实际运行版本与恢复入口见[Docker说明](DOCKER.md)；设计、功能覆盖、证据和人工/硬件限制见[桌面设计规格](docs/Frontend-Tech-UI-Design.md)及性能与验证报告（仅本机保留）。人工体验和业务验收尚未完成，第二期完整多端保留，本期没有窄屏开发或测试。
 
 ## 界面文字与技术信息展示
 
@@ -101,7 +104,7 @@ HR v5在上述v4候选基础上按明确文件清单独立组合，保留编制�
 
 明确用于功能测试的确认操作保留历史，页面显示“测试记录已留存，业务确认待办理”；当前有资格的本部门负责人需另存有效的本人业务确认。新的业务确认追加保存，不覆盖原测试记录；已有效确认时不再提供重复入口。已有操作的用途更正通过追加`process_case_confirmation_usage_restricted`事件记录，准确绑定案例、修订、正文摘要、变更、确认记录、部门及办理人，不按依据文字自动推断用途。功能测试记录不满足部门业务确认及正式门槛，也不能据此形成“本次无跨部门”的业务结论。该事件不新增公开写入接口或人员权限；维护更正须有明确用户指令及目标记录核验。
 
-隔离回归入口为`node scripts/test-process-case-governance-mysql.js`（v4；`--v5`仅为隔离权限兼容验证）及`node scripts/test-process-case-history-access-mysql.js`；用途绑定的纯检查为`node --test scripts/test-process-case-confirmation-usage.js`。测试只创建带所有权标记的独立临时MySQL，并在结束时清理自有资源；HTTP读取专项的会话建立使用合成夹具，随后执行真实身份、权限、路由和仓储，不代表真实业务登录或人工体验验收。
+隔离回归入口为本机保留的对应验证入口（v4；`--v5`仅为隔离权限兼容验证）及本机保留的对应验证入口；用途绑定的纯检查为本机保留的对应验证入口。测试只创建带所有权标记的独立临时MySQL，并在结束时清理自有资源；HTTP读取专项的会话建立使用合成夹具，随后执行真实身份、权限、路由和仓储，不代表真实业务登录或人工体验验收。
 
 部门侧只有“主对接人提交 → 部门负责人核对并最终确认”，不设置中间审核员。每个部门有且只有一个最终负责人，以`departments.final_responsible_person_id`中的单一人员为准；未登记时阻断最终确认，不能按多人角色授权形成多个最终负责人。负责人对本部门流程负最终责任，本人须与该登记一致，并具有当前有效的本部门负责人角色授权。组织登记与账号授权分别核验，缺少、失效或不一致时拒绝确认，不从岗位、编制资格或旧审核意见推断最终责任。
 
@@ -177,8 +180,8 @@ admin在“账号与授权办理”为已有员工点击“赋予账号”，绑
 | 精确身份、锁后资格、诊断及摘要限制 | [身份与事务合同](docs/Identity-Transaction-Contract.md) |
 | 产品范围与技术模块 | [PRD](PRD.md)、[技术规格](Tech-Spec.md) |
 | 权限及身份迁移 | [权限与RACI](docs/Permission-RACI.md)、[身份迁移](docs/RBAC-RACI-Migration-Runbook.md) |
-| 原生流程预览、修订、提升及正式办理 | [设计](docs/Process-V7-Preview-Review-Design.md)、[API](docs/Process-V7-Preview-Review-API-Contract.md)、[数据库](docs/Process-V7-Preview-Review-DB-Schema.md)、[迁移](docs/Process-V7-Preview-Review-Migration-Runbook.md) |
-| 固定版本后续数据治理工作包 | [设计](docs/Process-Data-Governance-Design.md)、[API](docs/Process-Data-Governance-API-Contract.md)、[数据库](docs/Process-Data-Governance-DB-Schema.md)、[迁移与恢复](docs/Process-Data-Governance-Migration-Runbook.md) |
+| 原生流程预览、修订、提升及正式办理 | 设计（仅本机保留）、[API](docs/Process-V7-Preview-Review-API-Contract.md)、[数据库](docs/Process-V7-Preview-Review-DB-Schema.md)、[迁移](docs/Process-V7-Preview-Review-Migration-Runbook.md) |
+| 固定版本后续数据治理工作包 | 设计（仅本机保留）、[API](docs/Process-Data-Governance-API-Contract.md)、[数据库](docs/Process-Data-Governance-DB-Schema.md)、[迁移与恢复](docs/Process-Data-Governance-Migration-Runbook.md) |
 | 命令、脚本副作用与验证选择 | [脚本说明](scripts/README.md) |
 | 3000本机Docker部署 | [Docker说明](DOCKER.md) |
 
@@ -188,7 +191,7 @@ admin在“账号与授权办理”为已有员工点击“赋予账号”，绑
 
 行为、合同、命令或维护边界变化时同步受影响说明，仍准确的文档不重写。流程治理、字段、术语、冲突、导入导出、通知及待办修改须说明状态与审批影响；Excel导入导出兼顾模板、校验、错误提示与权限。
 
-修改工作台按影响面运行`test:frontend`、`test:project-roles`、`test:process-governance`、`test:mainline`及`test:role-workbench`；版本整改运行`test:v8-transition`、`check:native-process-consistency`及相关隔离测试。具体命令和副作用按`package.json`及[脚本说明](scripts/README.md)选择。纯说明不启动平台、连接数据库或运行应用全套检查；指令入口修改运行仓库`test:codex-context`。
+修改工作台按影响面运行本机保留的对应验证入口、本机保留的对应验证入口、本机保留的对应验证入口、本机保留的对应验证入口及本机保留的对应验证入口；版本整改运行本机保留的对应验证入口、`check:native-process-consistency`及相关隔离测试。具体命令和副作用按`package.json`及[脚本说明](scripts/README.md)选择。纯说明不启动平台、连接数据库或运行应用全套检查；指令入口修改运行仓库本机保留的对应验证入口。
 
 当前3000由Docker运行，启停及实时检查按[Docker说明](DOCKER.md)。下面是Windows部署副本的维护入口，只管理其自有3000进程，不操作PMO或3001；不得用于重启当前Docker容器。启停与部署仍须有相应目标授权。
 
@@ -199,7 +202,7 @@ npm.cmd run service:check
 
 直接`npm start`要求显式MySQL读模型与连接变量，不回退SQLite、不自动建表或迁移。Secret只通过受控环境提供，不读出或写入说明。共用开发启动脚本同时涉及MDM、PMO及初始化，不能用于仅3000的发布。
 
-文档核对可用`npm.cmd run check:native-process-consistency`。格式源码变更按影响面选择`test:v8-transition`及相应合同；`test:v8-integration`涉及前端构建、自有临时MySQL、随机HTTP和Edge，执行前核对隔离条件。实际浏览器采用Edge100%、1699×828 CSS像素，仅桌面。相关检查不能替代运行开关、人工IME及业务验收。
+文档核对可用`npm.cmd run check:native-process-consistency`。格式源码变更按影响面选择本机保留的对应验证入口及相应合同；本机保留的对应验证入口涉及前端构建、自有临时MySQL、随机HTTP和Edge，执行前核对隔离条件。实际浏览器采用Edge100%、1699×828 CSS像素，仅桌面。相关检查不能替代运行开关、人工IME及业务验收。
 
 ## 历史追溯
 

@@ -1,5 +1,8 @@
 # AGENTS.md - 仓库级脚本
 
+测试脚本及辅助历史资料仅保留在维护者本机，不随 Git 分发；公开包不提供对应测试命令。本地验证须使用已有工具或明确取得的测试材料，并遵守隔离、权限和验收边界。
+
+
 本文件约束 `scripts/` 下的仓库级自动化。根目录 `AGENTS.md`、`CODEX.md`、`REPOSITORY_BOUNDARY.md` 和 `DIRECTORY_OWNERSHIP.md` 仍然优先适用。
 
 ## 适用边界
@@ -30,31 +33,31 @@
 Codex 项目指令、按需路由或局部入口变化：
 
 ```powershell
-npm run test:codex-context
+# 本地测试入口不随 Git 分发。
 ```
 
 历史展示解析或注入变化，使用纯解析合同和隔离输出验证，不为测试生成正式快照：
 
 ```powershell
-npm run test:parse-sankey-structure-block
-npm run test:root-script-safety
+# 本地测试入口不随 Git 分发。
+# 本地测试入口不随 Git 分发。
 node scripts/check-dashboard-data.mjs
-npm run test:process-governance-mainline
+# 本地测试入口不随 Git 分发。
 ```
 
 PMO 任务生成链变化：
 
 ```powershell
 npm run build:pmo-task-data
-npm run test:pmo-task-data
+# 本地测试入口不随 Git 分发。
 ```
 
-固定启动配置变化时运行 `npm run test:infomat-services-config`。只有任务包含实际服务运行验证时才运行 `npm run smoke:infomat-services`；用户指定单一服务时采用该服务的健康与内容检查，不扩大到其他服务。
+固定启动配置变化时运行 本机保留的对应验证入口。只有任务包含实际服务运行验证时才运行 本机保留的对应验证入口；用户指定单一服务时采用该服务的健康与内容检查，不扩大到其他服务。
 
 MDM 导入、流程治理或数据库写入链路变化时，在 `apps/mdm-platform/` 下补充对应测试；涉及流程治理主线时至少覆盖：
 
 ```powershell
-npm run test:process-governance
+# 本地测试入口不随 Git 分发。
 ```
 
 聚合主线回归会创建独立夹具、隔离数据库和临时 HTTP，不能描述为全程只读。`--legacy-source-comparison` 是旧副本正文/指纹的显式比较分支，副本变化时允许暴露差异，不得通过重生成保留快照掩盖；技术检查不证明业务验收或当前运行。

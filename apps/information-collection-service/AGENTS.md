@@ -1,5 +1,8 @@
 # AGENTS.md
 
+测试脚本及辅助历史资料仅保留在维护者本机，不随 Git 分发；公开包不提供对应测试命令。本地验证须使用已有工具或明确取得的测试材料，并遵守隔离、权限和验收边界。
+
+
 本目录是信息表收集服务，4000 提供表单设计与任务管理，4001 提供内部实名填报。
 
 当前暂缓4000/4001的开发与正式启用；恢复工作以用户明确要求为准。
@@ -24,6 +27,6 @@
 
 ## 运行与验证
 
-本目录 `npm test`（根目录 `npm run test:information-collection`）是应用测试入口，按行为改动范围选用。纯说明或协作入口修改只检查相关文档和路由。
+本目录 本机保留的对应验证入口（根目录 本机保留的对应验证入口）是应用测试入口，按行为改动范围选用。纯说明或协作入口修改只检查相关文档和路由。
 
-迁移、初始化和启动属于独立运行操作，不是测试步骤。仅在用户授权对应目标时按 README 执行 `migrate:dry-run`、`migrate:apply`、`bootstrap:admin`、`start` 或 `smoke`。迁移仍先 dry-run，再 apply 和结构核对；账号初始化不得作为验证自动运行。根目录对应入口以 `package.json` 和 `scripts/README.md` 为准。
+迁移、初始化和启动属于独立运行操作，不是测试步骤。仅在用户授权对应目标时按 README 执行 `migrate:dry-run`、`migrate:apply`、`bootstrap:admin`或 `start`。迁移仍先 dry-run，再 apply 和结构核对；账号初始化不得作为验证自动运行。根目录对应入口以 `package.json` 和 `scripts/README.md` 为准。

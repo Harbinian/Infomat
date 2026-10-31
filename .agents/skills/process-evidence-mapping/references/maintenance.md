@@ -1,5 +1,8 @@
 # 技能维护与验证
 
+测试脚本及辅助历史资料仅保留在维护者本机，不随 Git 分发；公开包不提供对应测试命令。本地验证须使用已有工具或明确取得的测试材料，并遵守隔离、权限和验收边界。
+
+
 仅修改技能、抽取器、编排或评测机制时读取本说明。用户明确要求改进技能即授权相应本地修改；评测不授权修改业务真源或正式发布。
 
 ## 演进提案的适用条件
@@ -21,10 +24,10 @@ node .agents/skills/process-evidence-mapping/scripts/generate-evolution-proposal
 
 | 修改内容 | 对应入口 |
 |---|---|
-| 技能入口、参考路由和保留边界 | 技能格式校验；`npm run test:process-evidence-skill` |
-| 演进提案或案例解释逻辑 | `npm run test:process-evidence-evolution` |
-| 来源读取、抽取、编译、问题或视图流程 | `npm run test:process-input-baseline-review-workflow` |
-| 标准合同或结构校验 | `npm run test:document-structured-output-schema` |
+| 技能入口、参考路由和保留边界 | 技能格式校验；本机保留的对应验证入口 |
+| 演进提案或案例解释逻辑 | 本机保留的对应验证入口 |
+| 来源读取、抽取、编译、问题或视图流程 | 本机保留的对应验证入口 |
+| 标准合同或结构校验 | 本机保留的对应验证入口 |
 | 切块、向量或召回机制 | `node .agents/skills/process-evidence-mapping/scripts/test-vector-pipeline.mjs` |
 
 跨机制修改覆盖相关检查，已通过且未受新改动影响的部分不重复执行。文档断言仅证明边界和路由存在；抽取或编译行为需用实例、反例及输出结果验证，不能靠固定标题、段落标签或词句证明。

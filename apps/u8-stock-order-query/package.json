@@ -4,8 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "node server.mjs",
-    "test": "node --test scripts/query.test.mjs"
+    "start": "node server.mjs"
   },
   "engines": { "node": ">=20" },
   "dependencies": { "mssql": "12.7.6" }

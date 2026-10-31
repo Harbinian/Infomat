@@ -1,8 +1,11 @@
 # scripts 目录说明
 
+测试脚本及辅助历史资料仅保留在维护者本机，不随 Git 分发；公开包不提供对应测试命令。本地验证须使用已有工具或明确取得的测试材料，并遵守隔离、权限和验收边界。
+
+
 ## 当前V8与历史版本兼容
 
-共享纯校验模块 `process-governance/v7-validator.js` 同时导出 V7 与 V8 入口，由 3001 和 3000 按文件版本分派。V8 仅放行 decision + use，V7 历史语义不变。模块不写文件、不连接数据库。验证命令：`node apps/structured-output-service/scripts/test-v8-decision-data.js`；3000 接收隔离回归见其 README 的 V8 章节。
+共享纯校验模块 `process-governance/v7-validator.js` 同时导出 V7 与 V8 入口，由 3001 和 3000 按文件版本分派。V8 仅放行 decision + use，V7 历史语义不变。模块不写文件、不连接数据库。验证命令：本机保留的对应验证入口；3000 接收隔离回归见其 README 的 V8 章节。
 
 本目录放仓库级自动化脚本。当前治理依据来自用户指定的外部原始材料、业务说明与明确确认；通过 3001 编制、用户下载并手动上传 3000，治理审核后再形成正式版本。`docs/` 输入只属于历史展示、兼容合同、技术说明或副本，不能决定现行业务事实、人员任命、职责或审批链。表中旧消费链不属于当前治理操作；其生成/同步要求显式兼容用途和目标路径。只服务单个应用的脚本应留在对应应用目录，例如 `apps/mdm-platform/scripts/`。
 
@@ -45,38 +48,38 @@
 
 常用命令：
 
-根目录 `npm test` 调用 `test:process-governance-mainline`，验证当前技术入口和隔离行为；它会创建独立夹具/隔离数据库/临时 HTTP，不证明正式实例已开启或业务验收。历史正文和指纹比较需另加 `--legacy-source-comparison`。
+根目录 本机保留的对应验证入口 调用 本机保留的对应验证入口，验证当前技术入口和隔离行为；它会创建独立夹具/隔离数据库/临时 HTTP，不证明正式实例已开启或业务验收。历史正文和指纹比较需另加 `--legacy-source-comparison`。
 
 ```bash
 npm run start:infomat-services
-npm run smoke:infomat-services
+# 本地测试入口不随 Git 分发。
 npm run repair:infomat-mysql
-npm run test:infomat-services-config
+# 本地测试入口不随 Git 分发。
 npm run migrate:information-collection:dry-run
 npm run migrate:information-collection:apply
 npm run check:information-collection-schema
-npm run test:information-collection
+# 本地测试入口不随 Git 分发。
 npm run start:information-collection
-npm run smoke:information-collection
-npm run test:process-governance-mainline
-npm run test:dept-domain-mapping
-npm run test:engineering-source-manifest
-npm run test:norms-source-manifest
-npm run test:parse-sankey-structure-block
-npm run test:document-structured-output-schema
-npm run test:root-script-safety
-npm run test:work-role-contract
+# 本地测试入口不随 Git 分发。
+# 本地测试入口不随 Git 分发。
+# 本地测试入口不随 Git 分发。
+# 本地测试入口不随 Git 分发。
+# 本地测试入口不随 Git 分发。
+# 本地测试入口不随 Git 分发。
+# 本地测试入口不随 Git 分发。
+# 本地测试入口不随 Git 分发。
+# 本地测试入口不随 Git 分发。
 npm run verify:norms-source-mapping
-npm run test:pmo-task-data
-npm run test:pmo-execution-standards
-npm run test:pmo-standard-gap-operations
-npm run test:pmo-wbs-semantic-depth
-npm run test:source-manifest-hashes
+# 本地测试入口不随 Git 分发。
+# 本地测试入口不随 Git 分发。
+# 本地测试入口不随 Git 分发。
+# 本地测试入口不随 Git 分发。
+# 本地测试入口不随 Git 分发。
 npm run build:pmo-task-data
-npm run test:project-governance-upgrade
-npm run test:process-evidence-skill
-npm run test:process-input-baseline-review
-npm run test:ocr-source
+# 本地测试入口不随 Git 分发。
+# 本地测试入口不随 Git 分发。
+# 本地测试入口不随 Git 分发。
+# 本地测试入口不随 Git 分发。
 npm run sync:process-governance -- --check-env
 ```
 
@@ -88,7 +91,7 @@ npm run sync:process-governance -- --legacy-display --snapshot artifacts/legacy-
 
 明确获得目标、权限、备份与恢复授权后，才在上述命令增加 `--apply`，并在进程环境配置 `MYSQL_HOST`、`MYSQL_PORT`、`MYSQL_USER`、`MYSQL_PASSWORD`、`MYSQL_DATABASE`。这只是历史展示读模型兼容导入，不替代 3001/3000 当前办理。SQLite 历史工具只使用应用中明确的 `legacy-sqlite:` 名称和独立库；已撤销的四个初始化/同步/导入/检查命令不再恢复。
 
-历史副本变化可使 `npm run test:process-governance-mainline -- --legacy-source-comparison` 失败。该模式用于检查有明确兼容任务的旧消费链；失败需审查版本与输入选择，不应为了得到绿灯重生成保留快照。默认聚合仍检查内嵌数据、消费结构与当前技术行为。
+历史副本变化可使 本机保留的对应验证入口 失败。该模式用于检查有明确兼容任务的旧消费链；失败需审查版本与输入选择，不应为了得到绿灯重生成保留快照。默认聚合仍检查内嵌数据、消费结构与当前技术行为。
 
 `parse-sankey-data.mjs` 支持部门渐进迁移：单个部门文件存在 `meta.parser_schema_version: 1` 且提供 `l3_catalog` 时优先解析结构块；若正文仍有旧 Markdown DCM/A1 表格，则同一 L3/A1 由结构块覆盖，legacy 中未覆盖的剩余项继续进入快照，部门记录为 `source: hybrid` 并输出覆盖 warning。未提供结构块的部门继续走旧 Markdown 表格/标题解析，并在 stderr 打印 `[WARN] {部门} 未提供结构块(schema v1)，回退旧 Markdown 解析，存在漂移风险。`。生成的 `docs/company-sankey-data.json` 保留既有 `nodes`、`links`、`stats`、`processMappings`、`evidenceRefs` 等字段，并新增 `meta.departments[]` 记录各部门 `source: structured|hybrid|legacy`。
 
@@ -103,7 +106,7 @@ npm run build:work-role-data -- --legacy-display `
   --source docs/organization/工作角色目录与岗位映射.md `
   --roster docs/organization/花名册.md `
   --out artifacts/legacy-display/work-role-data.json
-npm run test:work-role-contract
+# 本地测试入口不随 Git 分发。
 ```
 
 兼容快照仍保留 `schemaVersion=work-role-data-v1`、`generatedAt`、`sourceHash`、`workRoles`、`workRolePositionMappings`、`workRoleAliases`。三类记录只允许 `draft|active|retired`。生成器精确核对所选副本中的“部门 + 岗位”；不一致只能保留 `draft`，`active`/`retired` 失败。全部检查通过后才原子替换显式输出，失败保留该输出旧内容。程序调用 API 为历史消费者保留；当前治理仍需外部材料、业务说明与有权确认。
@@ -122,7 +125,7 @@ MDM 和 PMO 的仓库根目录启动入口：
 
 ```powershell
 npm run start:infomat-services
-npm run smoke:infomat-services
+# 本地测试入口不随 Git 分发。
 ```
 
 固定配置在 `scripts/infomat-services.config.json`，当前约定为：
@@ -152,7 +155,7 @@ MDM_ADMIN_PASSWORD=你的管理员密码
 ```powershell
 npm run repair:infomat-mysql
 npm run start:infomat-services
-npm run smoke:infomat-services
+# 本地测试入口不随 Git 分发。
 ```
 
 修复脚本只对齐本机 Docker 容器和固定端口，不改变资料真源。启动脚本会先完成 MDM MySQL schema 初始化、人员身份 live schema 校验和管理员权限校验，再启动 MDM / PMO。
@@ -164,7 +167,7 @@ npm run smoke:infomat-services
 | MDM | `http://127.0.0.1:3000` 可访问 |
 | PMO | 本机 `http://127.0.0.1:5173` 可访问；同事使用 `http://<本机局域网IP>:5173` |
 | MySQL | Docker 容器 `infomat-input-baseline-review-mysql` 通过 `localhost:3307` 提供服务 |
-| 权限数据 | `npm run smoke:infomat-services` 显示`ADMIN001`有效账号、`admin`固定角色和当前治理模型版本 |
+| 权限数据 | 本机保留的对应验证入口 显示`ADMIN001`有效账号、`admin`固定角色和当前治理模型版本 |
 | 私有密码 | `scripts/infomat-services.local.env` 包含 `MYSQL_PASSWORD` 和 `MDM_ADMIN_PASSWORD` |
 
 3000现有身份库首次切换到固定RBAC/RACI模型前，在`apps/mdm-platform/`执行：
@@ -201,7 +204,7 @@ npm run review:mysql:serve
 
 | 脚本 | 作用 | 输入 | 输出 / 副作用 |
 |---|---|---|---|
-| `check-codex-context.mjs`、`test-codex-context.mjs` | 校验 Codex 根入口、局部入口注册、UTF-8 字节预算、指令链、应用细节泄漏和重复提示 | 根 `AGENTS.md`、`DIRECTORY_OWNERSHIP.md` 注册块和各局部 `AGENTS.md`；夹具测试使用系统临时目录 | `npm run test:codex-context` 只输出检查结果；不写仓库文件、不连接数据库、不启动服务 |
+| `check-codex-context.mjs`、`test-codex-context.mjs` | 校验 Codex 根入口、局部入口注册、UTF-8 字节预算、指令链、应用细节泄漏和重复提示 | 根 `AGENTS.md`、`DIRECTORY_OWNERSHIP.md` 注册块和各局部 `AGENTS.md`；夹具测试使用系统临时目录 | 本机保留的对应验证入口 只输出检查结果；不写仓库文件、不连接数据库、不启动服务 |
 | `check-dcm-bbm.mjs` | 校验DCM/BBM规则、部门映射、跨部门证据和驾驶舱数据；已识别流程治理结构块v1的L3/A1计数 | `docs/contracts/dcm-bbm-contract.json`、`docs/norms/`、PMO驾驶舱 | 默认写 `docs/reports/dcm-bbm-quality-report.md`；`--report=...` 可覆盖，`--no-fail` 仅用于历史问题汇总，不是当前治理门禁通过 |
 | `verify-norms-source-mapping.mjs` | 只读盘点 `docs/norms` 源文件和部门映射表，核验 DCM/BBM 证据字段能否回到源文件编号、制度或表单名称、条款/表格/摘录位置 | `docs/contracts/dcm-bbm-contract.json`、`docs/norms/` | 写 `docs/reports/{日期}-norms-source-mapping-verification.md` 和 `artifacts/norms-source-mapping-verify/<run-id>/`，不写数据库，不修改映射基线 |
 | `audit-a1-transfer-evidence.mjs` | 审计 A1 跨部门输入 / 输出证据 | `docs/contracts/dcm-bbm-contract.json`、`docs/norms/` | 默认写 `docs/reports/{日期}-a1-transfer-evidence-audit.md`；`--no-write` 可只读运行 |
@@ -219,7 +222,7 @@ npm run review:mysql:serve
 | `input-baseline-review-core.mjs` | 输入基线问题复核 MySQL schema、原文匹配、高亮和仓库方法 | 待确认 JSON、`chunks.jsonl`、MySQL pool | 供导入脚本、服务和测试复用 |
 | `test-process-evidence-skill.mjs` | 检查技能名称、参考链接和现有合同枚举；不以关键词禁令、固定标题或固定措辞证明行为正确 | `.agents/skills/process-evidence-mapping/SKILL.md`、引用文件及技术合同 | 只读静态检查，来源覆盖与证据边界由隔离工作流验证 |
 | `.agents/skills/process-evidence-mapping/scripts/test-input-baseline-review-workflow.mjs` | 用合成制度回归 v2 生成、错误引用拦截、问题关闭规则、混合来源部分草稿和全不可读停止；验证视觉记录路径/摘要/定位拒绝、低高置信度均待复核、现有 OCR 枚举兼容及编译器不得省略视觉来源清单 | 合成制度、图片、OCR记录和 JSON 反例；不连接向量服务或运行识别引擎 | 每次写新的 `artifacts/process-input-baseline-review/test-v2-<随机值>/`，不清理旧批次，不表示真实视觉识别或业务验收 |
-| `.agents/skills/database-to-process-json/scripts/run-database-to-process-json.mjs` | 从指定的 CXSYSYS.dbo 结构快照生成一个未审核 V7 JSON 和逐项证据包；按业务名称交付，判断分叉从独立判断节点发出；旧稿人工内容保留，未匹配结构或冲突关系明确阻断；字段证据保留真实物理列名，只读摘要不升级为流程核验结论 | 明确主表或表单模板、`database-process-evidence-v1`快照、可选旧版3001 JSON及绑定快照的只读核验文件 | 只写新的 `artifacts/database-process-json/<run-id>/`，不连接数据库、不写数据库；`npm run test:database-to-process-json`覆盖人工内容保留、冲突阻断、物理列名及核验文件反例 |
+| `.agents/skills/database-to-process-json/scripts/run-database-to-process-json.mjs` | 从指定的 CXSYSYS.dbo 结构快照生成一个未审核 V7 JSON 和逐项证据包；按业务名称交付，判断分叉从独立判断节点发出；旧稿人工内容保留，未匹配结构或冲突关系明确阻断；字段证据保留真实物理列名，只读摘要不升级为流程核验结论 | 明确主表或表单模板、`database-process-evidence-v1`快照、可选旧版3001 JSON及绑定快照的只读核验文件 | 只写新的 `artifacts/database-process-json/<run-id>/`，不连接数据库、不写数据库；本机保留的对应验证入口覆盖人工内容保留、冲突阻断、物理列名及核验文件反例 |
 | `.agents/skills/database-to-process-json/scripts/export-cxsysys-readonly-snapshot.ps1` | 在明确授权后，用专用只读账号对快照允许的表和字段做限列、限行、无原值摘要核验 | 结构快照、主表、工作流、进程级只读连接环境变量和`-ConfirmReadOnly` | 只写指定的本地核验JSON，记录快照文件SHA-256、核验时间、权限摘要及逐列计数；旧核验文件缺少必填信息时须重新导出，不执行数据库写操作 |
 | `test-input-baseline-review-mysql.mjs` | 校验MySQL表结构、原文高亮、对比色按钮和服务页面约定 | 测试问题识别批次夹具 | 每次写新的被忽略目录 `artifacts/process-input-baseline-review/test-input-baseline-review-mysql-<随机值>/`，不连接真实 MySQL，不清理旧批次 |
 | `glossary.mjs` | 查询仓库术语表 | `docs/glossary.md` | 只读查询 |
@@ -242,6 +245,6 @@ npm run review:mysql:serve
 ## 修改规则
 
 - 新增或修改仓库级脚本时，遵守 `scripts/AGENTS.md`，并在脚本头部或本 README 写清用法、输入、输出、是否写文件、是否写数据库和验证命令。
-- 修改 `parse-sankey-data.mjs` 后，至少运行 `node scripts/check-dashboard-data.mjs` 和 `npm run test:process-governance-mainline`。
+- 修改 `parse-sankey-data.mjs` 后，至少运行 `node scripts/check-dashboard-data.mjs` 和 本机保留的对应验证入口。
 - 修改会触碰 MDM 导入链路的脚本后，同步运行 `apps/mdm-platform` 下的流程治理相关测试。
 - 不在本目录新增一次性输出、截图、数据库、日志或缓存；这些应放入本地临时目录或按边界文件先写迁移提案。

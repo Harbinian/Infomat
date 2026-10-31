@@ -1,5 +1,8 @@
 # MDM流程治理统一入口、身份与责任技术规格
 
+测试脚本及辅助历史资料仅保留在维护者本机，不随 Git 分发；公开包不提供对应测试命令。本地验证须使用已有工具或明确取得的测试材料，并遵守隔离、权限和验收边界。
+
+
 ## 3000内编制接口与存储
 
 当前本地兼容读取与显示约束：工作台首次提交在原事务中记录编制已开始；旧`started_at`为空但已有工作台成功保存或提交快照时，以原快照只读判断转办已关闭，不迁移或补写旧时间，功能关闭不遮蔽该证据。术语读取可附业务位置名称并排除技术配置候选，旧`location`、原文、摘要及写入核验仍保留。正式和治理新事件的姓名显示快照独立存于事件载荷，不加入已有资格、批准或正文摘要，不改变旧事件；读取时只使用对应事件确存的历史姓名。
@@ -304,7 +307,7 @@ MDM工作组组长只能在卡口通过后发布，不能以角色权限跳过�
 
 ## 11. 兼容与迁移
 
-身份迁移见[RBAC-RACI-Migration-Runbook.md](docs/RBAC-RACI-Migration-Runbook.md)，承接迁移见[Cross-Department-Handoff-Migration-Runbook.md](docs/Cross-Department-Handoff-Migration-Runbook.md)，v3表单状态迁移见[Process-Governance-V3-Migration-Runbook.md](docs/Process-Governance-V3-Migration-Runbook.md)，V7预览和原生正式基础迁移见[Process-V7-Preview-Review-Migration-Runbook.md](docs/Process-V7-Preview-Review-Migration-Runbook.md)，流程版本后续数据治理迁移见[Process-Data-Governance-Migration-Runbook.md](docs/Process-Data-Governance-Migration-Runbook.md)。
+身份迁移见[RBAC-RACI-Migration-Runbook.md](docs/RBAC-RACI-Migration-Runbook.md)，承接迁移见[Cross-Department-Handoff-Migration-Runbook.md](docs/Cross-Department-Handoff-Migration-Runbook.md)，v3表单状态迁移见Process-Governance-V3-Migration-Runbook.md（仅本机保留），V7预览和原生正式基础迁移见[Process-V7-Preview-Review-Migration-Runbook.md](docs/Process-V7-Preview-Review-Migration-Runbook.md)，流程版本后续数据治理迁移见[Process-Data-Governance-Migration-Runbook.md](docs/Process-Data-Governance-Migration-Runbook.md)。
 
 切换原则：
 
@@ -321,14 +324,14 @@ MDM工作组组长只能在卡口通过后发布，不能以角色权限跳过�
 现行本地验证入口（按改动选择，隔离检查不表示运行开启或业务验收）：
 
 ```powershell
-npm run test:rbac-raci-v2
-npm run test:frontend
-npm run test:project-roles
-npm run test:role-workbench
-npm run test:process-data-governance
-npm run test:process-governance
-npm run test:retired-capabilities
-npm run test:mainline
+# 本地测试入口不随 Git 分发。
+# 本地测试入口不随 Git 分发。
+# 本地测试入口不随 Git 分发。
+# 本地测试入口不随 Git 分发。
+# 本地测试入口不随 Git 分发。
+# 本地测试入口不随 Git 分发。
+# 本地测试入口不随 Git 分发。
+# 本地测试入口不随 Git 分发。
 ```
 
 以下为连接目标环境的结构维护检查，其中旧承接和统一入口命令保留历史维护用途；必须有具体目标、只读权限或变更授权及恢复条件，不能作为普通文档检查自动执行：
@@ -350,7 +353,7 @@ npm run service:check
 
 浏览器仅采用Edge100%、1699×828 CSS内容可视区，按当前入口核对登录、首次改密、管理员账号管理、只读角色责任页、角色可见标签、原生V9及受支持V8/V7案例与修订上传、双方核对、正式办理及角色范围。旧四工作区、承接故事链和旧冲突办理不再作为现行验收入口。3001单独核对首页与`/api/health`实际版本，保持独立运行。
 
-第05阶段的`test:launch-stage05`在净化环境运行相关回归，再新建隔离MySQL和Edge合成办理验证。`test:stage05-mysql-isolated`、`test:process-preview-browser`及`test:process-formal-browser`可定向复验。实际证据及人工IME、真实历史数据和业务验收的限制见[整改与证据第11节](../../docs/plans/2026-09-09-mdm-3000-launch/02-整改与证据.md#11-第05阶段实际整改与证据2026-09-10)。
+第05阶段的本机保留的对应验证入口在净化环境运行相关回归，再新建隔离MySQL和Edge合成办理验证。本机保留的对应验证入口、本机保留的对应验证入口及本机保留的对应验证入口可定向复验。实际证据及人工IME、真实历史数据和业务验收的限制见[整改与证据第11节](../../docs/plans/2026-09-09-mdm-3000-launch/02-整改与证据.md#11-第05阶段实际整改与证据2026-09-10)。
 
 ## 历史追溯
 

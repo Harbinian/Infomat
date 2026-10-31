@@ -8,8 +8,7 @@
   },
   "scripts": {
     "dev": "vite --host 127.0.0.1",
-    "build": "vite build",
-    "test": "node --test tests/*.test.js"
+    "build": "vite build"
   },
   "dependencies": {
     "@lottiefiles/dotlottie-react": "0.20.0",
