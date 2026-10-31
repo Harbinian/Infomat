@@ -36,4 +36,4 @@
 
 - 登录默认 /app/workbench，合并多角色事项并标明来源；优先视图列1至3个下一步动作，完整职责链及问题卡、首次入口、样例和完成标准见 README.md“工作台与问题卡维护约束”。页面不授予权限，不预设审核意见。
 - 行为、合同、命令或维护边界变化同步对应说明；仍准确的文档不重写。流程治理、字段、术语、冲突、导入导出、通知/待办修改说明状态与审批影响；Excel导入导出兼顾模板、校验、错误提示与权限。
-- 按 package.json、scripts/README.md 选择验证。修改工作台按影响面运行 test:frontend、test:project-roles、test:process-governance、test:mainline、test:role-workbench；纯说明不默认启动平台、连库或跑全套。指令修改运行仓库 test:codex-context，版本整改运行 test:v8-transition、check:native-process-consistency 及相关隔离测试。
+- 按 package.json、scripts/README.md 选择验证。修改工作台按影响面运行 本机保留的对应验证入口、本机保留的对应验证入口、本机保留的对应验证入口、本机保留的对应验证入口、本机保留的对应验证入口；纯说明不默认启动平台、连库或跑全套。指令修改运行仓库 本机保留的对应验证入口，版本整改运行 本机保留的对应验证入口、check:native-process-consistency 及相关隔离测试。

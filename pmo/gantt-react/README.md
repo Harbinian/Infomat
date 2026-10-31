@@ -1,5 +1,8 @@
 # 数字化底座项目 PMO 管控看板
 
+测试脚本及辅助历史资料仅保留在维护者本机，不随 Git 分发；公开包不提供对应测试命令。本地验证须使用已有工具或明确取得的测试材料，并遵守隔离、权限和验收边界。
+
+
 基于 React + Vite 的交付物驱动项目管控看板，从甘特图升级为 PMO 周会可用工具。
 
 修改本应用前先读 `AGENTS.md`。涉及代码、插件、数据字段、前端行为、启动命令或测试命令变化时，必须同步更新本 README 或 `AGENTS.md`。
@@ -26,7 +29,7 @@ npm run preview
 ```powershell
 docker compose -f pmo/gantt-react/compose.yaml build
 docker compose -f pmo/gantt-react/compose.yaml up -d --no-build
-node pmo/gantt-react/scripts/smoke-docker.mjs http://127.0.0.1:5173
+# 本地测试入口不随 Git 分发。
 ```
 
 默认基镜像为 `node:24-bookworm-slim`。本机无法拉取 Docker Hub 镜像时，可复用已存在且验证过的本地 Node 24 镜像：先设置 `$env:PMO_NODE_IMAGE='infomat-node:24.21.0'`，再运行构建命令。镜像必须事先存在；该名称不是公共镜像。
@@ -153,16 +156,16 @@ action:
 ### 测试
 
 ```bash
-npm run test:frontmatter
-npm run test:writeback
-npm run test:plugin
-npm run test:hmr
-npm run test:task-owner
-npm run test:pmo-week-range
-npm run test:weekly-issue-ledger
-npm run test:deliverable-identity
-npm run test:deliverable-action
-node ../scripts/smoke-deliverable-workflow.mjs
+# 本地测试入口不随 Git 分发。
+# 本地测试入口不随 Git 分发。
+# 本地测试入口不随 Git 分发。
+# 本地测试入口不随 Git 分发。
+# 本地测试入口不随 Git 分发。
+# 本地测试入口不随 Git 分发。
+# 本地测试入口不随 Git 分发。
+# 本地测试入口不随 Git 分发。
+# 本地测试入口不随 Git 分发。
+# 本地测试入口不随 Git 分发。
 ```
 
 ## Console 口径

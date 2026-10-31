@@ -1,5 +1,8 @@
 # CLAUDE.md
 
+测试脚本及辅助历史资料仅保留在维护者本机，不随 Git 分发；公开包不提供对应测试命令。本地验证须使用已有工具或明确取得的测试材料，并遵守隔离、权限和验收边界。
+
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## 指令入口
@@ -30,10 +33,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### 仓库级
 
 ```powershell
-npm test                              # = test:process-governance-mainline，创建隔离夹具/库/HTTP，不证明正式实例状态
-npm run test:codex-context            # 修改 AGENTS/路由/局部入口注册后运行
+# 本地测试入口不随 Git 分发。
+# 本地测试入口不随 Git 分发。
 npm run start:infomat-services        # 共同开发环境：MDM + PMO + MySQL(localhost:3307)
-npm run smoke:infomat-services        # 核对共同开发环境，只读
+# 本地测试入口不随 Git 分发。
 ```
 
 ### 3000 MDM 平台（`apps/mdm-platform`）
@@ -50,21 +53,21 @@ npm --prefix apps/mdm-platform run service:check
 按改动选择测试，不要默认跑全套：
 
 ```powershell
-npm --prefix apps/mdm-platform run test:frontend-shell
-npm --prefix apps/mdm-platform run test:process-governance
-npm --prefix apps/mdm-platform run test:mainline
-npm --prefix apps/mdm-platform run test:role-workbench
-npm --prefix apps/mdm-platform run test:role-workbench-mysql
-npm --prefix apps/mdm-platform run test:v8-transition
-npm --prefix apps/mdm-platform run test:v8-integration       # 前端构建 + 临时 MySQL + Edge，先核对隔离条件
+# 本地测试入口不随 Git 分发。
+# 本地测试入口不随 Git 分发。
+# 本地测试入口不随 Git 分发。
+# 本地测试入口不随 Git 分发。
+# 本地测试入口不随 Git 分发。
+# 本地测试入口不随 Git 分发。
+# 本地测试入口不随 Git 分发。
 ```
 
 单个 Node 测试可直接运行脚本；需要阻断真实 MySQL 的测试使用包装器：
 
 ```powershell
 cd apps/mdm-platform
-node scripts/test-role-workbench-api.js
-node -r ./scripts/testHelpers/blockRealMysql.js --test scripts/test-v8-transition.js
+# 本地测试入口不随 Git 分发。
+# 本地测试入口不随 Git 分发。
 ```
 
 浏览器测试（`test:*-browser`）使用 Edge，需显式候选地址，不得指向正式 3000/3001 端口。MySQL 迁移、导入和发布命令有副作用，先核对目标、授权、备份和回滚条件。
@@ -75,14 +78,14 @@ node -r ./scripts/testHelpers/blockRealMysql.js --test scripts/test-v8-transitio
 
 ```powershell
 cd apps/structured-output-service
-npm.cmd test
+# 本地测试入口不随 Git 分发。
 npm.cmd run build:workbench
 npm.cmd run dev:workbench -- --port 5187 --strictPort
 $env:STRUCTURED_OUTPUT_HOST='127.0.0.1'; $env:STRUCTURED_OUTPUT_PORT='3027'; npm.cmd start
 Invoke-RestMethod http://127.0.0.1:3027/api/health
 ```
 
-单个测试示例：`node scripts/test-workbench-controller.mjs`。浏览器回归使用 `test:workbench-browser`、`test:workbench-graph-browser` 等 PowerShell 入口，连接显式指定的隔离候选地址。Docker 构建必须从仓库根目录执行，上下文为仓库根：
+单个测试示例：本机保留的对应验证入口。浏览器回归使用 本机保留的对应验证入口、本机保留的对应验证入口 等 PowerShell 入口，连接显式指定的隔离候选地址。Docker 构建必须从仓库根目录执行，上下文为仓库根：
 
 ```powershell
 docker compose -f apps/structured-output-service/compose.yaml build
@@ -94,9 +97,9 @@ docker compose -f apps/structured-output-service/compose.yaml up -d --no-build
 当前开发与正式启用暂缓；恢复工作以用户明确要求为准。4000/4001 只读复用身份表，业务数据只写 `collection_*`。
 
 ```powershell
-npm --prefix apps/information-collection-service test
+# 本地测试入口不随 Git 分发。
 npm run start:information-collection
-npm run smoke:information-collection
+# 本地测试入口不随 Git 分发。
 npm run migrate:information-collection:dry-run   # 有副作用，先核对目标与授权
 npm run migrate:information-collection:apply
 npm run check:information-collection-schema
@@ -111,9 +114,9 @@ cd pmo
 python build_pmo_task_data.py
 
 cd ..
-npm run test:pmo-task-data
-npm run test:pmo-execution-standards
-npm run test:pmo-wbs-semantic-depth
+# 本地测试入口不随 Git 分发。
+# 本地测试入口不随 Git 分发。
+# 本地测试入口不随 Git 分发。
 ```
 
 PMO 开发服务：`cd pmo/gantt-react && npm run dev`，默认 `http://localhost:5174`。
@@ -123,9 +126,9 @@ PMO 开发服务：`cd pmo/gantt-react && npm run dev`，默认 `http://localhos
 正式 Docker 入口 `infomat-u8-stock-order-query-3088`，主机 `0.0.0.0:3088`；只读查询既有 SQL Server，不写单据。
 
 ```powershell
-npm --prefix apps/u8-stock-order-query test
-node apps/u8-stock-order-query/scripts/smoke-api.mjs
-node apps/u8-stock-order-query/scripts/smoke-quality-uniqueness.mjs
+# 本地测试入口不随 Git 分发。
+# 本地测试入口不随 Git 分发。
+# 本地测试入口不随 Git 分发。
 ```
 
 ## 高层架构

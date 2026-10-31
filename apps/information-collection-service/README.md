@@ -1,5 +1,8 @@
 # 信息表收集服务
 
+测试脚本及辅助历史资料仅保留在维护者本机，不随 Git 分发；公开包不提供对应测试命令。本地验证须使用已有工具或明确取得的测试材料，并遵守隔离、权限和验收边界。
+
+
 本应用为内部员工提供可追溯的信息收集入口：4000 负责设计表单、发布任务、查看完成情况和导出；4001 负责本人填报、服务器草稿、提交和截止前修改。
 
 当前业务范围包含多个主表分区、多个独立明细表、明细逐行录入和从 Excel 粘贴连续单元格。操作入口为4000表单设计中的“新增主表分区”“新增明细表”，4001负责明细填报和粘贴。范围已由用户确认；当前暂缓开发与正式启用，见[范围及启用状态](docs/Scope-Deviations.md)。
@@ -26,7 +29,7 @@ $env:COLLECTION_BOOTSTRAP_ADMIN_EMPLOYEE_NO='实际工号'
 npm --prefix apps/information-collection-service run bootstrap:admin
 ```
 
-5. 执行 `npm run start:information-collection` 和 `npm run smoke:information-collection`。
+5. 执行 `npm run start:information-collection` 和 本机保留的对应验证入口。
 
 不得把 3000 的 `admin` 角色自动映射为信息收集管理员。部署负责人必须确认首位管理员工号后再执行初始化。
 

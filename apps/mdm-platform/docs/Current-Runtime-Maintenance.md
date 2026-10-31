@@ -1,5 +1,8 @@
 # 3000 运行与结构维护说明
 
+测试脚本及辅助历史资料仅保留在维护者本机，不随 Git 分发；公开包不提供对应测试命令。本地验证须使用已有工具或明确取得的测试材料，并遵守隔离、权限和验收边界。
+
+
 本文整理当前工作树的技术行为和维护限制，实际启用、部署和验收分别核对目标实例。业务依据来自用户指定的外部原始材料及有权确认；实现不单独证明业务要求。文中代码路径以 `apps/mdm-platform/` 为基准。
 
 ## 正式运行与结构维护分离
@@ -17,11 +20,11 @@
 | 应用运行 | 对实际启用的业务表授予对应`SELECT/INSERT/UPDATE/DELETE`；固定部门和`roles/permissions/role_permissions`只需`SELECT`。账号管理需`person/user_accounts/person_roles`的`SELECT/INSERT/UPDATE`，访问事件需读取和追加；其他业务写表按现有API逐表核定 | 不授予`CREATE/ALTER/DROP/INDEX/REFERENCES`、`GRANT OPTION`或实例管理权限；不向固定权限模型表授予种子写权限 |
 | 迁移维护 | 独立凭据仅在获准目标库和维护窗口使用；依选定迁移授予结构检查、必要DDL及数据补偿权限 | 不留在应用进程环境中，不默认使用实例root；不以库级全部权限作为长期运行权限 |
 
-隔离验证入口为`npm run test:mysql-runtime-boundary`：脚本自行建立系统临时目录、合成身份和SQL监测替身，使用随机回环HTTP端口，阻止SQLite模块加载；不读取私有配置、不连接真实MySQL。固定的合成变量只用于测试。真实隔离MySQL最小权限账号、完整结构漂移、迁移中断及备份恢复仍须在后续数据演练阶段取证。
+隔离验证入口为本机保留的对应验证入口：脚本自行建立系统临时目录、合成身份和SQL监测替身，使用随机回环HTTP端口，阻止SQLite模块加载；不读取私有配置、不连接真实MySQL。固定的合成变量只用于测试。真实隔离MySQL最小权限账号、完整结构漂移、迁移中断及备份恢复仍须在后续数据演练阶段取证。
 
 ## 遗留入口与历史数据
 
-正式服务不再注册`systems/capabilities/processes/views/org-units/positions/persons/product-families/products/class-nodes/attributes/external/integration`接口族及`/api/quality/dashboard`，对这些路径的请求落在未注册边界（HTTP 404，非JSON响应），`rejectLegacyRoute`的410不在请求路径上。这是存储边界隔离；旧业务功能是否纳入首发仍待确定，不代表相关能力已经迁移或需求已经取消。退役边界由`test:mysql-runtime-boundary`与`test:security-routes`断言；不得为迁就旧的410期望而复活这些路由。`/api/quality/field-identities/progress`及现有MySQL治理接口继续保留。
+正式服务不再注册`systems/capabilities/processes/views/org-units/positions/persons/product-families/products/class-nodes/attributes/external/integration`接口族及`/api/quality/dashboard`，对这些路径的请求落在未注册边界（HTTP 404，非JSON响应），`rejectLegacyRoute`的410不在请求路径上。这是存储边界隔离；旧业务功能是否纳入首发仍待确定，不代表相关能力已经迁移或需求已经取消。退役边界由本机保留的对应验证入口与本机保留的对应验证入口断言；不得为迁就旧的410期望而复活这些路由。`/api/quality/field-identities/progress`及现有MySQL治理接口继续保留。
 
 历史SQLite记录仍在原`MDM_DB_PATH`指定文件或历史`data/platform.db`内，由原维护方保管，具体接续维护人待确认；这些记录不得因维护当前功能而被自动移动、删除或导入。旧能力、流程和地图不等于V7正式流程版本；组织岗位、产品和集成历史也不得按同名表直接转入MySQL。未来如需承接，先确定业务范围、原记录ID、引用和目标模型，再按单独迁移方案处理。已有MySQL草稿、发布版本、审批记录和稳定引用不变。
 

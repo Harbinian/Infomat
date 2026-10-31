@@ -33,8 +33,8 @@ V1至V3本地编制、旧结构化导入及跨部门承接办理已退役。历�
 | 精确身份、锁后资格、诊断及摘要限制 | [身份与事务合同](docs/Identity-Transaction-Contract.md) |
 | 产品范围与技术模块 | [PRD](PRD.md)、[技术规格](Tech-Spec.md) |
 | 权限及身份迁移 | [权限与RACI](docs/Permission-RACI.md)、[身份迁移](docs/RBAC-RACI-Migration-Runbook.md) |
-| 原生流程预览、修订、提升及正式办理 | [设计](docs/Process-V7-Preview-Review-Design.md)、[API](docs/Process-V7-Preview-Review-API-Contract.md)、[数据库](docs/Process-V7-Preview-Review-DB-Schema.md)、[迁移](docs/Process-V7-Preview-Review-Migration-Runbook.md) |
-| 固定版本后续数据治理工作包 | [设计](docs/Process-Data-Governance-Design.md)、[API](docs/Process-Data-Governance-API-Contract.md)、[数据库](docs/Process-Data-Governance-DB-Schema.md)、[迁移与恢复](docs/Process-Data-Governance-Migration-Runbook.md) |
+| 原生流程预览、修订、提升及正式办理 | 设计（仅本机保留）、[API](docs/Process-V7-Preview-Review-API-Contract.md)、[数据库](docs/Process-V7-Preview-Review-DB-Schema.md)、[迁移](docs/Process-V7-Preview-Review-Migration-Runbook.md) |
+| 固定版本后续数据治理工作包 | 设计（仅本机保留）、[API](docs/Process-Data-Governance-API-Contract.md)、[数据库](docs/Process-Data-Governance-DB-Schema.md)、[迁移与恢复](docs/Process-Data-Governance-Migration-Runbook.md) |
 | 命令、脚本副作用与验证选择 | [脚本说明](scripts/README.md) |
 | 3000本机Docker部署 | [Docker说明](DOCKER.md) |
 
@@ -51,7 +51,7 @@ npm.cmd run service:check
 
 直接`npm start`要求显式MySQL读模型与连接变量，不回退SQLite、不自动建表或迁移。Secret只通过受控环境提供，不读出或写入说明。共用开发启动脚本同时涉及MDM、PMO及初始化，不能用于仅3000的发布。
 
-文档核对可用`npm.cmd run check:native-process-consistency`。格式源码变更按影响面选择`test:v8-transition`及相应合同；`test:v8-integration`涉及前端构建、自有临时MySQL、随机HTTP和Edge，执行前核对隔离条件。实际浏览器采用Edge100%、1699×828 CSS像素，仅桌面。相关检查不能替代运行开关、人工IME及业务验收。
+文档核对可用`npm.cmd run check:native-process-consistency`。格式源码变更按影响面选择本机保留的对应验证入口及相应合同；本机保留的对应验证入口涉及前端构建、自有临时MySQL、随机HTTP和Edge，执行前核对隔离条件。实际浏览器采用Edge100%、1699×828 CSS像素，仅桌面。相关检查不能替代运行开关、人工IME及业务验收。
 
 ## 历史追溯
 

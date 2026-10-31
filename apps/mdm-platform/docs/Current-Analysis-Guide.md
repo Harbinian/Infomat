@@ -1,5 +1,8 @@
 # 3000 固定来源、分析与证据说明
 
+测试脚本及辅助历史资料仅保留在维护者本机，不随 Git 分发；公开包不提供对应测试命令。本地验证须使用已有工具或明确取得的测试材料，并遵守隔离、权限和验收边界。
+
+
 本文整理当前工作树的技术行为和维护限制，实际启用、部署和验收分别核对目标实例。业务依据来自用户指定的外部原始材料及有权确认；实现不单独证明业务要求。文中代码路径以 `apps/mdm-platform/` 为基准。
 
 ## 确定性流程材料检查
@@ -27,7 +30,7 @@ worker 在令牌事务内重新读取固定来源、有效身份、范围及摘�
 
 结构不合法时后续共享引用检查保留为未覆盖；共享校验失败时图规则保留为未覆盖。解析失败采用明确的 declared_anchor，不伪造可解析位置。结果超出既有 256 条证据/发现或请求容量时明确失败 `RESULT_LIMIT_EXCEEDED`，不截断后宣称完成。每个发现仍为 pending_verification、issue_id=NULL；succeeded 只表示计划检查已执行，不表示材料无问题或业务已验收。
 
-验证入口为 `npm.cmd run test:v7-analysis-rules`（纯合成规则测试）和 `npm.cmd run test:v7-analysis-worker -- --output <仓库artifacts内全新目录>`（自有 MySQL、随机端口夹具及真实子进程）。确定性规则 不增加表、迁移或回填，不改写 V7、台账、审批、问题和待办；分析队列与工作进程 替身队列继续兼容。回退到仅支持 分析队列与工作进程 的 worker 前须先停止 确定性规则 worker 并处理相应运行，不能让旧进程办理 确定性规则 队列。实际启用及业务验收须按具体目标核对。
+验证入口为 本机保留的对应验证入口（纯合成规则测试）和 本机保留的对应验证入口（自有 MySQL、随机端口夹具及真实子进程）。确定性规则 不增加表、迁移或回填，不改写 V7、台账、审批、问题和待办；分析队列与工作进程 替身队列继续兼容。回退到仅支持 分析队列与工作进程 的 worker 前须先停止 确定性规则 worker 并处理相应运行，不能让旧进程办理 确定性规则 队列。实际启用及业务验收须按具体目标核对。
 
 ## 独立分析工作进程
 
@@ -48,7 +51,7 @@ worker 在令牌事务内重新读取固定来源、有效身份、范围及摘�
 | 消费者预检 | `npm.cmd run analysis:worker -- inspect --target <host:port/database>`；只读检查原生原生流程固定来源分析的完整存储依赖及队列实际直接引用的来源前置，不能据此宣称worker进程存活或全部解析器可用 |
 | 停止 | `npm.cmd run analysis:worker -- stop --worker-id <启动时的UUID> --target <host:port/database>`；仅请求该实例停止；根据 stopped_at 和进程退出确认完成 |
 | 中断恢复 | `npm.cmd run analysis:worker -- recover --target <host:port/database>`；只回收已过期租约，保留成功步骤和所有尝试；重新 start 后继续。正常 worker 也自动回收，不抢占有效租约 |
-| 隔离验证 | `npm.cmd run test:analysis-worker -- --output <仓库artifacts内全新目录>` |
+| 隔离验证 | 本机保留的对应验证入口 |
 
 迁移键 `2026-09-17-analysis-queue-v1`，只增加 `data_map_analysis_queue`、`data_map_analysis_queue_events`、`data_map_analysis_workers` 三表；worker 启动只检查结构，绝不执行 DDL。中断迁移先 inspect 再 apply 续建。仅本次创建且逐表确认为空时可按 events、queue、workers 顺序补偿；已有数据时保留表，按获准备份恢复。旧 分析运行存储 未入队运行继续兼容原入口；已入队运行必须先停止 worker、核对活动租约和恢复条件，不应切回不识别令牌门槛的旧执行器。
 
@@ -133,7 +136,7 @@ API 前缀为 `/api/data-map-facts`：GET `capabilities`、`targets`、根清单
 
 新增错误以 `DEFINITION_FACT_*` 区分目标缺失/无效、核对范围或证据缺失、状态/修订/来源/完整性冲突以及迁移缺失。400 表示输入问题，401 身份失效，403 无写权限或正式动作未开启，404 无可披露请求，409 并发、来源或状态冲突，503 迁移或依赖不可用；不返回 SQL、堆栈或受限原文。表单只在页面内存保留，失败或取消离开保留输入；重新登录后先核对身份和事项访问权限，409 不自动采用新修订或重放写入。
 
-验证命令为 `npm.cmd run test:data-map-facts -- --output <仓库artifacts内新目录>`，前置及证据说明见 [scripts/README.md](../scripts/README.md)。这属于本地实现和隔离验证，不表示正式环境已开启或业务已验收。
+验证命令为 本机保留的对应验证入口，前置及证据说明见 [scripts/README.md](../scripts/README.md)。这属于本地实现和隔离验证，不表示正式环境已开启或业务已验收。
 
 <a id="v7精简后的工作入口"></a>
 
@@ -190,7 +193,7 @@ JSON请求上限256 KiB；材料只写固定来源映射私有MySQL来源，不�
 
 “导出当前筛选范围”先重新请求受限导出，再按当前筛选裁剪发现及其证据定位。下载格式为 `analysis-view-export-v1`：source_format_version 保留服务器格式名，selection 记录当前筛选，run 保存获准运行元数据，findings/evidence 为筛选结果，changes_governance=false；不含原文摘录或原始字节。分析HTTP接口 原 `analysis-export-v1` 接口格式保持。
 
-开发验证：先 `npm.cmd run build:frontend`，再 `npm.cmd run test:analysis-workbench -- --output <本仓artifacts下全新目录>`。正式环境需要另行按既有发布及worker流程授权开启；自动化验证不等于人工中文输入法体验或业务验收。
+开发验证：先 `npm.cmd run build:frontend`，再 本机保留的对应验证入口。正式环境需要另行按既有发布及worker流程授权开启；自动化验证不等于人工中文输入法体验或业务验收。
 
 ### 发现人工确认与现有问题池
 
@@ -213,7 +216,7 @@ JSON请求上限256 KiB；材料只写固定来源映射私有MySQL来源，不�
 
 迁移入口为 `manage:analysis-issues`，显式目标、默认dry-run，不随服务启动迁移。检查定义版本/固定来源映射/分析运行存储标记、原问题/事件表兼容结构和两张增量表；不兼容时报错，不能用另建问题库绕过。仅在获准环境执行apply；正式环境未开启。表内无数据时可按“finding_reviews → issue_bindings”补偿本次自有空表并处理对应迁移标记；有记录后保留业务数据，使用经验证备份恢复。已经建立关联时，不得回退到缺少旧入口保护的旧代码；回退需保留保护层并停用新确认入口，不能删除关系后重新开放旧关闭动作。
 
-本地验证：`test:analysis-issues -- --output <本仓artifacts下全新目录>` 使用自有tmpfs MySQL、合成身份、随机回环HTTP、独立worker和Edge；覆盖迁移、事务、权限、并发、关联、旧接口保护、备份恢复和输入保护。正式数据库、通知、部署、人工中文输入法体验及业务验收不属于该自动化证据。
+本地验证：`本机保留的对应验证入口 -- --output <本仓artifacts下全新目录>` 使用自有tmpfs MySQL、合成身份、随机回环HTTP、独立worker和Edge；覆盖迁移、事务、权限、并发、关联、旧接口保护、备份恢复和输入保护。正式数据库、通知、部署、人工中文输入法体验及业务验收不属于该自动化证据。
 
 ### 问题交办、办公室办理与逐问题复核
 
@@ -292,7 +295,7 @@ PDF解析使用自有受限子进程，最多2并发、15秒、256MiB V8堆，�
 
 /app/analysis 提供PDF登记、物理页筛选、文本分页与坐标浏览、分析创建和问题到证据跳转。pdf_evidence/pdf-extraction-v1仅报告技术读取覆盖和位置，业务核验始终未覆盖，默认partial；复用原问题/复核实体，不新增审批权。失败、取消离开/刷新和同身份重登保留输入；原文不写公开构建或浏览器持久存储。
 
-本地验证入口为 test:pdf-evidence、test:pdf-evidence-integration；后者强制自有MySQL、随机回环HTTP、独立worker与Edge，合成数据并在结束恢复/清理。正式迁移、服务开放、人工IME和业务验收未执行。依赖接口依据：[PDF.js 官方API](https://mozilla.github.io/pdf.js/api/draft/module-pdfjsLib.html)。
+本地验证入口为 本机保留的对应验证入口、本机保留的对应验证入口；后者强制自有MySQL、随机回环HTTP、独立worker与Edge，合成数据并在结束恢复/清理。正式迁移、服务开放、人工IME和业务验收未执行。依赖接口依据：[PDF.js 官方API](https://mozilla.github.io/pdf.js/api/draft/module-pdfjsLib.html)。
 
 ### 离线 AI 适配与校验
 
@@ -319,7 +322,7 @@ PDF解析使用自有受限子进程，最多2并发、15秒、256MiB V8堆，�
 
 ### 对象身份与只读影响技术核对
 
-新增本地合成验证入口test:object-identity-preview，产品行为未改变。定义ID、固定版、模板局部ID及流程data_ref／field_ref分别校验；同名不推等价，有序组合标识保存固定字段版及父版。GET /api/data-map-definitions/impact/:type/:id仍为停用计数和修订／count摘要，无逐条refs或合并／拆分／认定能力；设计交接／分析引用在本期证据单独核对，缺可选依赖保持未知。工作包／黄金源／表格发布仍原语义，不转换历史candidate或猜owner_user_id。
+新增本地合成验证入口本机保留的对应验证入口，产品行为未改变。定义ID、固定版、模板局部ID及流程data_ref／field_ref分别校验；同名不推等价，有序组合标识保存固定字段版及父版。GET /api/data-map-definitions/impact/:type/:id仍为停用计数和修订／count摘要，无逐条refs或合并／拆分／认定能力；设计交接／分析引用在本期证据单独核对，缺可选依赖保持未知。工作包／黄金源／表格发布仍原语义，不转换历史candidate或猜owner_user_id。
 
 本轮15＋19组隔离技术通过，旧定义／映射／来源／manifest保持，当前来源变化需重新核对。专项用原分析运行存储仓储登记五输入，真实GET／SQL读回，公共创建接口仍拒绝未登记合成适配器；未启worker或运行规则。产品没有新身份决定／撤销、别名或认定模型。命令及副作用见scripts/README.md，原批次evidence/p25/object-identity-preview-20261006-01/有能力核对、精确refs、假设方案、决定前置和恢复材料。实际目标库／副本／开关／业务验收未核对，新快照不是完整部署包。
 

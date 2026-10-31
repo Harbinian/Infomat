@@ -1,5 +1,8 @@
 # 信息表收集服务部署与回滚手册
 
+测试脚本及辅助历史资料仅保留在维护者本机，不随 Git 分发；公开包不提供对应测试命令。本地验证须使用已有工具或明确取得的测试材料，并遵守隔离、权限和验收边界。
+
+
 ## 1. 前置检查
 
 部署人员确认以下条件：
@@ -15,12 +18,12 @@
 
 以下命令从仓库根目录执行；迁移、开户和启停分别使用对应入口，不在应用目录直接运行仓库命令。
 
-1. 执行 `npm --prefix apps/information-collection-service install --ignore-scripts` 和 `npm --prefix apps/information-collection-service test`。
+1. 执行 `npm --prefix apps/information-collection-service install --ignore-scripts` 和 本机保留的对应验证入口。
 2. 执行 `npm run migrate:information-collection:dry-run`，保存不含密码的输出。
 3. 运维人员确认 dry-run 只新增 `collection_*` 表后，执行 `npm run migrate:information-collection:apply`。
 4. 设置 `COLLECTION_BOOTSTRAP_ADMIN_EMPLOYEE_NO` 并执行`npm --prefix apps/information-collection-service run bootstrap:admin`。脚本必须返回已确认人员的工号和姓名。
 5. 执行 `npm run start:information-collection`。
-6. 执行 `npm run smoke:information-collection`，确认两个健康接口和未登录访问边界通过。
+6. 执行 本机保留的对应验证入口，确认两个健康接口和未登录访问边界通过。
 7. 业务负责人使用首位管理员账号登录 4000，授权一个测试设计者。测试设计者发布最小任务，目标人员在 4001 完成一次提交和一次重新编辑。
 
 ## 3. 停止和失败处理

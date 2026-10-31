@@ -1,5 +1,8 @@
 # AGENTS.md
 
+测试脚本及辅助历史资料仅保留在维护者本机，不随 Git 分发；公开包不提供对应测试命令。本地验证须使用已有工具或明确取得的测试材料，并遵守隔离、权限和验收边界。
+
+
 本目录是把 Claude Code CLI 的无头模式接到 Slack 上的问答机器人：同事在频道 `@机器人` 或私聊提问，它在 Infomat 仓库内检索材料后作答。本文件只保留目录级硬规则和任务路由；镜像结构、性能实测和运维命令按任务读取 `README.md`。
 
 ## 修改边界
@@ -42,4 +45,4 @@
 - 同步进度与耗时：`docker compose logs -f repo-sync`
 - 只读是否真的生效：`docker exec infomat-slack-bot touch /repo/__probe`，应报 `Read-only file system`
 - 写入档是否仍指向真实仓库：`docker exec infomat-slack-bot touch /repo-write/.probe`，应成功
-- 协作入口或路由变化时，从仓库根目录运行 `npm run test:codex-context`
+- 协作入口或路由变化时，从仓库根目录运行 本机保留的对应验证入口

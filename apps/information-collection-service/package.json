@@ -9,9 +9,7 @@
     "migrate:dry-run": "node scripts/migrate.js --dry-run",
     "migrate:apply": "node scripts/migrate.js --apply",
     "schema:check": "node scripts/migrate.js --check",
-    "bootstrap:admin": "node scripts/bootstrap-admin.js",
-    "smoke": "node scripts/smoke-test.js",
-    "test": "node scripts/test-contract.js"
+    "bootstrap:admin": "node scripts/bootstrap-admin.js"
   },
   "dependencies": {
     "archiver": "^7.0.1",

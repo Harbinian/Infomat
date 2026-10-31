@@ -1,5 +1,8 @@
 # U8 出入库订单归属查询服务
 
+测试脚本及辅助历史资料仅保留在维护者本机，不随 Git 分发；公开包不提供对应测试命令。本地验证须使用已有工具或明确取得的测试材料，并遵守隔离、权限和验收边界。
+
+
 只读查询服务，Docker 主机端口监听 **0.0.0.0:3088**，允许通过主机各 IPv4 地址访问，本机入口仍为 **http://127.0.0.1:3088**。当前主机网卡地址为 **http://192.168.19.199:3088** 和 **http://192.168.10.184:3088**，地址变化后使用主机实际 IP。连接既有 SQL Server `192.168.19.222,1433 / UFDATA_333_2025`，固定使用原 `va2` 用户查询 `dbo.ext_StockOrderAttribution`，不改动 3000、3001 或其他服务。
 
 ## 当前行为
@@ -116,9 +119,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File apps/u8-stock-order-query/sc
 ## 验证入口
 
 ```powershell
-npm --prefix apps/u8-stock-order-query test
-node apps/u8-stock-order-query/scripts/smoke-api.mjs
-node apps/u8-stock-order-query/scripts/smoke-quality-uniqueness.mjs
+# 本地测试入口不随 Git 分发。
+# 本地测试入口不随 Git 分发。
+# 本地测试入口不随 Git 分发。
 ```
 
 第一项验证参数、日期、IP 地址及同源访问边界，不连接数据库。第二项连接已启动的 API，以当前已解析材料出库样本核查筛选、全量告警、质量核查、分页、字面输入及访问边界。第三项验证独立页的完整源头范围、组内不同生产编号、源头明细对账、缺失状态、筛选及分页，使用当前存在重复组合的样本前提。两种 API 检查仅读取正式数据。`U8_QUERY_URL` 可指定本服务 IP 或候选端口，例如 `http://192.168.19.199:3088`。运行结果应与当时的自然业务变化一起评估，不构成业务验收。
