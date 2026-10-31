@@ -1,32 +1,20 @@
-# .agents 说明
+# 项目技能
 
-> 状态：Agent 协作配置目录  
-> 生效日期：2026-06-11  
-> 范围：本仓库内由 Agent 使用的项目技能和提示材料。
+本目录保存随仓库分发的技能入口、必要参考和工具，不存放截图、临时附件、一次性任务提示词或历史任务包。技能指导协作与技术检查，不提供业务事实或发布授权。当前请求、已有授权和根 `AGENTS.md` 优先；`docs/` 中的资料不作为业务真源。
 
-本目录保存仓库随附的 Agent 技能配置。它用于帮助 AI 助手理解 Infomat 的流程映射、证据映射和中文文本处理规则，不作为业务资料真源。
-
-## 当前内容
-
-| 路径 | 作用 |
+| 入口 | 当前用途与边界 |
 |---|---|
-| deepseek-3000-remediation-prompts.md（仅本机保留） | DeepSeek 受限整改提示词：总控规则、R01–R13任务包、启动与续接；全部实施任务完成后统一验证，默认不操作现行3000或正式数据库；仅在用户明确启动时使用 |
-| `skills/business-behavior-mapping/` | BBM/A1 业务行为映射兼容技能 |
-| `skills/department-capability-mapping/` | DCM 部门能力流程系统映射兼容技能 |
-| `skills/process-evidence-mapping/` | 从可提取文字及带来源定位的待复核视觉转录生成并校验 `document-structured-output-v2` 证据草稿；不可读来源保留缺口，只暂停依赖成果，不自动确认或发布 |
-| `skills/database-to-process-json/` | 仅在用户显式调用时，从指定的 `CXSYSYS.dbo` 表单结构快照生成一个使用业务文件名的未审核 V7 JSON 和证据包；审批等实际办理保留为业务行为，办理后的条件分叉另设判断节点；默认不连接数据库，实时核验只允许专用只读账号和固定摘要查询 |
-| `skills/single-process-authoring/` | 一次编制一个流程，材料充分、续编或技术修正直接推进；缺信息时按七阶段引导访谈。默认产出 Markdown 制度正文、`process-governance-v8` JSON、工作平衡报告和待确认事项四项草案；用户要求时由同源正文生成 Word。交付前离线验证结构与语义，不自动写入或发布，不替代数据库转 JSON 和流程证据映射 |
-| `skills/technical-chinese-writer/` | 中文技术、业务和管理文档的受控起草、改写、审校与压缩技能 |
-| `skills/humanizer-zh/` | 仅在用户明确点名时使用的中文文风清理技能，不得替代受控写作 |
+| [process-evidence-mapping](skills/process-evidence-mapping/SKILL.md) | 从用户指定材料生成 `document-structured-output-v2` 证据草稿和待确认问题；无法读取的来源保留缺口，不自动写回业务基线或发布 |
+| [single-process-authoring](skills/single-process-authoring/SKILL.md) | 编制或续修单流程，交付制度正文、候选流程 JSON、工作平衡报告和待确认事项；V9 候选与 V7/V8 兼容分开，目标结构和接收支持须实际核对 |
+| [database-to-process-json](skills/database-to-process-json/SKILL.md) | 显式调用的 V7 兼容转换工具；从指定结构快照生成未审核草稿，默认不连接数据库，不充当 V9 编制或正式发布入口 |
+| [technical-chinese-writer](skills/technical-chinese-writer/SKILL.md) | 正式、受控或可执行中文内容的起草与审校；保留事实、责任、编号和执行条件 |
+| [humanizer-zh](skills/humanizer-zh/SKILL.md) | 用户明确点名时清理中文文风；不添加事实，不替代受控写作 |
+| [business-behavior-mapping](skills/business-behavior-mapping/SKILL.md)、[department-capability-mapping](skills/department-capability-mapping/SKILL.md) | 旧技能名兼容别名，仅路由至证据映射技能，无独立写回或发布流程 |
 
-## 使用边界
+## 维护规则
 
-1. 技能可以指导 AI 协作流程，但不能替代 `REPOSITORY_BOUNDARY.md`、`DIRECTORY_OWNERSHIP.md` 和 `MAINLINE_MAP.md`。
-2. 技能触发条件、输入输出或边界变化时，同步受影响的路由说明；内部文案整理无需改写其他仍准确的入口。
-3. 不在本目录放项目生成物、截图、运行日志或临时数据。
-4. 新增技能时，写清适用场景、输入、输出和不适用边界。
-5. `process-evidence-mapping` 的唯一机器主产物是 `document-structured-output-v2.json`；中间候选和 Markdown 视图不得替代标准合同或流程输入基线。
-6. 正式或可执行中文内容按 `technical-chinese-writer` 保留事实与责任；普通回复和简单文字修正直接处理。`humanizer-zh` 只在用户点名时清理文风。
-7. BBM/DCM 兼容入口只转向主技能，其 `references/prompts.md` 属于历史材料，不授权执行旧写回或页面发布步骤。
-8. 数据库转流程技能的快照、旧草稿保护和只读核验规则以该技能为准。技能开发测试按修改面选择，普通生成任务验证本批输出，不重复运行无关开发套件。
-9. 当前任务与已有授权优先于技能的默认方法；不因泛化关键词自动加载技能。工程方法按根 `CODEX.md` 的任务与风险选择，Superpowers 不再承担本库工作流。
+- 业务依据来自用户指定的外部原始材料、实际说明和明确确认；示例、数据库结构和旧程序仅用于其明确的技术用途。
+- 技能适用范围、输入输出或引用变化时同步入口和必要参考。更新当前说明，不在执行指令中累积旧任务清单。
+- 校验依赖本机配套结构、应用模块和依赖包；公开仓库不包含私有资料、完整本机测试材料或测试命令集。缺项时说明所缺条件，不伪造通过记录。
+- 按改动影响选择格式、引用和隔离行为验证；不因技能更新启动服务、连接正式库、执行通知或发布。
+- 保留仍有消费者的兼容资产。删除过时资料前检查引用；一次性任务包完成后不继续作为常驻规则。

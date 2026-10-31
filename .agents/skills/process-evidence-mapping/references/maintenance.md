@@ -7,7 +7,7 @@
 
 ## 演进提案的适用条件
 
-调整候选抽取、问题解释或证据规则时，按影响面验证行为；确需比较真实评测批次时，可用既有案例形成可审查提案：
+调整候选抽取、问题解释或证据规则时，按影响面验证行为；确需比较真实评测批次且本机已具备案例文件与评测批次时，可用既有案例形成可审查提案；下述案例路径仅为本机维护材料，不随仓库分发：
 
 ```powershell
 node .agents/skills/process-evidence-mapping/scripts/generate-evolution-proposal.mjs `
@@ -28,7 +28,7 @@ node .agents/skills/process-evidence-mapping/scripts/generate-evolution-proposal
 | 演进提案或案例解释逻辑 | 本机保留的对应验证入口 |
 | 来源读取、抽取、编译、问题或视图流程 | 本机保留的对应验证入口 |
 | 标准合同或结构校验 | 本机保留的对应验证入口 |
-| 切块、向量或召回机制 | `node .agents/skills/process-evidence-mapping/scripts/test-vector-pipeline.mjs` |
+| 切块、向量或召回机制 | 本机保留的向量流水线隔离验证入口 |
 
 跨机制修改覆盖相关检查，已通过且未受新改动影响的部分不重复执行。文档断言仅证明边界和路由存在；抽取或编译行为需用实例、反例及输出结果验证，不能靠固定标题、段落标签或词句证明。
 

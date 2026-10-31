@@ -1,6 +1,6 @@
 ---
 name: single-process-authoring
-description: 编制或续修一个业务流程，默认产出Markdown制度正文、process-governance-v8 JSON、工作平衡报告和待确认事项。用于新建单流程、整理已有业务材料、续编V7/V8草稿、修改流程决定、按3001校验结果修正或补充工作量数据；仅提及待确认事项不触发。不用于流程证据映射、桑基图输入基线、数据库结构快照转JSON或正式审核发布。
+description: 编制或续修一个业务流程，默认产出Markdown制度正文、process-governance-v9候选JSON、工作平衡报告和待确认事项。用于新建单流程、整理已有业务材料、续编V7/V8/V9草稿、修改流程决定、按3001校验结果修正或补充工作量数据；仅提及待确认事项不触发。不用于流程证据映射、桑基图输入基线、数据库结构快照转JSON或正式审核发布。
 ---
 
 # 单流程编制
@@ -32,7 +32,7 @@ description: 编制或续修一个业务流程，默认产出Markdown制度正�
 | 成果 | 文件建议名 | 要点 |
 |---|---|---|
 | 制度正文 | `<流程短名>-procedure-draft.md` | 八章、无封面；工作稿第6章只说明流程图由3000或3001生成、不绘图；用户要求Word时由同源正文按模板生成清稿，见[四项成果模板](references/output-templates.md) A 节 |
-| 3001 JSON | `<流程短名>-process-v8.json` | 单个完整可解析对象，以空白模板为骨架，遵守 V8 结构与语义规则 |
+| 3001 JSON | `<流程短名>-process-v9.json` | 单个完整可解析对象，按明确目标及配套模板生成V9候选；目标实例支持须另核对，不能只改版本号 |
 | 工作平衡报告 | `<流程短名>-workload-report.md` | 六维评分、主责与协作、典型路径、周期负荷、缺项与建议；独立于 JSON |
 | 待确认事项 | `<流程短名>-pending-items.md` | 问题号稳定，含来源、影响、需确认主体和状态 |
 
@@ -94,7 +94,7 @@ JSON 不含接口包装、Markdown 文字、注释或尾逗号。一次输出一
 生成或修正 JSON 后、交付前用本技能自带的离线校验器检查，不需要启动 3001。已通过且内容与规则未变的同一文件不重复检查；纯文案修改只核对受影响的事实、引用和跨文件一致性：
 
 ```powershell
-node .agents/skills/single-process-authoring/scripts/validate-process-v8.mjs <流程短名>-process-v8.json
+node .agents/skills/single-process-authoring/scripts/validate-process-v8.mjs <流程短名>-process-v9.json
 node .agents/skills/single-process-authoring/scripts/validate-process-v8.mjs <文件> --json
 node .agents/skills/single-process-authoring/scripts/validate-process-v8.mjs --emit-template <输出路径>
 node .agents/skills/single-process-authoring/scripts/validate-process-v8.mjs --promote <v7草稿.json> <输出路径>
@@ -102,11 +102,11 @@ node .agents/skills/single-process-authoring/scripts/validate-process-v8.mjs --p
 
 `--promote` 只做 V7→V8 的版本标识转换：改写 `schema_version`，保留 `migration.source_schema_version` 记录真实来源版本，并拒绝覆盖已有文件。它**不是迁移完成**——3001 导入时的规范化与差异核对仍需人工执行。
 
-该脚本调用 3001 实际使用的同一份语义校验器 `scripts/process-governance/v7-validator.js`，并按文件的 `schema_version` 分派到对应结构（V8 用服务结构常量，V7 用 `docs/contracts/process-governance-v7.schema.json`），按错误路径输出 `path`、`keyword`、`message`、`error_id`。校验不通过时为非零退出码。摘要按版本显示：V7 `e1d5b33b…`、V8 `3b68c1fd…`，两者不得混用。
+脚本保留兼容文件名，按文件实际版本调用配套结构与共享语义校验器，错误输出路径和标识，失败退出非零。摘要由同版本本机结构文件计算，不固定文档中的摘要。`--emit-template`报告本机应用模块返回的实际版本，不保证与目标实例相同；`--promote`仍仅V7→V8，不是V9迁移。详见[结构版本与兼容](references/structure-versioning.md)。
 
 报告里另有两行标识，用途不同：**「3001 应用提交」**来自 3001 的 `APP_COMMIT`，设了 `STRUCTURED_OUTPUT_APP_COMMIT` 环境变量时取该值、否则回落 git HEAD，输出中会注明来源；回落值会被任何无关提交顶掉，**不可用于跨批次比对**。**「规则文件提交」**是 `docs/contracts` 与 `scripts/process-governance` 最后一次变更的提交，规则不改则不变——跨批次比对用这一行，或在 `--json` 输出中读 `app_commit_source` 与 `rules_commit`。
 
-结构规则见[V8 结构与映射规则](references/v8-structure-rules.md)。
+结构选择与切版见[结构版本与兼容](references/structure-versioning.md)；V8专属规则见[V8兼容参考](references/v8-structure-rules.md)。
 
 需要注意：本地校验覆盖结构、引用、端点和节点类型等可机器判定的问题，不覆盖 3001 页面的业务提示，也不判断业务内容是否正确。
 
@@ -134,7 +134,8 @@ node .agents/skills/single-process-authoring/scripts/validate-process-v8.mjs --p
 | 需要解决的问题 | 参考 |
 |---|---|
 | 阶段出口、访谈规则、状态词、续接摘要内容 | [编制阶段与访谈规则](references/authoring-stages.md) |
-| 字段映射、标识规则、行为与关系、数据与表单、生命周期 | [V8 结构与映射规则](references/v8-structure-rules.md) |
+| 目标结构、模板版本、摘要与旧文件兼容 | [结构版本与兼容](references/structure-versioning.md) |
+| V8字段映射、标识规则、行为与关系、数据与表单、生命周期 | [V8 结构与映射规则](references/v8-structure-rules.md) |
 | 六维评分判据、综合分、周期工时与负荷率算法 | [工作强度与周期负荷方法](references/workload-method.md) |
 | 四项成果的章节与表格模板、一致性复核 | [四项成果模板](references/output-templates.md) |
 | 制度八章结构、原文转换边界与疑点 | [制度编写规范](references/document-standard.md) |

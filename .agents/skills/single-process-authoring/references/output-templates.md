@@ -83,20 +83,20 @@
 
 ## B 3001 JSON
 
-文件建议名：`<流程短名>-process-v8.json`。以 3001 空白模板为骨架，按 V8 结构填充，输出一个完整、可解析的对象。
+文件建议名：`<流程短名>-process-v9.json`（V9候选）；保留旧版本时按实际版本命名。取得本轮目标的配套空白模板后填充，输出一个完整、可解析的对象。
 
-- 顶层版本必须为 `process-governance-v8`；仅一条 `process`。
+- 顶层版本须与本轮明确目标及配套结构一致；仅一条 `process`。本机模板不代表目标实例已支持，见[结构版本与兼容](structure-versioning.md)。
 - 导入文件不含接口包装、Markdown 文字、注释或省略号。
 - 稳定标识与另外三份文件关联一致；对象改名后标识保持不变。
 - 对空值、待定值及暂未编码的内容逐项说明，阶段稿与最终待核对稿分开标记。
 - 伴随 JSON 给出独立说明：关联修订、节点／业务行为／控制节点／关系／数据对象／字段／表单计数、待确认数量、实际执行过的检查。检查说明不写入 JSON。
 - 交付前用 `scripts/validate-process-v8.mjs` 做离线校验，并如实记录结果。技术通过后仍写“待业务核对”，不新增审批标记。
 
-生成空白骨架并校验：
+生成本机模块提供的空白骨架，先检查报告版本与本轮目标一致，再填充业务内容并校验；空白骨架不保证业务必填内容通过：
 
 ```powershell
-node .agents/skills/single-process-authoring/scripts/validate-process-v8.mjs --emit-template <流程短名>-process-v8.json
-node .agents/skills/single-process-authoring/scripts/validate-process-v8.mjs <流程短名>-process-v8.json
+node .agents/skills/single-process-authoring/scripts/validate-process-v8.mjs --emit-template <流程短名>-process.json
+node .agents/skills/single-process-authoring/scripts/validate-process-v8.mjs <流程短名>-process.json
 ```
 
 ## C 工作平衡报告 Markdown
