@@ -29,7 +29,7 @@ $env:COLLECTION_BOOTSTRAP_ADMIN_EMPLOYEE_NO='实际工号'
 npm --prefix apps/information-collection-service run bootstrap:admin
 ```
 
-5. 执行 `npm run start:information-collection` 和 本机保留的对应验证入口。
+5. 仅在取得恢复开发或启用目标的明确授权后执行 `npm run start:information-collection`；本机 `scripts/smoke-information-collection.mjs` 用于定向检查两个端口的健康及登录边界，不作为本轮默认步骤。
 
 不得把 3000 的 `admin` 角色自动映射为信息收集管理员。部署负责人必须确认首位管理员工号后再执行初始化。
 

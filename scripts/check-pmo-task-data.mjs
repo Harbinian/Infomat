@@ -69,10 +69,28 @@ function compareTextHash(leftPath, rightPath) {
 
 const taskHash = compareTextHash(files.rootTasks, files.appTasks);
 const manifestHash = compareTextHash(files.rootManifest, files.appManifest);
+const amendmentHash = compareTextHash('pmo/task-amendments.json', 'pmo/gantt-react/public/task-amendments.json');
+const amendments = readJson('pmo/task-amendments.json');
 
 const tasks = readJson(files.rootTasks);
 const manifest = readJson(files.rootManifest);
 const appManifest = readJson(files.appManifest);
+assert(amendments.schemaVersion === 'pmo-task-amendments-v1', 'task amendment schema mismatch');
+assert(manifest.taskAmendments?.sha256_16 === amendmentHash.slice(0, 16), 'task amendment digest mismatch');
+assert(manifest.sourceDocuments.some(source => source.path === '信息化项目_WBS增补记录.md'), 'amendment source must be registered');
+assert(manifest.taskAmendments?.batchCount === amendments.batches.length, 'amendment batch count mismatch');
+const amendmentSource = readMarkdownJsonBlock('pmo/信息化项目_WBS增补记录.md', 'amendments');
+assert(amendmentSource.batches.length === amendments.batches.length, 'amendment source/output count mismatch');
+for (const batch of amendments.batches) {
+  assert(batch.leafCount + batch.summaryCount === batch.records.length, 'amendment task counts mismatch');
+  const seen = new Set();
+  for (const record of batch.records) {
+    assert(!seen.has(record.taskId), `duplicate amendment task ${record.taskId}`);
+    seen.add(record.taskId);
+    assert(tasks.some(task => String(task.id) === record.taskId && task.wbs === record.wbs), `amendment task identity mismatch: ${record.wbs}`);
+    assert(record.fields.length > 0, `empty amendment record: ${record.wbs}`);
+  }
+}
 const planSource = readMarkdownJsonBlock(files.planSource, 'plan');
 const wbsSource = readMarkdownJsonBlock(files.wbsSource, 'wbs');
 const planSourceText = readText(files.planSource);

@@ -1,6 +1,8 @@
 import { getWbsLevel } from '../utils/dateUtils';
+import { AmendmentBadge } from './TaskAmendments';
+import { taskAmendment } from '../utils/taskAmendments';
 
-export default function TaskTree({ tasks, treeMap, wbsDepth, selectedNodeKey, onSelect, onToggle }) {
+export default function TaskTree({ tasks, treeMap, wbsDepth, selectedNodeKey, onSelect, onToggle, amendmentIndex, amendmentBatch, highlightAmended }) {
   const maxLevel = wbsDepth && wbsDepth !== 'all' ? parseInt(wbsDepth, 10) : Infinity;
   const visibleSet = new Set(tasks.map(t => t.wbs));
   tasks.forEach(t => {
@@ -44,7 +46,8 @@ export default function TaskTree({ tasks, treeMap, wbsDepth, selectedNodeKey, on
 
     return (
       <div key={node.nodeKey}>
-        <div className={`tree-node level-${level}${isMs ? ' type-milestone' : ''}${isHighRisk ? ' risk-high' : ''}${isSum ? ' type-summary' : ''}${sel}`}
+        <div className={`tree-node level-${level}${isMs ? ' type-milestone' : ''}${isHighRisk ? ' risk-high' : ''}${isSum ? ' type-summary' : ''}${sel}${highlightAmended && taskAmendment(node, amendmentIndex) ? ' amendment-row' : ''}`}
+          data-wbs={node.originalWbs || node.wbs}
           style={{ paddingLeft: indent }}
           onClick={(e) => {
             if (e.target.closest('[data-action="toggle"]')) { onToggle(node.nodeKey); }
@@ -55,6 +58,7 @@ export default function TaskTree({ tasks, treeMap, wbsDepth, selectedNodeKey, on
           </span>
           <span className="col-wbs">{node.originalWbs || node.wbs}</span>
           <span className="col-name" title={node.name}>{node.name}</span>
+          <AmendmentBadge task={node} index={amendmentIndex} batch={amendmentBatch} />
         </div>
         {hasChildren && expanded && node.children.map(child => renderNode(child))}
       </div>
@@ -62,7 +66,7 @@ export default function TaskTree({ tasks, treeMap, wbsDepth, selectedNodeKey, on
   }
 
   return (
-    <div className="task-tree-panel" id="taskTreePanel"
+    <div className={`task-tree-panel${amendmentBatch ? ' has-amendments' : ''}`} id="taskTreePanel"
       onClick={(e) => { if (e.target === e.currentTarget) onSelect(null); }}>
       <div className="tree-header">
         <span className="col-wbs">WBS</span>

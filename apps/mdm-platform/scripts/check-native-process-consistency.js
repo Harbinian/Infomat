@@ -17,6 +17,13 @@ function walk(directory) {
 function reject(file, lines, pattern, reason) {
   lines.forEach((line, index) => { if (pattern.test(line)) failures.push(`${path.relative(root, file)}:${index + 1}: ${reason}`); });
 }
+function isEarlyV7ProfileRestriction(lines, index) {
+  // A version-specific compatibility profile must reject other versions. This
+  // is not native-format admission; require both the profile allowlist and its
+  // explicit mismatch rejection so a V7-only admission gate stays reportable.
+  return /^\s*if \(profile && profile !== 'early-v7-data-fields'\) throw problem\('UNSUPPORTED_VALIDATION_PROFILE',/.test(lines[index - 1] || '')
+    && /^\s*if \(profile && data\.schema_version !== 'process-governance-v7'\) throw problem\('VALIDATION_PROFILE_VERSION_MISMATCH',/.test(lines[index]);
+}
 for (const relative of frozenV4.keys()) {
   if (!fs.existsSync(path.join(root, relative))) failures.push(`${relative}: frozen v4 evaluator is missing`);
 }
@@ -32,7 +39,8 @@ for (const file of walk(path.join(root, 'server')).filter(f => f.endsWith('.js')
   const basename = path.basename(file);
   if (legacyWrappers.has(basename) || /Migration|Schema/.test(basename) || basename === 'v7AnalysisRules.js') continue;
   const lines = fs.readFileSync(file, 'utf8').split(/\r?\n/);
-  reject(file, lines, /schema_version\s*(?:===?|!==?)\s*['"]process-governance-v7['"]/, 'active format gate must use the shared native format policy');
+  const admissionLines = lines.map((line, index) => isEarlyV7ProfileRestriction(lines, index) ? '' : line);
+  reject(file, admissionLines, /schema_version\s*(?:===?|!==?)\s*['"]process-governance-v7['"]/, 'active format gate must use the shared native format policy');
   reject(file, lines, /\[\s*['"]process-governance-v[78]['"]\s*,\s*['"]process-governance-v[78]['"]\s*\]\.includes/, 'duplicated native format gate');
   reject(file, lines, /require\(['"]\.{1,2}\/processV7PreviewReview(?:Repository)?['"]\)/, 'active consumer must use the canonical preview module');
 }

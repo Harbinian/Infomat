@@ -128,14 +128,13 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "必须补",
+    "standardsGapBucket": "自动可补",
     "standardsGapReasons": [
-      "有关联交付物",
-      "排期窗口内"
+      "有关联交付物"
     ],
-    "standardsGapPriorityScore": 25,
+    "standardsGapPriorityScore": 10,
     "suggestedStandardId": "STD-MOM-001",
-    "suggestedAction": "强控制任务缺标准，优先补齐"
+    "suggestedAction": "建议绑定 STD-MOM-001"
   },
   {
     "id": 3,
@@ -184,7 +183,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 90,
+    "standardsGapPriorityScore": 75,
     "suggestedStandardId": "STD-GATE-001",
     "suggestedAction": "阶段门任务缺标准，本周补齐后再进入放行评审"
   },
@@ -204,7 +203,7 @@
     "risk": "中",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "周会、月报、风险台账、变更流程",
+    "deliverable": "周会、月报、风险台账、变更流程；数据战略工作报告安排、战略评估修订机制与现有PMO记录关联",
     "deliverableId": "",
     "notes": "",
     "viewCategory": "",
@@ -218,23 +217,20 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "2026-10-27补充要求：战略发布及评估主体、报告评估周期和组织职责须核实现行机制；本节点建立机制不等于各期活动已经执行。",
+    "executionStandardId": "STD-DSTRAT-001;STD-DSTRAT-EVAL-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-1-1-3-20261027",
+    "completionCriteria": "战略实施后按有权确认的周期报告任务、指标、资源和问题；报告可追溯现有任务和行动记录；评估资料、偏差根因及调整决定可查，不重复录入同一事实。",
+    "evidenceRequirements": "对应交付文件、来源版本、核查或评审记录、问题及决定记录；运行或业务验收结论须提供实际范围和有权确认。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "必须补",
-    "standardsGapReasons": [
-      "有关联交付物",
-      "排期窗口内"
-    ],
-    "standardsGapPriorityScore": 25,
-    "suggestedStandardId": "待PMO确认",
-    "suggestedAction": "强控制任务缺标准，优先补齐"
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
+    "suggestedStandardId": "STD-DSTRAT-001;STD-DSTRAT-EVAL-001",
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 436,
@@ -2502,7 +2498,7 @@
     "risk": "中",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "专项调研纪要汇总包",
+    "deliverable": "专项调研纪要汇总包；利益相关者与数据需求来源索引",
     "deliverableId": "",
     "notes": "WBS 1.2 执行级样板任务",
     "viewCategory": "现状调研",
@@ -2516,12 +2512,12 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "执行标准缺口诊断",
-    "executionNote": "五类专项纪要齐套",
+    "executionNote": "五类专项纪要齐套；2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
     "executionStandardId": "STD-GEN-001;STD-MOM-001",
-    "inputMaterialList": "按执行标准ID对应输入资料准备",
+    "inputMaterialList": "按执行标准ID对应输入资料准备；已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
     "checklistId": "CHK-MOM-001",
-    "completionCriteria": "五类专项纪要齐套",
-    "evidenceRequirements": "纪要文件包",
+    "completionCriteria": "五类专项纪要齐套；现有专项材料可定位需求提出方和业务依据；缺少材料或业务确认的事项明确待核实。",
+    "evidenceRequirements": "纪要文件包；对应交付文件、来源版本、核查或评审记录、问题及决定记录；运行或业务验收结论须提供实际范围和有权确认。",
     "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
@@ -2547,7 +2543,7 @@
     "risk": "高",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "跨系统问题总清单",
+    "deliverable": "跨系统问题总清单；公司级业务数据差距及需求优先级清单",
     "deliverableId": "",
     "notes": "WBS 1.2 执行级样板任务",
     "viewCategory": "现状调研",
@@ -2561,12 +2557,12 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "执行标准缺口诊断",
-    "executionNote": "问题去重、分类、责任和优先级明确",
+    "executionNote": "问题去重、分类、责任和优先级明确；2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
     "executionStandardId": "STD-ISSUE-001",
-    "inputMaterialList": "按执行标准ID对应输入资料准备",
+    "inputMaterialList": "按执行标准ID对应输入资料准备；已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
     "checklistId": "CHK-ISSUE-001",
-    "completionCriteria": "问题去重、分类、责任和优先级明确",
-    "evidenceRequirements": "问题总清单",
+    "completionCriteria": "问题去重、分类、责任和优先级明确；按业务影响、依赖、风险和投入记录排序依据；软件需求、治理差距和运行证据缺口分清，不填造评分。",
+    "evidenceRequirements": "问题总清单；对应交付文件、来源版本、核查或评审记录、问题及决定记录；运行或业务验收结论须提供实际范围和有权确认。",
     "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
@@ -2592,7 +2588,7 @@
     "risk": "高",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "关键依赖与阻塞项清单",
+    "deliverable": "关键依赖与阻塞项清单；数据战略关键依赖及资源阻塞清单",
     "deliverableId": "",
     "notes": "WBS 1.2 执行级样板任务",
     "viewCategory": "现状调研",
@@ -2606,12 +2602,12 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "执行标准缺口诊断",
-    "executionNote": "阻塞项有影响范围和建议处理路径",
+    "executionNote": "阻塞项有影响范围和建议处理路径；2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
     "executionStandardId": "STD-ISSUE-001",
-    "inputMaterialList": "按执行标准ID对应输入资料准备",
+    "inputMaterialList": "按执行标准ID对应输入资料准备；已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
     "checklistId": "CHK-RISK-001",
-    "completionCriteria": "阻塞项有影响范围和建议处理路径",
-    "evidenceRequirements": "风险清单、评审记录",
+    "completionCriteria": "阻塞项有影响范围和建议处理路径；来源、责任、质量、平台能力和接入依赖有影响范围及处理建议；未落实资源不记为已经到位。",
+    "evidenceRequirements": "风险清单、评审记录；对应交付文件、来源版本、核查或评审记录、问题及决定记录；运行或业务验收结论须提供实际范围和有权确认。",
     "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
@@ -2637,7 +2633,7 @@
     "risk": "高",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "现状调研总报告",
+    "deliverable": "现状调研总报告；公司整体业务与数据现状、目标差距分析",
     "deliverableId": "",
     "notes": "WBS 1.2 执行级样板任务",
     "viewCategory": "现状调研",
@@ -2651,12 +2647,12 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "执行标准缺口诊断",
-    "executionNote": "报告覆盖五类专项、问题、风险、依赖",
+    "executionNote": "报告覆盖五类专项、问题、风险、依赖；2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
     "executionStandardId": "STD-GEN-001",
-    "inputMaterialList": "按执行标准ID对应输入资料准备",
+    "inputMaterialList": "按执行标准ID对应输入资料准备；已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
     "checklistId": "CHK-REPORT-001",
-    "completionCriteria": "报告覆盖五类专项、问题、风险、依赖",
-    "evidenceRequirements": "报告文件",
+    "completionCriteria": "报告覆盖五类专项、问题、风险、依赖；两类设计责任和四类技术服务的适用业务需求纳入核对；未核实事项不能认定不存在或已满足。",
+    "evidenceRequirements": "报告文件；对应交付文件、来源版本、核查或评审记录、问题及决定记录；运行或业务验收结论须提供实际范围和有权确认。",
     "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
@@ -2682,7 +2678,7 @@
     "risk": "高",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "现状调研总报告评审纪要",
+    "deliverable": "现状调研总报告评审纪要；数据需求差距及优先级评审意见",
     "deliverableId": "",
     "notes": "WBS 1.2 执行级样板任务",
     "viewCategory": "现状调研",
@@ -2696,12 +2692,12 @@
     "releaseRule": "评审通过或有条件通过，整改项登记",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "执行标准缺口诊断",
-    "executionNote": "评审通过或有条件通过，整改项登记",
+    "executionNote": "评审通过或有条件通过，整改项登记；2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
     "executionStandardId": "STD-REV-001",
-    "inputMaterialList": "按执行标准ID对应输入资料准备",
+    "inputMaterialList": "按执行标准ID对应输入资料准备；已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
     "checklistId": "CHK-REV-001",
-    "completionCriteria": "评审通过或有条件通过，整改项登记",
-    "evidenceRequirements": "评审纪要、整改清单",
+    "completionCriteria": "评审通过或有条件通过，整改项登记；需求与差距有业务确认依据；评审意见和整改项可追溯，不从现有代码确定业务要求。",
+    "evidenceRequirements": "评审纪要、整改清单；对应交付文件、来源版本、核查或评审记录、问题及决定记录；运行或业务验收结论须提供实际范围和有权确认。",
     "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
@@ -2727,7 +2723,7 @@
     "risk": "高",
     "milestone": "是",
     "milestoneOverrideReason": "",
-    "deliverable": "蓝图编制准入确认单",
+    "deliverable": "蓝图编制准入确认单；数据战略输入齐备性及既有战略文件核查结果",
     "deliverableId": "",
     "notes": "WBS 1.2 执行级样板任务",
     "viewCategory": "现状调研",
@@ -2741,12 +2737,12 @@
     "releaseRule": "调研总报告通过，关键阻塞项可控",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "执行标准缺口诊断",
-    "executionNote": "调研总报告通过，关键阻塞项可控",
+    "executionNote": "调研总报告通过，关键阻塞项可控；2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
     "executionStandardId": "STD-REV-001",
-    "inputMaterialList": "按执行标准ID对应输入资料准备",
+    "inputMaterialList": "按执行标准ID对应输入资料准备；已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
     "checklistId": "CHK-GATE-001",
-    "completionCriteria": "调研总报告通过，关键阻塞项可控",
-    "evidenceRequirements": "准入确认单",
+    "completionCriteria": "调研总报告通过，关键阻塞项可控；核查有无已发布数据战略及适用版本；已有材料优先复用，缺失部分进入1.3.1补齐，不据本节点认定公司没有战略。",
+    "evidenceRequirements": "准入确认单；对应交付文件、来源版本、核查或评审记录、问题及决定记录；运行或业务验收结论须提供实际范围和有权确认。",
     "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
@@ -2772,9 +2768,9 @@
     "risk": "高",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "",
+    "deliverable": "总体蓝图、可独立发布的数据战略或补强稿、年度数据工作计划、3000范围资源及评估修订机制，分别由既有叶节点交付",
     "deliverableId": "",
-    "notes": "语义分组新增二级摘要；原二级任务已下沉到本工作包。",
+    "notes": "2026-10-27补充G01、G02和已确认G04范围；既有战略是否存在先核查，新增编制或补强按核查结果办理。",
     "viewCategory": "",
     "phaseGateNo": "",
     "isCriticalControl": "",
@@ -2817,7 +2813,7 @@
     "risk": "高",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "总体蓝图初稿",
+    "deliverable": "总体蓝图初稿；公司级数据战略或既有战略补强稿、业务目标—数据举措关联表、对标范围及缺口清单",
     "deliverableId": "",
     "notes": "",
     "viewCategory": "",
@@ -2831,26 +2827,20 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
+    "executionStandardId": "STD-GEN-001;STD-DSTRAT-001;STD-L3-SCOPE-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-1-3-1-20261027",
+    "completionCriteria": "先核查既有有效战略；交付可独立审查发布的数据战略或相应补强，包含需求差距、愿景目标、能力框架、举措、阶段路线图、指标及人财制度技术保障；软件上线不代替全部业务成效。",
+    "evidenceRequirements": "对应交付文件、来源版本、核查或评审记录、问题及决定记录；运行或业务验收结论须提供实际范围和有权确认。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "需拆分后补",
-    "standardsGapReasons": [
-      "高风险",
-      "H5重点",
-      "有关联交付物",
-      "排期窗口内",
-      "任务边界较宽"
-    ],
-    "standardsGapPriorityScore": 50,
-    "suggestedStandardId": "待拆分后确认",
-    "suggestedAction": "先拆分 WBS，再按拆分后的执行任务绑定标准"
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
+    "suggestedStandardId": "STD-GEN-001;STD-DSTRAT-001;STD-L3-SCOPE-001",
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 12,
@@ -2868,7 +2858,7 @@
     "risk": "中",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "部门能力-业务流程-业务行为-应用系统映射",
+    "deliverable": "部门能力-业务流程-业务行为-应用系统映射；业务责任—流程—数据对象—权威来源—系统消费映射及待核实事项",
     "deliverableId": "",
     "notes": "",
     "viewCategory": "",
@@ -2882,22 +2872,20 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
+    "executionStandardId": "STD-GEN-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-1-3-2-20261027",
+    "completionCriteria": "两类设计制造责任及四类技术服务按实际流程核验；3000治理与业务系统执行分清，未确定的流程责任、来源和系统载体保留待核实。",
+    "evidenceRequirements": "对应交付文件、来源版本、核查或评审记录、问题及决定记录；运行或业务验收结论须提供实际范围和有权确认。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "自动可补",
-    "standardsGapReasons": [
-      "有关联交付物"
-    ],
-    "standardsGapPriorityScore": 10,
-    "suggestedStandardId": "STD-SYS-001",
-    "suggestedAction": "建议绑定 STD-SYS-001"
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
+    "suggestedStandardId": "STD-GEN-001",
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 13,
@@ -2915,7 +2903,7 @@
     "risk": "中",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "系统架构方案",
+    "deliverable": "系统架构方案；3000、3001、业务系统与PMO职责架构，分对象维护消费矩阵及接口清单",
     "deliverableId": "",
     "notes": "",
     "viewCategory": "",
@@ -2929,23 +2917,20 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
+    "executionStandardId": "STD-GEN-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-1-3-3-20261027",
+    "completionCriteria": "员工信息由3000唯一维护，行政人事维护组织人员，保存直接生效并记录前后内容、操作人和原因；其他系统逐个受控读取。本期3000承接流程编制治理、组织员工目录、术语、数据地图、质量规则管理及逐个受控接入；其他实体主数据先完成标准、权威来源和映射，维护分发能力分对象另定。不建立重复维护源；系统映射和实际接入分别列示，不要求所有主数据实体迁入3000。",
+    "evidenceRequirements": "对应交付文件、来源版本、核查或评审记录、问题及决定记录；运行或业务验收结论须提供实际范围和有权确认。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "需拆分后补",
-    "standardsGapReasons": [
-      "有关联交付物",
-      "任务边界较宽"
-    ],
-    "standardsGapPriorityScore": 10,
-    "suggestedStandardId": "STD-SYS-001",
-    "suggestedAction": "先拆分 WBS，再按拆分后的执行任务绑定标准"
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
+    "suggestedStandardId": "STD-GEN-001",
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 14,
@@ -2963,7 +2948,7 @@
     "risk": "中",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "评审材料",
+    "deliverable": "评审材料；年度数据工作计划、3000能力与现有WBS承接表、资源测算、首批使用前质量机制及指标基线就绪安排",
     "deliverableId": "",
     "notes": "",
     "viewCategory": "",
@@ -2977,25 +2962,20 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "2026-10-27补充要求：战略周期、预算人数、首个接入系统及正式操作窗口尚未确定时列明缺口；软件资源不因既有MDM主责标签而视为已经落实。",
+    "executionStandardId": "STD-GEN-001;STD-DSTRAT-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-1-3-4-20261027",
+    "completionCriteria": "年度任务逐项关联战略目标、WBS、交付物、责任认领、资源、指标和依赖；治理设计、软件开发测试运维及业务维护投入分别核实；从2026-10-27核实剩余工作、已具备能力和待调整排程，不倒签新增要求。人力、财务、制度和技术保障，以及预算管控、资金保障管理和改进安排须有对应依据；未落实部分明确影响和处理建议。",
+    "evidenceRequirements": "对应交付文件、来源版本、核查或评审记录、问题及决定记录；运行或业务验收结论须提供实际范围和有权确认。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "需拆分后补",
-    "standardsGapReasons": [
-      "强控制任务类型",
-      "有关联交付物",
-      "排期窗口内",
-      "任务边界较宽"
-    ],
-    "standardsGapPriorityScore": 30,
-    "suggestedStandardId": "STD-REV-001",
-    "suggestedAction": "先拆分 WBS，再按拆分后的执行任务绑定标准"
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
+    "suggestedStandardId": "STD-GEN-001;STD-DSTRAT-001",
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 15,
@@ -3013,7 +2993,7 @@
     "risk": "高",
     "milestone": "是",
     "milestoneOverrideReason": "",
-    "deliverable": "总体蓝图评审意见",
+    "deliverable": "总体蓝图评审意见；总体蓝图及数据战略审查意见、有效战略版本与发布宣贯记录",
     "deliverableId": "",
     "notes": "",
     "viewCategory": "Gate",
@@ -3027,29 +3007,20 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
+    "executionStandardId": "STD-REV-001;STD-DSTRAT-001;STD-L3-SCOPE-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-1-3-5-20261027",
+    "completionCriteria": "蓝图、战略、平台范围与年度资源承诺一致；核实现行战略规划机制及有权审查发布主体，意见处理可追溯；独立战略可定位，有发布宣贯记录才记生效；平台和业务验收另行举证。",
+    "evidenceRequirements": "对应交付文件、来源版本、核查或评审记录、问题及决定记录；运行或业务验收结论须提供实际范围和有权确认。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "需拆分后补",
-    "standardsGapReasons": [
-      "高风险",
-      "关键控制",
-      "阶段门",
-      "H5重点",
-      "强控制任务类型",
-      "有关联交付物",
-      "排期窗口内",
-      "任务边界较宽"
-    ],
-    "standardsGapPriorityScore": 125,
-    "suggestedStandardId": "STD-GATE-001",
-    "suggestedAction": "先拆分 WBS，再按拆分后的执行任务绑定标准"
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
+    "suggestedStandardId": "STD-REV-001;STD-DSTRAT-001;STD-L3-SCOPE-001",
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 16,
@@ -3190,7 +3161,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 140,
+    "standardsGapPriorityScore": 125,
     "suggestedStandardId": "STD-GATE-001",
     "suggestedAction": "阶段门任务缺标准，本周补齐后再进入放行评审"
   },
@@ -3350,7 +3321,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 125,
+    "standardsGapPriorityScore": 140,
     "suggestedStandardId": "STD-PAY-001",
     "suggestedAction": "阶段门任务缺标准，本周补齐后再进入放行评审"
   },
@@ -3403,7 +3374,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 125,
+    "standardsGapPriorityScore": 140,
     "suggestedStandardId": "STD-PAY-001",
     "suggestedAction": "阶段门任务缺标准，本周补齐后再进入放行评审"
   },
@@ -3985,7 +3956,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 45,
+    "standardsGapPriorityScore": 30,
     "suggestedStandardId": "STD-REV-001",
     "suggestedAction": "强控制任务缺标准，优先补齐"
   },
@@ -4034,7 +4005,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 45,
+    "standardsGapPriorityScore": 30,
     "suggestedStandardId": "STD-REV-001",
     "suggestedAction": "强控制任务缺标准，优先补齐"
   },
@@ -4085,7 +4056,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 85,
+    "standardsGapPriorityScore": 70,
     "suggestedStandardId": "STD-REV-001",
     "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
   },
@@ -4131,10 +4102,9 @@
     "standardsGapBucket": "需拆分后补",
     "standardsGapReasons": [
       "有关联交付物",
-      "排期窗口内",
       "任务边界较宽"
     ],
-    "standardsGapPriorityScore": 25,
+    "standardsGapPriorityScore": 10,
     "suggestedStandardId": "STD-INFRA-001",
     "suggestedAction": "先拆分 WBS，再按拆分后的执行任务绑定标准"
   },
@@ -4177,13 +4147,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "自动可补",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
+    "standardsGapPriorityScore": 25,
     "suggestedStandardId": "STD-REV-001",
-    "suggestedAction": "建议绑定 STD-REV-001"
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 39,
@@ -4224,13 +4195,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "自动可补",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
+    "standardsGapPriorityScore": 25,
     "suggestedStandardId": "STD-INFRA-001",
-    "suggestedAction": "建议绑定 STD-INFRA-001"
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 40,
@@ -4271,13 +4243,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "自动可补",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
+    "standardsGapPriorityScore": 25,
     "suggestedStandardId": "STD-PAY-001",
-    "suggestedAction": "建议绑定 STD-PAY-001"
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 41,
@@ -4318,13 +4291,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "自动可补",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
+    "standardsGapPriorityScore": 25,
     "suggestedStandardId": "STD-INFRA-001",
-    "suggestedAction": "建议绑定 STD-INFRA-001"
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 42,
@@ -4466,7 +4440,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 45,
+    "standardsGapPriorityScore": 30,
     "suggestedStandardId": "STD-REV-001",
     "suggestedAction": "强控制任务缺标准，优先补齐"
   },
@@ -4515,7 +4489,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 45,
+    "standardsGapPriorityScore": 30,
     "suggestedStandardId": "STD-REV-001",
     "suggestedAction": "强控制任务缺标准，优先补齐"
   },
@@ -4561,10 +4535,9 @@
     "standardsGapBucket": "需拆分后补",
     "standardsGapReasons": [
       "有关联交付物",
-      "排期窗口内",
       "任务边界较宽"
     ],
-    "standardsGapPriorityScore": 25,
+    "standardsGapPriorityScore": 10,
     "suggestedStandardId": "待拆分后确认",
     "suggestedAction": "先拆分 WBS，再按拆分后的执行任务绑定标准"
   },
@@ -4607,13 +4580,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "自动可补",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
+    "standardsGapPriorityScore": 25,
     "suggestedStandardId": "STD-REV-001",
-    "suggestedAction": "建议绑定 STD-REV-001"
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 48,
@@ -4654,13 +4628,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "人工复核",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
-    "suggestedStandardId": "待人工确认",
-    "suggestedAction": "任务边界或交付物不清，人工复核后确认标准"
+    "standardsGapPriorityScore": 25,
+    "suggestedStandardId": "待PMO确认",
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 49,
@@ -4701,13 +4676,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "自动可补",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
+    "standardsGapPriorityScore": 25,
     "suggestedStandardId": "STD-PAY-001",
-    "suggestedAction": "建议绑定 STD-PAY-001"
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 50,
@@ -4751,9 +4727,10 @@
     "standardsGapBucket": "需拆分后补",
     "standardsGapReasons": [
       "有关联交付物",
+      "排期窗口内",
       "任务边界较宽"
     ],
-    "standardsGapPriorityScore": 10,
+    "standardsGapPriorityScore": 25,
     "suggestedStandardId": "待拆分后确认",
     "suggestedAction": "先拆分 WBS，再按拆分后的执行任务绑定标准"
   },
@@ -4898,7 +4875,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 45,
+    "standardsGapPriorityScore": 30,
     "suggestedStandardId": "STD-REV-001",
     "suggestedAction": "强控制任务缺标准，优先补齐"
   },
@@ -4947,7 +4924,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 45,
+    "standardsGapPriorityScore": 30,
     "suggestedStandardId": "STD-REV-001",
     "suggestedAction": "强控制任务缺标准，优先补齐"
   },
@@ -4993,10 +4970,9 @@
     "standardsGapBucket": "需拆分后补",
     "standardsGapReasons": [
       "有关联交付物",
-      "排期窗口内",
       "任务边界较宽"
     ],
-    "standardsGapPriorityScore": 25,
+    "standardsGapPriorityScore": 10,
     "suggestedStandardId": "STD-INFRA-001",
     "suggestedAction": "先拆分 WBS，再按拆分后的执行任务绑定标准"
   },
@@ -5039,13 +5015,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "自动可补",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
+    "standardsGapPriorityScore": 25,
     "suggestedStandardId": "STD-REV-001",
-    "suggestedAction": "建议绑定 STD-REV-001"
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 57,
@@ -5086,13 +5063,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "自动可补",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
+    "standardsGapPriorityScore": 25,
     "suggestedStandardId": "STD-INFRA-001",
-    "suggestedAction": "建议绑定 STD-INFRA-001"
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 58,
@@ -5133,13 +5111,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "自动可补",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
+    "standardsGapPriorityScore": 25,
     "suggestedStandardId": "STD-PAY-001",
-    "suggestedAction": "建议绑定 STD-PAY-001"
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 59,
@@ -5183,9 +5162,10 @@
     "standardsGapBucket": "需拆分后补",
     "standardsGapReasons": [
       "有关联交付物",
+      "排期窗口内",
       "任务边界较宽"
     ],
-    "standardsGapPriorityScore": 10,
+    "standardsGapPriorityScore": 25,
     "suggestedStandardId": "STD-INFRA-001",
     "suggestedAction": "先拆分 WBS，再按拆分后的执行任务绑定标准"
   },
@@ -5332,7 +5312,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 85,
+    "standardsGapPriorityScore": 70,
     "suggestedStandardId": "STD-REV-001",
     "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
   },
@@ -5484,7 +5464,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 50,
+    "standardsGapPriorityScore": 65,
     "suggestedStandardId": "STD-REV-001",
     "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
   },
@@ -5534,7 +5514,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 50,
+    "standardsGapPriorityScore": 65,
     "suggestedStandardId": "待PMO确认",
     "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
   },
@@ -5584,7 +5564,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 50,
+    "standardsGapPriorityScore": 65,
     "suggestedStandardId": "STD-PAY-001",
     "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
   },
@@ -5634,7 +5614,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 50,
+    "standardsGapPriorityScore": 65,
     "suggestedStandardId": "待PMO确认",
     "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
   },
@@ -5933,7 +5913,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 50,
+    "standardsGapPriorityScore": 65,
     "suggestedStandardId": "STD-REV-001",
     "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
   },
@@ -5983,7 +5963,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 50,
+    "standardsGapPriorityScore": 65,
     "suggestedStandardId": "待PMO确认",
     "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
   },
@@ -6033,7 +6013,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 50,
+    "standardsGapPriorityScore": 65,
     "suggestedStandardId": "STD-PAY-001",
     "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
   },
@@ -6084,7 +6064,7 @@
       "排期窗口内",
       "任务边界较宽"
     ],
-    "standardsGapPriorityScore": 50,
+    "standardsGapPriorityScore": 65,
     "suggestedStandardId": "待拆分后确认",
     "suggestedAction": "先拆分 WBS，再按拆分后的执行任务绑定标准"
   },
@@ -6224,14 +6204,13 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "必须补",
+    "standardsGapBucket": "自动可补",
     "standardsGapReasons": [
-      "有关联交付物",
-      "排期窗口内"
+      "有关联交付物"
     ],
-    "standardsGapPriorityScore": 25,
+    "standardsGapPriorityScore": 10,
     "suggestedStandardId": "STD-REV-001",
-    "suggestedAction": "强控制任务缺标准，优先补齐"
+    "suggestedAction": "建议绑定 STD-REV-001"
   },
   {
     "id": 81,
@@ -6280,7 +6259,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 85,
+    "standardsGapPriorityScore": 70,
     "suggestedStandardId": "STD-REV-001",
     "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
   },
@@ -6418,13 +6397,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "自动可补",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
+    "standardsGapPriorityScore": 25,
     "suggestedStandardId": "STD-PAY-001",
-    "suggestedAction": "建议绑定 STD-PAY-001"
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 85,
@@ -6472,7 +6452,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 40,
+    "standardsGapPriorityScore": 55,
     "suggestedStandardId": "STD-ACC-001",
     "suggestedAction": "强控制任务缺标准，优先补齐"
   },
@@ -6523,7 +6503,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 70,
+    "standardsGapPriorityScore": 85,
     "suggestedStandardId": "STD-UAT-001",
     "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
   },
@@ -6574,7 +6554,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 80,
+    "standardsGapPriorityScore": 95,
     "suggestedStandardId": "STD-REV-001",
     "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
   },
@@ -6662,14 +6642,13 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "必须补",
+    "standardsGapBucket": "自动可补",
     "standardsGapReasons": [
-      "有关联交付物",
-      "排期窗口内"
+      "有关联交付物"
     ],
-    "standardsGapPriorityScore": 25,
+    "standardsGapPriorityScore": 10,
     "suggestedStandardId": "STD-REV-001",
-    "suggestedAction": "强控制任务缺标准，优先补齐"
+    "suggestedAction": "建议绑定 STD-REV-001"
   },
   {
     "id": 90,
@@ -6718,7 +6697,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 85,
+    "standardsGapPriorityScore": 70,
     "suggestedStandardId": "STD-REV-001",
     "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
   },
@@ -6856,13 +6835,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "自动可补",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
+    "standardsGapPriorityScore": 25,
     "suggestedStandardId": "STD-SYS-001",
-    "suggestedAction": "建议绑定 STD-SYS-001"
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 94,
@@ -6910,7 +6890,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 50,
+    "standardsGapPriorityScore": 65,
     "suggestedStandardId": "STD-PAY-001",
     "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
   },
@@ -6953,13 +6933,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "自动可补",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
+    "standardsGapPriorityScore": 25,
     "suggestedStandardId": "STD-SYS-001",
-    "suggestedAction": "建议绑定 STD-SYS-001"
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 96,
@@ -7008,7 +6989,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 80,
+    "standardsGapPriorityScore": 95,
     "suggestedStandardId": "STD-REV-001",
     "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
   },
@@ -7684,7 +7665,7 @@
     "risk": "中",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "组织人员标准",
+    "deliverable": "组织人员标准；按对象的标准版本、权威来源、维护边界与3000引用关系",
     "deliverableId": "",
     "notes": "所有资源均按瓶颈处理，关键评审避免重叠",
     "viewCategory": "",
@@ -7698,12 +7679,12 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "执行标准缺口诊断",
-    "executionNote": "修订记录、确认记录、最终版本齐套",
+    "executionNote": "修订记录、确认记录、最终版本齐套；2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
     "executionStandardId": "STD-GEN-001;STD-MOM-001",
-    "inputMaterialList": "按执行标准ID对应输入资料准备",
+    "inputMaterialList": "按执行标准ID对应输入资料准备；已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
     "checklistId": "CHK-DOC-002",
-    "completionCriteria": "修订记录、确认记录、最终版本齐套",
-    "evidenceRequirements": "清单、草案、评审纪要、确认记录或系统导出文件",
+    "completionCriteria": "修订记录、确认记录、最终版本齐套；员工目录直接维护生效不因标准冻结另加审批；物料BOM等标准发布不等于已集中维护或自动分发；主数据标准版本与流程格式、术语地图定义版本分开记录。",
+    "evidenceRequirements": "清单、草案、评审纪要、确认记录或系统导出文件；对应交付文件、来源版本、核查或评审记录、问题及决定记录；运行或业务验收结论须提供实际范围和有权确认。",
     "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
@@ -8618,9 +8599,10 @@
     "standardsGapBucket": "需拆分后补",
     "standardsGapReasons": [
       "有关联交付物",
+      "排期窗口内",
       "任务边界较宽"
     ],
-    "standardsGapPriorityScore": 10,
+    "standardsGapPriorityScore": 25,
     "suggestedStandardId": "STD-REV-001",
     "suggestedAction": "先拆分 WBS，再按拆分后的执行任务绑定标准"
   },
@@ -8753,13 +8735,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "人工复核",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
-    "suggestedStandardId": "待人工确认",
-    "suggestedAction": "任务边界或交付物不清，人工复核后确认标准"
+    "standardsGapPriorityScore": 25,
+    "suggestedStandardId": "待PMO确认",
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 135,
@@ -8806,7 +8789,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 30,
+    "standardsGapPriorityScore": 45,
     "suggestedStandardId": "STD-REV-001",
     "suggestedAction": "强控制任务缺标准，优先补齐"
   },
@@ -8849,13 +8832,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "自动可补",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
+    "standardsGapPriorityScore": 25,
     "suggestedStandardId": "STD-REV-001",
-    "suggestedAction": "建议绑定 STD-REV-001"
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 137,
@@ -8986,13 +8970,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "自动可补",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
+    "standardsGapPriorityScore": 25,
     "suggestedStandardId": "STD-DATA-001",
-    "suggestedAction": "建议绑定 STD-DATA-001"
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 140,
@@ -9039,7 +9024,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 30,
+    "standardsGapPriorityScore": 45,
     "suggestedStandardId": "STD-REV-001",
     "suggestedAction": "强控制任务缺标准，优先补齐"
   },
@@ -9082,13 +9067,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "自动可补",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
+    "standardsGapPriorityScore": 25,
     "suggestedStandardId": "STD-REV-001",
-    "suggestedAction": "建议绑定 STD-REV-001"
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 142,
@@ -9219,13 +9205,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "自动可补",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
+    "standardsGapPriorityScore": 25,
     "suggestedStandardId": "STD-ISSUE-001",
-    "suggestedAction": "建议绑定 STD-ISSUE-001"
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 145,
@@ -9272,7 +9259,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 30,
+    "standardsGapPriorityScore": 45,
     "suggestedStandardId": "STD-REV-001",
     "suggestedAction": "强控制任务缺标准，优先补齐"
   },
@@ -9315,13 +9302,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "自动可补",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
+    "standardsGapPriorityScore": 25,
     "suggestedStandardId": "STD-REV-001",
-    "suggestedAction": "建议绑定 STD-REV-001"
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 147,
@@ -9452,13 +9440,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "自动可补",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
+    "standardsGapPriorityScore": 25,
     "suggestedStandardId": "STD-DATA-001",
-    "suggestedAction": "建议绑定 STD-DATA-001"
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 150,
@@ -9617,7 +9606,7 @@
     "risk": "高",
     "milestone": "是",
     "milestoneOverrideReason": "",
-    "deliverable": "数据标准V1.0",
+    "deliverable": "数据标准V1.0；按对象的标准版本、权威来源、维护边界与3000引用关系",
     "deliverableId": "",
     "notes": "",
     "viewCategory": "Gate",
@@ -9631,26 +9620,20 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
+    "executionStandardId": "STD-GEN-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-3-10-1-20261027",
+    "completionCriteria": "员工目录直接维护生效不因标准冻结另加审批；物料BOM等标准发布不等于已集中维护或自动分发；主数据标准版本与流程格式、术语地图定义版本分开记录。",
+    "evidenceRequirements": "对应交付文件、来源版本、核查或评审记录、问题及决定记录；运行或业务验收结论须提供实际范围和有权确认。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "必须补",
-    "standardsGapReasons": [
-      "高风险",
-      "关键控制",
-      "H5重点",
-      "有关联交付物",
-      "排期窗口内"
-    ],
-    "standardsGapPriorityScore": 80,
-    "suggestedStandardId": "待PMO确认",
-    "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
+    "suggestedStandardId": "STD-GEN-001",
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 153,
@@ -9698,7 +9681,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 65,
+    "standardsGapPriorityScore": 50,
     "suggestedStandardId": "STD-REV-001",
     "suggestedAction": "关键控制任务缺标准，纳入 PMO 周会"
   },
@@ -9748,7 +9731,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 55,
+    "standardsGapPriorityScore": 40,
     "suggestedStandardId": "STD-REV-001",
     "suggestedAction": "强控制任务缺标准，优先补齐"
   },
@@ -9868,7 +9851,7 @@
     "risk": "高",
     "milestone": "是",
     "milestoneOverrideReason": "",
-    "deliverable": "主数据标准V1.0",
+    "deliverable": "主数据标准V1.0；按对象的标准版本、权威来源、维护边界与3000引用关系",
     "deliverableId": "",
     "notes": "放行范围：核心接口开发、数据清洗、接口规格冻结；禁止推进：全系统联调、主数据分发终验",
     "viewCategory": "MDM_Version",
@@ -9882,27 +9865,20 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
+    "executionStandardId": "STD-GEN-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-3-10-6-20261027",
+    "completionCriteria": "员工目录直接维护生效不因标准冻结另加审批；物料BOM等标准发布不等于已集中维护或自动分发；主数据标准版本与流程格式、术语地图定义版本分开记录。",
+    "evidenceRequirements": "对应交付文件、来源版本、核查或评审记录、问题及决定记录；运行或业务验收结论须提供实际范围和有权确认。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "必须补",
-    "standardsGapReasons": [
-      "高风险",
-      "关键控制",
-      "阶段门",
-      "H5重点",
-      "有关联交付物",
-      "排期窗口内"
-    ],
-    "standardsGapPriorityScore": 105,
-    "suggestedStandardId": "STD-GATE-001",
-    "suggestedAction": "阶段门任务缺标准，本周补齐后再进入放行评审"
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
+    "suggestedStandardId": "STD-GEN-001",
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 158,
@@ -9971,7 +9947,7 @@
     "risk": "高",
     "milestone": "是",
     "milestoneOverrideReason": "",
-    "deliverable": "主数据标准V1.1",
+    "deliverable": "主数据标准V1.1；按对象的标准版本、权威来源、维护边界与3000引用关系",
     "deliverableId": "",
     "notes": "放行范围：全系统联调、全流程业务测试、主数据一致性校验；禁止推进：无审批的标准变更",
     "viewCategory": "MDM_Version",
@@ -9985,27 +9961,20 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
+    "executionStandardId": "STD-GEN-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-3-10-8-20261027",
+    "completionCriteria": "员工目录直接维护生效不因标准冻结另加审批；物料BOM等标准发布不等于已集中维护或自动分发；主数据标准版本与流程格式、术语地图定义版本分开记录。",
+    "evidenceRequirements": "对应交付文件、来源版本、核查或评审记录、问题及决定记录；运行或业务验收结论须提供实际范围和有权确认。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "必须补",
-    "standardsGapReasons": [
-      "高风险",
-      "关键控制",
-      "阶段门",
-      "H5重点",
-      "有关联交付物",
-      "排期窗口内"
-    ],
-    "standardsGapPriorityScore": 105,
-    "suggestedStandardId": "STD-GATE-001",
-    "suggestedAction": "阶段门任务缺标准，本周补齐后再进入放行评审"
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
+    "suggestedStandardId": "STD-GEN-001",
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 160,
@@ -10110,7 +10079,7 @@
   {
     "id": 162,
     "wbs": "4",
-    "name": "MDM建设准备与数据治理沉淀",
+    "name": "3000治理平台建设与数据治理交付",
     "type": "摘要",
     "duration": "",
     "start": "2026-07-16",
@@ -10123,9 +10092,9 @@
     "risk": "中",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "",
+    "deliverable": "流程编制、组织员工目录、术语数据地图质量规则及API权限兼容恢复四类交付，具体证据由现有叶节点承接",
     "deliverableId": "",
-    "notes": "本期不承诺MDM平台开发上线；聚焦主数据规则、映射、质量校验、过渡期规则中心与数据治理沉淀",
+    "notes": "本期3000承接流程编制治理、组织员工目录、术语、数据地图、质量规则管理及逐个受控接入；其他实体主数据先完成标准、权威来源和映射，维护分发能力分对象另定。员工信息由3000唯一维护，行政人事维护组织人员，保存直接生效并记录前后内容、操作人和原因；其他系统逐个受控读取。3001保持独立无状态和用户主动下载上传交接；外部AI编辑后的JSON回导不继承审核状态；旧数据、历史版本及未应用输入须保留并可核查。分别记录已实现、已准备、已开启、已验收及其证据，技术检查、软件发布和静态资料不能替代真实业务验收。既有资源标签沿用，软件开发测试运维投入在1.3.4核实。",
     "viewCategory": "MDM_Version",
     "phaseGateNo": "",
     "isCriticalControl": "",
@@ -10155,7 +10124,7 @@
   {
     "id": 439,
     "wbs": "4.1",
-    "name": "范围与对象边界",
+    "name": "3000范围与数据对象责任",
     "type": "摘要",
     "duration": "",
     "start": "2026-07-16",
@@ -10213,9 +10182,9 @@
     "risk": "高",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "流程地图范围清单",
+    "deliverable": "3000本期能力与流程数据地图范围、公司业务覆盖及仅提示缺口清单",
     "deliverableId": "",
-    "notes": "本阶段聚焦流程地图、数据地图、主数据对象和治理规则沉淀；不作为MDM平台开发上线承诺。",
+    "notes": "本期3000承接流程编制治理、组织员工目录、术语、数据地图、质量规则管理及逐个受控接入；其他实体主数据先完成标准、权威来源和映射，维护分发能力分对象另定。对应软件与治理交付按本节点范围核查；不承诺其他主数据全域迁入。",
     "viewCategory": "MDM_Version",
     "phaseGateNo": "",
     "isCriticalControl": "",
@@ -10227,25 +10196,20 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
+    "executionStandardId": "STD-3000-001;STD-GEN-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-4-1-1-20261027",
+    "completionCriteria": "本期3000承接流程编制治理、组织员工目录、术语、数据地图、质量规则管理及逐个受控接入；其他实体主数据先完成标准、权威来源和映射，维护分发能力分对象另定。公司整体内部三级建设对标，分阶段建设举证；设计责任按产品项目区分，设计、仿真、无损检测、工装维修业务继续纳入。43439数据业务化及36073资产运营、数据开放、数据服务本轮仅提示缺口。",
+    "evidenceRequirements": "对应范围的受控定义或版本、实现及权限验证、兼容记录、问题复核；实际启用与业务验收须另附目标及有权确认记录。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "必须补",
-    "standardsGapReasons": [
-      "高风险",
-      "H5重点",
-      "有关联交付物",
-      "排期窗口内"
-    ],
-    "standardsGapPriorityScore": 65,
-    "suggestedStandardId": "STD-REV-001",
-    "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
+    "suggestedStandardId": "STD-3000-001;STD-GEN-001",
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 164,
@@ -10263,9 +10227,9 @@
     "risk": "高",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "主数据对象清单、责任边界清单",
+    "deliverable": "按数据对象的来源、维护、消费及责任确认矩阵",
     "deliverableId": "",
-    "notes": "本阶段聚焦流程地图、数据地图、主数据对象和治理规则沉淀；不作为MDM平台开发上线承诺。",
+    "notes": "本期3000承接流程编制治理、组织员工目录、术语、数据地图、质量规则管理及逐个受控接入；其他实体主数据先完成标准、权威来源和映射，维护分发能力分对象另定。对应软件与治理交付按本节点范围核查；不承诺其他主数据全域迁入。",
     "viewCategory": "MDM_Version",
     "phaseGateNo": "",
     "isCriticalControl": "",
@@ -10277,25 +10241,20 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
+    "executionStandardId": "STD-3000-001;STD-GEN-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-4-1-2-20261027",
+    "completionCriteria": "员工信息由3000唯一维护，行政人事维护组织人员，保存直接生效并记录前后内容、操作人和原因；其他系统逐个受控读取。其他对象有业务确认依据；治理定义、规则映射和业务实体记录分清，未知事实不靠默认值补齐。",
+    "evidenceRequirements": "对应范围的受控定义或版本、实现及权限验证、兼容记录、问题复核；实际启用与业务验收须另附目标及有权确认记录。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "必须补",
-    "standardsGapReasons": [
-      "高风险",
-      "H5重点",
-      "有关联交付物",
-      "排期窗口内"
-    ],
-    "standardsGapPriorityScore": 65,
-    "suggestedStandardId": "STD-INTV-001",
-    "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
+    "suggestedStandardId": "STD-3000-001;STD-GEN-001",
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 440,
@@ -10358,9 +10317,9 @@
     "risk": "高",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "元数据模型、字段口径表",
+    "deliverable": "受控术语、对象字段、来源与流程定义模型及版本关联",
     "deliverableId": "",
-    "notes": "本阶段聚焦流程地图、数据地图、主数据对象和治理规则沉淀；不作为MDM平台开发上线承诺。",
+    "notes": "本期3000承接流程编制治理、组织员工目录、术语、数据地图、质量规则管理及逐个受控接入；其他实体主数据先完成标准、权威来源和映射，维护分发能力分对象另定。对应软件与治理交付按本节点范围核查；不承诺其他主数据全域迁入。",
     "viewCategory": "MDM_Version",
     "phaseGateNo": "",
     "isCriticalControl": "",
@@ -10372,25 +10331,20 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
+    "executionStandardId": "STD-3000-001;STD-GEN-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-4-2-1-20261027",
+    "completionCriteria": "术语对象字段流程和来源关系可查；固定版本与历史引用可追溯，不以名称一致推定字段同义或记录可连通。",
+    "evidenceRequirements": "对应范围的受控定义或版本、实现及权限验证、兼容记录、问题复核；实际启用与业务验收须另附目标及有权确认记录。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "必须补",
-    "standardsGapReasons": [
-      "高风险",
-      "H5重点",
-      "有关联交付物",
-      "排期窗口内"
-    ],
-    "standardsGapPriorityScore": 65,
-    "suggestedStandardId": "待PMO确认",
-    "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
+    "suggestedStandardId": "STD-3000-001;STD-GEN-001",
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 166,
@@ -10408,9 +10362,9 @@
     "risk": "高",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "主数据模型、映射关系表",
+    "deliverable": "分对象主数据模型、系统映射和实体能力边界",
     "deliverableId": "",
-    "notes": "本阶段聚焦流程地图、数据地图、主数据对象和治理规则沉淀；不作为MDM平台开发上线承诺。",
+    "notes": "本期3000承接流程编制治理、组织员工目录、术语、数据地图、质量规则管理及逐个受控接入；其他实体主数据先完成标准、权威来源和映射，维护分发能力分对象另定。对应软件与治理交付按本节点范围核查；不承诺其他主数据全域迁入。",
     "viewCategory": "MDM_Version",
     "phaseGateNo": "",
     "isCriticalControl": "",
@@ -10422,25 +10376,20 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
+    "executionStandardId": "STD-3000-001;STD-GEN-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-4-2-2-20261027",
+    "completionCriteria": "模型映射经业务核实并标明有效版本；实体集中维护和自动分发分对象另定，标准映射不记作实际接入。",
+    "evidenceRequirements": "对应范围的受控定义或版本、实现及权限验证、兼容记录、问题复核；实际启用与业务验收须另附目标及有权确认记录。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "必须补",
-    "standardsGapReasons": [
-      "高风险",
-      "H5重点",
-      "有关联交付物",
-      "排期窗口内"
-    ],
-    "standardsGapPriorityScore": 65,
-    "suggestedStandardId": "STD-DATA-001",
-    "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
+    "suggestedStandardId": "STD-3000-001;STD-GEN-001",
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 441,
@@ -10490,7 +10439,7 @@
   {
     "id": 167,
     "wbs": "4.3.1",
-    "name": "治理角色与权限边界设计",
+    "name": "治理角色权限设计与实现核对",
     "type": "设计",
     "duration": "6工作日",
     "start": "2026-09-03",
@@ -10503,9 +10452,9 @@
     "risk": "高",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "治理角色、权限边界说明",
+    "deliverable": "治理职责权限对照、软件权限核对及越权验证记录",
     "deliverableId": "",
-    "notes": "本阶段聚焦流程地图、数据地图、主数据对象和治理规则沉淀；不作为MDM平台开发上线承诺。",
+    "notes": "本期3000承接流程编制治理、组织员工目录、术语、数据地图、质量规则管理及逐个受控接入；其他实体主数据先完成标准、权威来源和映射，维护分发能力分对象另定。对应软件与治理交付按本节点范围核查；不承诺其他主数据全域迁入。",
     "viewCategory": "MDM_Version",
     "phaseGateNo": "",
     "isCriticalControl": "",
@@ -10517,25 +10466,20 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
+    "executionStandardId": "STD-3000-001;STD-GEN-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-4-3-1-20261027",
+    "completionCriteria": "按已确认职责链区分目录直接维护、流程审核发布、治理内容发布及系统只读消费；平台管理员不因技术权限取得业务决定权。",
+    "evidenceRequirements": "对应范围的受控定义或版本、实现及权限验证、兼容记录、问题复核；实际启用与业务验收须另附目标及有权确认记录。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "必须补",
-    "standardsGapReasons": [
-      "高风险",
-      "H5重点",
-      "有关联交付物",
-      "排期窗口内"
-    ],
-    "standardsGapPriorityScore": 65,
-    "suggestedStandardId": "待PMO确认",
-    "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
+    "suggestedStandardId": "STD-3000-001;STD-GEN-001",
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 168,
@@ -10553,9 +10497,9 @@
     "risk": "高",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "版本与分发口径",
+    "deliverable": "治理内容版本生效、历史读取和逐个接入口径",
     "deliverableId": "",
-    "notes": "本阶段聚焦流程地图、数据地图、主数据对象和治理规则沉淀；不作为MDM平台开发上线承诺。",
+    "notes": "本期3000承接流程编制治理、组织员工目录、术语、数据地图、质量规则管理及逐个受控接入；其他实体主数据先完成标准、权威来源和映射，维护分发能力分对象另定。对应软件与治理交付按本节点范围核查；不承诺其他主数据全域迁入。",
     "viewCategory": "MDM_Version",
     "phaseGateNo": "",
     "isCriticalControl": "",
@@ -10567,25 +10511,20 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
+    "executionStandardId": "STD-3000-001;STD-GEN-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-4-3-2-20261027",
+    "completionCriteria": "员工保存直接生效与其他治理发布规则分开；固定版本、历史意见、来源及变更原因可追溯，接入读取不赋予维护权。",
+    "evidenceRequirements": "对应范围的受控定义或版本、实现及权限验证、兼容记录、问题复核；实际启用与业务验收须另附目标及有权确认记录。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "必须补",
-    "standardsGapReasons": [
-      "高风险",
-      "H5重点",
-      "有关联交付物",
-      "排期窗口内"
-    ],
-    "standardsGapPriorityScore": 50,
-    "suggestedStandardId": "待PMO确认",
-    "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
+    "suggestedStandardId": "STD-3000-001;STD-GEN-001",
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 442,
@@ -10635,7 +10574,7 @@
   {
     "id": 169,
     "wbs": "4.4.1",
-    "name": "数据质量规则库整理",
+    "name": "质量规则目录与版本管理交付",
     "type": "设计",
     "duration": "6工作日",
     "start": "2026-09-19",
@@ -10648,9 +10587,9 @@
     "risk": "高",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "数据质量规则库",
+    "deliverable": "受控质量规则目录、对象字段关联、来源责任和执行方式",
     "deliverableId": "",
-    "notes": "本阶段聚焦流程地图、数据地图、主数据对象和治理规则沉淀；不作为MDM平台开发上线承诺。",
+    "notes": "本期3000承接流程编制治理、组织员工目录、术语、数据地图、质量规则管理及逐个受控接入；其他实体主数据先完成标准、权威来源和映射，维护分发能力分对象另定。对应软件与治理交付按本节点范围核查；不承诺其他主数据全域迁入。",
     "viewCategory": "MDM_Version",
     "phaseGateNo": "",
     "isCriticalControl": "",
@@ -10662,25 +10601,20 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
+    "executionStandardId": "STD-3000-001;STD-GEN-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-4-4-1-20261027",
+    "completionCriteria": "规则有业务依据、版本和适用范围，能定位执行与问题处理责任；规则管理、自动检测、审计登记和整改复核的软件深度分别说明。",
+    "evidenceRequirements": "对应范围的受控定义或版本、实现及权限验证、兼容记录、问题复核；实际启用与业务验收须另附目标及有权确认记录。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "必须补",
-    "standardsGapReasons": [
-      "高风险",
-      "H5重点",
-      "有关联交付物",
-      "排期窗口内"
-    ],
-    "standardsGapPriorityScore": 50,
-    "suggestedStandardId": "待PMO确认",
-    "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
+    "suggestedStandardId": "STD-3000-001;STD-GEN-001",
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 170,
@@ -10698,9 +10632,9 @@
     "risk": "高",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "数据质量指标口径",
+    "deliverable": "质量及战略指标口径、基线来源和采集准备清单",
     "deliverableId": "",
-    "notes": "本阶段聚焦流程地图、数据地图、主数据对象和治理规则沉淀；不作为MDM平台开发上线承诺。",
+    "notes": "本期3000承接流程编制治理、组织员工目录、术语、数据地图、质量规则管理及逐个受控接入；其他实体主数据先完成标准、权威来源和映射，维护分发能力分对象另定。对应软件与治理交付按本节点范围核查；不承诺其他主数据全域迁入。",
     "viewCategory": "MDM_Version",
     "phaseGateNo": "",
     "isCriticalControl": "",
@@ -10712,30 +10646,25 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
+    "executionStandardId": "STD-3000-001;STD-GEN-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-4-4-2-20261027",
+    "completionCriteria": "指标定义、范围、计算方法、来源、责任及周期可查；基线和目标值区分实测待测建议；相应场景首次使用前准备，已用而缺历史基线时记录首个可靠测量点及限制。",
+    "evidenceRequirements": "对应范围的受控定义或版本、实现及权限验证、兼容记录、问题复核；实际启用与业务验收须另附目标及有权确认记录。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "必须补",
-    "standardsGapReasons": [
-      "高风险",
-      "H5重点",
-      "有关联交付物",
-      "排期窗口内"
-    ],
-    "standardsGapPriorityScore": 50,
-    "suggestedStandardId": "待PMO确认",
-    "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
+    "suggestedStandardId": "STD-3000-001;STD-GEN-001",
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 443,
     "wbs": "4.5",
-    "name": "治理资料库与台账样例",
+    "name": "3000受控治理能力建设与版本管理",
     "type": "摘要",
     "duration": "",
     "start": "2026-10-06",
@@ -10780,7 +10709,7 @@
   {
     "id": 171,
     "wbs": "4.5.1",
-    "name": "治理资料库与版本台账建立",
+    "name": "流程编制与受控版本资料库建设",
     "type": "管理",
     "duration": "4工作日",
     "start": "2026-10-06",
@@ -10793,9 +10722,9 @@
     "risk": "高",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "治理资料库、版本台账",
+    "deliverable": "流程编制保存、提交核对、退回续修及审核发布能力与受控版本资料库",
     "deliverableId": "",
-    "notes": "本阶段聚焦流程地图、数据地图、主数据对象和治理规则沉淀；不作为MDM平台开发上线承诺。",
+    "notes": "本期3000承接流程编制治理、组织员工目录、术语、数据地图、质量规则管理及逐个受控接入；其他实体主数据先完成标准、权威来源和映射，维护分发能力分对象另定。对应软件与治理交付按本节点范围核查；不承诺其他主数据全域迁入。",
     "viewCategory": "MDM_Version",
     "phaseGateNo": "",
     "isCriticalControl": "",
@@ -10807,30 +10736,25 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
+    "executionStandardId": "STD-3000-001;STD-GEN-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-4-5-1-20261027",
+    "completionCriteria": "按既有确认链办理流程，保存续修与提交发布状态有证据；前后端API分离；未应用输入、历史内容和手工JSON交接受保护；已有能力核实复用，不重复建设。",
+    "evidenceRequirements": "对应范围的受控定义或版本、实现及权限验证、兼容记录、问题复核；实际启用与业务验收须另附目标及有权确认记录。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "必须补",
-    "standardsGapReasons": [
-      "高风险",
-      "H5重点",
-      "有关联交付物",
-      "排期窗口内"
-    ],
-    "standardsGapPriorityScore": 50,
-    "suggestedStandardId": "待PMO确认",
-    "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
+    "suggestedStandardId": "STD-3000-001;STD-GEN-001",
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 172,
     "wbs": "4.5.2",
-    "name": "主数据规则台账样例整理",
+    "name": "组织员工目录与治理规则台账建设",
     "type": "设计",
     "duration": "12工作日",
     "start": "2026-10-10",
@@ -10843,9 +10767,9 @@
     "risk": "高",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "主数据规则台账样例",
+    "deliverable": "组织员工目录维护能力、变更审计与治理规则台账",
     "deliverableId": "",
-    "notes": "本阶段聚焦流程地图、数据地图、主数据对象和治理规则沉淀；不作为MDM平台开发上线承诺。",
+    "notes": "本期3000承接流程编制治理、组织员工目录、术语、数据地图、质量规则管理及逐个受控接入；其他实体主数据先完成标准、权威来源和映射，维护分发能力分对象另定。对应软件与治理交付按本节点范围核查；不承诺其他主数据全域迁入。",
     "viewCategory": "MDM_Version",
     "phaseGateNo": "",
     "isCriticalControl": "",
@@ -10857,30 +10781,25 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
+    "executionStandardId": "STD-3000-001;STD-GEN-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-4-5-2-20261027",
+    "completionCriteria": "员工信息由3000唯一维护，行政人事维护组织人员，保存直接生效并记录前后内容、操作人和原因；其他系统逐个受控读取。稳定标识、状态和兼容历史数据可核查；组织人员维护、账号权限和业务规则台账分别管理，不能按名称猜测或覆盖。",
+    "evidenceRequirements": "对应范围的受控定义或版本、实现及权限验证、兼容记录、问题复核；实际启用与业务验收须另附目标及有权确认记录。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "必须补",
-    "standardsGapReasons": [
-      "高风险",
-      "H5重点",
-      "有关联交付物",
-      "排期窗口内"
-    ],
-    "standardsGapPriorityScore": 50,
-    "suggestedStandardId": "STD-DATA-001",
-    "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
+    "suggestedStandardId": "STD-3000-001;STD-GEN-001",
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 173,
     "wbs": "4.5.3",
-    "name": "主数据变更审核口径整理",
+    "name": "术语数据地图治理与变更控制",
     "type": "设计",
     "duration": "10工作日",
     "start": "2026-10-28",
@@ -10893,9 +10812,9 @@
     "risk": "高",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "变更审核口径",
+    "deliverable": "术语及数据地图受控定义、来源关联、变更记录与核验材料",
     "deliverableId": "",
-    "notes": "本阶段聚焦流程地图、数据地图、主数据对象和治理规则沉淀；不作为MDM平台开发上线承诺。",
+    "notes": "本期3000承接流程编制治理、组织员工目录、术语、数据地图、质量规则管理及逐个受控接入；其他实体主数据先完成标准、权威来源和映射，维护分发能力分对象另定。对应软件与治理交付按本节点范围核查；不承诺其他主数据全域迁入。",
     "viewCategory": "MDM_Version",
     "phaseGateNo": "",
     "isCriticalControl": "",
@@ -10907,30 +10826,25 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
+    "executionStandardId": "STD-3000-001;STD-GEN-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-4-5-3-20261027",
+    "completionCriteria": "治理定义有来源和适用范围，审核发布及历史引用按既有确认办理；其他主数据变更按对象规则，人事目录保持直接生效，不套用统一审批。",
+    "evidenceRequirements": "对应范围的受控定义或版本、实现及权限验证、兼容记录、问题复核；实际启用与业务验收须另附目标及有权确认记录。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "必须补",
-    "standardsGapReasons": [
-      "高风险",
-      "H5重点",
-      "有关联交付物",
-      "排期窗口内"
-    ],
-    "standardsGapPriorityScore": 50,
-    "suggestedStandardId": "STD-DATA-001",
-    "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
+    "suggestedStandardId": "STD-3000-001;STD-GEN-001",
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 174,
     "wbs": "4.5.4",
-    "name": "版本管理样例整理",
+    "name": "受控版本管理与旧数据兼容验证",
     "type": "设计",
     "duration": "8工作日",
     "start": "2026-11-11",
@@ -10943,9 +10857,9 @@
     "risk": "高",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "版本管理样例",
+    "deliverable": "版本及历史读取能力、受支持旧数据兼容与恢复核查记录",
     "deliverableId": "",
-    "notes": "本阶段聚焦流程地图、数据地图、主数据对象和治理规则沉淀；不作为MDM平台开发上线承诺。",
+    "notes": "本期3000承接流程编制治理、组织员工目录、术语、数据地图、质量规则管理及逐个受控接入；其他实体主数据先完成标准、权威来源和映射，维护分发能力分对象另定。对应软件与治理交付按本节点范围核查；不承诺其他主数据全域迁入。",
     "viewCategory": "MDM_Version",
     "phaseGateNo": "",
     "isCriticalControl": "",
@@ -10957,30 +10871,25 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
+    "executionStandardId": "STD-3000-001;STD-GEN-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-4-5-4-20261027",
+    "completionCriteria": "旧格式数据、稳定标识、引用及历史意见有兼容处理，不能静默删除或猜测迁移；导回JSON不继承审核状态；技术恢复与正式数据恢复分清。",
+    "evidenceRequirements": "对应范围的受控定义或版本、实现及权限验证、兼容记录、问题复核；实际启用与业务验收须另附目标及有权确认记录。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "必须补",
-    "standardsGapReasons": [
-      "高风险",
-      "H5重点",
-      "有关联交付物",
-      "排期窗口内"
-    ],
-    "standardsGapPriorityScore": 50,
-    "suggestedStandardId": "待PMO确认",
-    "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
+    "suggestedStandardId": "STD-3000-001;STD-GEN-001",
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 444,
     "wbs": "4.6",
-    "name": "分发接口与质量校验口径",
+    "name": "受控读取接口与质量校验交付",
     "type": "摘要",
     "duration": "",
     "start": "2026-11-21",
@@ -11025,7 +10934,7 @@
   {
     "id": 175,
     "wbs": "4.6.1",
-    "name": "分发规则与接口校验口径整理",
+    "name": "受控读取接口与接入校验交付",
     "type": "设计",
     "duration": "10工作日",
     "start": "2026-11-21",
@@ -11038,9 +10947,9 @@
     "risk": "高",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "分发规则与接口校验口径",
+    "deliverable": "接口规格、版本、权限实现及逐个消费系统接入核验",
     "deliverableId": "",
-    "notes": "本阶段聚焦流程地图、数据地图、主数据对象和治理规则沉淀；不作为MDM平台开发上线承诺。",
+    "notes": "本期3000承接流程编制治理、组织员工目录、术语、数据地图、质量规则管理及逐个受控接入；其他实体主数据先完成标准、权威来源和映射，维护分发能力分对象另定。对应软件与治理交付按本节点范围核查；不承诺其他主数据全域迁入。",
     "viewCategory": "MDM_Version",
     "phaseGateNo": "",
     "isCriticalControl": "",
@@ -11052,30 +10961,25 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
+    "executionStandardId": "STD-3000-001;STD-GEN-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-4-6-1-20261027",
+    "completionCriteria": "按已确认对象和接入方核查身份、读取范围、标识状态、错误处理及审计；员工唯一维护源不变；规格就绪、软件实现、实际启用和业务验收分别留证。",
+    "evidenceRequirements": "对应范围的受控定义或版本、实现及权限验证、兼容记录、问题复核；实际启用与业务验收须另附目标及有权确认记录。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "必须补",
-    "standardsGapReasons": [
-      "高风险",
-      "H5重点",
-      "有关联交付物",
-      "排期窗口内"
-    ],
-    "standardsGapPriorityScore": 50,
-    "suggestedStandardId": "STD-IF-001",
-    "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
+    "suggestedStandardId": "STD-3000-001;STD-GEN-001",
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 176,
     "wbs": "4.6.2",
-    "name": "质量规则与接口校验口径整理",
+    "name": "质量规则管理与接口校验交付",
     "type": "设计",
     "duration": "10工作日",
     "start": "2026-12-05",
@@ -11088,9 +10992,9 @@
     "risk": "高",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "质量规则与接口校验口径",
+    "deliverable": "规则管理能力、字段映射与接口质量校验记录",
     "deliverableId": "",
-    "notes": "本阶段聚焦流程地图、数据地图、主数据对象和治理规则沉淀；不作为MDM平台开发上线承诺。",
+    "notes": "本期3000承接流程编制治理、组织员工目录、术语、数据地图、质量规则管理及逐个受控接入；其他实体主数据先完成标准、权威来源和映射，维护分发能力分对象另定。对应软件与治理交付按本节点范围核查；不承诺其他主数据全域迁入。",
     "viewCategory": "MDM_Version",
     "phaseGateNo": "",
     "isCriticalControl": "",
@@ -11102,30 +11006,25 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
+    "executionStandardId": "STD-3000-001;STD-GEN-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-4-6-2-20261027",
+    "completionCriteria": "规则与对象字段版本对应，正常异常场景结果可核查；自动检查引擎及完整审计整改办理功能按专项需求确定，不把未实现功能当作已交付或免除治理责任。",
+    "evidenceRequirements": "对应范围的受控定义或版本、实现及权限验证、兼容记录、问题复核；实际启用与业务验收须另附目标及有权确认记录。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "必须补",
-    "standardsGapReasons": [
-      "高风险",
-      "H5重点",
-      "有关联交付物",
-      "排期窗口内"
-    ],
-    "standardsGapPriorityScore": 50,
-    "suggestedStandardId": "STD-IF-001",
-    "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
+    "suggestedStandardId": "STD-3000-001;STD-GEN-001",
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 177,
     "wbs": "4.6.3",
-    "name": "数据质量看板样例整理",
+    "name": "数据质量统计与检查结果展示",
     "type": "设计",
     "duration": "8工作日",
     "start": "2026-12-19",
@@ -11138,9 +11037,9 @@
     "risk": "高",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "数据质量看板样例",
+    "deliverable": "数据质量统计展示、检查结果及范围限制说明",
     "deliverableId": "",
-    "notes": "本阶段聚焦流程地图、数据地图、主数据对象和治理规则沉淀；不作为MDM平台开发上线承诺。",
+    "notes": "本期3000承接流程编制治理、组织员工目录、术语、数据地图、质量规则管理及逐个受控接入；其他实体主数据先完成标准、权威来源和映射，维护分发能力分对象另定。对应软件与治理交付按本节点范围核查；不承诺其他主数据全域迁入。",
     "viewCategory": "MDM_Version",
     "phaseGateNo": "",
     "isCriticalControl": "",
@@ -11152,30 +11051,25 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
+    "executionStandardId": "STD-3000-001;STD-GEN-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-4-6-3-20261027",
+    "completionCriteria": "展示有口径、来源、时间和范围，样例与真实结果分开；统计页面不替代质量审计、整改和复核过程，剩余软件缺口列明。",
+    "evidenceRequirements": "对应范围的受控定义或版本、实现及权限验证、兼容记录、问题复核；实际启用与业务验收须另附目标及有权确认记录。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "必须补",
-    "standardsGapReasons": [
-      "高风险",
-      "H5重点",
-      "有关联交付物",
-      "排期窗口内"
-    ],
-    "standardsGapPriorityScore": 50,
-    "suggestedStandardId": "待PMO确认",
-    "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
+    "suggestedStandardId": "STD-3000-001;STD-GEN-001",
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 178,
     "wbs": "4.6.4",
-    "name": "数据纠正通知机制口径整理",
+    "name": "数据纠正通知与复核机制落实",
     "type": "设计",
     "duration": "6工作日",
     "start": "2026-12-31",
@@ -11188,9 +11082,9 @@
     "risk": "高",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "纠正通知机制口径",
+    "deliverable": "纠正通知、整改责任、复核关闭机制及与平台能力衔接说明",
     "deliverableId": "",
-    "notes": "本阶段聚焦流程地图、数据地图、主数据对象和治理规则沉淀；不作为MDM平台开发上线承诺。",
+    "notes": "本期3000承接流程编制治理、组织员工目录、术语、数据地图、质量规则管理及逐个受控接入；其他实体主数据先完成标准、权威来源和映射，维护分发能力分对象另定。对应软件与治理交付按本节点范围核查；不承诺其他主数据全域迁入。",
     "viewCategory": "MDM_Version",
     "phaseGateNo": "",
     "isCriticalControl": "",
@@ -11202,25 +11096,20 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
+    "executionStandardId": "STD-3000-001;STD-GEN-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-4-6-4-20261027",
+    "completionCriteria": "问题来源、责任、处理与复核证据可追溯；机制与已实现的软件深度分别验收，实际外部通知仅按对应授权执行。",
+    "evidenceRequirements": "对应范围的受控定义或版本、实现及权限验证、兼容记录、问题复核；实际启用与业务验收须另附目标及有权确认记录。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "必须补",
-    "standardsGapReasons": [
-      "高风险",
-      "H5重点",
-      "有关联交付物",
-      "排期窗口内"
-    ],
-    "standardsGapPriorityScore": 50,
-    "suggestedStandardId": "待PMO确认",
-    "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
+    "suggestedStandardId": "STD-3000-001;STD-GEN-001",
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 445,
@@ -11283,9 +11172,9 @@
     "risk": "高",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "AI辅助治理文档规范",
+    "deliverable": "AI辅助治理规范、人工JSON往返与人工复核边界",
     "deliverableId": "DLV-179",
-    "notes": "本阶段聚焦流程地图、数据地图、主数据对象和治理规则沉淀；不作为MDM平台开发上线承诺。",
+    "notes": "本期3000承接流程编制治理、组织员工目录、术语、数据地图、质量规则管理及逐个受控接入；其他实体主数据先完成标准、权威来源和映射，维护分发能力分对象另定。对应软件与治理交付按本节点范围核查；不承诺其他主数据全域迁入。",
     "viewCategory": "MDM_Version",
     "phaseGateNo": "",
     "isCriticalControl": "",
@@ -11297,30 +11186,25 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
+    "executionStandardId": "STD-3000-001;STD-GEN-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-4-7-1-20261027",
+    "completionCriteria": "AI输出为待核实材料；业务事实由有权人员确认；外部AI使用按已有规则，回导JSON不继承审核状态，不自动互写3000和3001。",
+    "evidenceRequirements": "对应范围的受控定义或版本、实现及权限验证、兼容记录、问题复核；实际启用与业务验收须另附目标及有权确认记录。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "必须补",
-    "standardsGapReasons": [
-      "高风险",
-      "H5重点",
-      "有关联交付物",
-      "排期窗口内"
-    ],
-    "standardsGapPriorityScore": 50,
-    "suggestedStandardId": "待PMO确认",
-    "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
+    "suggestedStandardId": "STD-3000-001;STD-GEN-001",
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 180,
     "wbs": "4.7.2",
-    "name": "治理样例核对与问题修正",
+    "name": "3000治理样例核对与问题修正",
     "type": "评审",
     "duration": "8工作日",
     "start": "2027-01-14",
@@ -11333,9 +11217,9 @@
     "risk": "高",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "核对记录、问题修正清单",
+    "deliverable": "流程目录术语地图规则代表性样例核对、问题及修正证据",
     "deliverableId": "",
-    "notes": "本阶段聚焦流程地图、数据地图、主数据对象和治理规则沉淀；不作为MDM平台开发上线承诺。",
+    "notes": "本期3000承接流程编制治理、组织员工目录、术语、数据地图、质量规则管理及逐个受控接入；其他实体主数据先完成标准、权威来源和映射，维护分发能力分对象另定。对应软件与治理交付按本节点范围核查；不承诺其他主数据全域迁入。",
     "viewCategory": "MDM_Version",
     "phaseGateNo": "",
     "isCriticalControl": "",
@@ -11347,26 +11231,20 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
+    "executionStandardId": "STD-3000-001;STD-REV-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-4-7-2-20261027",
+    "completionCriteria": "样例覆盖已承接能力及正常异常状态，问题修正可复核；隔离自动化结果与真实用户办理及人工中文输入体验分开记录。",
+    "evidenceRequirements": "对应范围的受控定义或版本、实现及权限验证、兼容记录、问题复核；实际启用与业务验收须另附目标及有权确认记录。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "必须补",
-    "standardsGapReasons": [
-      "高风险",
-      "H5重点",
-      "强控制任务类型",
-      "有关联交付物",
-      "排期窗口内"
-    ],
-    "standardsGapPriorityScore": 70,
-    "suggestedStandardId": "STD-REV-001",
-    "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
+    "suggestedStandardId": "STD-3000-001;STD-REV-001",
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 181,
@@ -11384,9 +11262,9 @@
     "risk": "高",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "一致性评审记录",
+    "deliverable": "分对象跨系统来源口径映射及实际接入状态评审",
     "deliverableId": "",
-    "notes": "本阶段聚焦流程地图、数据地图、主数据对象和治理规则沉淀；不作为MDM平台开发上线承诺。",
+    "notes": "本期3000承接流程编制治理、组织员工目录、术语、数据地图、质量规则管理及逐个受控接入；其他实体主数据先完成标准、权威来源和映射，维护分发能力分对象另定。对应软件与治理交付按本节点范围核查；不承诺其他主数据全域迁入。",
     "viewCategory": "MDM_Version",
     "phaseGateNo": "",
     "isCriticalControl": "",
@@ -11398,31 +11276,25 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
+    "executionStandardId": "STD-3000-001;STD-REV-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-4-7-3-20261027",
+    "completionCriteria": "映射、规则版本和标识可查；已接入对象才核验真实消费链路，未接入只记就绪或缺口；不要求未来全部主数据作为当前联调前置。",
+    "evidenceRequirements": "对应范围的受控定义或版本、实现及权限验证、兼容记录、问题复核；实际启用与业务验收须另附目标及有权确认记录。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "必须补",
-    "standardsGapReasons": [
-      "高风险",
-      "H5重点",
-      "强控制任务类型",
-      "有关联交付物",
-      "排期窗口内"
-    ],
-    "standardsGapPriorityScore": 70,
-    "suggestedStandardId": "STD-REV-001",
-    "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
+    "suggestedStandardId": "STD-3000-001;STD-REV-001",
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 182,
     "wbs": "4.7.4",
-    "name": "治理资料使用说明编制",
+    "name": "3000治理平台使用与人工交接说明编制",
     "type": "培训",
     "duration": "5工作日",
     "start": "2027-02-05",
@@ -11435,9 +11307,9 @@
     "risk": "高",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "治理资料使用说明",
+    "deliverable": "3000能力使用、角色边界、历史查询、人工JSON及3001交接说明",
     "deliverableId": "",
-    "notes": "本阶段聚焦流程地图、数据地图、主数据对象和治理规则沉淀；不作为MDM平台开发上线承诺。",
+    "notes": "本期3000承接流程编制治理、组织员工目录、术语、数据地图、质量规则管理及逐个受控接入；其他实体主数据先完成标准、权威来源和映射，维护分发能力分对象另定。对应软件与治理交付按本节点范围核查；不承诺其他主数据全域迁入。",
     "viewCategory": "MDM_Version",
     "phaseGateNo": "",
     "isCriticalControl": "",
@@ -11449,25 +11321,20 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
+    "executionStandardId": "STD-3000-001;STD-GEN-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-4-7-4-20261027",
+    "completionCriteria": "说明对应实际能力与角色，未开启或未实现明确标注；3001独立无状态兼容保留；无静默丢失或静默应用输入。",
+    "evidenceRequirements": "对应范围的受控定义或版本、实现及权限验证、兼容记录、问题复核；实际启用与业务验收须另附目标及有权确认记录。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "必须补",
-    "standardsGapReasons": [
-      "高风险",
-      "H5重点",
-      "有关联交付物",
-      "排期窗口内"
-    ],
-    "standardsGapPriorityScore": 50,
-    "suggestedStandardId": "待PMO确认",
-    "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
+    "suggestedStandardId": "STD-3000-001;STD-GEN-001",
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 446,
@@ -11517,7 +11384,7 @@
   {
     "id": 183,
     "wbs": "4.8.1",
-    "name": "数据治理沉淀评审准备",
+    "name": "3000平台与治理交付评审准备",
     "type": "评审",
     "duration": "3工作日",
     "start": "2027-02-12",
@@ -11530,9 +11397,9 @@
     "risk": "高",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "评审材料",
+    "deliverable": "能力清单、规则版本、兼容恢复、权限验证及业务验收准备材料",
     "deliverableId": "",
-    "notes": "本阶段聚焦流程地图、数据地图、主数据对象和治理规则沉淀；不作为MDM平台开发上线承诺。",
+    "notes": "本期3000承接流程编制治理、组织员工目录、术语、数据地图、质量规则管理及逐个受控接入；其他实体主数据先完成标准、权威来源和映射，维护分发能力分对象另定。对应软件与治理交付按本节点范围核查；不承诺其他主数据全域迁入。",
     "viewCategory": "MDM_Version",
     "phaseGateNo": "",
     "isCriticalControl": "",
@@ -11544,31 +11411,25 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
+    "executionStandardId": "STD-3000-001;STD-REV-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-4-8-1-20261027",
+    "completionCriteria": "流程编制、目录、术语地图规则及API权限兼容恢复四类交付可定位到既有节点和证据；未完成事项有影响范围。",
+    "evidenceRequirements": "对应范围的受控定义或版本、实现及权限验证、兼容记录、问题复核；实际启用与业务验收须另附目标及有权确认记录。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "必须补",
-    "standardsGapReasons": [
-      "高风险",
-      "H5重点",
-      "强控制任务类型",
-      "有关联交付物",
-      "排期窗口内"
-    ],
-    "standardsGapPriorityScore": 70,
-    "suggestedStandardId": "STD-REV-001",
-    "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
+    "suggestedStandardId": "STD-3000-001;STD-REV-001",
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 184,
     "wbs": "4.8.2",
-    "name": "过渡期规则中心可用口径确认",
+    "name": "本期规则及接口就绪确认",
     "type": "里程碑",
     "duration": "0工作日",
     "start": "2027-02-17",
@@ -11581,9 +11442,9 @@
     "risk": "高",
     "milestone": "是",
     "milestoneOverrideReason": "",
-    "deliverable": "规则中心可用性确认单",
+    "deliverable": "本期对象规则接口版本及首批使用前机制基线就绪确认单",
     "deliverableId": "",
-    "notes": "本阶段聚焦流程地图、数据地图、主数据对象和治理规则沉淀；不作为MDM平台开发上线承诺。",
+    "notes": "本期3000承接流程编制治理、组织员工目录、术语、数据地图、质量规则管理及逐个受控接入；其他实体主数据先完成标准、权威来源和映射，维护分发能力分对象另定。对应软件与治理交付按本节点范围核查；不承诺其他主数据全域迁入。",
     "viewCategory": "MDM_Version",
     "phaseGateNo": "G3",
     "isCriticalControl": "是",
@@ -11592,35 +11453,28 @@
     "integrationStartCondition": "",
     "isH5Focus": "是",
     "phaseGateName": "主数据规则中心/数据治理沉淀阶段门",
-    "releaseRule": "不通过不得作为WBS9联调规则中心准入依据",
+    "releaseRule": "不通过不得作为WBS9联调规则中心准入依据；首次实际使用所需质量机制、指标口径与采集准备未就绪时不得以本节点放行相应使用范围。",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
+    "executionStandardId": "STD-3000-001;STD-REV-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-4-8-2-20261027",
+    "completionCriteria": "相关来源责任、版本、接口、权限和必要恢复条件已核实；首次实际使用所需质量机制与指标基线准备可查；仅就绪不记实际启用或业务验收。",
+    "evidenceRequirements": "对应范围的受控定义或版本、实现及权限验证、兼容记录、问题复核；实际启用与业务验收须另附目标及有权确认记录。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "必须补",
-    "standardsGapReasons": [
-      "高风险",
-      "关键控制",
-      "阶段门",
-      "H5重点",
-      "有关联交付物",
-      "排期窗口内"
-    ],
-    "standardsGapPriorityScore": 105,
-    "suggestedStandardId": "STD-GATE-001",
-    "suggestedAction": "阶段门任务缺标准，本周补齐后再进入放行评审"
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
+    "suggestedStandardId": "STD-3000-001;STD-REV-001",
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 185,
     "wbs": "4.8.3",
-    "name": "规则中心试运行口径报告",
+    "name": "3000分环境阶段验证报告",
     "type": "验收",
     "duration": "5工作日",
     "start": "2027-02-18",
@@ -11633,9 +11487,9 @@
     "risk": "高",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "规则中心试运行口径报告",
+    "deliverable": "本地隔离、获准目标运行和真实用户办理的分项验证报告",
     "deliverableId": "",
-    "notes": "本阶段聚焦流程地图、数据地图、主数据对象和治理规则沉淀；不作为MDM平台开发上线承诺。",
+    "notes": "本期3000承接流程编制治理、组织员工目录、术语、数据地图、质量规则管理及逐个受控接入；其他实体主数据先完成标准、权威来源和映射，维护分发能力分对象另定。对应软件与治理交付按本节点范围核查；不承诺其他主数据全域迁入。",
     "viewCategory": "MDM_Version",
     "phaseGateNo": "",
     "isCriticalControl": "",
@@ -11647,31 +11501,25 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
+    "executionStandardId": "STD-3000-001;STD-GEN-001;STD-UAT-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-4-8-3-20261027",
+    "completionCriteria": "分别记录已实现、已准备、已开启、已验收及其证据，技术检查、软件发布和静态资料不能替代真实业务验收。记录目标环境、角色、版本和覆盖范围；当前未授权正式操作不因计划自动执行。",
+    "evidenceRequirements": "对应范围的受控定义或版本、实现及权限验证、兼容记录、问题复核；实际启用与业务验收须另附目标及有权确认记录。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "必须补",
-    "standardsGapReasons": [
-      "高风险",
-      "H5重点",
-      "强控制任务类型",
-      "有关联交付物",
-      "排期窗口内"
-    ],
-    "standardsGapPriorityScore": 70,
-    "suggestedStandardId": "STD-ACC-001",
-    "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
+    "suggestedStandardId": "STD-3000-001;STD-GEN-001;STD-UAT-001",
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 186,
     "wbs": "4.8.4",
-    "name": "MDM建设准备与数据治理沉淀阶段验收",
+    "name": "3000平台与数据治理交付阶段验收",
     "type": "里程碑",
     "duration": "0工作日",
     "start": "2027-02-25",
@@ -11684,9 +11532,9 @@
     "risk": "高",
     "milestone": "是",
     "milestoneOverrideReason": "",
-    "deliverable": "MDM建设准备验收报告",
+    "deliverable": "3000平台与数据治理分项阶段验收报告、未覆盖及遗留事项",
     "deliverableId": "",
-    "notes": "本阶段聚焦流程地图、数据地图、主数据对象和治理规则沉淀；如需重启平台建设，须另行形成决策和资源基线。",
+    "notes": "本期3000承接流程编制治理、组织员工目录、术语、数据地图、质量规则管理及逐个受控接入；其他实体主数据先完成标准、权威来源和映射，维护分发能力分对象另定。对应软件与治理交付按本节点范围核查；不承诺其他主数据全域迁入。",
     "viewCategory": "MDM_Version",
     "phaseGateNo": "G6",
     "isCriticalControl": "是",
@@ -11698,28 +11546,20 @@
     "releaseRule": "不通过不得关闭MDM建设准备阶段",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
+    "executionStandardId": "STD-3000-001;STD-REV-001;STD-ACC-001;STD-L3-SCOPE-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-4-8-4-20261027",
+    "completionCriteria": "四类交付有对应实现准备开启验收证据，真实业务由有权主体确认；软件和公司覆盖分别评价；仅提示缺口项不纳入本轮验收，不据此作完整三级结论。",
+    "evidenceRequirements": "对应范围的受控定义或版本、实现及权限验证、兼容记录、问题复核；实际启用与业务验收须另附目标及有权确认记录。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "必须补",
-    "standardsGapReasons": [
-      "高风险",
-      "关键控制",
-      "阶段门",
-      "H5重点",
-      "强控制任务类型",
-      "有关联交付物",
-      "排期窗口内"
-    ],
-    "standardsGapPriorityScore": 125,
-    "suggestedStandardId": "STD-GATE-001",
-    "suggestedAction": "阶段门任务缺标准，本周补齐后再进入放行评审"
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
+    "suggestedStandardId": "STD-3000-001;STD-REV-001;STD-ACC-001;STD-L3-SCOPE-001",
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 187,
@@ -11860,7 +11700,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 140,
+    "standardsGapPriorityScore": 125,
     "suggestedStandardId": "STD-GATE-001",
     "suggestedAction": "阶段门任务缺标准，本周补齐后再进入放行评审"
   },
@@ -11913,7 +11753,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 140,
+    "standardsGapPriorityScore": 125,
     "suggestedStandardId": "STD-GATE-001",
     "suggestedAction": "阶段门任务缺标准，本周补齐后再进入放行评审"
   },
@@ -11933,7 +11773,7 @@
     "risk": "高",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "测试环境资源配额表",
+    "deliverable": "测试环境资源配额表；3000测试资源、MySQL、访问与日志配额及缺口",
     "deliverableId": "",
     "notes": "G4测试环境验收硬指标前置：资源、网络、访问矩阵、备份Agent、首次备份、恢复抽检、监控、账号、日志。",
     "viewCategory": "Infra_Phased",
@@ -11947,29 +11787,20 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
+    "executionStandardId": "STD-INFRA-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-5-1-3-20261027",
+    "completionCriteria": "覆盖3000前后端API及本期范围；与业务系统数据库环境分别核实，不将其他系统选型自动套给3000。",
+    "evidenceRequirements": "对应交付文件、来源版本、核查或评审记录、问题及决定记录；运行或业务验收结论须提供实际范围和有权确认。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "必须补",
-    "standardsGapReasons": [
-      "高风险",
-      "关键控制",
-      "阶段门",
-      "重点视图",
-      "H5重点",
-      "强控制任务类型",
-      "有关联交付物",
-      "排期窗口内"
-    ],
-    "standardsGapPriorityScore": 145,
-    "suggestedStandardId": "STD-GATE-001",
-    "suggestedAction": "阶段门任务缺标准，本周补齐后再进入放行评审"
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
+    "suggestedStandardId": "STD-INFRA-001",
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 192,
@@ -12148,7 +11979,7 @@
     "risk": "高",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "基础资源交付验收报告",
+    "deliverable": "基础资源交付验收报告；包含3000准备条件的资源交付证据",
     "deliverableId": "",
     "notes": "G4测试环境验收硬指标前置：资源、网络、访问矩阵、备份Agent、首次备份、恢复抽检、监控、账号、日志。",
     "viewCategory": "Infra_Phased",
@@ -12162,29 +11993,20 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
+    "executionStandardId": "STD-INFRA-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-5-1-7-20261027",
+    "completionCriteria": "按目标核对资源网络权限监控备份及恢复抽检，不据资料存在推定实际可用。",
+    "evidenceRequirements": "对应交付文件、来源版本、核查或评审记录、问题及决定记录；运行或业务验收结论须提供实际范围和有权确认。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "必须补",
-    "standardsGapReasons": [
-      "高风险",
-      "关键控制",
-      "阶段门",
-      "重点视图",
-      "H5重点",
-      "强控制任务类型",
-      "有关联交付物",
-      "排期窗口内"
-    ],
-    "standardsGapPriorityScore": 145,
-    "suggestedStandardId": "STD-GATE-001",
-    "suggestedAction": "阶段门任务缺标准，本周补齐后再进入放行评审"
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
+    "suggestedStandardId": "STD-INFRA-001",
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 196,
@@ -12278,7 +12100,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 75,
+    "standardsGapPriorityScore": 60,
     "suggestedStandardId": "STD-ACC-001",
     "suggestedAction": "强控制任务缺标准，优先补齐"
   },
@@ -12823,7 +12645,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 30,
+    "standardsGapPriorityScore": 45,
     "suggestedStandardId": "STD-BKP-001",
     "suggestedAction": "强控制任务缺标准，优先补齐"
   },
@@ -12872,7 +12694,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 30,
+    "standardsGapPriorityScore": 45,
     "suggestedStandardId": "STD-DR-001",
     "suggestedAction": "强控制任务缺标准，优先补齐"
   },
@@ -12923,7 +12745,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 60,
+    "standardsGapPriorityScore": 75,
     "suggestedStandardId": "STD-ACC-001",
     "suggestedAction": "强控制任务缺标准，优先补齐"
   },
@@ -13021,7 +12843,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 135,
+    "standardsGapPriorityScore": 120,
     "suggestedStandardId": "STD-PAY-001",
     "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
   },
@@ -13191,7 +13013,7 @@
     "risk": "中",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "网络与安全账号权限基线",
+    "deliverable": "网络与安全账号权限基线；3000人员维护、治理发布、管理员与系统只读接入权限基线",
     "deliverableId": "",
     "notes": "基础设施应早于MES测试环境搭建",
     "viewCategory": "Infra_Phased",
@@ -13205,24 +13027,20 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
+    "executionStandardId": "STD-GEN-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-5-4-5-20261027",
+    "completionCriteria": "最小权限与越权核验有证据；接入方不能写员工主档，账号与业务目录权限分别核实。",
+    "evidenceRequirements": "对应交付文件、来源版本、核查或评审记录、问题及决定记录；运行或业务验收结论须提供实际范围和有权确认。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "必须补",
-    "standardsGapReasons": [
-      "重点视图",
-      "有关联交付物",
-      "排期窗口内"
-    ],
-    "standardsGapPriorityScore": 30,
-    "suggestedStandardId": "STD-NET-001",
-    "suggestedAction": "强控制任务缺标准，优先补齐"
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
+    "suggestedStandardId": "STD-GEN-001",
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 217,
@@ -13320,7 +13138,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 60,
+    "standardsGapPriorityScore": 75,
     "suggestedStandardId": "STD-ACC-001",
     "suggestedAction": "强控制任务缺标准，优先补齐"
   },
@@ -13514,7 +13332,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 70,
+    "standardsGapPriorityScore": 85,
     "suggestedStandardId": "待PMO确认",
     "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
   },
@@ -13563,7 +13381,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 30,
+    "standardsGapPriorityScore": 45,
     "suggestedStandardId": "STD-DB-001",
     "suggestedAction": "强控制任务缺标准，优先补齐"
   },
@@ -13614,7 +13432,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 70,
+    "standardsGapPriorityScore": 85,
     "suggestedStandardId": "STD-DB-001",
     "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
   },
@@ -13665,7 +13483,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 70,
+    "standardsGapPriorityScore": 85,
     "suggestedStandardId": "STD-DB-001",
     "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
   },
@@ -13717,7 +13535,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 90,
+    "standardsGapPriorityScore": 105,
     "suggestedStandardId": "STD-DR-001",
     "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
   },
@@ -13970,7 +13788,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 70,
+    "standardsGapPriorityScore": 85,
     "suggestedStandardId": "待PMO确认",
     "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
   },
@@ -14021,7 +13839,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 70,
+    "standardsGapPriorityScore": 85,
     "suggestedStandardId": "待PMO确认",
     "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
   },
@@ -14072,7 +13890,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 70,
+    "standardsGapPriorityScore": 85,
     "suggestedStandardId": "待PMO确认",
     "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
   },
@@ -14123,7 +13941,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 70,
+    "standardsGapPriorityScore": 85,
     "suggestedStandardId": "STD-UAT-001",
     "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
   },
@@ -14174,7 +13992,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 70,
+    "standardsGapPriorityScore": 85,
     "suggestedStandardId": "STD-UAT-001",
     "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
   },
@@ -14268,7 +14086,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 30,
+    "standardsGapPriorityScore": 45,
     "suggestedStandardId": "待PMO确认",
     "suggestedAction": "强控制任务缺标准，优先补齐"
   },
@@ -14317,7 +14135,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 30,
+    "standardsGapPriorityScore": 45,
     "suggestedStandardId": "待PMO确认",
     "suggestedAction": "强控制任务缺标准，优先补齐"
   },
@@ -14366,7 +14184,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 30,
+    "standardsGapPriorityScore": 45,
     "suggestedStandardId": "待PMO确认",
     "suggestedAction": "强控制任务缺标准，优先补齐"
   },
@@ -14415,7 +14233,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 30,
+    "standardsGapPriorityScore": 45,
     "suggestedStandardId": "待PMO确认",
     "suggestedAction": "强控制任务缺标准，优先补齐"
   },
@@ -14466,7 +14284,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 60,
+    "standardsGapPriorityScore": 75,
     "suggestedStandardId": "STD-ACC-001",
     "suggestedAction": "强控制任务缺标准，优先补齐"
   },
@@ -14560,7 +14378,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 30,
+    "standardsGapPriorityScore": 45,
     "suggestedStandardId": "待PMO确认",
     "suggestedAction": "强控制任务缺标准，优先补齐"
   },
@@ -14609,7 +14427,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 30,
+    "standardsGapPriorityScore": 45,
     "suggestedStandardId": "待PMO确认",
     "suggestedAction": "强控制任务缺标准，优先补齐"
   },
@@ -14658,7 +14476,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 30,
+    "standardsGapPriorityScore": 45,
     "suggestedStandardId": "待PMO确认",
     "suggestedAction": "强控制任务缺标准，优先补齐"
   },
@@ -14707,7 +14525,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 30,
+    "standardsGapPriorityScore": 45,
     "suggestedStandardId": "STD-DR-001",
     "suggestedAction": "强控制任务缺标准，优先补齐"
   },
@@ -14727,7 +14545,7 @@
     "risk": "中",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "运维监控与日志审计运维移交",
+    "deliverable": "运维监控与日志审计运维移交；3000配置版本、日志、备份恢复及运维责任交接",
     "deliverableId": "",
     "notes": "基础设施应早于MES测试环境搭建",
     "viewCategory": "Infra_Phased",
@@ -14741,24 +14559,20 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
+    "executionStandardId": "STD-GEN-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-5-8-5-20261027",
+    "completionCriteria": "前后端API、MySQL与历史兼容维护边界可查；回退软件不覆盖切换后业务写入，真实恢复有对应目标授权。",
+    "evidenceRequirements": "对应交付文件、来源版本、核查或评审记录、问题及决定记录；运行或业务验收结论须提供实际范围和有权确认。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "必须补",
-    "standardsGapReasons": [
-      "重点视图",
-      "有关联交付物",
-      "排期窗口内"
-    ],
-    "standardsGapPriorityScore": 30,
-    "suggestedStandardId": "待PMO确认",
-    "suggestedAction": "强控制任务缺标准，优先补齐"
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
+    "suggestedStandardId": "STD-GEN-001",
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 248,
@@ -15084,14 +14898,13 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "必须补",
+    "standardsGapBucket": "自动可补",
     "standardsGapReasons": [
-      "有关联交付物",
-      "排期窗口内"
+      "有关联交付物"
     ],
-    "standardsGapPriorityScore": 25,
+    "standardsGapPriorityScore": 10,
     "suggestedStandardId": "STD-ISSUE-001",
-    "suggestedAction": "强控制任务缺标准，优先补齐"
+    "suggestedAction": "建议绑定 STD-ISSUE-001"
   },
   {
     "id": 253,
@@ -15132,14 +14945,13 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "必须补",
+    "standardsGapBucket": "人工复核",
     "standardsGapReasons": [
-      "有关联交付物",
-      "排期窗口内"
+      "有关联交付物"
     ],
-    "standardsGapPriorityScore": 25,
-    "suggestedStandardId": "待PMO确认",
-    "suggestedAction": "强控制任务缺标准，优先补齐"
+    "standardsGapPriorityScore": 10,
+    "suggestedStandardId": "待人工确认",
+    "suggestedAction": "任务边界或交付物不清，人工复核后确认标准"
   },
   {
     "id": 254,
@@ -15324,13 +15136,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "人工复核",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
-    "suggestedStandardId": "待人工确认",
-    "suggestedAction": "任务边界或交付物不清，人工复核后确认标准"
+    "standardsGapPriorityScore": 25,
+    "suggestedStandardId": "待PMO确认",
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 258,
@@ -15348,9 +15161,9 @@
     "risk": "中",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "集成方案",
+    "deliverable": "集成方案；分对象标准来源映射与已纳入3000受控读取接入清单及相应验证",
     "deliverableId": "",
-    "notes": "按最终执行版统一口径：本期不使用“MDM平台联调”表述，改为主数据标准映射/一致性校验/规则接口校验。",
+    "notes": "保留主数据标准映射、一致性及规则接口校验；按已确认对象逐个纳入3000受控读取接入，实体维护分发能力分对象另定。",
     "viewCategory": "",
     "phaseGateNo": "",
     "isCriticalControl": "",
@@ -15362,23 +15175,20 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "2026-10-27补充要求：逐个接入按双方准备和对应授权办理；映射核验与真实接口调用证据分别记录。",
+    "executionStandardId": "STD-IF-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-6-1-7-20261027",
+    "completionCriteria": "保留主数据标准映射和一致性校验；按对象区分接口规格、实现、实际接入和验收；员工保持3000唯一维护，物料BOM等不默认迁入或自动分发，未纳入的消费系统不记已接入。",
+    "evidenceRequirements": "对应交付文件、来源版本、核查或评审记录、问题及决定记录；运行或业务验收结论须提供实际范围和有权确认。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "需拆分后补",
-    "standardsGapReasons": [
-      "有关联交付物",
-      "任务边界较宽"
-    ],
-    "standardsGapPriorityScore": 10,
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
     "suggestedStandardId": "STD-IF-001",
-    "suggestedAction": "先拆分 WBS，再按拆分后的执行任务绑定标准"
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 259,
@@ -15422,9 +15232,10 @@
     "standardsGapBucket": "需拆分后补",
     "standardsGapReasons": [
       "有关联交付物",
+      "排期窗口内",
       "任务边界较宽"
     ],
-    "standardsGapPriorityScore": 10,
+    "standardsGapPriorityScore": 25,
     "suggestedStandardId": "STD-IF-001",
     "suggestedAction": "先拆分 WBS，再按拆分后的执行任务绑定标准"
   },
@@ -15519,7 +15330,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 50,
+    "standardsGapPriorityScore": 65,
     "suggestedStandardId": "待PMO确认",
     "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
   },
@@ -15569,7 +15380,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 50,
+    "standardsGapPriorityScore": 65,
     "suggestedStandardId": "STD-REV-001",
     "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
   },
@@ -15664,7 +15475,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 50,
+    "standardsGapPriorityScore": 65,
     "suggestedStandardId": "待PMO确认",
     "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
   },
@@ -15879,9 +15690,9 @@
     "risk": "高",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "接口联调记录",
+    "deliverable": "接口联调记录；分对象标准来源映射与已纳入3000受控读取接入清单及相应验证",
     "deliverableId": "",
-    "notes": "按最终执行版统一口径：本期不使用“MDM平台联调”表述，改为主数据标准映射/一致性校验/规则接口校验。",
+    "notes": "保留主数据标准映射、一致性及规则接口校验；按已确认对象逐个纳入3000受控读取接入，实体维护分发能力分对象另定。",
     "viewCategory": "",
     "phaseGateNo": "",
     "isCriticalControl": "",
@@ -15893,25 +15704,20 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "2026-10-27补充要求：逐个接入按双方准备和对应授权办理；映射核验与真实接口调用证据分别记录。",
+    "executionStandardId": "STD-IF-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-6-4-1-20261027",
+    "completionCriteria": "保留主数据标准映射和一致性校验；按对象区分接口规格、实现、实际接入和验收；员工保持3000唯一维护，物料BOM等不默认迁入或自动分发，未纳入的消费系统不记已接入。",
+    "evidenceRequirements": "对应交付文件、来源版本、核查或评审记录、问题及决定记录；运行或业务验收结论须提供实际范围和有权确认。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "必须补",
-    "standardsGapReasons": [
-      "高风险",
-      "H5重点",
-      "有关联交付物",
-      "排期窗口内"
-    ],
-    "standardsGapPriorityScore": 50,
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
     "suggestedStandardId": "STD-IF-001",
-    "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 267,
@@ -16437,14 +16243,13 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "必须补",
+    "standardsGapBucket": "自动可补",
     "standardsGapReasons": [
-      "有关联交付物",
-      "排期窗口内"
+      "有关联交付物"
     ],
-    "standardsGapPriorityScore": 25,
+    "standardsGapPriorityScore": 10,
     "suggestedStandardId": "STD-INTV-001",
-    "suggestedAction": "强控制任务缺标准，优先补齐"
+    "suggestedAction": "建议绑定 STD-INTV-001"
   },
   {
     "id": 275,
@@ -16492,7 +16297,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 65,
+    "standardsGapPriorityScore": 50,
     "suggestedStandardId": "待PMO确认",
     "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
   },
@@ -16750,9 +16555,9 @@
     "risk": "中",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "接口方案",
+    "deliverable": "接口方案；分对象标准来源映射与已纳入3000受控读取接入清单及相应验证",
     "deliverableId": "",
-    "notes": "按最终执行版统一口径：本期不使用“MDM平台联调”表述，改为主数据标准映射/一致性校验/规则接口校验。",
+    "notes": "保留主数据标准映射、一致性及规则接口校验；按已确认对象逐个纳入3000受控读取接入，实体维护分发能力分对象另定。",
     "viewCategory": "",
     "phaseGateNo": "",
     "isCriticalControl": "",
@@ -16764,22 +16569,20 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "2026-10-27补充要求：逐个接入按双方准备和对应授权办理；映射核验与真实接口调用证据分别记录。",
+    "executionStandardId": "STD-IF-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-7-2-1-20261027",
+    "completionCriteria": "保留主数据标准映射和一致性校验；按对象区分接口规格、实现、实际接入和验收；员工保持3000唯一维护，物料BOM等不默认迁入或自动分发，未纳入的消费系统不记已接入。",
+    "evidenceRequirements": "对应交付文件、来源版本、核查或评审记录、问题及决定记录；运行或业务验收结论须提供实际范围和有权确认。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "自动可补",
-    "standardsGapReasons": [
-      "有关联交付物"
-    ],
-    "standardsGapPriorityScore": 10,
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
     "suggestedStandardId": "STD-IF-001",
-    "suggestedAction": "建议绑定 STD-IF-001"
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 281,
@@ -16820,13 +16623,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "自动可补",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
+    "standardsGapPriorityScore": 25,
     "suggestedStandardId": "STD-IF-001",
-    "suggestedAction": "建议绑定 STD-IF-001"
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 282,
@@ -16877,7 +16681,7 @@
       "排期窗口内",
       "任务边界较宽"
     ],
-    "standardsGapPriorityScore": 100,
+    "standardsGapPriorityScore": 115,
     "suggestedStandardId": "STD-REV-001",
     "suggestedAction": "先拆分 WBS，再按拆分后的执行任务绑定标准"
   },
@@ -16972,7 +16776,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 50,
+    "standardsGapPriorityScore": 65,
     "suggestedStandardId": "待PMO确认",
     "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
   },
@@ -17015,13 +16819,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "自动可补",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
+    "standardsGapPriorityScore": 25,
     "suggestedStandardId": "STD-PLAN-001",
-    "suggestedAction": "建议绑定 STD-PLAN-001"
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 285,
@@ -17062,13 +16867,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "自动可补",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
+    "standardsGapPriorityScore": 25,
     "suggestedStandardId": "STD-PLAN-001",
-    "suggestedAction": "建议绑定 STD-PLAN-001"
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 286,
@@ -17112,9 +16918,10 @@
     "standardsGapBucket": "需拆分后补",
     "standardsGapReasons": [
       "有关联交付物",
+      "排期窗口内",
       "任务边界较宽"
     ],
-    "standardsGapPriorityScore": 10,
+    "standardsGapPriorityScore": 25,
     "suggestedStandardId": "STD-IF-001",
     "suggestedAction": "先拆分 WBS，再按拆分后的执行任务绑定标准"
   },
@@ -17182,9 +16989,9 @@
     "risk": "中",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "联调记录",
+    "deliverable": "联调记录；分对象标准来源映射与已纳入3000受控读取接入清单及相应验证",
     "deliverableId": "",
-    "notes": "按最终执行版统一口径：本期不使用“MDM平台联调”表述，改为主数据标准映射/一致性校验/规则接口校验。",
+    "notes": "保留主数据标准映射、一致性及规则接口校验；按已确认对象逐个纳入3000受控读取接入，实体维护分发能力分对象另定。",
     "viewCategory": "",
     "phaseGateNo": "",
     "isCriticalControl": "",
@@ -17196,22 +17003,20 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "2026-10-27补充要求：逐个接入按双方准备和对应授权办理；映射核验与真实接口调用证据分别记录。",
+    "executionStandardId": "STD-IF-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-7-3-6-20261027",
+    "completionCriteria": "保留主数据标准映射和一致性校验；按对象区分接口规格、实现、实际接入和验收；员工保持3000唯一维护，物料BOM等不默认迁入或自动分发，未纳入的消费系统不记已接入。",
+    "evidenceRequirements": "对应交付文件、来源版本、核查或评审记录、问题及决定记录；运行或业务验收结论须提供实际范围和有权确认。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "自动可补",
-    "standardsGapReasons": [
-      "有关联交付物"
-    ],
-    "standardsGapPriorityScore": 10,
-    "suggestedStandardId": "STD-DATA-001",
-    "suggestedAction": "建议绑定 STD-DATA-001"
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
+    "suggestedStandardId": "STD-IF-001",
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 457,
@@ -17856,7 +17661,7 @@
       "排期窗口内",
       "任务边界较宽"
     ],
-    "standardsGapPriorityScore": 80,
+    "standardsGapPriorityScore": 65,
     "suggestedStandardId": "STD-GATE-001",
     "suggestedAction": "先拆分 WBS，再按拆分后的执行任务绑定标准"
   },
@@ -17907,7 +17712,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 65,
+    "standardsGapPriorityScore": 80,
     "suggestedStandardId": "STD-GATE-001",
     "suggestedAction": "阶段门任务缺标准，本周补齐后再进入放行评审"
   },
@@ -17958,7 +17763,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 65,
+    "standardsGapPriorityScore": 80,
     "suggestedStandardId": "STD-GATE-001",
     "suggestedAction": "阶段门任务缺标准，本周补齐后再进入放行评审"
   },
@@ -18010,7 +17815,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 105,
+    "standardsGapPriorityScore": 120,
     "suggestedStandardId": "STD-GATE-001",
     "suggestedAction": "阶段门任务缺标准，本周补齐后再进入放行评审"
   },
@@ -18060,7 +17865,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 45,
+    "standardsGapPriorityScore": 60,
     "suggestedStandardId": "STD-GATE-001",
     "suggestedAction": "阶段门任务缺标准，本周补齐后再进入放行评审"
   },
@@ -18301,7 +18106,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 70,
+    "standardsGapPriorityScore": 85,
     "suggestedStandardId": "STD-REV-001",
     "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
   },
@@ -18351,7 +18156,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 50,
+    "standardsGapPriorityScore": 65,
     "suggestedStandardId": "待PMO确认",
     "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
   },
@@ -18403,7 +18208,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 100,
+    "standardsGapPriorityScore": 115,
     "suggestedStandardId": "STD-REV-001",
     "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
   },
@@ -18468,7 +18273,7 @@
     "risk": "中",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "主数据接收、基础维护",
+    "deliverable": "主数据接收、基础维护；分对象标准来源映射与已纳入3000受控读取接入清单及相应验证",
     "deliverableId": "",
     "notes": "低代码平台作为流程导向业务系统通用底座，QMS仅作为首批场景之一；2027上半年完成基础能力",
     "viewCategory": "",
@@ -18482,22 +18287,20 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "2026-10-27补充要求：逐个接入按双方准备和对应授权办理；映射核验与真实接口调用证据分别记录。",
+    "executionStandardId": "STD-IF-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-8-6-1-20261027",
+    "completionCriteria": "保留主数据标准映射和一致性校验；按对象区分接口规格、实现、实际接入和验收；员工保持3000唯一维护，物料BOM等不默认迁入或自动分发，未纳入的消费系统不记已接入。",
+    "evidenceRequirements": "对应交付文件、来源版本、核查或评审记录、问题及决定记录；运行或业务验收结论须提供实际范围和有权确认。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "自动可补",
-    "standardsGapReasons": [
-      "有关联交付物"
-    ],
-    "standardsGapPriorityScore": 10,
-    "suggestedStandardId": "STD-REV-001",
-    "suggestedAction": "建议绑定 STD-REV-001"
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
+    "suggestedStandardId": "STD-IF-001",
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 311,
@@ -18538,13 +18341,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "自动可补",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
+    "standardsGapPriorityScore": 25,
     "suggestedStandardId": "STD-DATA-001",
-    "suggestedAction": "建议绑定 STD-DATA-001"
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 312,
@@ -18562,7 +18366,7 @@
     "risk": "中",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "主数据接收、基础维护",
+    "deliverable": "主数据接收、基础维护；分对象标准来源映射与已纳入3000受控读取接入清单及相应验证",
     "deliverableId": "",
     "notes": "低代码平台作为流程导向业务系统通用底座，QMS仅作为首批场景之一；2027上半年完成基础能力",
     "viewCategory": "",
@@ -18576,22 +18380,20 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "2026-10-27补充要求：逐个接入按双方准备和对应授权办理；映射核验与真实接口调用证据分别记录。",
+    "executionStandardId": "STD-IF-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-8-6-3-20261027",
+    "completionCriteria": "保留主数据标准映射和一致性校验；按对象区分接口规格、实现、实际接入和验收；员工保持3000唯一维护，物料BOM等不默认迁入或自动分发，未纳入的消费系统不记已接入。",
+    "evidenceRequirements": "对应交付文件、来源版本、核查或评审记录、问题及决定记录；运行或业务验收结论须提供实际范围和有权确认。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "自动可补",
-    "standardsGapReasons": [
-      "有关联交付物"
-    ],
-    "standardsGapPriorityScore": 10,
-    "suggestedStandardId": "STD-DATA-001",
-    "suggestedAction": "建议绑定 STD-DATA-001"
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
+    "suggestedStandardId": "STD-IF-001",
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 313,
@@ -18609,7 +18411,7 @@
     "risk": "中",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "主数据接收、基础维护",
+    "deliverable": "主数据接收、基础维护；分对象标准来源映射与已纳入3000受控读取接入清单及相应验证",
     "deliverableId": "",
     "notes": "低代码平台作为流程导向业务系统通用底座，QMS仅作为首批场景之一；2027上半年完成基础能力",
     "viewCategory": "",
@@ -18623,22 +18425,20 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "2026-10-27补充要求：逐个接入按双方准备和对应授权办理；映射核验与真实接口调用证据分别记录。",
+    "executionStandardId": "STD-IF-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-8-6-4-20261027",
+    "completionCriteria": "保留主数据标准映射和一致性校验；按对象区分接口规格、实现、实际接入和验收；员工保持3000唯一维护，物料BOM等不默认迁入或自动分发，未纳入的消费系统不记已接入。",
+    "evidenceRequirements": "对应交付文件、来源版本、核查或评审记录、问题及决定记录；运行或业务验收结论须提供实际范围和有权确认。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "自动可补",
-    "standardsGapReasons": [
-      "有关联交付物"
-    ],
-    "standardsGapPriorityScore": 10,
-    "suggestedStandardId": "STD-DATA-001",
-    "suggestedAction": "建议绑定 STD-DATA-001"
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
+    "suggestedStandardId": "STD-IF-001",
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 314,
@@ -18679,13 +18479,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "自动可补",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
+    "standardsGapPriorityScore": 25,
     "suggestedStandardId": "STD-DATA-001",
-    "suggestedAction": "建议绑定 STD-DATA-001"
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 315,
@@ -18778,7 +18579,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 50,
+    "standardsGapPriorityScore": 65,
     "suggestedStandardId": "STD-REV-001",
     "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
   },
@@ -18828,7 +18629,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 50,
+    "standardsGapPriorityScore": 65,
     "suggestedStandardId": "STD-BOM-001",
     "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
   },
@@ -18878,7 +18679,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 50,
+    "standardsGapPriorityScore": 65,
     "suggestedStandardId": "STD-BOM-001",
     "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
   },
@@ -18929,7 +18730,7 @@
       "排期窗口内",
       "任务边界较宽"
     ],
-    "standardsGapPriorityScore": 50,
+    "standardsGapPriorityScore": 65,
     "suggestedStandardId": "STD-BOM-001",
     "suggestedAction": "先拆分 WBS，再按拆分后的执行任务绑定标准"
   },
@@ -18979,7 +18780,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 50,
+    "standardsGapPriorityScore": 65,
     "suggestedStandardId": "STD-BOM-001",
     "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
   },
@@ -19067,13 +18868,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "自动可补",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
+    "standardsGapPriorityScore": 25,
     "suggestedStandardId": "STD-REV-001",
-    "suggestedAction": "建议绑定 STD-REV-001"
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 323,
@@ -19114,13 +18916,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "自动可补",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
+    "standardsGapPriorityScore": 25,
     "suggestedStandardId": "STD-PLAN-001",
-    "suggestedAction": "建议绑定 STD-PLAN-001"
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 324,
@@ -19161,13 +18964,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "自动可补",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
+    "standardsGapPriorityScore": 25,
     "suggestedStandardId": "STD-PLAN-001",
-    "suggestedAction": "建议绑定 STD-PLAN-001"
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 325,
@@ -19208,13 +19012,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "自动可补",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
+    "standardsGapPriorityScore": 25,
     "suggestedStandardId": "STD-PLAN-001",
-    "suggestedAction": "建议绑定 STD-PLAN-001"
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 326,
@@ -19255,13 +19060,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "自动可补",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
+    "standardsGapPriorityScore": 25,
     "suggestedStandardId": "STD-PLAN-001",
-    "suggestedAction": "建议绑定 STD-PLAN-001"
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 327,
@@ -19347,13 +19153,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "自动可补",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
+    "standardsGapPriorityScore": 25,
     "suggestedStandardId": "STD-REV-001",
-    "suggestedAction": "建议绑定 STD-REV-001"
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 329,
@@ -19394,13 +19201,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "人工复核",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
-    "suggestedStandardId": "待人工确认",
-    "suggestedAction": "任务边界或交付物不清，人工复核后确认标准"
+    "standardsGapPriorityScore": 25,
+    "suggestedStandardId": "待PMO确认",
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 330,
@@ -19441,13 +19249,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "人工复核",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
-    "suggestedStandardId": "待人工确认",
-    "suggestedAction": "任务边界或交付物不清，人工复核后确认标准"
+    "standardsGapPriorityScore": 25,
+    "suggestedStandardId": "待PMO确认",
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 331,
@@ -19491,9 +19300,10 @@
     "standardsGapBucket": "需拆分后补",
     "standardsGapReasons": [
       "有关联交付物",
+      "排期窗口内",
       "任务边界较宽"
     ],
-    "standardsGapPriorityScore": 10,
+    "standardsGapPriorityScore": 25,
     "suggestedStandardId": "STD-UAT-001",
     "suggestedAction": "先拆分 WBS，再按拆分后的执行任务绑定标准"
   },
@@ -19536,13 +19346,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "人工复核",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
-    "suggestedStandardId": "待人工确认",
-    "suggestedAction": "任务边界或交付物不清，人工复核后确认标准"
+    "standardsGapPriorityScore": 25,
+    "suggestedStandardId": "待PMO确认",
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 333,
@@ -19628,13 +19439,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "自动可补",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
+    "standardsGapPriorityScore": 25,
     "suggestedStandardId": "STD-REV-001",
-    "suggestedAction": "建议绑定 STD-REV-001"
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 335,
@@ -19675,13 +19487,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "人工复核",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
-    "suggestedStandardId": "待人工确认",
-    "suggestedAction": "任务边界或交付物不清，人工复核后确认标准"
+    "standardsGapPriorityScore": 25,
+    "suggestedStandardId": "待PMO确认",
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 336,
@@ -19722,13 +19535,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "人工复核",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
-    "suggestedStandardId": "待人工确认",
-    "suggestedAction": "任务边界或交付物不清，人工复核后确认标准"
+    "standardsGapPriorityScore": 25,
+    "suggestedStandardId": "待PMO确认",
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 337,
@@ -19769,13 +19583,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "自动可补",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
+    "standardsGapPriorityScore": 25,
     "suggestedStandardId": "STD-UAT-001",
-    "suggestedAction": "建议绑定 STD-UAT-001"
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 338,
@@ -19816,13 +19631,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "人工复核",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
-    "suggestedStandardId": "待人工确认",
-    "suggestedAction": "任务边界或交付物不清，人工复核后确认标准"
+    "standardsGapPriorityScore": 25,
+    "suggestedStandardId": "待PMO确认",
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 339,
@@ -19908,13 +19724,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "自动可补",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
+    "standardsGapPriorityScore": 25,
     "suggestedStandardId": "STD-REV-001",
-    "suggestedAction": "建议绑定 STD-REV-001"
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 341,
@@ -19955,13 +19772,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "自动可补",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
+    "standardsGapPriorityScore": 25,
     "suggestedStandardId": "STD-RES-001",
-    "suggestedAction": "建议绑定 STD-RES-001"
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 342,
@@ -20002,13 +19820,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "自动可补",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
+    "standardsGapPriorityScore": 25,
     "suggestedStandardId": "STD-RES-001",
-    "suggestedAction": "建议绑定 STD-RES-001"
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 343,
@@ -20049,13 +19868,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "自动可补",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
+    "standardsGapPriorityScore": 25,
     "suggestedStandardId": "STD-RES-001",
-    "suggestedAction": "建议绑定 STD-RES-001"
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 344,
@@ -20188,13 +20008,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "自动可补",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
+    "standardsGapPriorityScore": 25,
     "suggestedStandardId": "STD-REV-001",
-    "suggestedAction": "建议绑定 STD-REV-001"
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 347,
@@ -20235,13 +20056,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "人工复核",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
-    "suggestedStandardId": "待人工确认",
-    "suggestedAction": "任务边界或交付物不清，人工复核后确认标准"
+    "standardsGapPriorityScore": 25,
+    "suggestedStandardId": "待PMO确认",
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 348,
@@ -20282,13 +20104,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "人工复核",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
-    "suggestedStandardId": "待人工确认",
-    "suggestedAction": "任务边界或交付物不清，人工复核后确认标准"
+    "standardsGapPriorityScore": 25,
+    "suggestedStandardId": "待PMO确认",
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 349,
@@ -20329,13 +20152,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "自动可补",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
+    "standardsGapPriorityScore": 25,
     "suggestedStandardId": "STD-UAT-001",
-    "suggestedAction": "建议绑定 STD-UAT-001"
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 350,
@@ -20468,13 +20292,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "自动可补",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
+    "standardsGapPriorityScore": 25,
     "suggestedStandardId": "STD-REV-001",
-    "suggestedAction": "建议绑定 STD-REV-001"
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 353,
@@ -20515,13 +20340,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "人工复核",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
-    "suggestedStandardId": "待人工确认",
-    "suggestedAction": "任务边界或交付物不清，人工复核后确认标准"
+    "standardsGapPriorityScore": 25,
+    "suggestedStandardId": "待PMO确认",
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 354,
@@ -20562,13 +20388,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "人工复核",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
-    "suggestedStandardId": "待人工确认",
-    "suggestedAction": "任务边界或交付物不清，人工复核后确认标准"
+    "standardsGapPriorityScore": 25,
+    "suggestedStandardId": "待PMO确认",
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 355,
@@ -20755,7 +20582,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 50,
+    "standardsGapPriorityScore": 65,
     "suggestedStandardId": "STD-REV-001",
     "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
   },
@@ -20805,7 +20632,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 50,
+    "standardsGapPriorityScore": 65,
     "suggestedStandardId": "STD-IF-001",
     "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
   },
@@ -20856,7 +20683,7 @@
       "排期窗口内",
       "任务边界较宽"
     ],
-    "standardsGapPriorityScore": 50,
+    "standardsGapPriorityScore": 65,
     "suggestedStandardId": "STD-IF-001",
     "suggestedAction": "先拆分 WBS，再按拆分后的执行任务绑定标准"
   },
@@ -21051,7 +20878,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 50,
+    "standardsGapPriorityScore": 65,
     "suggestedStandardId": "STD-REV-001",
     "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
   },
@@ -21101,7 +20928,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 50,
+    "standardsGapPriorityScore": 65,
     "suggestedStandardId": "STD-IF-001",
     "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
   },
@@ -21152,7 +20979,7 @@
       "排期窗口内",
       "任务边界较宽"
     ],
-    "standardsGapPriorityScore": 50,
+    "standardsGapPriorityScore": 65,
     "suggestedStandardId": "STD-IF-001",
     "suggestedAction": "先拆分 WBS，再按拆分后的执行任务绑定标准"
   },
@@ -21347,7 +21174,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 50,
+    "standardsGapPriorityScore": 65,
     "suggestedStandardId": "STD-REV-001",
     "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
   },
@@ -21397,7 +21224,7 @@
       "有关联交付物",
       "排期窗口内"
     ],
-    "standardsGapPriorityScore": 50,
+    "standardsGapPriorityScore": 65,
     "suggestedStandardId": "待PMO确认",
     "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
   },
@@ -21687,13 +21514,14 @@
     "standardGapFlag": "",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "自动可补",
+    "standardsGapBucket": "必须补",
     "standardsGapReasons": [
-      "有关联交付物"
+      "有关联交付物",
+      "排期窗口内"
     ],
-    "standardsGapPriorityScore": 10,
+    "standardsGapPriorityScore": 25,
     "suggestedStandardId": "STD-REV-001",
-    "suggestedAction": "建议绑定 STD-REV-001"
+    "suggestedAction": "强控制任务缺标准，优先补齐"
   },
   {
     "id": 378,
@@ -22541,7 +22369,7 @@
     "risk": "高",
     "milestone": "是",
     "milestoneOverrideReason": "",
-    "deliverable": "主数据V1.1、交底签收单",
+    "deliverable": "主数据V1.1、交底签收单；本次联调对象的标准、字段、标识及来源版本冻结证据",
     "deliverableId": "",
     "notes": "9.0.8未通过前不得进入跨系统业务场景联调。",
     "viewCategory": "G9_Ready",
@@ -22555,28 +22383,20 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "信息化项目组统筹联调启动条件核验；对应工作组提供招采、环境、主数据、接口、规则中心、备份和冒烟测试证据，项目决策组按阶段门口径放行。",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "信息化项目组统筹联调启动条件核验；对应工作组提供招采、环境、主数据、接口、规则中心、备份和冒烟测试证据，项目决策组按阶段门口径放行；2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
+    "executionStandardId": "STD-G9-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-9-0-3-20261027",
+    "completionCriteria": "主数据标准版本与流程格式及术语地图定义版本分清；仅冻结本次联调所需对象，例外及影响可查。",
+    "evidenceRequirements": "对应交付文件、来源版本、核查或评审记录、问题及决定记录；运行或业务验收结论须提供实际范围和有权确认。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "必须补",
-    "standardsGapReasons": [
-      "高风险",
-      "关键控制",
-      "阶段门",
-      "重点视图",
-      "H5重点",
-      "有关联交付物",
-      "排期窗口内"
-    ],
-    "standardsGapPriorityScore": 125,
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
     "suggestedStandardId": "STD-G9-001",
-    "suggestedAction": "阶段门任务缺标准，本周补齐后再进入放行评审"
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 396,
@@ -22594,7 +22414,7 @@
     "risk": "高",
     "milestone": "是",
     "milestoneOverrideReason": "",
-    "deliverable": "接口规格冻结单",
+    "deliverable": "接口规格冻结单；本次联调接口规格、接入方、权限和版本锁定记录",
     "deliverableId": "",
     "notes": "9.0.8未通过前不得进入跨系统业务场景联调。",
     "viewCategory": "G9_Ready",
@@ -22608,32 +22428,25 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "信息化项目组统筹联调启动条件核验；对应工作组提供招采、环境、主数据、接口、规则中心、备份和冒烟测试证据，项目决策组按阶段门口径放行。",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "信息化项目组统筹联调启动条件核验；对应工作组提供招采、环境、主数据、接口、规则中心、备份和冒烟测试证据，项目决策组按阶段门口径放行；2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
+    "executionStandardId": "STD-G9-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-9-0-4-20261027",
+    "completionCriteria": "明确读取及维护边界、错误处理和兼容；未确认实体能力不作为已实现接口冻结。",
+    "evidenceRequirements": "对应交付文件、来源版本、核查或评审记录、问题及决定记录；运行或业务验收结论须提供实际范围和有权确认。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "必须补",
-    "standardsGapReasons": [
-      "高风险",
-      "关键控制",
-      "重点视图",
-      "H5重点",
-      "有关联交付物",
-      "排期窗口内"
-    ],
-    "standardsGapPriorityScore": 100,
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
     "suggestedStandardId": "STD-G9-001",
-    "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 397,
     "wbs": "9.0.5",
-    "name": "集成过渡期规则中心可用确认",
+    "name": "本期治理规则及已纳入接口就绪确认",
     "type": "验收",
     "duration": "3工作日",
     "start": "2027-05-05",
@@ -22646,43 +22459,34 @@
     "risk": "高",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "规则中心可用性确认单",
+    "deliverable": "本期治理规则及已纳入接口就绪确认单",
     "deliverableId": "",
     "notes": "9.0.8未通过前不得进入跨系统业务场景联调。",
     "viewCategory": "G9_Ready",
     "phaseGateNo": "",
     "isCriticalControl": "是",
-    "versionControlObject": "",
+    "versionControlObject": "本次联调对象标准、规则、来源映射及接口版本",
     "changeLevel": "",
-    "integrationStartCondition": "规则中心",
+    "integrationStartCondition": "本期对象治理规则及已纳入接口就绪",
     "isH5Focus": "是",
     "phaseGateName": "",
-    "releaseRule": "",
+    "releaseRule": "本期对象来源、规则、接口、权限及目标证据不齐不得按该范围放行；不要求未来全域主数据完成。",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "信息化项目组统筹联调启动条件核验；对应工作组提供招采、环境、主数据、接口、规则中心、备份和冒烟测试证据，项目决策组按阶段门口径放行。",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "信息化项目组统筹联调启动条件核验；对应工作组提供招采、环境、主数据、接口、规则中心、备份和冒烟测试证据，项目决策组按阶段门口径放行；2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
+    "executionStandardId": "STD-G9-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-9-0-5-20261027",
+    "completionCriteria": "承接4.8.2具体对象的规则接口就绪结果，并核实目标权限、运行版本及恢复条件；不另建重复规则中心，不以WBS4摘要或未来全域主数据完成替代。",
+    "evidenceRequirements": "对应交付文件、来源版本、核查或评审记录、问题及决定记录；运行或业务验收结论须提供实际范围和有权确认。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "需拆分后补",
-    "standardsGapReasons": [
-      "高风险",
-      "关键控制",
-      "重点视图",
-      "H5重点",
-      "强控制任务类型",
-      "有关联交付物",
-      "排期窗口内",
-      "任务边界较宽"
-    ],
-    "standardsGapPriorityScore": 120,
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
     "suggestedStandardId": "STD-G9-001",
-    "suggestedAction": "先拆分 WBS，再按拆分后的执行任务绑定标准"
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 398,
@@ -22806,7 +22610,7 @@
     "risk": "高",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "联调启动评审纪要",
+    "deliverable": "联调启动评审纪要；含治理规则接口、质量机制及指标基线证据的联调启动评审",
     "deliverableId": "",
     "notes": "9.0.8未通过前不得进入跨系统业务场景联调。",
     "viewCategory": "G9_Ready",
@@ -22814,34 +22618,26 @@
     "isCriticalControl": "是",
     "versionControlObject": "",
     "changeLevel": "",
-    "integrationStartCondition": "总包",
+    "integrationStartCondition": "总包；按9.0.1至9.0.7核对本期对象，质量机制及基线准备同步核实",
     "isH5Focus": "是",
     "phaseGateName": "",
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "信息化项目组统筹联调启动条件核验；对应工作组提供招采、环境、主数据、接口、规则中心、备份和冒烟测试证据，项目决策组按阶段门口径放行。",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "信息化项目组统筹联调启动条件核验；对应工作组提供招采、环境、主数据、接口、规则中心、备份和冒烟测试证据，项目决策组按阶段门口径放行；2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
+    "executionStandardId": "STD-G9-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-9-0-8-20261027",
+    "completionCriteria": "既有9.0.1至9.0.7逐项核实，本次对象来源规则接口准备、权限恢复及必要机制基线有证据；未满足前不得按相应范围放行。",
+    "evidenceRequirements": "对应交付文件、来源版本、核查或评审记录、问题及决定记录；运行或业务验收结论须提供实际范围和有权确认。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "必须补",
-    "standardsGapReasons": [
-      "高风险",
-      "关键控制",
-      "重点视图",
-      "H5重点",
-      "强控制任务类型",
-      "有关联交付物",
-      "排期窗口内"
-    ],
-    "standardsGapPriorityScore": 120,
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
     "suggestedStandardId": "STD-G9-001",
-    "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 461,
@@ -22904,9 +22700,9 @@
     "risk": "高",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "联调报告",
+    "deliverable": "联调报告；分对象标准来源映射与已纳入3000受控读取接入清单及相应验证",
     "deliverableId": "",
-    "notes": "按最终执行版统一口径：本期不使用“MDM平台联调”表述，改为主数据标准映射/一致性校验/规则接口校验。",
+    "notes": "保留主数据标准映射、一致性及规则接口校验；按已确认对象逐个纳入3000受控读取接入，实体维护分发能力分对象另定。",
     "viewCategory": "G9_Ready",
     "phaseGateNo": "",
     "isCriticalControl": "",
@@ -22918,26 +22714,20 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "信息化项目组统筹联调节奏和问题台账；对应系统工作组负责本系统接口场景、供应商负责接口适配，MDM工作组负责主数据口径，数据质量工作组按复核口径抽审。",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "信息化项目组统筹联调节奏和问题台账；对应系统工作组负责本系统接口场景、供应商负责接口适配，MDM工作组负责主数据口径，数据质量工作组按复核口径抽审；2026-10-27补充要求：逐个接入按双方准备和对应授权办理；映射核验与真实接口调用证据分别记录。",
+    "executionStandardId": "STD-IF-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-9-1-1-20261027",
+    "completionCriteria": "保留主数据标准映射和一致性校验；按对象区分接口规格、实现、实际接入和验收；员工保持3000唯一维护，物料BOM等不默认迁入或自动分发，未纳入的消费系统不记已接入。",
+    "evidenceRequirements": "对应交付文件、来源版本、核查或评审记录、问题及决定记录；运行或业务验收结论须提供实际范围和有权确认。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "必须补",
-    "standardsGapReasons": [
-      "高风险",
-      "重点视图",
-      "H5重点",
-      "有关联交付物",
-      "排期窗口内"
-    ],
-    "standardsGapPriorityScore": 70,
-    "suggestedStandardId": "STD-G9-001",
-    "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
+    "suggestedStandardId": "STD-IF-001",
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 402,
@@ -22955,9 +22745,9 @@
     "risk": "高",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "联调报告",
+    "deliverable": "联调报告；分对象标准来源映射与已纳入3000受控读取接入清单及相应验证",
     "deliverableId": "",
-    "notes": "按最终执行版统一口径：本期不使用“MDM平台联调”表述，改为主数据标准映射/一致性校验/规则接口校验。",
+    "notes": "保留主数据标准映射、一致性及规则接口校验；按已确认对象逐个纳入3000受控读取接入，实体维护分发能力分对象另定。",
     "viewCategory": "G9_Ready",
     "phaseGateNo": "",
     "isCriticalControl": "",
@@ -22969,26 +22759,20 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "信息化项目组统筹联调节奏和问题台账；对应系统工作组负责本系统接口场景、供应商负责接口适配，MDM工作组负责主数据口径，数据质量工作组按复核口径抽审。",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "信息化项目组统筹联调节奏和问题台账；对应系统工作组负责本系统接口场景、供应商负责接口适配，MDM工作组负责主数据口径，数据质量工作组按复核口径抽审；2026-10-27补充要求：逐个接入按双方准备和对应授权办理；映射核验与真实接口调用证据分别记录。",
+    "executionStandardId": "STD-IF-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-9-1-2-20261027",
+    "completionCriteria": "保留主数据标准映射和一致性校验；按对象区分接口规格、实现、实际接入和验收；员工保持3000唯一维护，物料BOM等不默认迁入或自动分发，未纳入的消费系统不记已接入。",
+    "evidenceRequirements": "对应交付文件、来源版本、核查或评审记录、问题及决定记录；运行或业务验收结论须提供实际范围和有权确认。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "必须补",
-    "standardsGapReasons": [
-      "高风险",
-      "重点视图",
-      "H5重点",
-      "有关联交付物",
-      "排期窗口内"
-    ],
-    "standardsGapPriorityScore": 70,
-    "suggestedStandardId": "STD-G9-001",
-    "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
+    "suggestedStandardId": "STD-IF-001",
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 403,
@@ -23006,9 +22790,9 @@
     "risk": "高",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "联调报告",
+    "deliverable": "联调报告；分对象标准来源映射与已纳入3000受控读取接入清单及相应验证",
     "deliverableId": "",
-    "notes": "按最终执行版统一口径：本期不使用“MDM平台联调”表述，改为主数据标准映射/一致性校验/规则接口校验。",
+    "notes": "保留主数据标准映射、一致性及规则接口校验；按已确认对象逐个纳入3000受控读取接入，实体维护分发能力分对象另定。",
     "viewCategory": "G9_Ready",
     "phaseGateNo": "",
     "isCriticalControl": "",
@@ -23020,26 +22804,20 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "信息化项目组统筹联调节奏和问题台账；对应系统工作组负责本系统接口场景、供应商负责接口适配，MDM工作组负责主数据口径，数据质量工作组按复核口径抽审。",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "信息化项目组统筹联调节奏和问题台账；对应系统工作组负责本系统接口场景、供应商负责接口适配，MDM工作组负责主数据口径，数据质量工作组按复核口径抽审；2026-10-27补充要求：逐个接入按双方准备和对应授权办理；映射核验与真实接口调用证据分别记录。",
+    "executionStandardId": "STD-IF-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-9-1-3-20261027",
+    "completionCriteria": "保留主数据标准映射和一致性校验；按对象区分接口规格、实现、实际接入和验收；员工保持3000唯一维护，物料BOM等不默认迁入或自动分发，未纳入的消费系统不记已接入。",
+    "evidenceRequirements": "对应交付文件、来源版本、核查或评审记录、问题及决定记录；运行或业务验收结论须提供实际范围和有权确认。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "必须补",
-    "standardsGapReasons": [
-      "高风险",
-      "重点视图",
-      "H5重点",
-      "有关联交付物",
-      "排期窗口内"
-    ],
-    "standardsGapPriorityScore": 70,
-    "suggestedStandardId": "STD-G9-001",
-    "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
+    "suggestedStandardId": "STD-IF-001",
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 404,
@@ -23882,7 +23660,7 @@
   {
     "id": 418,
     "wbs": "9.4.1",
-    "name": "数据治理常态化机制设计",
+    "name": "数据治理及战略评估机制固化",
     "type": "管理",
     "duration": "10工作日",
     "start": "2028-01-19",
@@ -23895,7 +23673,7 @@
     "risk": "中",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "机制文件",
+    "deliverable": "机制文件；既有质量治理机制固化版、战略实施报告与评估修订机制及持续运行安排",
     "deliverableId": "",
     "notes": "重点：联调、常态化治理、生产现场推广",
     "viewCategory": "G9_Ready",
@@ -23909,29 +23687,25 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "信息化项目组统筹机制固化；MDM工作组维护主数据规则版本，数据质量工作组负责月度审计、复核和闭环跟踪。",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "信息化项目组统筹机制固化；MDM工作组维护主数据规则版本，数据质量工作组负责月度审计、复核和闭环跟踪；2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
+    "executionStandardId": "STD-GEN-001;STD-DSTRAT-EVAL-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-9-4-1-20261027",
+    "completionCriteria": "核对首批使用前机制和基线准备，结合实际问题固化；明确职责周期及评估修订流程，不将收尾时段作为首次建立机制或启动采集的时间。",
+    "evidenceRequirements": "对应交付文件、来源版本、核查或评审记录、问题及决定记录；运行或业务验收结论须提供实际范围和有权确认。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "必须补",
-    "standardsGapReasons": [
-      "重点视图",
-      "有关联交付物",
-      "排期窗口内"
-    ],
-    "standardsGapPriorityScore": 30,
-    "suggestedStandardId": "STD-G9-001",
-    "suggestedAction": "强控制任务缺标准，优先补齐"
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
+    "suggestedStandardId": "STD-GEN-001;STD-DSTRAT-EVAL-001",
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 419,
     "wbs": "9.4.2",
-    "name": "月度数据质量审计机制运行",
+    "name": "月度质量审计与战略实施记录汇总复核",
     "type": "管理",
     "duration": "10工作日",
     "start": "2028-02-02",
@@ -23944,7 +23718,7 @@
     "risk": "中",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "质量审计报告",
+    "deliverable": "质量审计报告；实际周期质量审计与战略工作报告汇总、问题复核和计划调整记录",
     "deliverableId": "",
     "notes": "重点：联调、常态化治理、生产现场推广",
     "viewCategory": "G9_Ready",
@@ -23958,24 +23732,20 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "信息化项目组统筹机制固化；MDM工作组维护主数据规则版本，数据质量工作组负责月度审计、复核和闭环跟踪。",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "信息化项目组统筹机制固化；MDM工作组维护主数据规则版本，数据质量工作组负责月度审计、复核和闭环跟踪；2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
+    "executionStandardId": "STD-GEN-001;STD-DSTRAT-EVAL-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-9-4-2-20261027",
+    "completionCriteria": "实际使用后依有效机制持续记录，本节点汇总复核既有周期；证据按时间对象版本追溯，不以收尾工期证明长期运行，不补造历史基线或报告。",
+    "evidenceRequirements": "对应交付文件、来源版本、核查或评审记录、问题及决定记录；运行或业务验收结论须提供实际范围和有权确认。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "必须补",
-    "standardsGapReasons": [
-      "重点视图",
-      "有关联交付物",
-      "排期窗口内"
-    ],
-    "standardsGapPriorityScore": 30,
-    "suggestedStandardId": "STD-G9-001",
-    "suggestedAction": "强控制任务缺标准，优先补齐"
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
+    "suggestedStandardId": "STD-GEN-001;STD-DSTRAT-EVAL-001",
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 420,
@@ -23993,7 +23763,7 @@
     "risk": "高",
     "milestone": "是",
     "milestoneOverrideReason": "",
-    "deliverable": "机制验收报告",
+    "deliverable": "机制验收报告；质量治理及战略报告评估的机制验收和覆盖差距",
     "deliverableId": "",
     "notes": "重点：联调、常态化治理、生产现场推广",
     "viewCategory": "Gate",
@@ -24007,27 +23777,20 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "信息化项目组统筹机制固化；MDM工作组维护主数据规则版本，数据质量工作组负责月度审计、复核和闭环跟踪。",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "信息化项目组统筹机制固化；MDM工作组维护主数据规则版本，数据质量工作组负责月度审计、复核和闭环跟踪；2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
+    "executionStandardId": "STD-ACC-001;STD-DSTRAT-EVAL-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-9-4-3-20261027",
+    "completionCriteria": "机制有效版本、实际周期记录、差异根因、问题处理或修订决定相互对应；未到评价期和未开展活动明确状态，实际证据由G35归集，不以模板代替。",
+    "evidenceRequirements": "对应交付文件、来源版本、核查或评审记录、问题及决定记录；运行或业务验收结论须提供实际范围和有权确认。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "必须补",
-    "standardsGapReasons": [
-      "高风险",
-      "关键控制",
-      "H5重点",
-      "强控制任务类型",
-      "有关联交付物",
-      "排期窗口内"
-    ],
-    "standardsGapPriorityScore": 100,
-    "suggestedStandardId": "STD-ACC-001",
-    "suggestedAction": "高风险任务缺标准，PMO 本周补齐"
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
+    "suggestedStandardId": "STD-ACC-001;STD-DSTRAT-EVAL-001",
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 421,
@@ -24559,7 +24322,7 @@
   {
     "id": 430,
     "wbs": "10.2.1",
-    "name": "驾驶舱指标体系深化",
+    "name": "驾驶舱指标体系深化与基线复核",
     "type": "驾驶舱",
     "duration": "10工作日",
     "start": "2027-10-09",
@@ -24572,7 +24335,7 @@
     "risk": "中",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "指标体系",
+    "deliverable": "指标体系；公司业务结果、数据治理及平台交付指标口径和首批基线复核",
     "deliverableId": "",
     "notes": "2026先支撑数据治理沉淀和知识库，2027深化数字员工",
     "viewCategory": "",
@@ -24586,22 +24349,20 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
+    "executionStandardId": "STD-GEN-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-10-2-1-20261027",
+    "completionCriteria": "复用首批相应场景使用前的口径与可采集性准备；来源、范围、计算和比较限制明确；指标深化和驾驶舱页面不作为此前采集启动条件。",
+    "evidenceRequirements": "对应交付文件、来源版本、核查或评审记录、问题及决定记录；运行或业务验收结论须提供实际范围和有权确认。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "人工复核",
-    "standardsGapReasons": [
-      "有关联交付物"
-    ],
-    "standardsGapPriorityScore": 10,
-    "suggestedStandardId": "待人工确认",
-    "suggestedAction": "任务边界或交付物不清，人工复核后确认标准"
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
+    "suggestedStandardId": "STD-GEN-001",
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 431,
@@ -24711,7 +24472,7 @@
     "risk": "高",
     "milestone": "否",
     "milestoneOverrideReason": "",
-    "deliverable": "总体验收材料",
+    "deliverable": "总体验收材料；3000能力与公司覆盖、战略实施评估、运行证据及本轮仅提示缺口的总体验收材料",
     "deliverableId": "",
     "notes": "2026先支撑数据治理沉淀和知识库，2027深化数字员工",
     "viewCategory": "Risk_Control",
@@ -24725,29 +24486,20 @@
     "releaseRule": "",
     "contractPaymentControl": "作为验收或付款资料的一部分，需保留评审、验收或问题闭环证据。",
     "h5DiagnosticRule": "",
-    "executionNote": "",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
+    "executionStandardId": "STD-ACC-001;STD-L3-SCOPE-001;STD-DSTRAT-EVAL-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-10-3-1-20261027",
+    "completionCriteria": "实际证据可追溯目标版本、时间、业务范围和有权主体；区分四类状态与公司阶段覆盖；内部缩减范围不记完整三级达标，仍保留四项标准缺口。",
+    "evidenceRequirements": "对应交付文件、来源版本、核查或评审记录、问题及决定记录；运行或业务验收结论须提供实际范围和有权确认。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "需拆分后补",
-    "standardsGapReasons": [
-      "高风险",
-      "关键控制",
-      "重点视图",
-      "H5重点",
-      "强控制任务类型",
-      "有关联交付物",
-      "排期窗口内",
-      "任务边界较宽"
-    ],
-    "standardsGapPriorityScore": 120,
-    "suggestedStandardId": "STD-PAY-001",
-    "suggestedAction": "先拆分 WBS，再按拆分后的执行任务绑定标准"
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
+    "suggestedStandardId": "STD-ACC-001;STD-L3-SCOPE-001;STD-DSTRAT-EVAL-001",
+    "suggestedAction": "已绑定执行标准"
   },
   {
     "id": 433,
@@ -24819,7 +24571,7 @@
     "risk": "高",
     "milestone": "是",
     "milestoneOverrideReason": "",
-    "deliverable": "总体验收报告",
+    "deliverable": "总体验收报告；分阶段公司业务及3000平台总体验收结论、未覆盖及剩余缺口",
     "deliverableId": "",
     "notes": "2026先支撑数据治理沉淀和知识库，2027深化数字员工",
     "viewCategory": "Gate",
@@ -24833,27 +24585,19 @@
     "releaseRule": "",
     "contractPaymentControl": "作为验收或付款资料的一部分，需保留评审、验收或问题闭环证据。",
     "h5DiagnosticRule": "",
-    "executionNote": "",
-    "executionStandardId": "",
-    "inputMaterialList": "",
-    "checklistId": "",
-    "completionCriteria": "",
-    "evidenceRequirements": "",
-    "standardGapFlag": "",
+    "executionNote": "2026-10-27补充要求：按本任务交付物及完成判定核实现状和剩余工作；新增要求不据原排期视为已完成，实际状态以对应证据确认。",
+    "executionStandardId": "STD-ACC-001;STD-L3-SCOPE-001",
+    "inputMaterialList": "已确认业务范围、对应前置材料及现有有效版本；补充要求按2026-10-27基准核实现状",
+    "checklistId": "CHK-WBS-10-3-3-20261027",
+    "completionCriteria": "按已确认范围逐项评价实际交付和运行证据；未验收部分明确保留；战略发布、软件发布或试点完成不能单独代表公司整体成熟度或第三方三级通过。",
+    "evidenceRequirements": "对应交付文件、来源版本、核查或评审记录、问题及决定记录；运行或业务验收结论须提供实际范围和有权确认。",
+    "standardGapFlag": "否",
     "standardDeferredReason": "",
     "requiresExecutionStandard": true,
-    "standardsGapBucket": "需拆分后补",
-    "standardsGapReasons": [
-      "高风险",
-      "关键控制",
-      "H5重点",
-      "强控制任务类型",
-      "有关联交付物",
-      "排期窗口内",
-      "任务边界较宽"
-    ],
-    "standardsGapPriorityScore": 100,
-    "suggestedStandardId": "STD-PAY-001",
-    "suggestedAction": "先拆分 WBS，再按拆分后的执行任务绑定标准"
+    "standardsGapBucket": "",
+    "standardsGapReasons": [],
+    "standardsGapPriorityScore": 0,
+    "suggestedStandardId": "STD-ACC-001;STD-L3-SCOPE-001",
+    "suggestedAction": "已绑定执行标准"
   }
 ]

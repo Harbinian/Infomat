@@ -14,6 +14,7 @@ import { spawn } from 'node:child_process';
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { ReplyDeliveryError, sendAnswer } from './slack-replies.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DEFAULT_WORKDIR = path.resolve(ROOT, '..', '..');
@@ -257,21 +258,6 @@ async function ask(question, threadKey, profile) {
 
 // ---------------------------------------------------------------- Slack 辅助
 
-/** Slack 单条消息约 4000 字符上限，留出余量后按行切分。 */
-function chunkText(text, limit = 3800) {
-  if (text.length <= limit) return [text];
-  const chunks = [];
-  let rest = text;
-  while (rest.length > limit) {
-    let cut = rest.lastIndexOf('\n', limit);
-    if (cut < limit / 2) cut = limit;
-    chunks.push(rest.slice(0, cut));
-    rest = rest.slice(cut).replace(/^\n+/, '');
-  }
-  if (rest) chunks.push(rest);
-  return chunks;
-}
-
 function isAllowed(userId, channelId) {
   if (cfg.allowedUsers.length && !cfg.allowedUsers.includes(userId)) return false;
   if (cfg.allowedChannels.length && !cfg.allowedChannels.includes(channelId)) return false;
@@ -339,28 +325,34 @@ async function handleQuestion({ client, event, question, threadKey, channel, rep
     const answer = (result?.result || '').trim() || '没有拿到有效回答。';
     if (result?.session_id) rememberSession(threadKey, result.session_id, profile.name);
 
-    const chunks = chunkText(answer);
-    await client.chat.update({ channel, ts: replyTs, text: chunks[0] });
-    for (const extra of chunks.slice(1)) {
-      await client.chat.postMessage({ channel, thread_ts: threadKey, text: extra });
-    }
+    const deliveredMessages = await sendAnswer({ client, channel, replyTs, threadTs: threadKey, text: answer });
 
     console.log(
-      '[ok] %s · %s · %d 秒 · %d 轮 · 估算 $%s · %s',
+      '[ok] %s · %s · %d 秒 · %d 轮 · 估算 $%s · %d 条回复 · %s',
       profile.label,
       userId,
       Math.round((Date.now() - started) / 1000),
       result?.num_turns ?? '?',
       Number(result?.total_cost_usd ?? 0).toFixed(4),
+      deliveredMessages,
       question.slice(0, 60).replace(/\s+/g, ' '),
     );
   } catch (err) {
     console.error('[error]', err.message);
-    await client.chat.update({
-      channel,
-      ts: replyTs,
-      text: `出错了：${err.message}\n（如需排查，请查看机器人终端的输出）`,
-    });
+    const detail = String(err.message).slice(0, 500);
+    if (err instanceof ReplyDeliveryError && err.deliveredMessages > 0) {
+      await client.chat.postMessage({
+        channel,
+        thread_ts: threadKey,
+        text: `回复已发送 ${err.deliveredMessages} 段，后续发送失败：${detail}\n（如需排查，请查看机器人终端的输出）`,
+      });
+    } else {
+      await client.chat.update({
+        channel,
+        ts: replyTs,
+        text: `出错了：${detail}\n（如需排查，请查看机器人终端的输出）`,
+      });
+    }
   } finally {
     clearInterval(progress);
     busy.delete(threadKey);

@@ -1,7 +1,6 @@
 # Infomat 目录职责与修改规则
 
-Git 分发保留源码、配置示例、运行维护入口、有效契约、技能依赖及必要生成输入。测试脚本与夹具、辅助说明和历史副本按 `.gitignore` 仅留本机，取消跟踪不删除本地文件。公开 `package.json` 不再列出这些测试命令；本机原命令清单位于被忽略的 `.local-tests/commands.json`，执行前须结合本机已有工具核对。
-
+Git 分发、本机测试及历史副本的保留规则见 [REPOSITORY_BOUNDARY.md](REPOSITORY_BOUNDARY.md)。本文件只维护目录责任和局部入口注册。
 
 > 状态：目录维护规则
 > 目的：明确每个目录的责任、维护入口、可修改规则和禁止事项。
@@ -51,12 +50,12 @@ scripts/AGENTS.md
 |---|---|---|---|---|
 | `apps/` | 可运行应用集合 | 子目录 README | 新应用必须有独立 README、运行命令和数据边界 | 不放业务资料原件 |
 | `apps/u8-stock-order-query/` | U8 出入库订单归属与销售质量编号核查服务；整个目录仅在本机保留，由 Git 忽略 | 本机 README、`server.mjs`、`public/`、`scripts/`、`compose.yaml` | 固定账套只读查询、销售质量编号唯一性独立页、中文字段说明、北京时间显示；Docker 3088 全 IPv4 监听，独立启动和停止 | 不写 U8 单据，不用管理员账号提供网页查询，不自动回填或修改归属，不操作其他服务 |
-| `apps/mdm-platform/` | MDM 平台源码 | `package.json`、`server/`、`public/`、`scripts/` | 平台功能、平台测试、平台维护脚本在此修改 | 不放 PMO 甘特图、流程制度原文、历史方案 |
+| `apps/mdm-platform/` | MDM 平台源码及3000内编制候选 | `package.json`、`server/`、`frontend/`、`public/`、`scripts/` | 平台功能、编制草稿及提交、平台测试和维护脚本在此修改；前后端以API分离，候选不表示正式切换 | 不放 PMO 甘特图、流程制度原文、历史方案；不自动接管或停止3001实例 |
 | `apps/structured-output-service/` | 局域网单流程治理编制工具 | `AGENTS.md`、README、`package.json`、`server.js`、`public/`、`scripts/` | 维护单流程编制、页面输入保护及受支持历史文件兼容；只读目录副本用于录入提示；版本、运行方式和验收门槛由应用入口维护 | 不保存用户内容和图坐标，不写回资料副本，不调用3000或共享数据库，不据目录提示确认组织及责任 |
 | `apps/information-collection-service/` | 内部信息表收集服务 | `package.json`、`server/`、`public/`、`scripts/`、`docs/` | 4000 管理端设计并发布收集任务，4001 填报端保存本人草稿和答卷；只读复用 `person`、`user_accounts`、`departments`，业务数据写入 `collection_*` 表，附件写入仓库外受控目录 | 不修改 MDM 身份、角色或治理业务表；不自动继承 3000 权限；不向浏览器持久化答案或附件 |
 | `apps/slack-bot/` | Slack 问答机器人（Claude Code CLI 无头模式的 Slack 入口） | `AGENTS.md`、`README.md`、`src/`、`compose.yaml`、`Dockerfile`、`sync.sh` | 只读档读 `repo-sync` 同步出的卷镜像（`:ro`），写入档仅对 `BOT_WRITE_USERS` 开放且直写宿主机仓库；凭据只存 `.env`，不进镜像；权限按提问者判定 | 不把 token 或密钥写入会被提交或被构建的文件；不绕过提问者粒度的权限判定；不让只读档拿到写工具或可写挂载；不把机器人输出当业务结论或治理决定 |
 | `apps/mdm-platform/server/` | MDM 后端实现 | Express 路由、当前MySQL运行schema与历史/测试SQLite兼容实现 | 修改时同步平台测试 | 不直接依赖 PMO 页面内嵌数据 |
-| `apps/mdm-platform/public/` | MDM 旧前端及共享本地资产 | 既有页面和本地图形资源 | 保留未迁移模块及资源路径兼容 | 不放 PMO 驾驶舱截图 |
+| `apps/mdm-platform/public/` | MDM 共享本地静态资产 | 本地图形资源、标识及模板 | 按服务端显式白名单提供；当前页面由 `frontend/` 维护，旧 `public/index.html` 已删除 | 不恢复旧前端入口，不放 PMO 驾驶舱截图 |
 | `apps/mdm-platform/frontend/` | MDM React 前端 | React + Vite 源码、独立锁文件及构建配置 | 维护页面及同源访问；旧路径兼容范围按应用入口核对；dist为被忽略的公开构建产物 | 不共用 PMO 业务代码、配置或5173服务，不公开业务材料及服务端源码 |
 | `apps/mdm-platform/scripts/` | 平台内脚本和测试 | 平台数据库、平台路由 | 脚本应说明是否写数据库，测试应使用隔离库 | 不放仓库级 parser |
 | `apps/mdm-platform/data/` | 历史和测试用本地数据目录 | 历史/测试SQLite文件 | 只用于受控兼容验证或隔离测试，不作为正式运行入口 | 不作为仓库真源，不提交数据库，不替代当前MySQL运行配置 |
@@ -68,8 +67,9 @@ scripts/AGENTS.md
 | 路径 | 责任 | 入口/接口 | 可修改规则 | 禁止事项 |
 |---|---|---|---|---|
 | `docs/` | 资料、说明、方案沉淀 | 子目录分工 | 文档按资产类型进入子目录 | 不放本地生成物 |
+| `docs/agents/` | 工程技能的仓库配置 | `CLAUDE.md` 的 `Agent skills` 节 | 维护工程问题跟踪方式及领域文档读取、写入规则 | 不作为业务真源或治理依据，不记录 Secret 或实时服务状态 |
 | `docs/norms/` | 历史制度、表单、映射及部门桑基图资产 | 本目录AGENTS及README用于定位旧消费关系 | 仅维护获准的副本或历史兼容；生成命令须显式声明旧输入，不自动同步当前治理 | 不以旧资料决定业务事实、职责或审批，不放临时报告、截图、日志 |
-| `docs/organization/` | 组织、人员、角色历史资料和转换副本；不再是真源 | `AGENTS.md`、README及原文件位置保留用于追溯 | 只维护明确授权的记录或副本，人员事实回到用户指定的行政人事发布Excel，任命由有权主体确认 | 不以本目录旧职责、岗位或映射决定当前流程和授权，不自动据此生成或同步3000业务数据 |
+| `docs/organization/` | 组织、人员、角色历史资料和转换副本；不再是真源 | `AGENTS.md`、README及原文件位置保留用于追溯 | 只维护明确授权的记录或副本，员工有效信息以3000为唯一维护源，行政人事维护；外部Excel仅作明确导入材料，任命由有权主体确认 | 不以本目录旧职责、岗位或映射决定当前流程和授权，不自动据此生成或同步3000业务数据 |
 | `docs/contracts/` | 自动化结构和校验规则 | `AGENTS.md`、规则说明、JSON规则文件 | 修改前读取本目录 `AGENTS.md`；发布版本变化必须同时处理旧数据兼容和回归 | 不写业务流程正文，不替代流程输入基线或组织真源，不保存 Secret |
 | `docs/integration/` | 集成和主数据治理方案 | 方案文档 | 可沉淀接口、主数据、系统协同方案 | 不作为当前流程输入基线 |
 | `docs/samples/` | 最小样例 | 样例 README 或文件名 | 只保留可复现、可说明格式的样例 | 不堆放完整生成输出 |

@@ -2,6 +2,8 @@ import { useMemo } from 'react';
 import { applyFilters, formatDate, parseDate } from '../utils/dateUtils';
 import { getExecutionStandardDiagnostics, isExecutionStandardGap } from '../utils/deliverableWorkflow';
 import { resolveTaskOwner } from '../utils/taskOwnerUtils';
+import { AmendmentBadge } from './TaskAmendments';
+import { taskAmendment } from '../utils/taskAmendments';
 
 const TASK_FILTER_DEFAULTS = {
   year: 'all',
@@ -49,7 +51,7 @@ function describeExecutionStandard(task) {
   return diagnostics.length ? diagnostics.join('、') : '-';
 }
 
-export default function TaskLedger({ tasks = [], filters = {} }) {
+export default function TaskLedger({ tasks = [], filters = {}, amendmentIndex, amendmentBatch, highlightAmended, onSelectTask }) {
   const mergedFilters = useMemo(
     () => ({ ...TASK_FILTER_DEFAULTS, ...filters }),
     [filters]
@@ -127,10 +129,13 @@ export default function TaskLedger({ tasks = [], filters = {} }) {
               {sorted.map(task => (
                 <tr
                   key={task.nodeKey || task.id || task.wbs}
-                  className={`dlv-row ${task.risk === '高' ? 'dlv-high-risk' : ''} ${task.isMilestone ? 'type-milestone' : ''} ${task.isSummary ? 'type-summary' : ''} ${isExecutionStandardGap(task) ? 'standard-gap-row' : ''}`}
+                  className={`dlv-row ${task.risk === '高' ? 'dlv-high-risk' : ''} ${task.isMilestone ? 'type-milestone' : ''} ${task.isSummary ? 'type-summary' : ''} ${isExecutionStandardGap(task) ? 'standard-gap-row' : ''} ${highlightAmended && taskAmendment(task, amendmentIndex) ? 'amendment-row' : ''}`}
+                  data-wbs={task.originalWbs || task.wbs}
                 >
                   <td className="dlv-wbs">{task.normalizedWbs || task.wbs}</td>
-                  <td className="dlv-name" title={task.name}>{task.name}</td>
+                  <td className="dlv-name"><button type="button" className="task-detail-link" title={task.name}
+                    onClick={() => onSelectTask?.(task.nodeKey)}>{task.name}</button>
+                    <AmendmentBadge task={task} index={amendmentIndex} batch={amendmentBatch} /></td>
                   <td>{task.department || '-'}</td>
                   <td>{resolveTaskOwner(task)}</td>
                   <td>{describeType(task)}</td>

@@ -16,6 +16,8 @@ import DeliverableDetail from './components/DeliverableDetail';
 import TaskLedger from './components/TaskLedger';
 import StandardGapOperationsView from './components/StandardGapOperationsView';
 import WeeklyIssueLedger from './components/WeeklyIssueLedger';
+import { AmendmentControls } from './components/TaskAmendments';
+import { buildAmendmentIndex, filterAmendedTasks, loadTaskAmendments, taskAmendment } from './utils/taskAmendments';
 import { buildTaskTree, applyFilters, normalizeTasks, analyzeTasks, computeProjectRange, formatDate, parseDate, filterTasksByExpansion } from './utils/dateUtils';
 import { buildDeliverableIndex, deliverableStorageKey } from './utils/deliverableIndex.js';
 import { buildPhaseGates } from './utils/phaseGateUtils.js';
@@ -203,20 +205,26 @@ export default function App() {
   const [standardBucket, setStandardBucket] = useState('all');
   const [localTransitions, setLocalTransitions] = useState({});
   const [projectGovernance, setProjectGovernance] = useState({ status: 'loading', data: null, error: null });
+  const [amendmentState, setAmendmentState] = useState({ status: 'loading', data: null });
+  const [amendmentBatchId, setAmendmentBatchId] = useState(null);
+  const [onlyAmended, setOnlyAmended] = useState(false);
+  const [highlightAmended, setHighlightAmended] = useState(true);
 
   const loadProjectData = useCallback(async ({ showLoading = false } = {}) => {
     if (showLoading) setLoading(true);
     try {
-      const [response, projectGovernanceSnapshot, ledgerPayload, rosterRows] = await Promise.all([
-        fetch('tasks.json'),
+      const [response, projectGovernanceSnapshot, ledgerPayload, rosterRows, amendmentPayload] = await Promise.all([
+        fetch('tasks.json', { cache: 'no-store' }),
         loadProjectGovernanceSnapshot(),
         loadDeliverableLedgerSafe(),
         loadRosterSafe(),
+        loadTaskAmendments(),
       ]);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
       setProjectGovernance(projectGovernanceSnapshot);
       setRawTasks(data);
+      setAmendmentState(amendmentPayload);
       const normalized = normalizeTasks(data);
       computeProjectRange(normalized);
       analyzeTasks(data);
@@ -298,10 +306,17 @@ export default function App() {
     return deliverablesWithEvidence.find(item => deliverableStorageKey(item) === key) || selectedDeliverable;
   }, [deliverablesWithEvidence, selectedDeliverable]);
 
+  const amendmentBatches = amendmentState.data?.batches || [];
+  const activeAmendmentBatch = amendmentBatches.find(batch => batch.id === amendmentBatchId) || amendmentBatches[0] || null;
+  const amendmentIndex = useMemo(() => buildAmendmentIndex(allTasks, activeAmendmentBatch), [allTasks, activeAmendmentBatch]);
+  const amendmentFilterActive = onlyAmended && amendmentState.status === 'ready' && !amendmentIndex.issues.length && Boolean(activeAmendmentBatch);
+  const amendmentLedgerTasks = useMemo(() => amendmentFilterActive ? filterAmendedTasks(allTasks, amendmentIndex) : allTasks, [allTasks, amendmentIndex, amendmentFilterActive]);
+
   const filteredTasks = useMemo(() => {
     if (!allTasks.length) return [];
-    return applyFilters(allTasks, filters, view);
-  }, [allTasks, filters, view]);
+    const result = applyFilters(allTasks, filters, view);
+    return amendmentFilterActive ? filterAmendedTasks(result, amendmentIndex, true, allTasks) : result;
+  }, [allTasks, filters, view, amendmentFilterActive, amendmentIndex]);
 
   const displayTasks = useMemo(
     () => filterTasksByExpansion(filteredTasks, treeData.map),
@@ -347,7 +362,7 @@ export default function App() {
     else { setFilters(prev => ({ ...prev, year: 'all' })); }
   }, []);
 
-  const handleSelect = useCallback((nodeKey) => { setSelectedNodeKey(nodeKey); }, []);
+  const handleSelect = useCallback((nodeKey) => { setSelectedNodeKey(nodeKey); setSelectedDeliverable(null); }, []);
   const handleToggle = useCallback((nodeKey) => {
     const node = treeData.map[nodeKey];
     if (!node) return;
@@ -593,10 +608,17 @@ export default function App() {
   if (page !== 'procedure' && loading) return <div className="loading">数据加载中</div>;
   if (page !== 'procedure' && error) return <div className="loading">数据加载失败：{error}</div>;
 
+  const amendmentControls = <AmendmentControls status={amendmentState.status} batches={amendmentBatches}
+    batch={activeAmendmentBatch} index={amendmentIndex} onlyAmended={amendmentFilterActive}
+    highlight={highlightAmended} onBatchChange={setAmendmentBatchId}
+    onOnlyChange={setOnlyAmended} onHighlightChange={setHighlightAmended} />;
+
   const renderPMOContent = () => {
     switch (pmoView) {
       case 'tasks':
-        return <TaskLedger tasks={allTasks} filters={taskFilters} />;
+        return <>{amendmentControls}<TaskLedger tasks={amendmentLedgerTasks} filters={taskFilters}
+          amendmentIndex={amendmentIndex} amendmentBatch={activeAmendmentBatch}
+          highlightAmended={highlightAmended} onSelectTask={handleSelect} /></>;
       case 'weekly-issues':
         return <WeeklyIssueLedger tasks={allTasks} deliverables={deliverablesWithEvidence} phaseGates={phaseGates} pmoDate={pmoDate} roster={roster} />;
       case 'deliverables':
@@ -654,21 +676,23 @@ export default function App() {
         <>
           <FilterBar tasks={allTasks} filters={filters} view={view}
             onFilterChange={handleFilterChange} onViewChange={handleViewChange} />
+          {amendmentControls}
 
           <div className="main-container">
             <TaskTree tasks={filteredTasks} treeMap={treeData.map}
               wbsDepth={filters.wbsDepth}
+              amendmentIndex={amendmentIndex} amendmentBatch={activeAmendmentBatch} highlightAmended={highlightAmended}
               selectedNodeKey={selectedNodeKey} onSelect={handleSelect} onToggle={handleToggle} />
 
             <GanttChart tasks={displayTasks} treeMap={treeData.map}
               monthWidth={monthWidth} selectedNodeKey={selectedNodeKey}
+              amendmentIndex={amendmentIndex} amendmentBatch={activeAmendmentBatch} highlightAmended={highlightAmended}
               onSelect={handleSelect} onZoomChange={handleZoom} />
           </div>
 
           <MilestoneList tasks={filteredTasks} show={showMilestonePanel}
             onClose={() => setShowMilestonePanel(false)} />
 
-          {selectedTask && <TaskDetail task={selectedTask} onClose={() => setSelectedNodeKey(null)} />}
         </>
       ) : page === 'procedure' ? (
         <div className="procedure-page">
@@ -702,6 +726,9 @@ export default function App() {
           )}
         </div>
       )}
+      {selectedTask && (page === 'gantt' || (page === 'pmo' && pmoView === 'tasks')) && <TaskDetail
+        task={selectedTask} amendment={taskAmendment(selectedTask, amendmentIndex)} amendmentBatch={activeAmendmentBatch}
+        onClose={() => setSelectedNodeKey(null)} />}
     </>
   );
 }

@@ -2,7 +2,7 @@
 
 Use this compact example when auditing or generating A1 rows from unstructured procedure text.
 
-Source: `docs/norms/经营发展部业务资料/管理体系程序文件/GLTX-JY-05-D公司月度绩效考核方案.docx.md.md`
+Source: `docs/norms/经营发展部业务资料/管理体系程序文件/GLTX-JY-05-D公司月度绩效考核方案.docx.md`
 
 ## Why This Example Matters
 

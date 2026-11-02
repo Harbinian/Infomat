@@ -27,6 +27,6 @@
 
 ## 运行与验证
 
-本目录 本机保留的对应验证入口（根目录 本机保留的对应验证入口）是应用测试入口，按行为改动范围选用。纯说明或协作入口修改只检查相关文档和路由。
+本机 `scripts/test-contract.js` 提供应用合同检查；先从仓库根 `.local-tests/commands.json` 的本应用条目核对命令和依赖，再在应用目录直接执行。测试不随 Git 分发，缺少工具时记录未执行项。纯说明或协作入口修改只检查相关文档和路由。
 
 迁移、初始化和启动属于独立运行操作，不是测试步骤。仅在用户授权对应目标时按 README 执行 `migrate:dry-run`、`migrate:apply`、`bootstrap:admin`或 `start`。迁移仍先 dry-run，再 apply 和结构核对；账号初始化不得作为验证自动运行。根目录对应入口以 `package.json` 和 `scripts/README.md` 为准。

@@ -3,6 +3,7 @@ import {
   parseDate, formatDate, getWbsColor, getTotalMonths, getMonthLabels,
   getXForDate, isZeroWorkdayDuration
 } from '../utils/dateUtils';
+import { taskAmendment } from '../utils/taskAmendments';
 
 const ROW_HEIGHT = 32;
 const MONTH_HEADER_HEIGHT = 44;
@@ -21,10 +22,12 @@ const GANTT_THEME = {
   focus: '#c97050',
   gold: '#9a7a30',
   sage: '#6f7d4e',
-  summary: '#c8b999'
+  summary: '#c8b999',
+  amendment: '#6d4c9e',
+  amendmentFill: 'rgba(109, 76, 158, 0.055)'
 };
 
-export default function GanttChart({ tasks, monthWidth, onSelect, onZoomChange }) {
+export default function GanttChart({ tasks, monthWidth, onSelect, onZoomChange, amendmentIndex, amendmentBatch, highlightAmended }) {
   const canvasRef = useRef(null);
   const panelRef = useRef(null);
   const monthCanvasRef = useRef(null);
@@ -111,6 +114,12 @@ export default function GanttChart({ tasks, monthWidth, onSelect, onZoomChange }
     // Background
     ctx.fillStyle = GANTT_THEME.panel2;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if (highlightAmended) {
+      ctx.fillStyle = GANTT_THEME.amendmentFill;
+      tasks.forEach((task, rowIndex) => {
+        if (taskAmendment(task, amendmentIndex)) ctx.fillRect(0, rowIndex * ROW_HEIGHT, totalWidth, ROW_HEIGHT);
+      });
+    }
 
     // Grid lines
     ctx.strokeStyle = GANTT_THEME.lineSoft;
@@ -150,14 +159,14 @@ export default function GanttChart({ tasks, monthWidth, onSelect, onZoomChange }
 
     // Task bars
     tasks.forEach((task, rowIndex) => {
-      drawTaskBar(ctx, task, rowIndex, monthWidth, positions);
+      drawTaskBar(ctx, task, rowIndex, monthWidth, positions, Boolean(taskAmendment(task, amendmentIndex)));
     });
 
     positionsRef.current = positions;
 
     // Render month header on separate canvas
     renderMonthHeader(months, totalWidth);
-  }, [tasks, monthWidth, renderMonthHeader]);
+  }, [tasks, monthWidth, renderMonthHeader, amendmentIndex, highlightAmended]);
 
   // Sync month header horizontal scroll with gantt panel
   const syncMonthScroll = useCallback(() => {
@@ -193,7 +202,8 @@ export default function GanttChart({ tasks, monthWidth, onSelect, onZoomChange }
             `<div class="tt-row">工期: <span>${task.duration || '-'}</span></div>`,
             `<div class="tt-row">类型: <span>${task.type || '-'}</span></div>`,
             `<div class="tt-row">部门: <span>${task.department || '-'}</span></div>`,
-            `<div class="tt-row">风险: <span>${task.risk || '-'}</span></div>`
+            `<div class="tt-row">风险: <span>${task.risk || '-'}</span></div>`,
+            ...(taskAmendment(task, amendmentIndex) ? [`<div class="tt-row">本次增补: <span>${amendmentBatch.date}，原排程保留</span></div>`] : [])
           ].join('');
           tooltip.style.display = 'block';
           tooltip.style.left = (e.clientX + 16) + 'px';
@@ -224,7 +234,7 @@ export default function GanttChart({ tasks, monthWidth, onSelect, onZoomChange }
       canvas.removeEventListener('mouseleave', onMouseLeave);
       canvas.removeEventListener('click', onClick);
     };
-  }, [tasks, onSelect]);
+  }, [tasks, onSelect, amendmentIndex, amendmentBatch]);
 
   // Wheel: Ctrl=zoom, Shift=horizontal scroll
   useEffect(() => {
@@ -283,7 +293,7 @@ export default function GanttChart({ tasks, monthWidth, onSelect, onZoomChange }
         </div>
       </div>
       <div className="gantt-panel" ref={panelRef}>
-        <canvas ref={canvasRef} className="gantt-canvas" />
+        <canvas ref={canvasRef} className="gantt-canvas" role="img" aria-label={`甘特图，${tasks.length}条任务；时间条保留原排程，紫色加号表示本次增补`} />
         <div className="gantt-tooltip" ref={tooltipRef} />
       </div>
       <div className="zoom-controls">
@@ -296,7 +306,7 @@ export default function GanttChart({ tasks, monthWidth, onSelect, onZoomChange }
   );
 }
 
-function drawTaskBar(ctx, task, rowIndex, monthWidth, positions) {
+function drawTaskBar(ctx, task, rowIndex, monthWidth, positions, amended = false) {
   const startDate = parseDate(task.start);
   const finishDate = parseDate(task.finish);
   const y = rowIndex * ROW_HEIGHT;
@@ -334,11 +344,17 @@ function drawTaskBar(ctx, task, rowIndex, monthWidth, positions) {
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
+    if (amended) {
+      ctx.fillStyle = GANTT_THEME.amendment;
+      ctx.font = `bold 12px ${FONT_STACK}`;
+      ctx.textAlign = 'left';
+      ctx.fillText('＋', cx + size + 5, cy + 4);
+    }
     if (labelName) {
       ctx.fillStyle = GANTT_THEME.text;
       ctx.font = labelFont;
       ctx.textAlign = 'left';
-      ctx.fillText(labelName, cx + size + 6, cy + 4);
+      ctx.fillText(labelName, cx + size + 6 + (amended ? 16 : 0), cy + 4);
     }
     positions.push({ nodeKey: task.nodeKey, x: cx - size, y: cy - size, width: size * 2, height: size * 2 });
     return;
@@ -383,7 +399,13 @@ function drawTaskBar(ctx, task, rowIndex, monthWidth, positions) {
     ctx.fillStyle = isSummary ? GANTT_THEME.muted : GANTT_THEME.text;
     ctx.font = labelFont;
     ctx.textAlign = 'left';
-    ctx.fillText(labelName, barX + barWidth + 6, barY + BAR_HEIGHT / 2 + 4);
+    ctx.fillText(labelName, barX + barWidth + 6 + (amended ? 16 : 0), barY + BAR_HEIGHT / 2 + 4);
+  }
+  if (amended) {
+    ctx.fillStyle = GANTT_THEME.amendment;
+    ctx.font = `bold 12px ${FONT_STACK}`;
+    ctx.textAlign = 'left';
+    ctx.fillText('＋', barX + barWidth + 5, barY + BAR_HEIGHT / 2 + 4);
   }
 
   positions.push({ nodeKey: task.nodeKey, x: barX, y: barY, width: barWidth, height: BAR_HEIGHT });

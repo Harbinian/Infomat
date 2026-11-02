@@ -135,7 +135,7 @@ node .agents/skills/single-process-authoring/scripts/validate-process-v8.mjs --p
 |---|---|
 | 阶段出口、访谈规则、状态词、续接摘要内容 | [编制阶段与访谈规则](references/authoring-stages.md) |
 | 目标结构、模板版本、摘要与旧文件兼容 | [结构版本与兼容](references/structure-versioning.md) |
-| V8字段映射、标识规则、行为与关系、数据与表单、生命周期 | [V8 结构与映射规则](references/v8-structure-rules.md) |
+| 原V8字段映射、标识、行为关系、表单、生命周期 | [V8 结构与映射规则](references/v8-structure-rules.md) |
 | 六维评分判据、综合分、周期工时与负荷率算法 | [工作强度与周期负荷方法](references/workload-method.md) |
 | 四项成果的章节与表格模板、一致性复核 | [四项成果模板](references/output-templates.md) |
 | 制度八章结构、原文转换边界与疑点 | [制度编写规范](references/document-standard.md) |

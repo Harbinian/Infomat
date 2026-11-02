@@ -3,8 +3,10 @@
 !apps/structured-output-service/package.json
 !apps/structured-output-service/package-lock.json
 !apps/structured-output-service/server.js
+!apps/structured-output-service/config/organization-catalog.json
 !apps/structured-output-service/public/**
 !scripts/process-governance/v7-validator.js
+!scripts/process-governance/authoring-contracts.js
 !docs/contracts/document-structured-output.schema.json
 !docs/contracts/process-governance-v*.schema.json
 !docs/contracts/process-governance-version-history.json

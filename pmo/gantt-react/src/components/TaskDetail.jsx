@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { parseDate, formatDate } from '../utils/dateUtils';
+import { AmendmentDetails } from './TaskAmendments';
 
-export default function TaskDetail({ task, onClose }) {
+export default function TaskDetail({ task, onClose, amendment, amendmentBatch }) {
   const panelRef = useRef(null);
 
   useEffect(() => {
@@ -38,6 +39,8 @@ export default function TaskDetail({ task, onClose }) {
     { label: '审核人/审批组', value: task.reviewer || '-' },
     { label: '风险等级', value: task.risk || '中', badge: 'risk' },
     { label: '交付物', value: task.deliverable || '-' },
+    { label: '验收要求', value: task.completionCriteria || '-' },
+    { label: '证据要求', value: task.evidenceRequirements || '-' },
     { label: '交付物编号', value: task._deliverableId || '-' },
     { label: '交付物类型', value: task._deliverableType || '-' },
     { label: '交付物等级', value: task._deliverableLevel ? `${task._deliverableLevel}类` : '-' },
@@ -47,12 +50,14 @@ export default function TaskDetail({ task, onClose }) {
   ];
 
   return (
-    <div className="detail-overlay open" ref={panelRef}>
+    <div className={`detail-overlay open${amendment ? ' has-amendment-details' : ''}`} ref={panelRef}>
       <div className="detail-header">
         <h3>任务详情</h3>
-        <button className="detail-close" onClick={onClose}>&times;</button>
+        <button type="button" className="detail-close" aria-label="关闭任务详情" onClick={onClose}>&times;</button>
       </div>
       <div className="detail-body">
+        {amendment && <div className="amendment-task-name">{task.originalWbs || task.wbs}{' '}{task.name}</div>}
+        <AmendmentDetails record={amendment} batch={amendmentBatch} />
         {fields.map((f, i) => (
           <div key={i} className="detail-field">
             <label>{f.label}</label>

@@ -15,6 +15,7 @@ WORK_PRINCIPLES_MD = "信息化项目_工作开展原则.md"
 COLLABORATION_RULES_MD = "信息化项目_协同工作规则.md"
 DEPARTMENT_CONTACT_ROSTER_MD = "信息化项目_部门主备对接人名单.md"
 EXECUTION_STANDARD_MD = "信息化项目_执行标准真源.md"
+from task_amendments import AMENDMENT_SOURCE_MD, build_task_amendments
 
 BASE_FIELD_MAP = [
     ("ID", "id"),
@@ -424,7 +425,7 @@ def file_digest(path: pathlib.Path):
     return h.hexdigest()[:16]
 
 
-def build_source_manifest(tasks, plan_data):
+def build_source_manifest(tasks, plan_data, amendments=None):
     summary = plan_data.get("summary") or {}
     field_count = len(TASK_OUTPUT_FIELD_KEYS)
     if summary.get("fieldCount") != field_count:
@@ -474,6 +475,11 @@ def build_source_manifest(tasks, plan_data):
             "path": EXECUTION_STANDARD_MD,
             "purpose": "维护执行标准卡正文、检查清单、完成判定和证据要求",
         },
+        {
+            "role": "WBS增补记录",
+            "path": AMENDMENT_SOURCE_MD,
+            "purpose": "维护授权增补批次、任务身份和字段前后记录，不改变任务状态",
+        },
     ]
     for doc in source_docs:
         path = ROOT / doc["path"]
@@ -502,7 +508,16 @@ def build_source_manifest(tasks, plan_data):
             "tasks.json",
             "gantt-react/public/tasks.json",
             "gantt-react/public/pmo-source-manifest.json",
+            "task-amendments.json",
+            "gantt-react/public/task-amendments.json",
         ],
+        "taskAmendments": {
+            "schemaVersion": "pmo-task-amendments-v1",
+            "path": "task-amendments.json",
+            "source": AMENDMENT_SOURCE_MD,
+            "batchCount": len((amendments or {}).get("batches", [])),
+            "sha256_16": hashlib.sha256(json.dumps(amendments or {}, ensure_ascii=False, indent=2).encode("utf-8")).hexdigest()[:16],
+        },
         "taskSummary": computed_summary,
         "standardGovernance": {
             "schemaVersion": "pmo-standard-gap-operations-v1",
@@ -522,7 +537,8 @@ def build_source_manifest(tasks, plan_data):
 
 
 def write_manifest(manifest, out_path: pathlib.Path):
-    out_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+    # The digest and both copies use identical UTF-8 bytes on Windows and Linux.
+    out_path.write_bytes(json.dumps(manifest, ensure_ascii=False, indent=2).encode("utf-8"))
 
 
 def main():
@@ -533,15 +549,20 @@ def main():
     react_manifest_path = react_public / "pmo-source-manifest.json"
 
     tasks, plan_data = read_tasks_from_md(ROOT / PLAN_SOURCE_MD)
-    manifest = build_source_manifest(tasks, plan_data)
+    amendment_source = read_source_block(ROOT / AMENDMENT_SOURCE_MD, "amendments")
+    amendments = build_task_amendments(amendment_source, plan_data["tasks"], TASK_FIELD_MAP)
+    manifest = build_source_manifest(tasks, plan_data, amendments)
 
     write_tasks_json(tasks, tasks_path)
     write_manifest(manifest, manifest_path)
+    write_manifest(amendments, ROOT / "task-amendments.json")
     react_tasks_path.write_text(tasks_path.read_text(encoding="utf-8"), encoding="utf-8")
-    react_manifest_path.write_text(manifest_path.read_text(encoding="utf-8"), encoding="utf-8")
+    react_manifest_path.write_bytes(manifest_path.read_bytes())
+    (react_public / "task-amendments.json").write_bytes((ROOT / "task-amendments.json").read_bytes())
 
     print(f"Wrote {len(tasks)} tasks from {PLAN_SOURCE_MD}")
     print("Wrote pmo-source-manifest.json")
+    print("Wrote task-amendments.json")
 
 
 if __name__ == "__main__":

@@ -1,8 +1,5 @@
 # AGENTS.md - 仓库级脚本
 
-测试脚本及辅助历史资料仅保留在维护者本机，不随 Git 分发；公开包不提供对应测试命令。本地验证须使用已有工具或明确取得的测试材料，并遵守隔离、权限和验收边界。
-
-
 本文件约束 `scripts/` 下的仓库级自动化。根目录 `AGENTS.md`、`CODEX.md`、`REPOSITORY_BOUNDARY.md` 和 `DIRECTORY_OWNERSHIP.md` 仍然优先适用。
 
 ## 适用边界
@@ -28,36 +25,15 @@
 
 ## 验证口径
 
-以下入口按变更类型选择，默认从仓库根目录运行。已经通过且未受新改动影响的检查不重复执行。解析、生成和运行命令有副作用，只在对应任务授权范围内执行。
+按变化选择检查，默认从仓库根执行。测试工具不随 Git 分发，先核对本机 `.local-tests/commands.json`、脚本和依赖；缺失时按 `CODEX.md` 核对受影响合同并记录未执行项。已通过且未受新改动影响的检查不重复。
 
-Codex 项目指令、按需路由或局部入口变化：
+| 变化 | 检查与边界 |
+|---|---|
+| Codex 入口、注册或路由 | 本机 `node scripts/test-codex-context.mjs` 与 `node scripts/check-codex-context.mjs`；不启动服务、不连库 |
+| 历史展示解析或注入 | `node scripts/check-dashboard-data.mjs` 及本机纯解析合同；隔离输出，不重造保留快照 |
+| PMO 任务生成链 | 获准更新对应输入后运行 `npm run build:pmo-task-data`，再运行 `node scripts/check-pmo-task-data.mjs` 核对六份派生输出 |
+| 固定启动配置 | 本机 `node scripts/test-infomat-services-config.mjs`；只检查配置，不启动服务 |
+| 指定服务运行 | 核对该对象的监听、健康与内容；共同开发环境的冒烟工具为本机 `scripts/smoke-infomat-services.mjs`，不扩大单服务任务范围 |
+| MDM 导入或治理链 | 进入主责应用选取隔离专项；本机聚合 `scripts/test-process-governance-mainline.mjs` 会创建夹具、隔离数据库和临时 HTTP，不是全程只读 |
 
-```powershell
-# 本地测试入口不随 Git 分发。
-```
-
-历史展示解析或注入变化，使用纯解析合同和隔离输出验证，不为测试生成正式快照：
-
-```powershell
-# 本地测试入口不随 Git 分发。
-# 本地测试入口不随 Git 分发。
-node scripts/check-dashboard-data.mjs
-# 本地测试入口不随 Git 分发。
-```
-
-PMO 任务生成链变化：
-
-```powershell
-npm run build:pmo-task-data
-# 本地测试入口不随 Git 分发。
-```
-
-固定启动配置变化时运行 本机保留的对应验证入口。只有任务包含实际服务运行验证时才运行 本机保留的对应验证入口；用户指定单一服务时采用该服务的健康与内容检查，不扩大到其他服务。
-
-MDM 导入、流程治理或数据库写入链路变化时，在 `apps/mdm-platform/` 下补充对应测试；涉及流程治理主线时至少覆盖：
-
-```powershell
-# 本地测试入口不随 Git 分发。
-```
-
-聚合主线回归会创建独立夹具、隔离数据库和临时 HTTP，不能描述为全程只读。`--legacy-source-comparison` 是旧副本正文/指纹的显式比较分支，副本变化时允许暴露差异，不得通过重生成保留快照掩盖；技术检查不证明业务验收或当前运行。
+历史正文或指纹比较使用显式 `--legacy-source-comparison`；副本变化导致失败时核对版本和输入，不以重生成保留快照掩盖差异。技术检查不证明目标已开启或业务已验收。

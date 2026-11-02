@@ -2625,12 +2625,14 @@
   <script src="data-relation-diagram.js"></script>
   <script src="lifecycle-analyzer.js"></script>
   <script src="review-pattern-diagrams.js"></script>
+  <script src="process-data-availability.js"></script>
   <script src="structure-score.js"></script>
   <script>
-    const DEPARTMENTS = [
+    const LEGACY_DEPARTMENTS = [
       '全公司', '公司领导', '工程技术部', '质量管理部', '财务部', '行政人事部',
       '经营发展部', '物资保障部', '项目管理部', '复材车间', '运维安环部'
     ];
+    const DEPARTMENTS = [];
     const ROLE_DUTIES = ['', '发起', '办理', '审核', '批准', '判断', '发送', '接收', '会签'];
     const NODE_TYPES = [
       { value: '', label: '请选择' },
@@ -2648,7 +2650,7 @@
     ];
     const MATERIAL_TYPES = ['', '现有制度', '表单或记录', '现行业务操作说明', '会议或访谈', '其他参考材料'];
     const AREA_TYPES = ['', '基本信息', '明细清单'];
-    const EXPECTED_EXPORT_SCHEMA_VERSION = 'process-governance-v8';
+    const EXPECTED_EXPORT_SCHEMA_VERSION = 'process-governance-v9';
     const MAX_IMPORT_BYTES = 10 * 1024 * 1024;
     const FORM_DESIGN_STATES = new Set(['unspecified', 'current_state', 'proposed_design']);
     const INFORMATION_TYPES = [
@@ -2856,7 +2858,7 @@
         terms: [
           ['无状态临时工具', '3001不保存账号草稿、服务端草稿或浏览器持久化内容。业务内容只存在当前页面内存中，用户主动下载JSON是唯一保存方式。'],
           ['当前候选流程', '本次页面正在编制的一条流程。历史多候选文件导入后，每条候选流程分别显示、分别修改、分别下载，不形成审核状态。'],
-          ['单流程结构化文件规则', 'process-governance-v8规定一份JSON只包含一个流程，并固定流程、行为、关系、数据对象、生命周期、表单、术语和迁移归档的结构。'],
+          ['单流程结构化文件规则', 'process-governance-v9规定一份JSON只包含一个流程，明确流程入口、记录组织与条件引用，并保留行为、关系、生命周期、表单、术语和迁移归档。'],
           ['源文件', '用户从“文件”入口选择的原始JSON。3001只读取源文件并在页面内存中处理，不修改或覆盖源文件。'],
           ['来源版本', '源文件声明的结构版本。v1至v7和历史格式导入后只在当前页面内存中迁移为v8。'],
           ['源文件SHA-256', '按源文件实际字节计算的摘要，用于确认两次核对的源文件是否相同；摘要不代表内容已经审核。'],
@@ -3554,7 +3556,7 @@
         }
         const validation = await validateGraphDocument(planned.document);
         if (!globalThis.ImportCompatibility.allowsPreservedLifecycleErrors(source, planned.document, validation)) {
-          formFieldBatchError.textContent = `完整候选未通过v8结构检查：${(validation.errors || []).slice(0, 3).map(item => `${validationErrorLocation(item)}：${item.message}`).join('；')}`;
+          formFieldBatchError.textContent = `完整候选未通过v9结构检查：${(validation.errors || []).slice(0, 3).map(item => `${validationErrorLocation(item)}：${item.message}`).join('；')}`;
           return false;
         }
         const liveSession = currentFormFieldBatchSession();
@@ -3636,7 +3638,7 @@
     }
 
     async function fetchEmptyProcessDocument() {
-      const response = await fetch('/api/template?version=process-governance-v8', { cache: 'no-store' });
+      const response = await fetch('/api/template?version=process-governance-v9', { cache: 'no-store' });
       const result = await readJsonResponse(
         response,
         '3001空白模板接口未返回结构化数据。请保持当前页面打开，待维护人员重启3001服务后再次新建流程。'
@@ -3658,6 +3660,7 @@
         rosterRolesByDepartment = result.rosterRolesByDepartment && typeof result.rosterRolesByDepartment === 'object'
           ? result.rosterRolesByDepartment
           : {};
+        DEPARTMENTS.splice(0, DEPARTMENTS.length, ...Object.keys(rosterRolesByDepartment));
         formItemTypes = Array.isArray(result.fieldType)
           ? [...new Set(result.fieldType.map(value => text(value).trim()).filter(Boolean))]
           : [];
@@ -3665,6 +3668,7 @@
         formItemTypeLoadState = formItemTypes.length ? 'ready' : 'unavailable';
       } catch (_error) {
         rosterRolesByDepartment = {};
+        DEPARTMENTS.splice(0, DEPARTMENTS.length);
         formItemTypes = [];
         rosterLoadState = 'unavailable';
         formItemTypeLoadState = 'unavailable';
@@ -3706,12 +3710,12 @@
       const raw = text(value).trim();
       if (!raw) return { department: '', position: '', known: false };
       if (raw === '全公司') return { department: '全公司', position: '', known: true };
-      const departments = [...new Set(DEPARTMENTS.concat(Object.keys(rosterRolesByDepartment || {})))]
+      const departments = [...new Set(LEGACY_DEPARTMENTS.concat(DEPARTMENTS, Object.keys(rosterRolesByDepartment || {})))]
         .filter(department => department && department !== '全公司')
         .sort((left, right) => right.length - left.length);
       const department = departments.find(item => raw === item || raw.startsWith(item));
       if (department) {
-        const position = raw.slice(department.length).trim();
+        const position = raw.slice(department.length).replace(/^[\s/／:：·-]+/, '').trim();
         return {
           department,
           position,
@@ -3796,9 +3800,9 @@
         label: selectedDepartment === '全公司'
           ? '全公司通用无需选择岗位'
           : rosterLoadState === 'loading'
-            ? '正在读取花名册岗位'
+            ? '正在读取员工基础信息表岗位'
             : rosterLoadState === 'unavailable'
-              ? '花名册岗位暂时不可用'
+              ? '员工基础信息表岗位暂时不可用'
               : selectedDepartment
                 ? '请选择执行岗位'
                 : '请先选择执行部门'
@@ -3806,19 +3810,19 @@
       if (selectedDepartment && parsed.position && !positions.includes(parsed.position)) {
         positionOptions.push({
           value: parsed.position,
-          label: `原文件岗位：${parsed.position}（当前花名册未收录）`
+          label: `原文件岗位：${parsed.position}（当前员工基础信息表未收录）`
         });
       }
 
       const rosterWarning = rawValue && !knownCurrentValue && !departmentOnlyInProgress
-        ? `<div class="inline-warning">当前导入值“${escapeHtml(rawValue)}”未被现行花名册收录。3001会保留该值；如需修改，请重新选择执行部门和执行岗位。</div>`
+        ? `<div class="inline-warning">当前导入值“${escapeHtml(rawValue)}”未被员工基础信息表收录。3001会保留该值；如需修改，请重新选择执行部门和执行岗位。</div>`
         : '';
       const availability = rosterLoadState === 'unavailable'
-        ? '<div class="inline-warning">花名册岗位暂时不可用。3001不会清除已有执行岗位；其他内容仍可继续编制和下载。</div>'
+        ? '<div class="inline-warning">员工基础信息表岗位暂时不可用。3001不会清除已有执行岗位；其他内容仍可继续编制和下载。</div>'
         : externalDepartment
           ? `<div class="inline-note">当前为跨部门行为。流程先后请在“流程关系”中维护；发送、接收、创建或更新的数据请在“输出物与数据”中维护。</div>`
           : selectedDepartment && selectedDepartment === ownDepartment
-            ? `<div class="inline-note">当前为本部门执行。执行岗位显示“${escapeHtml(selectedDepartment)}”花名册中的岗位。</div>`
+            ? `<div class="inline-note">当前为本部门执行。执行岗位显示员工基础信息表中“${escapeHtml(selectedDepartment)}”的岗位。</div>`
             : !ownDepartment
               ? '<div class="inline-note">可以先选择任意执行部门和岗位。填写流程归口部门后，页面会据此识别本部门行为和跨部门行为。</div>'
               : '<div class="inline-note">请选择实际执行部门和执行岗位。</div>';
@@ -4331,7 +4335,8 @@
           if (errors.length) throw new Error(errors.join('；'));
           dataObject.behavior_links.push({
             link_ref: newRef('data_link'), behavior_ref: behavior.behavior_ref,
-            operation: patch.operation || 'pending_confirmation', updated_field_refs: []
+            operation: patch.operation || 'pending_confirmation', updated_field_refs: [],
+            record_scope: 'pending_confirmation', presence: 'pending_confirmation'
           });
         } else if (expectedKind === 'new-form-behavior-link') {
           const form = (nextDocument.forms || []).find(item => item.form_ref === session.entityRef);
@@ -4535,11 +4540,11 @@
       statusBox.className = 'status';
     }
 
-    function optionHtml(options, selected) {
+    function optionHtml(options, selected, includeDisabled = false) {
       return options.map(option => {
         const value = typeof option === 'string' ? option : option.value;
         const label = typeof option === 'string' ? (option || '请选择') : option.label;
-        return `<option value="${escapeAttribute(value)}"${value === selected ? ' selected' : ''}>${escapeHtml(label)}</option>`;
+        return `<option value="${escapeAttribute(value)}"${value === selected ? ' selected' : ''}${includeDisabled && typeof option !== 'string' && option.disabled ? ' disabled' : ''}>${escapeHtml(label)}</option>`;
       }).join('');
     }
 
@@ -4563,6 +4568,10 @@
         control = `<textarea class="${options.tall ? 'tall' : ''}" data-bind="${escapeAttribute(pathKey)}" data-kind="${options.nullable ? 'nullable' : 'text'}" placeholder="${escapeAttribute(options.placeholder || '')}">${escapeHtml(value)}</textarea>`;
       } else if (options.type === 'select') {
         control = `<select data-bind="${escapeAttribute(pathKey)}" data-kind="${options.nullable ? 'nullable' : 'text'}">${optionHtml(options.options || [], value == null ? '' : value)}</select>`;
+      } else if (options.type === 'multi-select') {
+        const known = new Set((options.options || []).map(option => option.value));
+        const preserved = list(value).filter(ref => !known.has(ref)).map(value => ({ value, label: '原引用保留，待核对', disabled: true }));
+        control = `<select multiple size="4" data-bind="${escapeAttribute(pathKey)}" data-kind="array">${[...(options.options || []), ...preserved].map(option => `<option value="${escapeAttribute(option.value)}" ${list(value).includes(option.value) ? 'selected' : ''}${option.disabled ? ' disabled' : ''}>${escapeHtml(option.label)}</option>`).join('')}</select>`;
       } else if (options.type === 'date') {
         control = `<input type="date" data-bind="${escapeAttribute(pathKey)}" data-kind="${options.nullable ? 'nullable' : 'text'}" value="${escapeAttribute(value || '')}">`;
       } else if (options.type === 'checkbox') {
@@ -5504,7 +5513,7 @@
             ? `<select id="governanceCandidateSelect" data-governance-candidate>${candidateOptions}</select>`
             : '<strong>尚未新建或导入流程</strong>'}
           <div class="governance-context">
-            <span class="context-badge version">v8 候选</span>
+            <span class="context-badge version">${escapeHtml(EXPECTED_EXPORT_SCHEMA_VERSION.replace('process-governance-', ''))} 候选</span>
             <span class="context-badge" title="导入来源：${escapeAttribute(origin)}">${escapeHtml(origin)}</span>
             ${hasUnapplied ? '<span class="context-badge dirty">有未应用修改</span>' : ''}
             ${entry?.dirty ? '<span class="context-badge dirty">有未下载修改</span>' : fileState ? `<span class="context-badge ${escapeAttribute(fileState.className)}">${escapeHtml(fileState.label)}</span>` : ''}
@@ -5747,7 +5756,7 @@
           `).join('');
       if (!data) {
         return `<section class="start-hero">
-          <div class="eyebrow">3001 · process-governance-v8</div>
+          <div class="eyebrow">3001 · process-governance-v9</div>
           <h2>${compactTaskUiEnabled() ? '按四项任务完成一条流程的编制、核对和交接准备' : '按七步完成一条流程的编制、核对和交接准备'}</h2>
           <p>v8为候选版本，支持判断节点使用数据作为判断依据。编制人维护当前唯一流程文件；业务核对人确认流程事实；MDM工作组检查结构。3001不保存草稿，也不记录审核结论。</p>
           ${renderRoleOperationSequence()}
@@ -5849,9 +5858,11 @@
 
     function webGridAdapterOptions() {
       return {
+        schemaVersion: currentDocument()?.schema_version,
         refFactory: newRef,
         technicalIntegrity: globalThis.GraphEditCommands.technicalIntegrity,
         allowedFieldTypes: formItemTypes,
+        allowedDepartments: DEPARTMENTS,
         pendingLifecycle,
         dataObjectFactory(ref) {
           return {
@@ -5859,6 +5870,8 @@
             data_name: '',
             description: '',
             information_type: 'pending_confirmation',
+            record_model: 'pending_confirmation',
+            collection_field_refs: [],
             fields: [],
             behavior_links: [],
             source_relations: [],
@@ -6023,7 +6036,7 @@
     function nativeGridDisplayValue(column, value, row) {
       if (value == null || value === '') return '';
       if (column.editor === 'boolean') return value ? '是' : '否';
-      if (column.editor === 'multi-select') return list(value).map(value => column.values?.find(option => option.value === value)?.label || value).join('、');
+      if (column.editor === 'multi-select') return list(value).map(value => nativeGridOptionRows(column,row).find(option => option.value === value)?.label || '原引用保留，待核对').join('、');
       if (column.editor === 'select') return column.values?.find(option => String(option.value) === String(value))?.label || value;
       if (column.editor === 'lookup') return gridLookupLabel(column.lookup, value, row);
       if (column.editor === 'update-fields') return selectedUpdateFieldLabels(row.data_ref, value, gridUpdateFieldOptions(row)).join('、');
@@ -6031,6 +6044,7 @@
     }
 
     function nativeGridOptionRows(column, row) {
+      if (column.lookup === 'collectionFields') return gridUpdateFieldOptions(row);
       if (column.editor === 'select' || column.editor === 'multi-select') return column.values || [];
       if (column.editor === 'lookup') return gridLookupRows(column.lookup, row);
       return [];
@@ -6068,7 +6082,9 @@
         return `<input type="checkbox" ${attributes}${rawValue ? ' checked' : ''}${disabled}>`;
       }
       if (column.editor === 'multi-select') {
-        return `<select multiple size="4" style="height:auto" ${attributes}${disabled} title="按住Ctrl可选择多项，也可粘贴用顿号分隔的中文操作名称">${(column.values || []).map(option => `<option value="${escapeAttribute(option.value)}" ${list(rawValue).includes(option.value) ? 'selected' : ''}>${escapeHtml(option.label)}</option>`).join('')}</select>`;
+        const options = nativeGridOptionRows(column,row);
+        const missing = list(rawValue).filter(value=>!options.some(option=>option.value===value)).map(value=>({value,label:'原引用保留，待核对',disabled:true}));
+        return `<select multiple size="4" style="height:auto" ${attributes}${disabled} title="按住Ctrl可选择多项，也可粘贴用顿号分隔的中文名称">${[...options,...missing].map(option => `<option value="${escapeAttribute(option.value)}" ${list(rawValue).includes(option.value) ? 'selected' : ''}${option.disabled ? ' disabled' : ''}>${escapeHtml(option.label)}</option>`).join('')}</select>`;
       }
       if (column.editor === 'select' || column.editor === 'lookup') {
         const options = nativeGridOptionRows(column, row);
@@ -6461,7 +6477,7 @@
         <div class="item-card">
           <div class="grid">
             <div class="inline-note"><strong>导入来源：</strong>${escapeHtml(summary.sourceVersion)}</div>
-            <div class="inline-note"><strong>当前格式：</strong>process-governance-v8</div>
+            <div class="inline-note"><strong>当前格式：</strong>process-governance-v9</div>
             <div class="inline-note"><strong>已保留内容：</strong>${summary.behaviorCount}个行为、${summary.dataCount}项数据、${summary.formCount}张表单、${summary.fieldCount}个字段</div>
             <div class="inline-note"><strong>待确认关系：</strong>${summary.unresolved}项</div>
           </div>
@@ -6471,7 +6487,7 @@
       return `
         <div id="versionsPanel" role="tabpanel" aria-labelledby="versionsTab">
           ${section('v1至v7升级历史', '版本说明来自仓库受控文件，只供查阅，不改变当前草稿。', historyBody)}
-          ${section('当前文件迁移摘要', '旧文件导入后统一在页面内存中转换为v8，导入源文件始终保持原样。', migrationBody)}
+          ${section('当前文件迁移摘要', '旧文件导入后统一在页面内存中转换为v9，新增记录语义及流程入口保留待确认，导入源文件始终保持原样。', migrationBody)}
         </div>`;
     }
 
@@ -6716,6 +6732,11 @@
       const isControl = ['decision', 'parallel_split', 'parallel_join'].includes(behavior.node_type);
       const actor = parseActorRole(behavior.current_actor_role);
       const positions = rosterRolesByDepartment[actor.department] || [];
+      const retainedPosition = actor.position || (!actor.department ? behavior.current_actor_role : '');
+      const positionOptions = [''].concat(positions);
+      if (retainedPosition && !positions.includes(retainedPosition)) positionOptions.push({ value: retainedPosition, label: `${retainedPosition}（原值保留，待核对）`, disabled: true });
+      const departmentOptions = [''].concat(DEPARTMENTS.filter(item => item !== '全公司'));
+      if (actor.department && !DEPARTMENTS.includes(actor.department)) departmentOptions.push({ value: actor.department, label: `${actor.department}（原值保留，待核对）`, disabled: true });
       const isEntry = !(currentDocument().flow_relations || []).some(relation =>
         relation.to_behavior_ref === behavior.behavior_ref && relation.relation_type !== 'loop'
       );
@@ -6731,8 +6752,9 @@
             </details>` : `
             <label>执行主体确定方式<select data-graph-property="actor_assignment_mode">${optionHtml(ACTOR_ASSIGNMENT_MODES, actorAssignmentMode(behavior))}</select></label>
             ${actorAssignmentMode(behavior) === 'fixed_department' ? `
-              <label>执行部门<select data-graph-actor-department>${optionHtml([''].concat(DEPARTMENTS.filter(item => item !== '全公司')), actor.department)}</select></label>
-              <label>执行岗位<select data-graph-actor-position>${optionHtml([''].concat(positions), actor.position)}</select></label>` : ''}
+              <label>执行部门<select data-graph-actor-department>${optionHtml(departmentOptions, actor.department, true)}</select></label>
+              <label>执行岗位<select data-graph-actor-position>${optionHtml(positionOptions, retainedPosition, true)}</select></label>
+              ${behavior.current_actor_role && !actor.known ? `<div class="inline-warning">原执行主体“${escapeHtml(behavior.current_actor_role)}”保留，待核对；请选择原表中的部门和岗位。</div>` : ''}` : ''}
             ${actorAssignmentMode(behavior) === 'dynamic_from_data' ? `
               <label>执行部门来源数据<select data-graph-property="actor_department_data_ref">${dynamicDepartmentOptionHtml(behavior, currentDataFlowDetails())}</select><span class="technical-note">仅可选择本行为开始前已产生且可到达本行为的数据；失效原值保留并提示。</span></label>
               <label>岗位或责任人确定规则<textarea data-graph-property="actor_position_rule">${escapeHtml(behavior.actor_position_rule)}</textarea></label>` : ''}
@@ -6900,8 +6922,8 @@
             ${field(`${eventPath}.target_scope`, '作用范围', { type: 'select', options: LIFECYCLE_TARGET_SCOPE_OPTIONS })}
             ${needsCarrier ? field(`${eventPath}.carrier_scope`, '载体范围', { type: 'select', options: LIFECYCLE_CARRIER_SCOPE_OPTIONS }) : ''}
             ${field(`${eventPath}.responsibility.mode`, '责任确定方式', { type: 'select', options: LIFECYCLE_RESPONSIBILITY_MODE_OPTIONS })}
-            ${field(`${eventPath}.responsibility.department`, '责任部门')}
-            ${field(`${eventPath}.responsibility.position`, '责任岗位')}
+            ${field(`${eventPath}.responsibility.department`, '责任部门', { type: 'select', options: [{ value: '', label: '尚未选择' }, ...DEPARTMENTS.map(value => ({ value, label: value }))] })}
+            ${field(`${eventPath}.responsibility.position`, '责任岗位', { type: 'select', options: [{ value: '', label: '尚未选择' }, ...rosterPositions(event.responsibility?.department).map(value => ({ value, label: value }))] })}
             ${field(`${eventPath}.exception_handling`, '例外处理', { type: 'textarea', className: 'wide' })}
           </div>
         </details>
@@ -7866,6 +7888,13 @@
         return true;
       }
       if (selection.kind === 'behavior') {
+        const actor = parseActorRole(merged.mergedEntity.current_actor_role);
+        if (merged.changedFields.includes('current_actor_role')
+          && actorAssignmentMode(merged.mergedEntity) === 'fixed_department'
+          && merged.mergedEntity.current_actor_role && !actor.known) {
+          showStatus('执行部门与岗位请选择员工基础信息表中的对应组合，原JSON和未应用输入均保留。', 'error');
+          return false;
+        }
         return runGraphCommand(
           { type: 'update_behavior', behavior: merged.mergedEntity },
           { successLabel: `${config.label}已更新`, resetEditSessionOnSuccess: true }
@@ -8314,6 +8343,7 @@
 
     function renderProfile() {
       const body = `<div class="grid">
+        ${field('process.entry_behavior_refs', '流程入口', { type: 'multi-select', className: 'wide', options: behaviorOptions(false), hint: '按真实启动位置选择，可多选；未选择表示仍需确认，不按行序推断。' })}
         ${field('process.purpose', '流程目的', { type: 'textarea', className: 'half', placeholder: '说明为什么要建立这条流程' })}
         ${field('process.scope', '适用范围', { type: 'textarea', className: 'half', placeholder: '说明适用对象、业务边界或触发范围' })}
       </div>`;
@@ -9615,7 +9645,7 @@
       return `<div class="score-panel" id="structureScorePanel" aria-live="polite">
         <div class="score-panel-head">
           <div>
-            <h3>${escapeHtml(rule?.label || '结构化学习评分 v5（process-governance-v8）')}</h3>
+            <h3>${escapeHtml(rule?.label || '结构化学习评分 v6（process-governance-v9）')}</h3>
             <p>评分根据当前页面内容自动生成，只用于结构化学习反馈，不写入下载的JSON。</p>
           </div>
           <button class="button small" data-action="refresh-structure-score"${pending ? ' disabled' : ''}>重新评分</button>
@@ -10137,7 +10167,9 @@
     }
 
     function updateNativeGridCell(control) {
-      if (!control?.matches?.('[data-grid-cell]')) return;
+      // Replacing the workspace can emit change from the previously focused
+      // cell after its editing session has already been disposed.
+      if (!webGridSession || !control?.matches?.('[data-grid-cell]') || !control.isConnected || !workspace.contains(control)) return false;
       const tableId = control.dataset.gridTableId;
       const rowId = control.dataset.gridRowId;
       const column = control.dataset.gridColumn;
@@ -10169,6 +10201,7 @@
       }
       clearNativeGridIssues();
       updateNativeGridStatus();
+      return true;
     }
 
     function applyNativeGridFilter(tableId, query) {
@@ -10214,6 +10247,7 @@
     }
 
     function nativeGridPasteOptions(tableId, column, row) {
+      if (column.lookup === 'collectionFields') return gridUpdateFieldOptions(row);
       if (column.editor === 'select' || column.editor === 'multi-select') return column.values || [];
       if (column.editor === 'lookup') return gridLookupRows(column.lookup, row || {});
       return [];
@@ -12461,6 +12495,7 @@
           source_behavior_name: '',
           source_data_name: '',
           availability_mode: 'pending_confirmation',
+          presence: 'pending_confirmation',
           available_from_behavior_ref: null
         });
         touch();
@@ -12769,7 +12804,7 @@
           if (item.current_actor_role !== '全公司' && actorDepartmentIsKnown && !parsedActor.position) {
             addWarning(`${label}未选择执行岗位`, actorTarget);
           } else if (!actorIsValid) {
-            addWarning(`${label}的执行岗位未被所选执行部门的花名册收录`, actorTarget);
+            addWarning(`${label}的执行岗位未被员工基础信息表中所选部门的岗位目录收录`, actorTarget);
           }
         }
         const hasDerivedEntry = (dataFlowDetails?.incomingByBehavior.get(item.behavior_ref) || [])
@@ -13065,7 +13100,7 @@
           }
         });
         const createLinks = (item.behavior_links || []).filter(link => link.operation === 'create');
-        if (createLinks.length > 1) {
+        if (createLinks.length > 1 && !(data.schema_version === 'process-governance-v9' && item.record_model === 'record_collection')) {
           addWarning(`${label}登记了${createLinks.length}个创建行为，当前无法确认唯一创建位置。`, atField(dataTarget, `data_objects.${dataIndex}.behavior_links`));
         }
         (item.behavior_links || []).forEach((link, linkIndex) => {
@@ -13408,13 +13443,13 @@
       try {
         parsed = JSON.parse(JSON.stringify(context.snapshot));
         checks.parse = true;
-        const migrated = globalThis.ProcessGovernanceMigration.migrateDocument(parsed, { departments: DEPARTMENTS });
+        const migrated = globalThis.ProcessGovernanceMigration.migrateDocument(parsed, { departments: DEPARTMENTS, preserveFixedActorRoles: true });
         checks.compatibility = parsed.schema_version === EXPECTED_EXPORT_SCHEMA_VERSION
           && migrated.length === 1
           && migrated[0].schema_version === EXPECTED_EXPORT_SCHEMA_VERSION;
         roundTripDocument = globalThis.ProcessGovernanceMigration.migrateDocument(
           JSON.parse(JSON.stringify(migrated[0])),
-          { departments: DEPARTMENTS }
+          { departments: DEPARTMENTS, preserveFixedActorRoles: true }
         )[0];
         checks.preservation = scoring.stableStringify(scoring.semanticProjection(migrated[0]))
           === scoring.stableStringify(scoring.semanticProjection(roundTripDocument));
@@ -13575,7 +13610,7 @@
           ? { validationProfile: 'early-v7-data-fields' }
           : {});
         const sourceClassification = globalThis.ImportCompatibility.classifyPostMigrationValidation(sourceValidation);
-        const sourceCanEnterRelationshipRepair = ['process-governance-v7', EXPECTED_EXPORT_SCHEMA_VERSION].includes(parsed.schema_version)
+        const sourceCanEnterRelationshipRepair = ['process-governance-v7', 'process-governance-v8', EXPECTED_EXPORT_SCHEMA_VERSION].includes(parsed.schema_version)
           && sourceClassification.allowed;
         if (!sourceValidation.valid && !sourceCanEnterRelationshipRepair) {
           const firstError = sourceValidation.errors?.[0];
@@ -13584,7 +13619,8 @@
         const migratedDocuments = globalThis.ProcessGovernanceMigration.migrateDocument(parsed, {
           fileName: file.name,
           fileSha256,
-          departments: DEPARTMENTS
+          departments: DEPARTMENTS,
+          preserveFixedActorRoles: true
         });
         const targetValidations = await Promise.all(migratedDocuments.map(validateGraphDocument));
         const targetBatch = globalThis.ImportCompatibility.classifyPostMigrationBatch(targetValidations);
@@ -13592,11 +13628,11 @@
         if (failedTargetIndex >= 0) {
           const failedTarget = targetValidations[failedTargetIndex];
           const firstError = failedTarget.errors?.[0];
-          throw new Error(firstError ? `${validationErrorLocation(firstError)}：${firstError.message}` : '迁移副本未通过v8结构校验');
+          throw new Error(firstError ? `${validationErrorLocation(firstError)}：${firstError.message}` : '迁移副本未通过v9结构校验');
         }
         if (!targetBatch.allowed) throw new Error('迁移没有生成可安装的流程候选');
         const repairableRelationshipErrorCount = targetBatch.repairableErrorCount;
-        const normalizationSummaries = ['process-governance-v7', EXPECTED_EXPORT_SCHEMA_VERSION].includes(parsed.schema_version)
+        const normalizationSummaries = ['process-governance-v7', 'process-governance-v8', EXPECTED_EXPORT_SCHEMA_VERSION].includes(parsed.schema_version)
           ? migratedDocuments.map(data => globalThis.ImportCompatibility.summarizeNormalization(parsed, data))
           : migratedDocuments.map(() => null);
         const normalizationChangeCount = normalizationSummaries.reduce(
@@ -13654,7 +13690,7 @@
                 : `v7文件已导入并发现${normalizationChangeCount}项规范化差异。请展开逐项核对；当前内容尚未下载。`
             : migrated
               ? '历史结构化文件已导入当前页面，当前内容标记为未下载。'
-              : 'v8结构化文件已导入当前页面。',
+              : `${EXPECTED_EXPORT_SCHEMA_VERSION.replace('process-governance-', '')}结构化文件已导入当前页面。`,
           'success'
         );
       } catch (error) {
@@ -13872,7 +13908,7 @@
         });
       }
       const kind = target.dataset.kind;
-      const value = kind === 'boolean' ? target.checked : kind === 'nullable' ? nullable(target.value) : target.value;
+      const value = kind === 'boolean' ? target.checked : kind === 'array' ? Array.from(target.selectedOptions, option => option.value) : kind === 'nullable' ? nullable(target.value) : target.value;
       const lifecycleChoice = target.dataset.bind.match(/^(data_objects\.\d+\.lifecycle\.(?:entry_state|routes\.\d+\.(?:exit_state|events\.\d+\.result_state)))\.identifiability_applicability$/);
       if (lifecycleChoice) {
         setByPath(lifecycleChoice[1], globalThis.LifecycleAnalyzer.changeIdentifiability(getByPath(lifecycleChoice[1]), 'identifiability_applicability', value));
@@ -13950,7 +13986,7 @@
         const tableId = target.dataset.gridTableId;
         const rowId = target.dataset.gridRowId;
         const column = target.dataset.gridColumn;
-        updateNativeGridCell(target);
+        if (!updateNativeGridCell(target) || !webGridSession) return;
         if (column === 'business_data_ref') refreshNativeGridPanelAndFocus(tableId, rowId, column);
         if (tableId === 'form_items' && column === 'data_field_ref') {
           refreshNativeGridPanelAndFocus('form_items', rowId, column);
@@ -13993,7 +14029,8 @@
         return;
       }
       if (target.matches('[data-graph-actor-department]') && graphSelection?.kind === 'behavior') {
-        editSessionManager.updatePatch({ current_actor_role: combineActorRole(target.value, '') });
+        const previousPosition = workspace.querySelector('[data-graph-actor-position]')?.value || '';
+        editSessionManager.updatePatch({ current_actor_role: combineActorRole(target.value, previousPosition) });
         refreshUnappliedIndicators();
         render();
         return;
@@ -14104,7 +14141,8 @@
         const index = Number(target.dataset.actorDepartment);
         const behavior = currentDocument()?.behaviors?.[index];
         if (!behavior) return;
-        const nextValue = combineActorRole(target.value, '');
+        const previousActor = parseActorRole(behavior.current_actor_role);
+        const nextValue = combineActorRole(target.value, previousActor.position || (!previousActor.department ? behavior.current_actor_role : ''));
         behavior.actor_assignment_mode = 'fixed_department';
         behavior.current_actor_role = nextValue;
         behavior.actor_department_data_ref = null;

@@ -237,5 +237,7 @@ BOT_WRITE_TOOLS=Read,Grep,Glob,Edit,Write,Bash
 - **最常见故障：WebSocket 连不上而 HTTP 正常。** 表现为启动时刷 `SMWebsocketError` 但 `auth.test` 能成功。原因是 Slack 的 HTTP 走 Node 原生 fetch（会读代理环境变量），而 Socket Mode 的 WebSocket 走 npm 版 undici（不读）。修复方式见 `src/index.js` 中构造 `SocketModeReceiver` 的注释——必须显式注入 `dispatcher`，设置 undici 全局 dispatcher 是无效的，因为 `@slack/socket-mode` 会自建 Agent 顶掉它。
 - 本机 Claude Code 的模型通道是 DeepSeek 兼容端点，`claude -p` 每次会向 stderr 打印一行 `[claude-code:unrecognized_model]` 诊断，属正常现象，不影响解析（stdout 始终是单行纯净 JSON）。
 - **响应时间差异很大**：简单问题十几秒；需要全仓库检索的问题实测可跑到 15 轮、4~5 分钟。等待期间占位消息每 45 秒刷新一次时间戳（「已 N 秒」），刷不动才是真卡住。
-- Slack 单条消息约 4000 字符，超长答案会按行自动切成多条接续发送。
+- 答案按每段最多 3800 个 JavaScript 字符和 3500 个 UTF-8 字节切分，优先在换行处断开，完整保留文本和 Unicode 字符。首段更新占位消息，其余段在原线程接续发送。字节预算用于避免中文答案在字符数不足 4000 时仍被 `chat.update` 以 `msg_too_long` 拒绝。
+- Slack 仍返回 `msg_too_long` 时，只将被拒绝的那一段按更小的字节预算重新切分并重试；已经发送成功的段不重发。其他错误不自动重发，避免网络结果不明时产生重复回复。若部分答案已经发出，后续失败提示另发到原线程，不覆盖已发出的答案。
+- 回复失败日志只记录接口、错误码、字符数、UTF-8 字节数、已发送段数和重试预算，不记录答案正文。`npm run check` 检查语法。本机保留的 `src/slack-replies.test.js` 可通过 `node --test src/slack-replies.test.js` 使用模拟 Slack 客户端验证中文、Emoji、长行、超长重试和部分发送失败，不发送真实消息；测试脚本不随 Git 分发。
 - 机器人只回答，不主动参与；不会读取未被 @ 的频道消息。

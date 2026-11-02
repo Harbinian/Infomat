@@ -15,7 +15,8 @@
 - 人员分配、例会把关机制、高压窗口和推进原则分别以 `信息化项目_工作平衡.md`、`信息化项目_工作开展原则.md` 为准。
 - 部门主备岗、会议、行动项、调整、升级和完成确认以 `信息化项目_协同工作规则.md` 为准；当前人员名单以 `信息化项目_部门主备对接人名单.md` 为准。
 - `信息化项目_协同工作规则_群通知.md` 是信息化工作群发布副本，不替代规则正文或人员名单。
-- `tasks.json`、`pmo-source-manifest.json` 和 `gantt-react/public/*` 是生成消费文件，不手工维护。
+- `信息化项目_WBS增补记录.md` 维护增补任务及原任务字段调整；不改写原计划与 WBS 记录。
+- `tasks.json`、`pmo-source-manifest.json`、`task-amendments.json` 及 `gantt-react/public/` 中的对应副本是六份生成消费文件，不手工维护。
 
 ## 数据更新流程
 
@@ -29,7 +30,7 @@ python build_pmo_task_data.py
 3. 回到仓库根目录运行：
 
 ```powershell
-# 本地测试入口不随 Git 分发。
+node scripts/check-pmo-task-data.mjs
 ```
 
 4. 如任务数、字段数或里程碑数量变化，先核对 Markdown 真源是否确实发生增删。

@@ -1,7 +1,6 @@
 # PMO 数字化底座
 
-测试脚本及辅助历史资料仅保留在维护者本机，不随 Git 分发；公开包不提供对应测试命令。本地验证须使用已有工具或明确取得的测试材料，并遵守隔离、权限和验收边界。
-
+测试脚本及夹具仅留本机，不随 Git 分发。原命令在仓库根 `.local-tests/commands.json` 按所属 `package` 查询；先核对脚本、依赖和隔离条件，再直接调用。该清单不代表当前 npm 入口；新检出缺少工具时记录未执行项。
 
 `pmo/` 目录包含三个同级项目管理入口：流程地图驾驶舱、React 甘特图和 PMO 管控看板。
 
@@ -16,6 +15,7 @@
 | 计划管控真源 | `pmo/信息化项目_计划管控真源.md` |
 | WBS结构真源 | `pmo/信息化项目_WBS结构真源.md` |
 | 执行标准真源 | `pmo/信息化项目_执行标准真源.md` |
+| WBS增补记录 | `pmo/信息化项目_WBS增补记录.md`，维护日期、任务身份和字段前后记录；当前任务值仍以计划管控真源为准 |
 | 工作平衡 | `pmo/信息化项目_工作平衡.md` |
 | 工作开展原则 | `pmo/信息化项目_工作开展原则.md` |
 | 协同工作规则 | `pmo/信息化项目_协同工作规则.md` |
@@ -62,7 +62,6 @@ npm run dev
 
 PMO 看板内的“周会事项”页签是 PMO 行动台账，登记行动项、风险、问题、变更和责任池事项，数据写入 `pmo/weekly-issues/ledger.json` 正本并随仓库版本管理。规则校验（关闭依据、期限调整同意人）在服务端执行，见 `pmo/weekly-issues/README.md`。
 
-
 流程地图驾驶舱的独立路由为：
 
 ```text
@@ -70,6 +69,12 @@ http://localhost:5174/#/procedure-dashboard
 ```
 
 原始页面仍保留在 `pmo/procedure-management/dashboard.html`，由 PMO 服务直接读取，不另维护副本。
+
+## 当前计划补充基准
+
+当前计划修订基准为2026-10-27。沿用516个WBS节点，WBS1.3补充公司级数据战略和年度计划，WBS4调整为3000治理平台建设与数据治理交付；本期范围、仅提示缺口项和具体判据见计划管控及执行标准真源。
+
+本次保留原日历排程、资源、前置及受控交付物绑定；新增要求从本次基准核实现状和剩余工作，不据原日期认定完成。实际启用、业务验收和后续排程分别取得证据后办理。重新生成数据只同步本地PMO消费文件，不执行服务发布或业务验收。
 
 ## 更新任务数据
 
@@ -91,14 +96,14 @@ python build_pmo_task_data.py
 | `pmo/gantt-react/public/tasks.json` | React 应用实际读取的数据 |
 | `pmo/pmo-source-manifest.json` | PMO 真源清单 |
 | `pmo/gantt-react/public/pmo-source-manifest.json` | React 服务可读取的真源清单 |
+| `pmo/task-amendments.json` | 按批次生成的WBS增补前后对照 |
+| `pmo/gantt-react/public/task-amendments.json` | React增补标签、筛选与详情对照数据 |
 
 运行完成后应看到 `Wrote 516 tasks from 信息化项目_计划管控真源.md`。如任务数变化，应先确认 MD 真源是否确实发生增删。
 
 可在仓库根目录运行以下命令，确认计划真源、WBS 真源、PMO 根目录备份数据与 React 应用实际读取数据的任务数量和日期一致，并检查集中休假后的关键排期节点：
 
-```bash
-# 本地测试入口不随 Git 分发。
-```
+任务与来源一致性从仓库根运行 `node scripts/check-pmo-task-data.mjs`；页面交互及交付物专项按 `.local-tests/commands.json` 选择本机脚本，并核对输入及副作用。
 
 ## 数据字段
 

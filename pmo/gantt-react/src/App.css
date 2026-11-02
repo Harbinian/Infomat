@@ -16,6 +16,9 @@
   --c-sys: #9a7a30;
   --c-miss: #9a8e7c;
   --focus: #c97050;
+  --amendment: #6d4c9e;
+  --amendment-fill: #eee7f5;
+  --amendment-row: rgba(109, 76, 158, 0.055);
   --shadow: 0 8px 28px rgba(58, 46, 31, 0.10);
   --shadow-sm: 0 4px 12px rgba(58, 46, 31, 0.06);
 
@@ -287,6 +290,40 @@ button { transition: all 0.12s ease; }
 .tree-node.level-4 .col-name { padding-left: 36px; }
 .tree-node.type-milestone .col-name { color: var(--c-sys); font-weight: 600; }
 .tree-node.risk-high .col-wbs { color: var(--focus); font-weight: 700; }
+
+/* Amendment metadata decorates the existing plan; it does not encode progress. */
+.amendment-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 15px; padding: 9px 18px; border-bottom: 1px solid var(--line); background: var(--panel); color: var(--muted); font-size: 12px; flex-shrink: 0; }
+.amendment-bar strong { color: var(--ink); font-weight: 600; }
+.amendment-schedule-note { font-size: 11px; }
+.amendment-filter { display: inline-flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; margin-left: auto; }
+.amendment-filter button { background: var(--panel-2); color: var(--text); border: 0; padding: 5px 10px; cursor: pointer; font-size: 12px; }
+.amendment-filter button[aria-pressed="true"] { color: var(--amendment); background: var(--amendment-fill); }
+.amendment-highlight { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.amendment-highlight input { accent-color: var(--amendment); }
+.amendment-badge { display: inline-block; flex-shrink: 0; color: var(--amendment); background: var(--amendment-fill); border: 1px solid transparent; border-radius: 4px; padding: 1px 5px; font-size: 11px; line-height: 18px; font-weight: 500; white-space: nowrap; }
+.amendment-badge.outlined { background: transparent; border-color: rgba(109, 76, 158, .45); }
+.task-tree-panel.has-amendments { width: 480px; min-width: 480px; }
+.tree-node > .amendment-badge { margin-right: 7px; }
+.tree-node.amendment-row:not(.selected) { background-color: var(--amendment-row); }
+.task-ledger-view .dlv-row.amendment-row { background-color: var(--amendment-row); }
+.task-detail-link { border: 0; background: transparent; color: inherit; font-size: inherit; text-align: left; cursor: pointer; padding: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
+.task-detail-link:hover { text-decoration: underline; }
+.task-ledger-view .dlv-name .amendment-badge { margin-top: 4px; }
+.task-ledger-view .dlv-name:has(.amendment-badge) { white-space: normal; }
+.task-detail-link:focus-visible, .amendment-filter button:focus-visible, .amendment-before summary:focus-visible, .amendment-other summary:focus-visible { outline: 2px solid var(--amendment); outline-offset: 2px; }
+.amendment-details { border-bottom: 1px solid var(--line); padding-bottom: 16px; margin-bottom: 16px; }
+.amendment-task-name { font-size: 14px; font-weight: 600; color: var(--ink); margin-bottom: 12px; }
+.amendment-details-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.amendment-details-heading strong { color: var(--ink); font-size: 15px; }
+.amendment-details-note { color: var(--muted); font-size: 11px; margin: 7px 0 10px; }
+.amendment-field { margin-top: 13px; }
+.amendment-field-title { display: flex; align-items: center; gap: 7px; font-size: 12px; margin-bottom: 6px; color: var(--ink); }
+.amendment-added { padding: 9px 11px; background: var(--amendment-fill); border-left: 2px solid var(--amendment); border-radius: 0 4px 4px 0; color: var(--text); font-size: 13px; line-height: 1.65; overflow-wrap: anywhere; }
+.amendment-current { color: var(--text); font-size: 13px; line-height: 1.65; overflow-wrap: anywhere; }
+.amendment-before, .amendment-other { margin-top: 8px; color: var(--muted); font-size: 12px; }
+.amendment-before summary, .amendment-other > summary { cursor: pointer; }
+.amendment-before div { margin-top: 8px; }
+.amendment-before p { color: var(--text); margin-top: 3px; white-space: pre-wrap; overflow-wrap: anywhere; }
 
 /* ===== Gantt ===== */
 .gantt-wrapper { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; position: relative; }

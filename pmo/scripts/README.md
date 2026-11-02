@@ -10,6 +10,8 @@
 
 | 脚本 | 作用 |
 |---|---|
+| `smoke-task-amendments.mjs` | 只读检查增补批次、稳定任务身份、父级汇总与筛选上下文；不修改进度、交付物或任务数据 |
+| `test_task_amendments.py` | 使用内存夹具检查增补生成器的身份、字段、差异及历史版本校验，不写文件 |
 | `export-organization-dynamics-png.mjs` | 读取组织数字化参与度模型 SVG，使用本机 Edge 或 Chrome 导出1600×2400 PNG；默认只写入被忽略的 `artifacts/` |
 | `smoke-deliverable-action.mjs` | 交付物行动项 smoke 检查，锁定双轴状态机、规则 6.2/6.4/8.1 校验、发布文本和 7 个行动项端点；使用临时正本夹具，运行后清理 |
 | `smoke-deliverable-identity.mjs` | 交付物身份契约 smoke 检查，锁定受控行与计划投影行分离、编号不漂移；只读，不写文件 |

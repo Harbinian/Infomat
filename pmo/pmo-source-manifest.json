@@ -1,6 +1,6 @@
 {
   "schemaVersion": "pmo-service-source-manifest-v1",
-  "snapshotDate": "2026-06-12",
+  "snapshotDate": "2026-10-27",
   "authoritativeMode": "markdown-only",
   "deprecatedInputs": {
     "status": "历史 XLSX/MPP/CSV 任务导入文件已废弃；当前不再保留或读取 Project 导入表、旧版备份、MPP 或 CSV 文件"
@@ -11,28 +11,28 @@
       "path": "信息化项目_计划管控真源.md",
       "purpose": "维护任务排程、资源责任、风险交付、阶段门和执行管控字段",
       "exists": true,
-      "sha256_16": "0175e377042e85ae"
+      "sha256_16": "b189629d7177fcd0"
     },
     {
       "role": "WBS结构真源",
       "path": "信息化项目_WBS结构真源.md",
       "purpose": "维护 WBS 编号、父子层级、排序和摘要/里程碑结构",
       "exists": true,
-      "sha256_16": "3cf8d475232d89f8"
+      "sha256_16": "baa47c6d930d5125"
     },
     {
       "role": "工作平衡",
       "path": "信息化项目_工作平衡.md",
       "purpose": "维护人员分配、例会把关机制、高压窗口和调度规则",
       "exists": true,
-      "sha256_16": "58e5a9a8a39e2f72"
+      "sha256_16": "1a2facf72a9d33e4"
     },
     {
       "role": "工作开展原则",
       "path": "信息化项目_工作开展原则.md",
       "purpose": "维护 PMO 推进原则、协同边界、阶段确认和闭环规则",
       "exists": true,
-      "sha256_16": "b56072f9dff47662"
+      "sha256_16": "1f4b5cc1c825c191"
     },
     {
       "role": "协同工作规则",
@@ -53,14 +53,30 @@
       "path": "信息化项目_执行标准真源.md",
       "purpose": "维护执行标准卡正文、检查清单、完成判定和证据要求",
       "exists": true,
-      "sha256_16": "2779d072a4f03bf6"
+      "sha256_16": "dcf2cd645f29983a"
+    },
+    {
+      "role": "WBS增补记录",
+      "path": "信息化项目_WBS增补记录.md",
+      "purpose": "维护授权增补批次、任务身份和字段前后记录，不改变任务状态",
+      "exists": true,
+      "sha256_16": "7086259bd4261717"
     }
   ],
   "serviceOutputs": [
     "tasks.json",
     "gantt-react/public/tasks.json",
-    "gantt-react/public/pmo-source-manifest.json"
+    "gantt-react/public/pmo-source-manifest.json",
+    "task-amendments.json",
+    "gantt-react/public/task-amendments.json"
   ],
+  "taskAmendments": {
+    "schemaVersion": "pmo-task-amendments-v1",
+    "path": "task-amendments.json",
+    "source": "信息化项目_WBS增补记录.md",
+    "batchCount": 1,
+    "sha256_16": "129b6ff89f219984"
+  },
   "taskSummary": {
     "recordCount": 516,
     "fieldCount": 43,
@@ -72,22 +88,22 @@
   },
   "standardGovernance": {
     "schemaVersion": "pmo-standard-gap-operations-v1",
-    "referenceDate": "2026-06-12",
+    "referenceDate": "2026-10-27",
     "standardSource": "信息化项目_执行标准真源.md",
     "generatedBy": "pmo/build_pmo_task_data.py",
     "taskCount": 516,
     "fieldCount": 43,
     "bucketCounts": {
-      "必须补": 210,
-      "自动可补": 62,
+      "必须补": 214,
+      "自动可补": 22,
       "合理暂缓": 94,
-      "需拆分后补": 53,
-      "人工复核": 28
+      "需拆分后补": 45,
+      "人工复核": 15
     },
-    "actionableGapCount": 353,
-    "highRiskActionableCount": 168,
-    "criticalControlActionableCount": 70,
-    "phaseGateActionableCount": 33
+    "actionableGapCount": 296,
+    "highRiskActionableCount": 126,
+    "criticalControlActionableCount": 55,
+    "phaseGateActionableCount": 25
   },
   "updateRule": "修改 MD 真源后运行 python build_pmo_task_data.py，将计划数据输入甘特图和 PMO 看板服务。"
 }

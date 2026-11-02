@@ -1,7 +1,6 @@
 # 数字化底座项目 PMO 管控看板
 
-测试脚本及辅助历史资料仅保留在维护者本机，不随 Git 分发；公开包不提供对应测试命令。本地验证须使用已有工具或明确取得的测试材料，并遵守隔离、权限和验收边界。
-
+测试脚本及夹具仅留本机，不随 Git 分发。原命令在仓库根 `.local-tests/commands.json` 按所属 `package` 查询；先核对脚本、依赖和隔离条件，再直接调用。该清单不代表当前 npm 入口；新检出缺少工具时记录未执行项。
 
 基于 React + Vite 的交付物驱动项目管控看板，从甘特图升级为 PMO 周会可用工具。
 
@@ -29,7 +28,6 @@ npm run preview
 ```powershell
 docker compose -f pmo/gantt-react/compose.yaml build
 docker compose -f pmo/gantt-react/compose.yaml up -d --no-build
-# 本地测试入口不随 Git 分发。
 ```
 
 默认基镜像为 `node:24-bookworm-slim`。本机无法拉取 Docker Hub 镜像时，可复用已存在且验证过的本地 Node 24 镜像：先设置 `$env:PMO_NODE_IMAGE='infomat-node:24.21.0'`，再运行构建命令。镜像必须事先存在；该名称不是公共镜像。
@@ -48,7 +46,17 @@ docker compose -f pmo/gantt-react/compose.yaml up -d --no-build
 
 ## 数据来源
 
-`public/tasks.json` 由 `pmo/build_pmo_task_data.py` 读取七份PMO来源生成，以计划管控Markdown为任务主体，其余六份共同提供WBS、执行标准和协同信息，并登记在source manifest中。页面实际读取 `public/tasks.json`，同时保留 `pmo/tasks.json` 作为 PMO 根目录备份。
+`public/tasks.json` 由 `pmo/build_pmo_task_data.py` 读取八份PMO来源生成，以计划管控Markdown为任务主体，其余七份共同提供WBS、执行标准、协同信息和增补记录，并登记在source manifest中。页面实际读取 `public/tasks.json`，同时保留 `pmo/tasks.json` 作为 PMO 根目录备份。
+
+### WBS增补标记与前后对照
+
+增补身份以`pmo/信息化项目_WBS增补记录.md`中的批次日期、稳定任务ID和WBS为依据；当前任务值仍由计划管控真源维护。生成器另产出两份`task-amendments.json`，并在来源清单登记摘要；原任务JSON仍为43字段，不加入进度或完成状态。
+
+甘特图与任务清单显示`10/27增补`或摘要调整标签，未直接修改的父级按去重叶任务显示`含n项增补`。可切换全部任务与仅看本次增补、开关行底强调；甘特筛选保留父级上下文以保持两侧行对齐。时间条颜色、位置、长度和风险标记保持原有含义，增补使用独立靛紫色标识。
+
+任务名称可打开详情，顶部展示新增要求、补充内容及可展开的调整前对照。增补数据缺失或身份不匹配时，页面提示增补记录不可用并显示完整任务，避免将缺数据误作无任务。多批次时可选择批次，历史前后记录保留；本批次的标记不表示任务已完成。
+
+修改增补源后仍运行原生成入口，六份输出为两份任务JSON、两份来源清单和两份增补JSON。验证：`node pmo/scripts/smoke-task-amendments.mjs`、`python pmo/scripts/test_task_amendments.py`及 `node scripts/check-pmo-task-data.mjs`，均从仓库根目录执行。桌面界面以Edge100%、1699×828 CSS像素检查，不执行窄屏适配或测试。
 
 当前任务数为 516，每条任务固定输出43个顶层字段。字段数由`pmo/build_pmo_task_data.py`中的唯一输出字段清单计算，并由生成器逐行检查，不从真源摘要手工复制。生成脚本会保留基础甘特字段，并附带阶段门、关键路径控制、H5 重点展示、合同/付款控制口径、执行标准缺口分桶和优先级队列等执行管控字段。
 
@@ -71,7 +79,10 @@ docker compose -f pmo/gantt-react/compose.yaml up -d --no-build
 | `pmo/信息化项目_WBS结构真源.md` | WBS 编号、父子层级和排序 |
 | `pmo/信息化项目_工作平衡.md` | 人员分配、例会把关机制和高压窗口 |
 | `pmo/信息化项目_工作开展原则.md` | PMO 推进原则、协同边界和闭环规则 |
+| `pmo/信息化项目_协同工作规则.md` | 部门主备岗、行动项、期限调整和完成确认规则 |
+| `pmo/信息化项目_部门主备对接人名单.md` | 部门负责人、主对接人和备岗名单 |
 | `pmo/信息化项目_执行标准真源.md` | 执行标准卡、检查清单、完成判定和证据要求 |
+| `pmo/信息化项目_WBS增补记录.md` | 增补批次、稳定任务身份与字段前后记录 |
 
 ### 替换新任务数据
 
@@ -79,7 +90,7 @@ docker compose -f pmo/gantt-react/compose.yaml up -d --no-build
 2. 如调整 WBS 编号/层级，同步修改 `pmo/信息化项目_WBS结构真源.md`。
 3. 如调整人员或推进机制，同步修改 `pmo/信息化项目_工作平衡.md`、`pmo/信息化项目_工作开展原则.md`。
 4. 在 `pmo/` 下运行 `python build_pmo_task_data.py`。
-5. 脚本同时写入 `pmo/tasks.json`、`pmo/pmo-source-manifest.json`、`pmo/gantt-react/public/tasks.json` 和 `pmo/gantt-react/public/pmo-source-manifest.json`。
+5. 脚本同时写入根目录和React public内的`tasks.json`、`pmo-source-manifest.json`及`task-amendments.json`，不手工修改生成文件。
 6. 刷新浏览器。
 
 运行完成后应看到 `Wrote 516 tasks from 信息化项目_计划管控真源.md`。如任务数发生变化，先确认 MD 真源是否确实增删任务。
@@ -155,18 +166,7 @@ action:
 
 ### 测试
 
-```bash
-# 本地测试入口不随 Git 分发。
-# 本地测试入口不随 Git 分发。
-# 本地测试入口不随 Git 分发。
-# 本地测试入口不随 Git 分发。
-# 本地测试入口不随 Git 分发。
-# 本地测试入口不随 Git 分发。
-# 本地测试入口不随 Git 分发。
-# 本地测试入口不随 Git 分发。
-# 本地测试入口不随 Git 分发。
-# 本地测试入口不随 Git 分发。
-```
+任务与来源一致性从仓库根运行 `node scripts/check-pmo-task-data.mjs`；页面交互及交付物专项按 `.local-tests/commands.json` 选择本机脚本，并核对输入及副作用。
 
 ## Console 口径
 

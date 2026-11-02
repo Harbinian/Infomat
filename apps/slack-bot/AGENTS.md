@@ -44,5 +44,5 @@
 - 构建启动：`docker compose up -d --build`；状态应为 `Up (healthy)`
 - 同步进度与耗时：`docker compose logs -f repo-sync`
 - 只读是否真的生效：`docker exec infomat-slack-bot touch /repo/__probe`，应报 `Read-only file system`
-- 写入档是否仍指向真实仓库：`docker exec infomat-slack-bot touch /repo-write/.probe`，应成功
-- 协作入口或路由变化时，从仓库根目录运行 本机保留的对应验证入口
+- 写入挂载核对：只读检查 `compose.yaml` 和目标容器的挂载配置，确认 `/repo-write` 的来源与可写属性；实际写入验证另按目标及授权执行，不默认在真实仓库创建探针文件。
+- 协作入口或路由变化时，按根 `CODEX.md` 核对上下文检查工具、路由及注册；本机测试清单位于仓库根 `.local-tests/commands.json`，不把历史测试别名当作当前 npm 入口。

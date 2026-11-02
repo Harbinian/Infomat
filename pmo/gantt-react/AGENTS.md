@@ -20,6 +20,7 @@
 | `../信息化项目_执行标准真源.md` | 执行标准卡、检查清单、完成判定和证据要求 |
 | `../信息化项目_协同工作规则.md` | 行动项发布、接收、完成确认、期限调整和升级规则 |
 | `../信息化项目_部门主备对接人名单.md` | 责任部门与主备对接人，供 `action.assigneeDepartment` 校验 |
+| `../信息化项目_WBS增补记录.md` | 增补任务及原任务字段调整，生成独立增补数据 |
 
 `public/pmo-source-manifest.json` 是服务侧真源清单。历史 XLSX / MPP / CSV 任务导入文件已废弃，不作为当前输入。
 
@@ -35,10 +36,10 @@ python build_pmo_task_data.py
 3. 回到仓库根目录运行：
 
 ```powershell
-# 本地测试入口不随 Git 分发。
+node scripts/check-pmo-task-data.mjs
 ```
 
-脚本会写入 `tasks.json`、`pmo-source-manifest.json`、`gantt-react/public/tasks.json` 和 `gantt-react/public/pmo-source-manifest.json`。不要手改这些生成文件。
+脚本会写入 `tasks.json`、`pmo-source-manifest.json`、`task-amendments.json` 及 `gantt-react/public/` 下的三份对应副本。不要手改这些生成文件。
 
 任务字段及生成合同由 `../build_pmo_task_data.py` 的 `TASK_OUTPUT_FIELD_KEYS` 维护，字段变化按父级 `AGENTS.md` 同步真源、生成器和检查，不另存第二份字段清单。
 

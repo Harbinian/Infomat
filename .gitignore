@@ -9,6 +9,13 @@ Thumbs.db
 # Local-only U8 query service (port 3088)
 /apps/u8-stock-order-query/
 
+# Local review workspaces and browser error output
+/.trae/
+/x.textContent)})
+
+# Standalone Slack Agent experiment (not part of Infomat distribution)
+/deepseekv4-1flash/
+
 # Generated artifacts (do not commit)
 artifacts/
 output/
@@ -82,6 +89,10 @@ yarn-error.log*
 /apps/mdm-platform/scripts/stage05-workbench-scenario.js
 /apps/mdm-platform/scripts/lib/processGovernanceMysqlSmoke.js
 /apps/mdm-platform/scripts/rehearse-process-v7-*
+/apps/structured-output-service/scripts/import-normalization-browser-scenario.js
+/apps/structured-output-service/scripts/multi-candidate-atomic-browser-scenario.js
+/apps/structured-output-service/scripts/v7-performance-browser-scenario.js
+/apps/structured-output-service/scripts/organization-enums-browser-scenario.js
 
 # Local-only history, source copies and auxiliary documentation
 *.docx.md

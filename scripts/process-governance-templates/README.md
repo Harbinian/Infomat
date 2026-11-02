@@ -68,7 +68,7 @@ Copy-Item scripts/process-governance-templates/verify-workbooks.mjs (Join-Path $
 
 ## 验证
 
-本机保留的对应验证入口 用合成文件存在夹具验证日期优先级、历史回退及无兼容标识停止；它不生成真实 Office 交付物，也不代替下面的渲染检查。
+本机 `scripts/test-root-script-safety.mjs` 使用合成文件存在夹具验证日期优先级、历史回退及无兼容标识停止；先核对脚本和依赖。它不生成真实 Office 交付物，也不代替下面的渲染检查。
 
 1. 标准化脚本必须输出 `273 L3 / 1415 A1 / 7 unmapped`，且流程、A1 制度名称缺失数均为 0。
 2. 工作簿公式错误扫描必须为 0；每个部门的 L3、A1 和待确认系统承接数量必须与桑基图快照一致。
