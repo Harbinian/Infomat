@@ -28,7 +28,7 @@ Infomat 集中维护流程与数据治理平台、PMO 协作工具、系统查�
 | **流程与数据治理平台（3000）** | 流程编制、核对与正式版本；组织与员工目录、账号授权、统一术语、数据治理及受控承接。模块权限与开启条件由平台维护 | [平台说明](apps/mdm-platform/README.md) |
 | **单流程编制工具（3001）** | 独立编制和兼容导入；用户内容仅保存在当前页面内存中，主动下载是唯一持久化动作 | [应用说明](apps/structured-output-service/README.md) |
 | **PMO 协作工具** | 甘特图、管控看板、周会行动台账及交付物维护；流程地图驾驶舱保留历史展示用途 | [PMO 说明](pmo/README.md) · [前端开发](pmo/gantt-react/README.md) |
-| **U8 出入库订单归属查询（3088）** | 只读查询订单归属、质量编号差异及销售质量编号唯一性，不修改 U8 单据或编号 | [应用说明](apps/u8-stock-order-query/README.md) |
+| **U8 出入库订单归属查询（3088）** | 只读查询订单归属、质量编号差异及销售质量编号唯一性，不修改 U8 单据或编号；整个服务目录仅在本机保留，不随 Git 分发 | 本机目录 `apps/u8-stock-order-query/` 下的 `README.md` |
 | **信息表收集服务（4000 / 4001）** | 管理端设计表单和发布任务，填报端保存草稿及提交答卷；当前暂缓开发与正式启用 | [应用说明](apps/information-collection-service/README.md) |
 | **Slack 问答机器人** | 通过 Claude Code CLI 检索仓库并回答问题；默认只读，写入能力按提问者单独授权 | [应用说明](apps/slack-bot/README.md) |
 

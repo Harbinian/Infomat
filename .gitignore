@@ -6,6 +6,9 @@ Thumbs.db
 # Private department business materials (local only)
 /docs/
 
+# Local-only U8 query service (port 3088)
+/apps/u8-stock-order-query/
+
 # Generated artifacts (do not commit)
 artifacts/
 output/

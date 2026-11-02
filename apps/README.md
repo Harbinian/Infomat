@@ -11,6 +11,7 @@
 |---|---|---|
 | `mdm-platform/` | MDM 平台承接应用 | [mdm-platform/README.md](mdm-platform/README.md) |
 | `structured-output-service/` | 局域网3001单流程治理编制工具，本工作区默认导出`process-governance-v8`候选，无状态兼容导入v1至v8及已支持历史文件；实际服务状态须实时核对 | [structured-output-service/README.md](structured-output-service/README.md) |
+| `u8-stock-order-query/` | 3088 U8 出入库订单归属及销售质量编号核查，只读查询；整个目录仅在本机保留，不随 Git 分发 | 本机目录下的 `README.md` |
 | `information-collection-service/` | 内部信息表收集服务，4000 用于表单设计和任务管理，4001 用于员工填报；业务数据写入独立 `collection_*` 表 | [information-collection-service/README.md](information-collection-service/README.md) |
 
 ## 使用边界
