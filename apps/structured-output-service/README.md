@@ -2,7 +2,7 @@
 
 测试脚本及夹具仅留本机，不随 Git 分发。原命令在仓库根 `.local-tests/commands.json` 按所属 `package` 查询；先核对脚本、依赖和隔离条件，再直接调用。该清单不代表当前 npm 入口；新检出缺少工具时记录未执行项。
 
-3000本地编制候选复用本应用React编辑器及领域模块；可选集成参数不改变独立3001的无状态行为。模板与技术校验由共享纯模块`scripts/process-governance/authoring-contracts.js`提供，各应用注入自身Ajv，不需要访问另一个HTTP服务。3000草稿保存、提交及切换条件见[3000编制合同](../mdm-platform/PROCESS_AUTHORING.md)；本轮源码整合未停止或部署3001。
+3000编制工作台复用本应用React编辑器及领域模块；可选集成参数不改变独立3001的无状态行为。模板与技术校验由共享纯模块`scripts/process-governance/authoring-contracts.js`提供，各应用注入自身Ajv，不需要访问另一个HTTP服务。3000草稿保存、提交及切换条件见[3000编制合同](../mdm-platform/PROCESS_AUTHORING.md)；实际版本、开关及恢复条件见[部署记录](../mdm-platform/DOCKER.md)。
 
 ## 部门和岗位选择
 
@@ -59,7 +59,15 @@ Controller的 `getSnapshot / subscribe / dispatch / destroy` 是业务状态唯�
 
 仅验证Microsoft Edge100%、1699×828 CSS像素桌面工作区。中文Composition事件及焦点自动化不等于Windows输入法候选窗人工体验或业务验收。技术契约和 `docs/` 说明用于实现兼容，不是业务治理真源。
 
-两项工作台浏览器命令均支持 `-OutputDir <本地证据目录>`，可分开保留各次验证报告、截图及实际下载；省略该参数沿用原默认目录。工作台脚本等待初始化及导入保护弹窗实际显示后再继续，避免把界面显示时序误判为导入失败。
+完整交互与图形阅读的两个本机入口为 `scripts/test-workbench-browser.ps1` 和 `scripts/test-workbench-graph-browser.ps1`。默认核对真实V9候选；可用 `-SourceSchemaVersion process-governance-v7`、`process-governance-v8` 或 `process-governance-v9` 指定来源，目标始终为V9。每个版本先生成并严格校验对应合同的虚构夹具，再通过实际文件输入导入。V7/V8正文保留，新字段明确待确认；原生V9夹具显式登记入口及记录范围，下载后继续保留。
+
+```powershell
+$candidateUrl = 'http://127.0.0.1:<本次独立端口>'
+& scripts/test-workbench-browser.ps1 -BaseUrl $candidateUrl -SourceSchemaVersion process-governance-v9
+& scripts/test-workbench-graph-browser.ps1 -BaseUrl $candidateUrl -SourceSchemaVersion process-governance-v9
+```
+
+两个入口复用隔离Edge、默认健康及Schema摘要核对、端口和地址保护，不启动服务。`-OutputDir`（别名 `-EvidenceDirectory`）必须是本库 `artifacts/` 内尚不存在的目录；省略时生成新的独立目录，不再复用固定历史夹具或覆盖旧报告。每次保留源夹具、实际下载、字节及SHA-256核对、截图、日志和 `result.json`。完整交互覆盖统一编辑、九类表、未应用输入、撤销、下载、重导和引用弹窗；图形回归覆盖真实ELK Worker、迟到回包、渲染几何、阅读与视口恢复、97环节长图及失败导入。Composition自动化仅为事件级保护，不作为人工输入法验收。
 
 Docker部署复核补齐了锁文件中Linux/npm10解析所需的两项开发工具可选依赖 `@emnapi/core` 和 `@emnapi/runtime`（MIT），主依赖及前端工具版本保持不变。当前依赖审计发现Express间接依赖 `proxy-addr` 的新公布漏洞；仅将其锁定版本由2.0.7升级到2.0.8，依据维护者的 [GHSA-jqcg-44mw-7w3h修复说明](https://github.com/jshttp/proxy-addr/security/advisories/GHSA-jqcg-44mw-7w3h)。镜像以Node24.21.0运行，使用 `npm ci --omit=dev --ignore-scripts` 安装运行依赖，浏览器静态产物随镜像发布。
 
@@ -67,7 +75,7 @@ V8与3000的只读兼容专项会引用3000校验模块。在未安装3000依赖
 
 ## 当前格式与判断依据
 
-本工作区默认新建、校验、下载和健康检查使用 `process-governance-v9`，状态为 `candidate`。本轮按用户Q33确认准备代码与兼容处理，实际3001实例暂不切换；运行版本须实时核对。V8/V7结构与摘要冻结，既有发布记录保留追溯，不能代替候选部署或业务验收。
+默认新建、校验、下载和健康检查使用 `process-governance-v9`。2026-11-02正式3001已更新至V9，健康与结构摘要核对通过；技术契约的发布状态仍为 `candidate`，软件更新不自动改变该状态，也不代表流程业务验收。V8/V7结构与摘要冻结，导入来源兼容及显式版本接口继续保留；运行状态须结合[部署记录](../mdm-platform/DOCKER.md)实时核对。
 
 - 业务行为 `action` 保留原有数据操作；判断节点 `decision` 只允许 `use`，表达使用已有数据作为判断依据。创建、更新及待确认操作必须关联实际执行步骤；并行等其他控制节点仍不允许数据关系。表单处理关系继续只允许业务行为。
 - 不新增业务步骤、数据、字段或流程连线，不推断分支结果，不改变数据值、生命周期或归档状态。判断节点不强制登记数据依据。
@@ -80,7 +88,7 @@ V8与3000的只读兼容专项会引用3000校验模块。在未安装3000依赖
 
 V9专项检查为 `node ../../scripts/process-governance/test-v9-validator.js`、`node scripts/test-v9-authoring.mjs`、`node scripts/test-v9-data-availability.js`。发布前须核对目标摘要、3000接收支持与回退条件；旧服务不能读取V9时，由用户保留V9原件、恢复旧版本备份或改用受支持候选工具，不生成有损降级文件。当前无兼容截止日期，移除旧格式须另行决定。
 
-3001是无状态、以图为主的单流程编制工具。本工作区默认规则见 `../../docs/contracts/process-governance-v9.schema.json`；`/api/schema?version=v8`及显式V7查询保持原摘要。文件下载仍是唯一持久化动作。
+3001是无状态、以图为主的单流程编制工具。本工作区默认规则见 `../../docs/contracts/process-governance-v9.schema.json`；`/api/schema?version=process-governance-v8`及显式V7查询保持原摘要。文件下载仍是唯一持久化动作。
 
 ## 当前边界
 

@@ -1,17 +1,18 @@
 // Real Edge UI only; synthetic local fixture, explicit candidate URL supplied by the runner.
 // Saves screenshots and actual downloaded JSON to the runner's evidence directory.
-async page => {
+async (page, support) => {
   const checks=[], downloads=[], errors=[], remote=[], storage=[], actions=[];
-  const output='__OUTPUT_DIR__', fixture='__FIXTURE_PATH__';
-  const origin='__BASE_URL__';
+  const output=support.config.output, fixture=support.config.fixturePath;
+  const origin=support.config.origin;
   const assert=(condition,message)=>{if(!condition)throw new Error(message);};
   const check=(name)=>checks.push(name);
   const onError=error=>errors.push(error.message);
-  const onConsole=message=>{if(message.type()==='error')errors.push(message.text());};
+  const onConsole=message=>{if(['warning','error'].includes(message.type()))errors.push(message.text());};
   page.on('pageerror',onError);page.on('console',onConsole);
   page.on('dialog',dialog=>dialog.accept());
   await page.context().route('**/*',async route=>{const url=new URL(route.request().url());if(['http:','https:','ws:','wss:'].includes(url.protocol)&&url.origin!==origin){remote.push(url.origin+url.pathname);await route.abort();}else await route.continue();});
   await page.addInitScript(()=>{
+    document.addEventListener('change',event=>{if(event.target.matches('input[type="file"]')&&event.target.files[0]&&!window.__workbenchRegressionSourceFile)window.__workbenchRegressionSourceFile=event.target.files[0];},true);
     window.__workbenchStorageWrites=[];
     window.__workbenchDownloadDigests=[];
     const digest=crypto.subtle.digest.bind(crypto.subtle);
@@ -19,6 +20,8 @@ async page => {
     for(const key of ['setItem','removeItem','clear']){const original=Storage.prototype[key];Storage.prototype[key]=function(...args){window.__workbenchStorageWrites.push(key);return original.apply(this,args);};}
     const open=indexedDB.open.bind(indexedDB);indexedDB.open=(...args)=>{window.__workbenchStorageWrites.push('indexedDB.open');return open(...args);};
   });
+  const sourceProof=async()=>page.evaluate(async()=>{const file=window.__workbenchRegressionSourceFile,bytes=await file.arrayBuffer();return{name:file.name,size:file.size,sha256:[...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(v=>v.toString(16).padStart(2,'0')).join('')};});
+  const checkSource=async()=>{const source=await page.evaluate(async()=>JSON.parse(await window.__workbenchRegressionSourceFile.text()));const validation=await support.validate(source);assert(source.schema_version===support.config.sourceVersion&&validation.valid,'The selected file must pass its actual source version contract');return sourceProof();};
   const closeDrawer=async()=>{const close=page.locator('.ant-drawer-open .ant-drawer-close');if(await close.count()){await close.click();await page.locator('.ant-drawer-content-wrapper:visible').waitFor({state:'hidden'});}};
   const detail=()=>page.getByRole('complementary',{name:'对象详情'});
   const waitReady=async()=>{await page.locator('.busy-strip').waitFor({state:'hidden'});};
@@ -51,12 +54,13 @@ async page => {
   try {
     await page.setViewportSize({width:1699,height:828});await page.goto(origin+'/workbench/',{waitUntil:'networkidle'});await waitReady();
     const viewport=await page.evaluate(()=>({width:innerWidth,height:innerHeight,scale:visualViewport.scale,overflow:document.documentElement.scrollWidth>innerWidth}));
+    assert((await page.evaluate(()=>navigator.userAgent)).includes('Edg/'),'Microsoft Edge is required');
     assert(viewport.width===1699&&viewport.height===828&&viewport.scale===1&&!viewport.overflow,'Desktop viewport or horizontal overflow mismatch');
     await page.getByLabel('导入文件',{exact:true}).setInputFiles(fixture);
     await page.getByRole('button',{name:'放弃未下载内容并继续',exact:true}).waitFor();await page.getByRole('button',{name:'放弃未下载内容并继续',exact:true}).click();
     await page.getByRole('button',{name:'虚构测试：判断分支与并行阅读',exact:true}).waitFor();await waitReady();
     await screenshot({path:`${output}/flow.png`,scale:'css'});check('Edge100% 1699×828 candidate import and flow default');
-    await save('baseline');check('Actual local download and current content baseline');
+    const originalSourceFile=await checkSource();await save('baseline');check('Actual local download and current content baseline');
     await page.getByRole('radio',{name:'对象清单',exact:true}).locator('..').click();
     await page.getByRole('button',{name:'测试起点：提交资料',exact:true}).click();
     assert(await detail().getByRole('button',{name:'编辑本对象',exact:true}).count()===1,'Single edit entry missing');
@@ -102,7 +106,7 @@ async page => {
     await page.getByRole('button',{name:'↓ 下载草稿',exact:true}).click();await page.getByRole('button',{name:'继续编辑',exact:true}).click();assert(await detail().getByRole('textbox',{name:'目的',exact:true}).inputValue()==='未应用输入必须保留','Download cancellation lost input');
     await detail().getByRole('button',{name:'取消修改',exact:true}).click();await detail().getByRole('button',{name:'退出编辑',exact:true}).click();await save('final');check('Independent check, download cancellation and final baseline');
     // File.text() starts before the controller becomes busy. The unchanged process title is not an import completion signal.
-    await page.getByLabel('导入文件',{exact:true}).setInputFiles(`${output}/final.json`);await page.getByText('当前内容与导入文件一致',{exact:true}).waitFor();await waitReady();await page.getByRole('button',{name:'虚构测试：判断分支与并行阅读',exact:true}).waitFor();await save('roundtrip');check('Actual downloaded V8 re-import and re-download');
+    await page.getByLabel('导入文件',{exact:true}).setInputFiles(`${output}/final.json`);await page.getByText('当前内容与导入文件一致',{exact:true}).waitFor();await waitReady();await page.getByRole('button',{name:'虚构测试：判断分支与并行阅读',exact:true}).waitFor();await save('roundtrip');check('Actual downloaded V9 re-import and re-download');
     await page.getByRole('button',{name:'帮助与预览',exact:true}).click();await page.getByRole('button',{name:'术语使用关系',exact:false}).click();await page.getByRole('dialog',{name:'术语使用关系 · 预览'}).waitFor();await page.getByRole('button',{name:/^了\s*解$/}).click();await page.getByRole('dialog',{name:'术语使用关系 · 预览'}).waitFor({state:'hidden'});await screenshot({path:`${output}/warm-help.png`,scale:'css'});await closeDrawer();check('Central preview boundary and warm popup theme');
     await page.getByRole('radio',{name:'对象清单',exact:true}).locator('..').click();await page.getByRole('radio',{name:'字段与区域',exact:true}).locator('..').click();await page.getByRole('button',{name:/^真实Edge候选验证：表单区域 ·/}).click();await page.getByRole('button',{name:'引用已有对象字段',exact:true}).click();
     const reuseDialog=page.getByRole('dialog',{name:'引用已有对象字段',exact:true});await reuseDialog.getByRole('combobox',{name:'引用对象字段',exact:true}).click();await page.locator('.ant-select-dropdown:visible').getByText(/^金额 · 虚构测试资料$/).click();await reuseDialog.getByRole('combobox',{name:'引用对象字段',exact:true}).press('Escape');assert(await reuseDialog.getByRole('button',{name:'建立所选引用',exact:true}).isDisabled(),'Required flag must not be defaulted');await reuseDialog.getByRole('combobox',{name:'必填性 金额 · 虚构测试资料',exact:true}).locator('..').click();await page.locator('.ant-select-dropdown:visible').getByText('非必填',{exact:true}).click();assert(await reuseDialog.getByRole('button',{name:'建立所选引用',exact:true}).isEnabled(),'Explicit required flag must enable submission');await reuseDialog.getByRole('combobox',{name:'必填性 金额 · 虚构测试资料',exact:true}).press('Escape');await page.waitForTimeout(250);await screenshot({path:`${output}/reuse-picker.png`,scale:'css'});await reuseDialog.getByRole('button',{name:'取消选择',exact:true}).click();await reuseDialog.waitFor({state:'hidden'});assert(await page.getByText('✓ 实际当前内容已下载',{exact:true}).count()===1,'Canceling picker changed downloaded document baseline');check('Unified field reuse picker requires explicit required flag and preserves download on cancel');
@@ -112,8 +116,9 @@ async page => {
     await page.getByRole('button',{name:'放弃并继续',exact:true}).click();await page.getByText('文件不是有效 JSON，当前内容和输入均保留',{exact:true}).waitFor();await page.waitForTimeout(500);
     assert(await page.getByText('文件不是有效 JSON，当前内容和输入均保留',{exact:true}).isVisible(),'Canvas viewport feedback cleared the failed import diagnosis');assert(await pendingPurpose.inputValue()==='导入失败后仍保留的输入','Failed import lost visible input');assert(await page.getByRole('radio',{name:'流程图',exact:true}).isChecked(),'Failed import changed the main view');
     await screenshot({path:`${output}/failed-import-retained.png`,scale:'css'});await detail().getByRole('button',{name:'取消修改',exact:true}).click();await detail().getByRole('button',{name:'退出编辑',exact:true}).click();check('Failed import retains diagnosis through viewport feedback and preserves visible inputs');
+    assert(JSON.stringify(originalSourceFile)===JSON.stringify(await sourceProof()),'Original source File bytes changed');
     const environment=await page.evaluate(()=>({viewport:{width:innerWidth,height:innerHeight,scale:visualViewport.scale},overflow:document.documentElement.scrollWidth>innerWidth,storage:window.__workbenchStorageWrites||[],local:localStorage.length,session:sessionStorage.length,legacyPage:typeof window.currentDocument,domainScripts:[...document.scripts].map(s=>s.getAttribute('src')).filter(Boolean),inputBg:getComputedStyle(document.querySelector('.ant-btn-default')).backgroundColor}));
     assert(!environment.overflow&&!environment.storage.length&&!environment.local&&!environment.session,'Storage or horizontal overflow detected');assert(environment.legacyPage==='undefined','Legacy page DOM controller loaded');assert(!remote.length,'Unexpected external requests');assert(!errors.length,`Browser errors: ${errors.join('; ')}`);check('No legacy page controller, persistent storage, external traffic, console error or page overflow');
-    return {passed:true,browser:'Microsoft Edge',checks,downloads,environment,errors,remote};
+    return {passed:true,surface:'react-workbench',sourceVersion:support.config.sourceVersion,targetVersion:support.config.targetVersion,browser:'Microsoft Edge',originalSourceFile,checks,downloads,environment,errors,remote};
   } catch(error) {await page.screenshot({path:`${output}/failure.png`,scale:'css'});return {passed:false,error:error.message,checks,downloads,errors,remote,actions,comboboxes:await page.getByRole('combobox').evaluateAll(elements=>elements.map(element=>({label:element.getAttribute('aria-label'),expanded:element.getAttribute('aria-expanded'),html:element.parentElement.outerHTML.slice(0,1000)})))};}
 }

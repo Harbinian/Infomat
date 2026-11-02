@@ -1,12 +1,12 @@
-async page => {
+async (page, support) => {
   // The CLI invokes an async page function. Only fictional candidate data is used.
   // Screenshots and actual downloaded JSON are saved in the supplied local output directory.
-  const config = await page.evaluate(() => globalThis.__workbenchGraphTestConfig);
+  const config = { ...support.config, BaseUrl:support.config.origin, outputDir:support.config.output };
   if (!config?.fixturePath || !config?.outputDir) throw new Error('Use test-workbench-graph-browser.ps1 to supply explicit local test paths.');
   const origin = new URL(config.BaseUrl).origin;
   const candidate = new URL(origin);
   if (!['127.0.0.1', 'localhost', '[::1]'].includes(candidate.hostname) || ['3000', '3001'].includes(candidate.port) || !candidate.port) throw new Error('Only an explicit loopback candidate is permitted.');
-  const result = { passed: false, browser: 'msedge', viewport: { width: 1699, height: 828 }, origin, checks: [], screenshots: [], consoleProblems: [], pageErrors: [], forbiddenRequests: [], geometry: null };
+  const result = { passed: false, surface:'react-workbench', sourceVersion:config.sourceVersion, targetVersion:config.targetVersion, browser: 'msedge', viewport: { width: 1699, height: 828 }, origin, checks: [], screenshots: [], consoleProblems: [], pageErrors: [], forbiddenRequests: [], geometry: null };
   result.applyDiagnostics = { validations: [], states: [] };
   result.businessDisplay = [];
   const assert = (value, text) => { if (!value) throw new Error(`[Graph phase: ${phase}] ${text}`); };
@@ -32,6 +32,7 @@ async page => {
     if (/^(http|https|ws|wss):$/.test(url.protocol) && url.origin !== origin) result.forbiddenRequests.push({ method: request.method(), origin: url.origin, path: url.pathname });
     if (/\/api\/(session|data|export|process-design|v7-mappings|data-map-definitions)(\/|$)/.test(url.pathname)) result.forbiddenRequests.push({ method: request.method(), path: url.pathname });
   });
+  await page.context().route('**/*',async route=>{const url=new URL(route.request().url());if(['http:','https:','ws:','wss:'].includes(url.protocol)&&url.origin!==origin){result.forbiddenRequests.push({origin:url.origin,path:url.pathname});await route.abort();}else await route.continue();});
   await page.context().addInitScript(() => {
     // Run the actual same-origin ELK Worker; delay only delivery of a completed reply.
     // This proves that a queued real reply cannot mount its disposed graph owner.
@@ -43,6 +44,7 @@ async page => {
       set onmessage(listener) { this.addEventListener('message', event => { const delay = window.__elkWorkerDelay; this.audit.queued = true; const deliver = () => { this.audit.late ||= this.audit.terminated; listener(event); }; if (delay) setTimeout(deliver, delay); else deliver(); }); }
       terminate() { this.audit.terminated = true; return super.terminate(); }
     };
+    document.addEventListener('change',event=>{if(event.target.matches('input[type="file"]')&&event.target.files[0]&&!window.__workbenchRegressionSourceFile)window.__workbenchRegressionSourceFile=event.target.files[0];},true);
     window.__workbenchGraphStorageWrites = [];
     window.__workbenchGraphDownloadHashes = [];
     const nativeDigest = crypto.subtle.digest.bind(crypto.subtle);
@@ -72,6 +74,8 @@ async page => {
   await page.waitForFunction(() => document.querySelector('.process-title')?.textContent.includes('虚构测试：判断分支与并行阅读'));
   const ready = () => page.waitForFunction(() => document.querySelector('.graph-canvas')?.dataset.layoutStatus === 'ready' && document.querySelector('.graph-canvas')?._cyreg?.cy?.nodes('.behavior-node').length === 7);
   await ready();
+  const sourceProof=async()=>page.evaluate(async()=>{const file=window.__workbenchRegressionSourceFile,bytes=await file.arrayBuffer();return{name:file.name,size:file.size,sha256:[...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(v=>v.toString(16).padStart(2,'0')).join('')};});
+  const checkSource=async()=>{const source=await page.evaluate(async()=>JSON.parse(await window.__workbenchRegressionSourceFile.text()));const validation=await support.validate(source);assert(source.schema_version===support.config.sourceVersion&&validation.valid,'The selected file must pass its actual source version contract');return sourceProof();};
   const shot = async name => { const filename = `${config.outputDir}/${name}.png`; await page.screenshot({ path: filename, scale: 'css' }); result.screenshots.push(filename); };
   const cyState = () => page.evaluate(() => {
     const cy = document.querySelector('.graph-canvas')?._cyreg?.cy;
@@ -131,7 +135,9 @@ async page => {
     delete json.export_meta.exported_at;
     return { json, digest, byteLength: bytes.length, fileName: file.suggestedFilename() };
   };
+  result.originalSourceFile=await checkSource();
   const before = await download('before-reading');
+  assert(before.json.schema_version===config.targetVersion,'Downloaded target version mismatch');
   const assertBusinessDisplay = async (stage, source = before.json) => {
     const refs = new Set();
     const collect = value => {
@@ -397,6 +403,7 @@ async page => {
   assert(!storage.writes.length && !storage.cookies && !storage.local && !storage.session, 'The workbench must not persist business data or reading state.');
   assert(!storage.overflow && !result.forbiddenRequests.length && !result.pageErrors.length && !result.consoleProblems.length, 'There must be no overflow, remote service traffic or browser errors.');
   result.storage = storage; check('actual export byte summaries, unchanged business JSON, no browser persistence or remote traffic');
+  assert(JSON.stringify(result.originalSourceFile)===JSON.stringify(await sourceProof()),'Original source File bytes changed');
   result.passed = true;
   return result;
 }

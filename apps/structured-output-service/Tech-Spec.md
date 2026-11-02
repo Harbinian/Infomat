@@ -80,7 +80,7 @@ Controller应用对象或表格修改前，核对本次新增或改变的部门�
 
 ## 当前格式与版本兼容
 
-当前候选为V9，V8/V7 Schema及摘要冻结。`scripts/process-governance/v7-validator.js`保留V7/V8入口并新增V9入口；`/api/validate`按真实版本分派，模板、Schema及健康端点默认V9，显式V8/V7查询保持原合同。V9摘要为 `2251b3b65091e39c28b83d98dc01d44d5e7ed6ba1a50c1822fe613e9e3955678`；3001运行实例本轮不切换。
+当前技术契约为V9候选，V8/V7 Schema及摘要冻结。`scripts/process-governance/v7-validator.js`保留V7/V8入口并新增V9入口；`/api/validate`按真实版本分派，模板、Schema及健康端点默认V9，显式V8/V7查询保持原合同。V9摘要为 `2251b3b65091e39c28b83d98dc01d44d5e7ed6ba1a50c1822fe613e9e3955678`。2026-11-02正式3001已更新并核对该摘要，契约状态仍为 `candidate`；实际镜像、健康及恢复条件见[部署记录](../mdm-platform/DOCKER.md)，软件更新不代表业务验收。
 
 V9必须显式编制 `process.entry_behavior_refs`、对象 `record_model/collection_field_refs`、数据链接 `record_scope/presence`、外部来源 `presence`。空入口和 `pending_confirmation`允许保存待补草稿，但内容门槛阻断。`record_collection`中的实例与集合索引字段分开：创建写入新实例；更新实例字段与更新集合元数据须用不同链接，不覆盖历史实例。`required`来源是办理前必须真实满足的前置声明，不代表系统已经查到材料；`if_exists`来源不证明必需输入存在。
 
@@ -445,6 +445,14 @@ POST /api/validate
 公共本机入口为 `scripts/test-browser-specialty-runner.ps1`：请求前拒绝3000、3001和非回环地址；核对默认健康、Schema文件摘要、响应头及结构内容。Edge使用临时隔离会话、100%缩放和1699×828 CSS像素内容可视区；启动超时20秒。浏览器启动配置只作用于本次合成测试会话，不改变用户Edge配置。`-EvidenceDirectory`须是本仓`artifacts/`中的全新目录，保留健康、配置、原始结果、实际下载及截图；关闭本次创建的Edge会话。
 
 保留首页重绘工作区时可能触发旧焦点单元格的`change`。单元格更新先核对表格会话有效、控件仍连接DOM且属于当前工作区；失效事件不写工作副本，事件处理器也不继续读取已释放会话。当前有效单元格仍沿原有未应用修改保护处理。纯回归入口为本机 `node scripts/test-native-grid-stale-session.js`。
+
+### React完整交互与图形回归
+
+本机 `test-workbench-browser.ps1` 和 `test-workbench-graph-browser.ps1` 复用公共隔离运行器，要求默认健康、Schema及摘要实际为V9。`SourceSchemaVersion`支持V9、V7和V8来源，`ExpectedSchemaVersion`仅支持V9目标；不通过查询参数伪装历史目标。`OutputDir`保留为证据参数，亦可用别名`EvidenceDirectory`，但只接受本库`artifacts/`内尚不存在的目录；默认生成新目录，不覆盖历史证据。
+
+`workbench-graph-fixture.js`按所选来源版本生成虚构的7环节判断、并行与回路样本，并在写出前严格校验；图形回归另扩展为97环节长图。V9样本显式记录入口、单条记录模型、操作范围及存在条件；V7/V8来源不附加这些字段，导入后保留原生正文并增加待确认项。浏览器再次按实际来源合同检查所选文件；下载字节校验将首次导出与来源的预期内存迁移结果深比较，后续撤销、重导或只读阅读按各场景核对全文。原File的SHA-256及生成夹具字节须始终一致。
+
+交互回归保留原有统一编辑、跨表工作副本、未应用输入保护、撤销、实际下载、引用和预览断言。图形回归保留真实Worker、迟到回包拒绝、ELK及Cytoscape几何、动画取消、判断与并行阅读、减少动态效果、直接关系、长图和拒绝导入后的正文及视口核对；不增加产品调试接口。证据为隔离Edge自动化，不代替人工Windows输入法、正式运行或业务验收。
 
 ### React工作台专项
 
