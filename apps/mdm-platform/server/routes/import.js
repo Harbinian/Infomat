@@ -48,7 +48,7 @@ router.post('/field-entries', requireAuth, handleUpload, async (req, res) => {
     if (!req.file) return res.status(400).json({ error: '缺少 Excel 文件' });
 
     const repo = await dataMapRepository();
-    const context = await repo.getContext(contextId);
+    const context = await repo.getContextScope(contextId);
     if (!context) return res.status(404).json({ error: '数据地图上下文不存在' });
     if (!await canImportForContext(req, context)) {
       return res.status(403).json({ error: '无权导入该数据地图上下文字段台账' });

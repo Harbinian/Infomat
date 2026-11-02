@@ -117,12 +117,13 @@ module.exports = function (helpers) {
       return require('./analysisComparison').compareAnalysisSnapshots(loaded.get(id(beforeRunId)), loaded.get(id(afterRunId)));
     }); },
     createAnalysisRun(session, payload) { return tx(async db => {
+      await require('./dataMapHandoffControl').assertGraphWriteEnabled(db);
       keys(payload, ['request_id', 'inputs', 'check_scope', 'parser_versions', 'rule_version', 'steps', 'ai_metadata', 'rerun_of_run_id']);
       if (Buffer.byteLength(json(payload)) > 262144) throw code('PAYLOAD_TOO_LARGE', 413);
       const who = await actor(db, session, 'governance:structure-gate');
       scope(who, who.departmentId);
       const inputs = [];
-      for (const item of list(payload.inputs, 128, 1)) inputs.push(await input(db, who, item));
+      for (const item of list(payload.inputs, 128, 1)) {await resolve.assertNewReference(db,who,item.kind,item.ref_id);inputs.push(await input(db, who, item));}
       unique(inputs.map(i => i.input_key));
       unique(inputs.map(i => i.snapshot.kind + ':' + i.snapshot.ref_id));
       keys(payload.check_scope, ['description', 'check_ids']);
@@ -158,17 +159,20 @@ module.exports = function (helpers) {
         const runId = await lastId(db);
         for (const i of inputs) await db.execute(`INSERT INTO data_map_analysis_inputs(run_id,input_key,${Object.values(columns).join(',')},snapshot_json,snapshot_digest) VALUES (?,?,?,?,?,?,?,?,?)`, [runId, i.input_key, ...Object.keys(columns).map(k => k === i.snapshot.kind ? i.snapshot.ref_id : null), json(i.snapshot), digest(i.snapshot)]);
         for (const s of steps) await db.execute("INSERT INTO data_map_analysis_steps(run_id,step_key,status,attempt_no) VALUES (?,?,'queued',0)", [runId, s.step_key]);
+        await db.execute('UPDATE data_map_governance_control SET graph_revision=graph_revision+1 WHERE control_id=1');
         return { run_id: runId, revision_no: 1, status: 'queued', manifest_digest: digest(manifest) };
       });
     }); },
     getAnalysisRun(session, runId) { return tx(async db => {
-      const { run, inputs } = await load(db, await actor(db, session), runId);
+      const who=await actor(db,session),{ run, inputs } = await load(db,who,runId);
       const attempts = await results(db, run);
       const coverage = run.manifest.steps.map(s => {
         const latest = attempts.filter(a => a.step_key === s.step_key).at(-1);
         return { step_key: s.step_key, ...(latest?.coverage || { expected: s.check_ids, checked: [], missing: s.check_ids }) };
       });
-      return { ...run, coverage, attempts, input_formats: [...inputs].filter(([, i]) => i.snapshot.kind === 'v7_source').map(([input_key, i]) => ({ input_key, ...require('./v7AnalysisRules').inputFormat(i, run.manifest.parser_versions.v7_deterministic) })) };
+      const input_reference_states=[];
+      for(const [input_key,input]of inputs)input_reference_states.push({input_key,...await resolve.referenceStatus(db,who,input.snapshot.kind,input.snapshot.ref_id)});
+      return { ...run, coverage, attempts, input_reference_states, input_formats: [...inputs].filter(([, i]) => i.snapshot.kind === 'v7_source').map(([input_key, i]) => ({ input_key, ...require('./v7AnalysisRules').inputFormat(i, run.manifest.parser_versions.v7_deterministic) })) };
     }); },
     beginAnalysisAttempt(session, payload) { return tx(async db => {
       keys(payload, ['request_id', 'run_id', 'expected_revision', 'step_key']);

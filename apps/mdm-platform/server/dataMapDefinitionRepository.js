@@ -67,7 +67,7 @@ function makeDataMapDefinitionRepository(pool) {
     const [[account]]=await db.execute('SELECT CAST(person_id AS CHAR) AS person_id,CAST(auth_version AS CHAR) AS auth_version,account_status,must_change_password FROM user_accounts WHERE account_id=? FOR UPDATE',[id(session.accountId)]);
     const [[person]]=await db.execute('SELECT CAST(current_department_id AS CHAR) AS department_id,status FROM person WHERE person_id=? FOR UPDATE',[personId]);
     if (!account || !person || account.account_status!=='active' || account.must_change_password || person.status!=='active' || account.person_id!==personId || account.auth_version!==id(session.authVersion)) throw failure('DEFINITION_AUTH_REQUIRED',401);
-    await db.execute('SELECT person_id FROM person_roles WHERE person_id=? FOR UPDATE',[personId]);
+    await db.execute('SELECT person_id FROM person_roles WHERE person_id=? FOR SHARE',[personId]);
     // Bypass any earlier RR snapshot and hold current qualifications on this
     // same transaction connection, after the existing identity locks.
     const authority = await readPersonAuthority(db,session,personId,{currentRead:true});
@@ -99,13 +99,11 @@ function makeDataMapDefinitionRepository(pool) {
     return { ...value, revision_no:value.version_no, definition, base_snapshot:baseSnapshot };
   }
   async function current(db,type,entityId,lock=false) {
-    const [[head]] = await db.execute(`SELECT CAST(current_version_id AS CHAR) AS version_id,revision_no FROM data_map_definition_heads WHERE entity_type=? AND entity_id=?${lock?' FOR UPDATE':''}`,[type,entityId]);
-    if (!head) throw failure('DEFINITION_LEGACY_CAPTURE_REQUIRED',409);
-    const value=await version(db,head.version_id,lock);
-    if (head.revision_no!==value.version_no) throw failure('DEFINITION_VERSION_INTEGRITY_CONFLICT',409);
+    const value=await require('./dataMapEffectiveReader').readDefinition(db,{entityType:type,entityId,view:'current'});
+    if(!value.referenceable)throw failure('HANDOFF_REFERENCE_UNAVAILABLE',409);
     return value;
   }
-  function unchanged(v, source) { if (v.base_digest !== digest(source)) throw failure('DEFINITION_LEGACY_SOURCE_CHANGED',409); }
+  function unchanged(v, source) { if (v.source_kind==='governance') return; if (v.base_digest !== digest(source)) throw failure('DEFINITION_LEGACY_SOURCE_CHANGED',409); }
   async function request(db, actor, action, payload, operation) {
     const requestId = uuid(payload.request_id), hash = digest(payload);
     if (!actor.departmentId) throw failure('DEFINITION_DEPARTMENT_REQUIRED',403);
@@ -149,6 +147,7 @@ function makeDataMapDefinitionRepository(pool) {
       const type=kind(payload.entity_type);
       
         const who=await actor(db,session,'governance:draft-department');
+        await require('./dataMapHandoffControl').assertLegacyWriteAllowed(db,{entryId:'W01:saveDefinition'});
         return request(db,who,'save_definition',payload,async()=>{
           let entityId=payload.entity_id ? id(payload.entity_id) : null, previous=null, parent=null;
           let original={ name:null,business_meaning:null,source:null,authority_suggestion:null,governance:null,
@@ -223,6 +222,7 @@ function makeDataMapDefinitionRepository(pool) {
   async function addSourceMappingInTransaction(db,session,payload) {
       
         const who=await actor(db,session,'governance:draft-department');
+        await require('./dataMapHandoffControl').assertLegacyWriteAllowed(db,{entryId:'W08:sourceMapping'});
         return request(db,who,'source_mapping',payload,async()=>{
           const batchId=id(payload.batch_id),sheet=text(payload.sheet_name,128),type=kind(payload.record_type);
           const [[batch]]=await db.execute('SELECT CAST(scope_department_id AS CHAR) AS scope_department_id FROM data_map_source_files WHERE batch_id=? FOR UPDATE',[batchId]);
@@ -268,6 +268,7 @@ function makeDataMapDefinitionRepository(pool) {
       if (payload.confirm !== true) throw failure('TEMPLATE_CONFIRM_REQUIRED');
       return transaction(async db => {
         const locked = await actor(db,session,'governance:draft-department');
+        await require('./dataMapHandoffControl').assertLegacyWriteAllowed(db,{entryId:'W06:templateConfirm'});
         scope(locked,who.departmentId,true);
         const body = {request_id:payload.request_id,original_name:prepared.preview.source.original_name,plan_digest:prepared.plan_digest};
         return request(db,locked,'import_template',body,async () => {
@@ -317,9 +318,9 @@ function makeDataMapDefinitionRepository(pool) {
     async saveDefinition(session,payload) {
       return transaction(db => saveDefinitionInTransaction(db,session,payload));
     },
-    async getCurrent(session,type,entityId) {
+    async getCurrent(session,type,entityId,query={}) {
       kind(type);id(entityId);
-      return transaction(async db=>{const who=await actor(db,session);const scoped=await entityScope(db,type,entityId);scope(who,scoped.departmentId);const v=await current(db,type,entityId);unchanged(v,scoped.source);return v;});
+      return transaction(async db=>{const who=await actor(db,session);const scoped=await entityScope(db,type,entityId);scope(who,scoped.departmentId);return require('./dataMapEffectiveReader').readDefinition(db,{entityType:type,entityId,view:query.view,versionId:query.version});});
     },
     async getVersion(session,versionId) {
       return transaction(async db=>{
@@ -327,7 +328,7 @@ function makeDataMapDefinitionRepository(pool) {
         // Historical bytes survive legacy deletion; only global readers may see
         // history when current entity/context scope can no longer be resolved.
         if (!who.permissions.has('governance:read-global')) {const scoped=await entityScope(db,v.entity_type,v.entity_id);scope(who,scoped.departmentId);}
-        return v;
+        return require('./dataMapEffectiveReader').readDefinition(db,{entityType:v.entity_type,entityId:v.entity_id,view:'history',versionId:v.version_id});
       });
     },
     async getSource(session,batchId) {

@@ -31,6 +31,11 @@ function requiredProbes(env) {
     probes.push('SELECT process_ref FROM process_design_documents LIMIT 0', 'SELECT draft_revision_no, content_hash FROM process_design_review_tasks LIMIT 0');
   }
   if (env.PROCESS_V7_AUTHORING_ENABLED === '1') probes.push(...probesFromSql(require('./processV7AuthoringMigration').SCHEMA_SQL).map(p => p.sql));
+  if (env.PROCESS_AUTHORING_WORKSPACE_ENABLED === '1') probes.push(...probesFromSql(require('./processAuthoringWorkspaceSchema').SCHEMA_SQL).map(p => p.sql));
+  if(env.TERMINOLOGY_GOVERNANCE_ENABLED==='1'){
+    probes.push(...probesFromSql(require('./terminologyGovernanceSchema').SCHEMA_SQL).map(p=>p.sql));
+    probes.push(...probesFromSql(require('./terminologyUsageSchema').SCHEMA_SQL).map(p=>p.sql));
+  }
   if (env.PROCESS_DATA_GOVERNANCE_ENABLED === '1') {
     probes.push(...probesFromSql(require('./processDataGovernanceMigration').PROCESS_DATA_GOVERNANCE_SCHEMA_SQL).map(p => p.sql));
   }
@@ -53,6 +58,10 @@ function createReadiness({ env = process.env, version, pool, now = Date.now } = 
     try {
       assertRuntimeConfig(env);
       sessionConfig(env);
+      if(!['0','1'].includes(String(env.DATA_MAP_HANDOFF_ENABLED||'0')))throw new Error('HANDOFF_CONFIGURATION_INVALID');
+      if(!['0','1'].includes(String(env.TERMINOLOGY_GOVERNANCE_ENABLED||'0')))throw new Error('TERMINOLOGY_CONFIGURATION_INVALID');
+      if(!['0','1'].includes(String(env.PROCESS_AUTHORING_WORKSPACE_ENABLED||'0')))throw new Error('AUTHORING_WORKSPACE_CONFIGURATION_INVALID');
+      if(env.PROCESS_AUTHORING_WORKSPACE_ENABLED==='1'&&env.PROCESS_V7_PREVIEW_ENABLED!=='1')throw new Error('AUTHORING_WORKSPACE_REQUIRES_PREVIEW');
       if (env.PROCESS_V7_AUTHORING_ENABLED === '1' && env.PROCESS_V7_PREVIEW_ENABLED !== '1') throw new Error('AUTHORING_REQUIRES_PREVIEW');
       if (env.PROCESS_V7_PREVIEW_ENABLED === '1' || env.PROCESS_V7_FORMAL_ENABLED === '1') require('./processV7TrialScope').assertV7TrialScopeConfigured({ env });
       if (env.PROCESS_DATA_GOVERNANCE_ENABLED === '1') require('./processDataGovernanceScope').assertProcessVersionScopeConfigured(env);
@@ -68,6 +77,8 @@ function createReadiness({ env = process.env, version, pool, now = Date.now } = 
           const sessions = await inspectSessionSchema(connection);
           if (sessions.state !== 'applied') throw new Error('SESSION_SCHEMA_UNAVAILABLE');
           await require('./todoTermSourceMigration').assertTodoTermSourceReady(connection);
+          if(env.TERMINOLOGY_GOVERNANCE_ENABLED==='1')await require('./terminologyGovernanceRepository').assertReady(connection,env);
+          if(env.PROCESS_AUTHORING_WORKSPACE_ENABLED==='1'&&!(await require('./processAuthoringWorkspaceSchema').inspectSchema(connection)).ready)throw new Error('AUTHORING_WORKSPACE_SCHEMA_UNAVAILABLE');
           for (const [enabled, modulePath] of [
             [env.MDM_SYSTEM_ADMIN_ENABLED === '1', './systemAdminMigration'],
             [env.PROCESS_V7_PREVIEW_ENABLED === '1' || env.PROCESS_V7_FORMAL_ENABLED === '1', './processV7PreviewReviewMigration'],
@@ -77,6 +88,17 @@ function createReadiness({ env = process.env, version, pool, now = Date.now } = 
           ]) if (enabled) {
             const [rows] = await connection.execute('SELECT migration_key FROM schema_migrations WHERE migration_key=?', [require(modulePath).MIGRATION_KEY]);
             if (!rows.length) throw new Error('FEATURE_SCHEMA_UNAVAILABLE');
+          }
+          if (env.PROCESS_V7_FORMAL_ENABLED === '1') {
+            if (!(await require('./processCaseGovernanceSchema').inspectSchema(connection)).ready) throw new Error('PROCESS_CASE_SCHEMA_UNAVAILABLE');
+            await require('./processFormalControlMigration').assertReady(connection);
+          }
+          if (env.DATA_MAP_HANDOFF_ENABLED === '1' || env.PROCESS_DATA_GOVERNANCE_ENABLED === '1') {
+            const handoff=require('./dataMapHandoffSchema');
+            const [markers]=await connection.execute('SELECT migration_key FROM schema_migrations WHERE migration_key=?',[handoff.MIGRATION_KEY]);
+            if(!markers.length || !(await handoff.inspectHandoffSchema(connection)).ready)throw new Error('HANDOFF_SCHEMA_UNAVAILABLE');
+            if((await require('./dataMapHandoffControl').readControl(connection)).cutover_state!=='controlled')throw new Error('HANDOFF_MAINTENANCE');
+            await require('./dataMapHandoffAuthority').inspectHandoffAccessModel(connection,{lock:false});
           }
         }, timeout);
         cached = body(true, null);

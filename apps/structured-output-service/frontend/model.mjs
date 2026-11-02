@@ -1,3 +1,4 @@
+import { organizationField } from './organization.mjs';
 export const clone = value => value == null ? value : JSON.parse(JSON.stringify(value));
 const array = value => Array.isArray(value) ? value : [];
 export const normalizeKind = kind => ({ area: 'form-area', field: 'data-field', item: 'form-item', 'form-field': 'form-item', flow_relation: 'relation' }[kind] || kind);
@@ -77,7 +78,8 @@ const ENUM_LABELS = {
   inherit_behavior:'沿用环节责任',explicit:'明确责任',record:'单条记录',version:'版本',batch:'批次',all_records:'全部记录',paper_original:'纸质原件',electronic_original:'电子原件',business_copy:'业务副本',paper_and_electronic:'纸质及电子',
   activate:'生效',deactivate:'停用',reactivate:'恢复生效',expire:'到期失效',restore_active_custody:'恢复使用',destroy:'销毁',irreversible_anonymize:'不可逆匿名化',
   auto_generated:'自动建议',confirmed:'已人工确认',needs_recheck:'需重新确认',rejected:'不采用',unclassified:'未分类',needs_review:'待核对',
-  source_not_applicable:'来源不适用',duplicate_suggestion:'重复建议',semantic_mismatch:'语义不符',insufficient_evidence:'依据不足',conflicting_sources:'来源冲突',other:'其他',no_lifecycle_in_current_process:'本流程不发生生命周期变化',reference_only:'仅引用现有数据'
+  source_not_applicable:'来源不适用',duplicate_suggestion:'重复建议',semantic_mismatch:'语义不符',insufficient_evidence:'依据不足',conflicting_sources:'来源冲突',other:'其他',no_lifecycle_in_current_process:'本流程不发生生命周期变化',reference_only:'仅引用现有数据',
+  single_instance:'单条记录',record_collection:'独立记录集合',new_instance:'新建独立记录',current_instance:'当前记录',prior_records:'既有历史记录',collection_metadata:'集合索引与保管信息',required:'必须存在',if_exists:'存在时使用',conditional:'条件成立时创建'
 };
 export const labelValue = value => ENUM_LABELS[value] || (value === '' || value == null ? '待填写' : /^[a-z][a-z0-9_]*$/i.test(String(value)) ? '原有选项待核对' : String(value));
 
@@ -126,6 +128,7 @@ export function messageForUser(document, message) {
   for(const ref of [...refs].sort((a,b)=>b.length-a.length))result=result.replace(new RegExp(`(?<![A-Za-z0-9_])${ref.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}(?![A-Za-z0-9_])`,'g'),`「${referenceName(entries,ref)}」`);
   result=result.replace(/\/(?:process|behaviors|flow_relations|terms|data_objects|forms|migration|export_meta)(?:\/[A-Za-z0-9_~.-]+)+/g,'对应内容');
   const names={behavior_ref:'关联环节',from_behavior_ref:'起点环节',to_behavior_ref:'终点环节',relation_ref:'环节流转',data_ref:'数据对象',field_ref:'对象字段',form_ref:'表单',area_ref:'表单区域',item_ref:'表单字段',term_ref:'术语',source_ref:'数据来源',route_ref:'生命周期路径',event_ref:'生命周期事件',process_ref:'流程',package_ref:'文件',data_field_ref:'引用对象字段',business_data_ref:'业务数据归属',updated_field_refs:'更新字段',actor_department_data_ref:'用于确定部门的数据',available_from_behavior_ref:'可用起点环节',source_data_ref:'来源数据对象',behavior_name:'环节名称',data_name:'数据对象名称',field_name:'字段名称',form_name:'表单名称',item_name:'字段显示名称',area_title:'区域名称',node_type:'环节类型',information_type:'信息类型',schema_version:'文件格式'};
+  Object.assign(names,{entry_behavior_refs:'流程入口',record_model:'记录组织方式',collection_field_refs:'集合索引与保管字段',record_scope:'本次操作的记录范围',presence:'记录存在条件'});
   result=result.replace(/\b[A-Za-z_][A-Za-z0-9_]*\b/g,word=>names[word] || ENUM_LABELS[word] || (/^[a-z][a-z0-9]*(?:_[a-z0-9]+)+$/.test(word)?'对应内容':word));
   return result.replace(/(?:技术|稳定)?标识存在歧义/g,'关联无法唯一确定').replace(/技术标识|稳定标识/g,'对象引用');
 }
@@ -139,6 +142,7 @@ const stateFields = (prefix,label) => [
 ];
 export function fields(document, target, enums = {}, modules = {}) {
   const kind = normalizeKind(target?.kind), current = resolve(document,target), entity = current.entity || {};
+  const nativeV9 = document?.schema_version === 'process-governance-v9';
   const entries=catalog(document);
   const references = (type, nullable = false, owner = '') => [ ...(nullable ? [{value:null,label:'未指定'}] : []), ...entries.filter(item => item.kind===type && (!owner || item.parentRef===owner)).map(item => ({value:item.ref,label:businessLabel(entries,item),disabled:item.ambiguous})) ];
   const ref = (key,label,type,nullable=false,owner='') => ({key,label,editor:'select',reference:true,nullable,options:references(type,nullable,owner)});
@@ -161,6 +165,16 @@ export function fields(document, target, enums = {}, modules = {}) {
     'lifecycle-event':[spec('action','生命周期动作','select',['activate','deactivate','reactivate','void','expire','archive','restore_active_custody','destroy','irreversible_anonymize']),spec('trigger.mode','触发方式','select',['behavior','time_period','business_condition','external_process_notice','pending_confirmation']),spec('trigger.operator','组合方式','select',['single','and','or','pending_confirmation']),ref('trigger.behavior_ref','触发环节','behavior',true),spec('trigger.expression','触发表达说明','textarea'),...stateFields('result_state','结果'),spec('target_scope','影响范围','select',['record','version','batch','all_records','pending_confirmation']),spec('carrier_scope','载体范围','select',['paper_original','electronic_original','business_copy','paper_and_electronic','not_applicable','pending_confirmation']),spec('responsibility.mode','责任方式','select',['inherit_behavior','explicit','pending_confirmation']),spec('responsibility.department','责任部门'),spec('responsibility.position','责任岗位'),spec('exception_handling','异常处理','textarea'),spec('review_status','编制确认状态','select',['auto_generated','pending_confirmation','confirmed','needs_recheck','not_applicable','rejected']),spec('high_risk','高风险动作','boolean'),spec('decision_reason','决定原因','select',['','source_not_applicable','duplicate_suggestion','semantic_mismatch','insufficient_evidence','conflicting_sources','other']),spec('decision_notes','决定说明','textarea')]
   };
   const result = definitions[kind] || [];
+  if (nativeV9) {
+    if (kind === 'process') result.push({key:'entry_behavior_refs',label:'流程入口',editor:'multi-select',reference:true,options:references('behavior')});
+    if (kind === 'data') result.splice(2,0,
+      spec('record_model','记录组织方式','select',['single_instance','record_collection','pending_confirmation']),
+      {key:'collection_field_refs',label:'集合索引与保管字段',editor:'multi-select',reference:true,options:references('data-field',false,current.ref)});
+    if (kind === 'data-link') result.push(
+      spec('record_scope','本次操作的记录范围','select',['new_instance','current_instance','prior_records','collection_metadata','pending_confirmation']),
+      spec('presence','记录存在条件','select',entity.operation==='create'?['required','conditional','pending_confirmation']:entity.operation==='pending_confirmation'?['pending_confirmation']:['required','if_exists','pending_confirmation']));
+    if (kind === 'data-source') result.push(spec('presence','来源记录存在条件','select',['required','if_exists','pending_confirmation']));
+  }
   if(kind==='form-item' && entity.data_field_ref)result.find(field=>field.key==='item_type').readOnly=true;
   if (kind === 'behavior') {
     const available = dynamicDepartmentOptions(document, target.ref, modules);
@@ -168,9 +182,10 @@ export function fields(document, target, enums = {}, modules = {}) {
     field.options = [{value:null,label:'未指定'}, ...available];
   }
   // Preserve invalid existing values visibly; selecting an unrelated same-name object is always explicit.
-  return result.map(field => {
+  return result.map(original => {
+    const field = organizationField(original, enums, entity);
     const value = readPath(entity,field.key);
-    if (field.options && value != null && !Array.isArray(value) && !field.options.some(option => option.value === value)) return {...field,options:[...field.options,{value,label:field.reference?'关联对象缺失或不适用（原引用保留）':'原有选项待核对',disabled:true}]};
+    if (field.editor !== 'organization-role' && field.options && value != null && !Array.isArray(value) && !field.options.some(option => option.value === value)) return {...field,options:[...field.options,{value,label:field.organization?`${value}（原值保留，待核对）`:field.reference?'关联对象缺失或不适用（原引用保留）':'原有选项待核对',disabled:true}]};
     return field;
   });
 }
@@ -192,7 +207,7 @@ export const pendingState = () => ({business_validity:'pending_confirmation',cus
 export const pendingLifecycle = () => ({applicability:'pending_confirmation',entry_state:pendingState(),routes:[],analysis:{analyzer_version:'',source_fingerprint:'',status:'not_analyzed'},decision_reason:'',decision_notes:''});
 export function newEntity(kind, ref, modules = {}) {
   kind=normalizeKind(kind);
-  return clone({
+  const entity = clone({
     behavior:{behavior_ref:ref,node_type:'action',behavior_name:'未命名环节',behavior_description:'',current_actor_role:'',actor_assignment_mode:'fixed_department',actor_department_data_ref:null,actor_position_rule:'',trigger:'',precondition:'',input_description:'',timing:null,completion_standard:'',output_description:'',countersign_all_required:false,countersign_target_departments:[]},
     data:{data_ref:ref,data_name:'未命名数据对象',description:'',information_type:'pending_confirmation',fields:[],behavior_links:[],source_relations:[],lifecycle:pendingLifecycle()},
     'data-field':{field_ref:ref,field_name:'未命名对象字段',field_type:'文本',definition:''},
@@ -208,9 +223,15 @@ export function newEntity(kind, ref, modules = {}) {
     'lifecycle-route':{route_ref:ref,route_label:'未命名生命周期路径',flow_relation_refs:[],events:[],exit_state:pendingState()},
     'lifecycle-event':{event_ref:ref,action:'activate',trigger:{mode:'pending_confirmation',operator:'pending_confirmation',behavior_ref:null,expression:''},result_state:{...pendingState(),business_validity:'effective'},target_scope:'pending_confirmation',carrier_scope:'not_applicable',responsibility:{mode:'pending_confirmation',department:'',position:''},exception_handling:'',review_status:'pending_confirmation',high_risk:false,decision_reason:'',decision_notes:'',provenance:{source_type:'user_confirmed',source_ref:null,source_path:'',basis:'',analyzer_version:'',source_fingerprint:''}}
   }[kind]);
+  if (modules.schemaVersion === 'process-governance-v9' && entity) {
+    if (kind === 'data') Object.assign(entity,{record_model:'pending_confirmation',collection_field_refs:[]});
+    if (kind === 'data-link') Object.assign(entity,{record_scope:'pending_confirmation',presence:'pending_confirmation'});
+    if (kind === 'data-source') entity.presence='pending_confirmation';
+  }
+  return entity;
 }
 export function createAddition(document, kind, parentRef, ref, modules = {}) {
-  kind=normalizeKind(kind); const next=clone(document), entity=newEntity(kind,ref,modules);
+  kind=normalizeKind(kind); const next=clone(document), entity=newEntity(kind,ref,{...modules,schemaVersion:document?.schema_version});
   if (!entity) throw new Error('此对象类型没有新增入口');
   const top={behavior:'behaviors',data:'data_objects',form:'forms',term:'terms',relation:'flow_relations'}[kind];
   if (top) { (next[top] ||= []).push(entity);return {document:next,target:{kind,ref,parentRef:''}}; }

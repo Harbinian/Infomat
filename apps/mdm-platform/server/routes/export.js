@@ -46,7 +46,7 @@ router.get('/excel', requireAuth, async (req, res) => {
     release = acquireExportSlot();
     abortScope = createAbortScope(req, res);
     const repo = await abortScope.run(() => dataMapRepository());
-    const data = await abortScope.run(() => repo.exportFieldLedger(scope, { signal: abortScope.signal, maxRows: EXPORT_LIMITS.maxRows }));
+    const data = await abortScope.run(() => repo.exportFieldLedger(scope, { signal: abortScope.signal, maxRows: EXPORT_LIMITS.maxRows, view:req.query.view }));
     const fields = data.fields || [];
     const identities = data.identities || [];
     abortScope.check();
@@ -72,11 +72,13 @@ router.get('/excel', requireAuth, async (req, res) => {
       { header: 'A1编号', key: 'process_governance_a1_code', width: 18 },
       { header: '消费系统', key: 'consume_systems', width: 20 },
       { header: '同步方式', key: 'sync_mode', width: 12 },
-      { header: '字段说明', key: 'note', width: 28 }
+      { header: '字段说明', key: 'note', width: 28 },
+      { header: '固定版本',key:'version_id',width:22 },{header:'承接发布',key:'publication_id',width:38},{header:'治理状态',key:'governance_status',width:20},{header:'内容摘要',key:'content_digest',width:68}
     ];
 
     fields.forEach(field => {
       ledger.addRow({
+        version_id:field.version_id,publication_id:field.publication_id,governance_status:field.governance_status,content_digest:field.content_digest,
         context_title: field.context_title || field.context_key || '',
         dept_name: field.dept_name || '',
         object_name: field.object_name_cn || field.data_object || '',

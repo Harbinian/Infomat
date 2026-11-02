@@ -12,6 +12,10 @@ function validateProcessGovernanceV8(document, options = {}) {
   return validateProcessGovernance(document, options, true);
 }
 
+function validateProcessGovernanceV9(document, options = {}) {
+  return validateProcessGovernance(document, options, true);
+}
+
 function validateProcessGovernance(document, options, allowDecisionUse) {
   const schemaValidator = options.schemaValidator;
   if (typeof schemaValidator !== 'function') {
@@ -69,6 +73,12 @@ function validateProcessGovernance(document, options, allowDecisionUse) {
   uniqueRefs(document && document.terms, 'term_ref', '/terms', technicalIds);
 
   const behaviorByRef = new Map(behaviors.map(item => [item && item.behavior_ref, item]));
+  const explicitRecords = document && document.schema_version === 'process-governance-v9';
+  if (explicitRecords) {
+    list(document.process && document.process.entry_behavior_refs).forEach((ref, index) => {
+      requireRef(behaviorRefs, ref, `/process/entry_behavior_refs/${index}`, '流程入口行为');
+    });
+  }
   behaviors.forEach((behavior, index) => {
     requireRef(dataRefs, behavior && behavior.actor_department_data_ref, `/behaviors/${index}/actor_department_data_ref`, '动态执行部门来源数据');
   });
@@ -113,6 +123,13 @@ function validateProcessGovernance(document, options, allowDecisionUse) {
       .forEach(ref => dataLinkRefs.add(ref));
     uniqueRefs(dataObject && dataObject.source_relations, 'source_ref', `/data_objects/${dataIndex}/source_relations`, technicalIds);
     const operationsByBehavior = new Map();
+    const collectionFields = new Set(list(dataObject && dataObject.collection_field_refs));
+    if (explicitRecords) {
+      list(dataObject && dataObject.collection_field_refs).forEach((ref, index) => requireRef(fieldRefs, ref, `/data_objects/${dataIndex}/collection_field_refs/${index}`, '集合元数据字段'));
+      if (dataObject.record_model === 'single_instance' && collectionFields.size) {
+        addError(`/data_objects/${dataIndex}/collection_field_refs`, '单个办理实例不能声明集合元数据字段', {}, 'recordSemantics', 'COLLECTION_FIELDS_REQUIRE_RECORD_COLLECTION');
+      }
+    }
     list(dataObject && dataObject.behavior_links).forEach((link, linkIndex) => {
       const linkPath = `/data_objects/${dataIndex}/behavior_links/${linkIndex}`;
       requireRef(behaviorRefs, link && link.behavior_ref, `${linkPath}/behavior_ref`, '数据关系对应行为');
@@ -133,6 +150,25 @@ function validateProcessGovernance(document, options, allowDecisionUse) {
         addError(`${linkPath}/updated_field_refs`, '只有更新操作可以登记更新字段', { ref: link.link_ref });
       }
       updatedRefs.forEach((fieldRef, fieldIndex) => requireRef(fieldRefs, fieldRef, `${linkPath}/updated_field_refs/${fieldIndex}`, '更新字段'));
+      if (explicitRecords && link) {
+        const scopeKnown = link.record_scope && link.record_scope !== 'pending_confirmation';
+        const presenceKnown = link.presence && link.presence !== 'pending_confirmation';
+        if (link.operation === 'create') {
+          if (scopeKnown && link.record_scope !== 'new_instance') addError(`${linkPath}/record_scope`, '创建操作必须产生独立新实例', {}, 'recordSemantics', 'CREATE_REQUIRES_NEW_INSTANCE');
+          if (presenceKnown && !['required', 'conditional'].includes(link.presence)) addError(`${linkPath}/presence`, '创建操作应明确每次必产或按实际事项有条件产生', {}, 'recordSemantics', 'CREATE_PRESENCE_INVALID');
+        } else if (['use', 'update'].includes(link.operation)) {
+          if (scopeKnown && link.record_scope === 'new_instance') addError(`${linkPath}/record_scope`, '使用或更新不能引用本行为尚未产生的新实例', {}, 'recordSemantics', 'INPUT_CANNOT_READ_NEW_INSTANCE');
+          if (presenceKnown && !['required', 'if_exists'].includes(link.presence)) addError(`${linkPath}/presence`, '使用或更新应明确必须已有或存在时才办理', {}, 'recordSemantics', 'INPUT_PRESENCE_INVALID');
+          if (link.record_scope === 'prior_records' && dataObject.record_model === 'single_instance') addError(`${linkPath}/record_scope`, '此前记录集合只能关联独立记录集合', {}, 'recordSemantics', 'PRIOR_RECORDS_REQUIRE_COLLECTION');
+          if (link.record_scope === 'collection_metadata') {
+            if (dataObject.record_model === 'single_instance') addError(`${linkPath}/record_scope`, '单个办理实例不能使用集合元数据操作', {}, 'recordSemantics', 'METADATA_REQUIRES_COLLECTION');
+            if (link.operation === 'update' && updatedRefs.some(ref => !collectionFields.has(ref))) addError(`${linkPath}/updated_field_refs`, '集合元数据更新只能选择已明确的集合字段', {}, 'recordSemantics', 'COLLECTION_UPDATE_FIELD_SCOPE_INVALID');
+          } else if (link.operation === 'update' && scopeKnown && updatedRefs.some(ref => collectionFields.has(ref))) {
+            addError(`${linkPath}/updated_field_refs`, '实例更新不能同时修改集合元数据；请分别登记操作', {}, 'recordSemantics', 'INSTANCE_UPDATE_FIELD_SCOPE_INVALID');
+          }
+          if (link.operation === 'update' && scopeKnown && !updatedRefs.length) addError(`${linkPath}/updated_field_refs`, '已明确记录范围的更新操作必须明确实际更新字段', {}, 'recordSemantics', 'UPDATED_FIELDS_REQUIRED');
+        }
+      }
       if (!operationsByBehavior.has(link && link.behavior_ref)) operationsByBehavior.set(link && link.behavior_ref, new Set());
       operationsByBehavior.get(link && link.behavior_ref).add(link && link.operation);
     });
@@ -231,5 +267,6 @@ function validateProcessGovernance(document, options, allowDecisionUse) {
 module.exports = {
   V7,
   validateProcessGovernanceV7,
-  validateProcessGovernanceV8
+  validateProcessGovernanceV8,
+  validateProcessGovernanceV9
 };

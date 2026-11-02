@@ -55,7 +55,7 @@ function compareAnalysisSnapshots(before, after) {
   const deterministic = [a, b].some(i => i.steps.some(s => s.definition.parser_key === rules.PARSER));
   if (leftFormats.some(i => i.identity && rightFormats.some(j => j.identity === i.identity && j.schema_version !== i.schema_version))) reasons.push('SOURCE_FORMAT_CHANGED');
   if (deterministic && [...leftFormats, ...rightFormats].some(i => i.format_state === 'unsupported')) reasons.push('SOURCE_FORMAT_UNSUPPORTED');
-  if (deterministic && [...leftFormats, ...rightFormats].some(i => !['native_v7', 'native_v8', 'unsupported'].includes(i.format_state))) reasons.push('SOURCE_FORMAT_UNRESOLVED');
+  if (deterministic && [...leftFormats, ...rightFormats].some(i => !['native_v7', 'native_v8', 'native_v9', 'unsupported'].includes(i.format_state))) reasons.push('SOURCE_FORMAT_UNRESOLVED');
   // Only the original eight checks have mapped V7 semantics across versions.
   // New content coverage cannot be equated to a historical eight-check run.
   const nativeV7 = [...leftFormats, ...rightFormats].length > 0 && [...leftFormats, ...rightFormats].every(i => i.format_state === 'native_v7');

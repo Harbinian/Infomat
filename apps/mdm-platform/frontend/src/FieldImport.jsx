@@ -1,3 +1,4 @@
+import {userMessage} from './businessPresentation.js';
 import React, { useEffect, useRef, useState } from 'react';
 
 export function FieldImport({ api, user, selected, pending, lastReadAt, draft, setDraft, busy, setBusy, isCurrentAttempt, onImported }) {
@@ -22,7 +23,7 @@ export function FieldImport({ api, user, selected, pending, lastReadAt, draft, s
       setFeedback({ error: '请选择非空的 .xlsx 文件，且文件大小不超过 5MB。原有文件选择仍保留。' }); return;
     }
     if (draft?.file && !window.confirm('替换当前字段台账文件？尚未导入的文件选择将被替换。')) return;
-    setDraft({ owner:draft?.owner, file, contextId: String(selected.id), contextTitle: selected.title || selected.context_key, requestId:crypto.randomUUID(), checked: false, dirty: true });
+    setDraft({ owner:draft?.owner, file, contextId: String(selected.id), contextTitle: selected.title || '数据使用范围名称未记录', requestId:crypto.randomUUID(), checked: false, dirty: true });
     setFeedback({});
   }
   function clear() {
@@ -42,7 +43,7 @@ export function FieldImport({ api, user, selected, pending, lastReadAt, draft, s
       const result = await api.request('/api/import/field-entries', { method: 'POST', body });
       if (!mounted.current || !isCurrentAttempt(attempt.attemptId)) return;
       if (!Number.isSafeInteger(result?.imported) || result.imported < 0 || String(result.context_id) !== attempt.contextId || result.receipt?.request_id !== attempt.requestId) throw new Error('导入回执与原请求不一致，请保留文件并核对。');
-      setDraft(null); setFeedback({ success: `已导入 ${result.imported} 行，目标为“${attempt.contextTitle}” (#${attempt.contextId})。批次 #${result.receipt.batch_id}，请求 ${attempt.requestId}。${result.receipt.replayed ? '这是原请求回执，未重复写入；历史删除或后续维护不会重建字段。' : ''}请在关联字段台账核对。` });
+      setDraft(null); setFeedback({ success: `已导入 ${result.imported} 行，目标为“${attempt.contextTitle}”。${result.receipt.replayed ? '这是原请求回执，未重复写入；历史删除或后续维护不会重建字段。' : ''}请在关联字段台账核对。` });
       onImported(attempt.contextId);
     } catch (error) {
       if (!mounted.current || !isCurrentAttempt(attempt.attemptId)) return;
@@ -62,7 +63,7 @@ export function FieldImport({ api, user, selected, pending, lastReadAt, draft, s
     <p>先选择本部门的来源上下文，再下载模板填写。支持 .xlsx，最大 5MB；首行须包含“数据对象”和“字段说明”。字段名须符合现有禁用词和质量规则。</p>
     <p className="muted">字段、关联记录和批次日志整批提交，校验或写入失败会整批回滚。导入不代表主数据、权威来源或流程审核已经确认。</p>
     <a href="/template.xlsx" download="字段台账模板.xlsx">下载字段台账模板</a>
-    <p data-field-import-target style={{ overflowWrap: 'anywhere' }}>导入目标：{draft?.file ? `${draft.contextTitle} (#${draft.contextId})` : selected ? `${selected.title || selected.context_key} (#${selected.id})` : '请先选择上下文'}</p>
+    <p data-field-import-target style={{ overflowWrap: 'anywhere' }}>导入目标：{draft?.file ? draft.contextTitle : selected ? selected.title || '数据使用范围名称未记录' : '请先选择上下文'}</p>
     {!pending && !canImport && <p role="status">当前上下文没有本部门编制权限，不能导入字段。</p>}
     {!sameTarget && <p role="status">文件仍绑定原上下文。请切回导入目标后办理，或明确放弃此文件选择。</p>}
     {(canDraft || draft?.file) && <form onSubmit={submit}>
@@ -81,7 +82,7 @@ export function FieldImport({ api, user, selected, pending, lastReadAt, draft, s
         {draft?.file && <button type="button" className="secondary" disabled={busy} onClick={clear}>放弃字段文件选择</button>}
       </div>
     </form>}
-    {feedback.error && <p role="alert" data-field-import-error>{feedback.error}</p>}
+    {feedback.error && <p role="alert" data-field-import-error>{userMessage(feedback.error)}</p>}
     {feedback.success && <p role="status">{feedback.success}</p>}
   </section>;
 }

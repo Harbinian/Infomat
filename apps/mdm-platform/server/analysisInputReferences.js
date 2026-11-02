@@ -2,7 +2,7 @@
 const { failure, id, parse, digest, json } = require('./dataMapDefinitionValues');
 const columns = Object.freeze({ v7_source: 'source_id', definition: 'definition_version_id', mapping: 'mapping_version_id', handoff: 'handoff_version_id', template: 'batch_id' });
 const integrity = () => failure('DEFINITION_ANALYSIS_REFERENCE_CHANGED', 409);
-module.exports = function ({ scope, entityScope, version, loadSource, target, unpack, mappingSelect }) {
+module.exports = function ({ scope, entityScope, version, loadSource, target, unpack, mappingSelect,assertTargetReferenceable,assertSourceCurrent }) {
   async function resolve(db, who, kind, refId) {
     refId = id(refId);
     if (!columns[kind]) throw failure('DEFINITION_ANALYSIS_INPUT_KIND_INVALID');
@@ -10,7 +10,6 @@ module.exports = function ({ scope, entityScope, version, loadSource, target, un
     if (kind === 'v7_source') {
       await require('./analysisDependencyReadiness').assertSourceStorage(db);
       const r = await loadSource(db, who, refId);
-      if (r.stale) throw integrity();
       metadata = { source_kind: r.source_kind, source_ref: r.source_ref, content_digest: r.content_digest, digest_algorithm: r.digest_algorithm,
         raw_sha256: r.raw_sha256, raw_digest_algorithm: r.raw_digest_algorithm, original_name: r.original_name, byte_length: r.byte_length, validation_status: r.validation_status,
         identity: { kind: r.source_kind, id: r.source_kind === 'preview_revision' ? r.case_id : r.source_kind === 'published_version' ? r.document.process.process_ref : r.source_id } };
@@ -89,6 +88,26 @@ module.exports = function ({ scope, entityScope, version, loadSource, target, un
     }
     return { snapshot: { kind, ref_id: refId, ...metadata }, document };
   }
+  resolve.assertNewReference=async function assertNewReference(db,who,inputKind,refId,visited=new Set()) {
+    const key=inputKind+':'+refId;if(visited.has(key))return;visited.add(key);
+    const value=await resolve(db,who,inputKind,refId);
+    if(inputKind==='definition')await require('./dataMapEffectiveReader').isVersionReferenceable(db,refId);
+    if(inputKind==='v7_source'){const source=await loadSource(db,who,refId);if(source.stale)throw failure('DEFINITION_V7_SOURCE_CHANGED',409);await assertSourceCurrent(db,source);}
+    if(inputKind==='mapping'){
+      await assertTargetReferenceable(db,value.snapshot.object_version_id,value.snapshot.field_version_id);
+      await assertNewReference(db,who,'v7_source',value.snapshot.source_id,visited);
+    }
+    if(inputKind==='handoff')for(const link of value.snapshot.mapping_refs)await assertNewReference(db,who,'mapping',link.mapping_version_id,visited);
+    if(inputKind==='template'&&Array.isArray(value.document?.links))for(const link of value.document.links)await assertNewReference(db,who,link.kind,link.ref_id,visited);
+    return value;
+  };
+  resolve.referenceStatus=async function referenceStatus(db,who,inputKind,refId){
+    try{await resolve.assertNewReference(db,who,inputKind,refId);return {kind:inputKind,ref_id:String(refId),new_reference_allowed:true,requires_attention:false,issue:null};}
+    catch(error){
+      if(error.statusCode!==503&&!['HANDOFF_REFERENCE_UNAVAILABLE','HANDOFF_SCOPE_STALE','DEFINITION_V7_SOURCE_CHANGED','DEFINITION_V7_NOT_PUBLISHED','DEFINITION_V7_SOURCE_NOT_FOUND','DEFINITION_V7_PREVIEW_DISABLED','DEFINITION_V7_FORMAL_DISABLED'].includes(error.code))throw error;
+      return {kind:inputKind,ref_id:String(refId),new_reference_allowed:false,requires_attention:true,issue:error.code};
+    }
+  };
   return resolve;
 };
 module.exports.columns = columns;

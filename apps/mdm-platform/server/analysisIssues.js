@@ -38,13 +38,19 @@ module.exports = function (helpers) {
   }
   async function currentInputs(db, run) {
     // Fixed snapshots stay readable, but an explicit decision cannot silently use superseded ledger/mapping revisions.
+    if(run.input_reference_states?.some(value=>!value.new_reference_allowed))throw fail('SOURCE_SUPERSEDED',409);
     async function current(kind, ref) {
       let ok;
-      if (kind === 'definition') ok = (await db.execute('SELECT entity_id FROM data_map_definition_heads WHERE current_version_id=? FOR SHARE', [ref]))[0].length;
+      if (kind === 'definition') ok = await require('./dataMapEffectiveReader').isVersionReferenceable(db,ref);
+      if (kind === 'v7_source') {
+        const [[source]]=await db.execute('SELECT source_kind,CAST(process_version_id AS CHAR) process_version_id FROM data_map_v7_sources WHERE source_id=? FOR SHARE',[ref]);
+        if(!source)throw fail('SOURCE_SUPERSEDED',409);
+        try{await helpers.assertSourceCurrent(db,source);}catch(error){if(error.code!=='HANDOFF_SCOPE_STALE')throw error;throw fail('SOURCE_SUPERSEDED',409);}
+      }
       if (kind === 'mapping') {
-        const [[m]] = await db.execute('SELECT CAST(object_version_id AS CHAR) object_version_id,CAST(field_version_id AS CHAR) field_version_id,CAST(mapping_id AS CHAR) mapping_id,revision_no FROM data_map_v7_mapping_versions WHERE mapping_version_id=? FOR SHARE', [ref]);
+        const [[m]] = await db.execute('SELECT CAST(v.object_version_id AS CHAR) object_version_id,CAST(v.field_version_id AS CHAR) field_version_id,CAST(v.mapping_id AS CHAR) mapping_id,CAST(m.source_id AS CHAR) source_id,v.revision_no FROM data_map_v7_mapping_versions v JOIN data_map_v7_mappings m ON m.mapping_id=v.mapping_id WHERE v.mapping_version_id=? FOR SHARE', [ref]);
         const [[latest]] = await db.execute('SELECT revision_no FROM data_map_v7_mappings WHERE mapping_id=? FOR SHARE', [m.mapping_id]);
-        ok = latest.revision_no === m.revision_no; await current('definition', m.object_version_id); if (m.field_version_id) await current('definition', m.field_version_id);
+        ok = latest.revision_no === m.revision_no; await current('v7_source',m.source_id);await current('definition', m.object_version_id); if (m.field_version_id) await current('definition', m.field_version_id);
       }
       if (kind === 'handoff') {
         const [[h]] = await db.execute('SELECT CAST(handoff_id AS CHAR) handoff_id,revision_no FROM data_map_design_handoff_versions WHERE handoff_version_id=? FOR SHARE', [ref]);
@@ -91,7 +97,7 @@ module.exports = function (helpers) {
     const out = [];
     for (const l of links) {
       const f = await finding(db, session, l.run_id, l.finding_id);
-      out.push({ ...l, message: f.found.message, reviews: await history(db, l.finding_id) });
+      out.push({ ...l, message: f.found.message, input_reference_states:f.run.input_reference_states, reviews: await history(db, l.finding_id) });
     }
     return out;
   }
@@ -113,7 +119,7 @@ module.exports = function (helpers) {
       // and restart issue-first; never hold an empty review-index gap while waiting for identity.
       if(state.issue_id && state.issue_id!==linked?.issue_id)return {retry_linked_read:true};
       if (state.issue_id) { await issue(db, who, state.issue_id); await linkedFindings(db, session, state.issue_id); }
-      return { finding_id: f.found.finding_id, state, events, can_confirm: !who.readOnly && who.permissions.has('governance:structure-gate'), close_enabled: false };
+      return { finding_id: f.found.finding_id, state, events, input_reference_states:f.run.input_reference_states, can_confirm: !who.readOnly && who.permissions.has('governance:structure-gate')&&f.run.input_reference_states.every(value=>value.new_reference_allowed), close_enabled: false };
     }); if(!value.retry_linked_read)return value; } throw fail('REVISION_CONFLICT',409); },
     getAnalysisIssue(session, issueId) { return tx(async db => {
       await db.execute('SELECT issue_id FROM process_governance_issues WHERE issue_id=? FOR UPDATE',[id(issueId)]);
@@ -121,6 +127,7 @@ module.exports = function (helpers) {
       return { issue: result.value, revision_no: result.binding?.revision_no || 1, issue_digest: digest(result.value), links, close_enabled: false };
     }); },
     decideAnalysisFinding(session, payload) { return tx(async db => {
+      await require('./dataMapHandoffControl').assertGraphWriteEnabled(db);
       keys(payload, ['request_id','run_id','finding_id','expected_revision','action','reason','owner_department_id','owner_basis','evidence_ids','issue_id','expected_issue_revision','expected_issue_digest','title']);
       if(payload.action==='link')await db.execute('SELECT issue_id FROM process_governance_issues WHERE issue_id=? FOR UPDATE',[id(payload.issue_id)]);
       const who = await actor(db, session, 'governance:structure-gate');
@@ -135,6 +142,7 @@ module.exports = function (helpers) {
       if (evidence.some(e => !e || e.locator_kind !== 'json_pointer')) throw fail('EVIDENCE_INVALID');
       await currentInputs(db, f.run);
       return request(db, who, 'analysis_finding_decision', payload, async () => {
+        await db.execute('UPDATE data_map_governance_control SET graph_revision=graph_revision+1 WHERE control_id=1');
         if (!Number.isSafeInteger(payload.expected_revision) || state.revision_no !== payload.expected_revision) throw fail('REVISION_CONFLICT', 409);
         if (state.issue_id || state.decision === 'not_an_issue') throw fail('DECISION_FINAL', 409);
         let issueId = null, issueRevision = null;

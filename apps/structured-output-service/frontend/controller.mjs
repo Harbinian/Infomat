@@ -1,4 +1,5 @@
 import { clone, catalog, resolve, fields, readPath, writePath, normalizeKind, tableForTarget, gridTarget, newEntity, pendingLifecycle, createAddition, deletionPlan, KIND_LABELS } from './model.mjs';
+import { organizationInputErrors } from './organization.mjs';
 
 const frozen = value => {
   if (!value || typeof value !== 'object' || Object.isFrozen(value)) return value;
@@ -98,7 +99,7 @@ export function createWorkbenchController(options = {}) {
     return null;
   }
   function gridOptions() {
-    return {refFactory,pendingLifecycle,allowedFieldTypes:state.enums.fieldType || state.enums.field_types || state.enums.fieldTypes || ['文本','长文本','数字','日期','日期时间','金额','枚举','布尔','部门','人员','文件编号','签名','图片','附件','二维码'],technicalIntegrity:modules.GraphEditCommands.technicalIntegrity,dataObjectFactory:ref=>newEntity('data',ref,modules)};
+    return {refFactory,pendingLifecycle,schemaVersion:state.document?.schema_version,allowedFieldTypes:state.enums.fieldType || state.enums.field_types || state.enums.fieldTypes || ['文本','长文本','数字','日期','日期时间','金额','枚举','布尔','部门','人员','文件编号','签名','图片','附件','二维码'],technicalIntegrity:modules.GraphEditCommands.technicalIntegrity,dataObjectFactory:ref=>newEntity('data',ref,{...modules,schemaVersion:state.document?.schema_version})};
   }
   function startGrid() {
     if(grid)return;
@@ -166,6 +167,8 @@ export function createWorkbenchController(options = {}) {
         if(normalizeKind(target.kind)==='data-field')catalog(planned).filter(item=>item.kind==='form-item'&&item.entity.data_field_ref===target.ref&&item.entity.business_data_ref===target.parentRef).forEach(item=>{item.entity.item_type=entity.entity.field_type;});
       }
     }
+    const organizationErrors=organizationInputErrors(state.document,planned,state.enums);
+    if(organizationErrors.length)return fail(new Error(organizationErrors.join('；')));
     if(fingerprint(planned)===fingerprint(state.document))return {ok:true};
     return operation(async(signal,mark)=>{
       const baseline=await validate(state.document,signal),validation=await validate(planned,signal);
@@ -210,13 +213,14 @@ export function createWorkbenchController(options = {}) {
       let source=await validate(parsed,signal);
       if(!source.valid && parsed.schema_version==='process-governance-v7' && modules.ProcessGovernanceMigration.needsDataFieldUpgrade(parsed))source=await validate(parsed,signal,'early-v7-data-fields');
       if(!source.valid && !modules.ImportCompatibility.classifyPostMigrationValidation(source).allowed)throw new Error(`源文件检查失败：${(source.errors||[]).slice(0,4).map(item=>item.message).join('；')}`);
-      const documents=modules.ProcessGovernanceMigration.migrateDocument(source.data || parsed,{fileName:action.fileName});
+      const documents=modules.ProcessGovernanceMigration.migrateDocument(source.data || parsed,{fileName:action.fileName,departments:Object.keys(state.enums.rosterRolesByDepartment||{}),preserveFixedActorRoles:true});
       const validations=[];for(const document of documents)validations.push(await validate(document,signal));
       const classification=modules.ImportCompatibility.classifyPostMigrationBatch(validations);
       if(!classification.allowed)throw new Error('迁移后的文件存在无法安全保留的结构问题，当前工作内容保持不变');
       const info={fileName:action.fileName || '',sourceVersion:parsed.schema_version,targetVersion:documents[0]?.schema_version,count:documents.length,normalization:modules.ImportCompatibility.summarizeNormalization?.(parsed,documents[0]),repairableErrorCount:classification.repairableErrorCount};
       if(!current(mark))return {ok:false,stale:true};
       if(documents.length>1) {state.importCandidates=documents.map((document,index)=>({index,label:document.process?.process_name || `流程 ${index+1}`,document,info}));emit();return {ok:true,choose:true};}
+      options.assertImportDocument?.(clone(documents[0]));
       replaceDocument(documents[0],{dirty:parsed.schema_version!==documents[0].schema_version||fingerprint(parsed)!==fingerprint(documents[0]),importInfo:info});emit();return {ok:true};
     });
   }
@@ -305,6 +309,7 @@ export function createWorkbenchController(options = {}) {
         case 'import':return await importText(action);
         case 'choose-import': {
           const candidate=state.importCandidates?.[action.index];if(!candidate)throw new Error('请选择文件内的一条流程');
+          options.assertImportDocument?.(clone(candidate.document));
           replaceDocument(candidate.document,{dirty:true,importInfo:candidate.info});emit();return {ok:true};
         }
         case 'cancel-import':state.importCandidates=null;emit();break;
@@ -470,5 +475,9 @@ export function createWorkbenchController(options = {}) {
     }
     return result;
   }
-  return Object.freeze({getSnapshot:()=>snapshot,subscribe:listener=>{if(destroyed)return()=>{};listeners.add(listener);return()=>listeners.delete(listener);},dispatch,destroy:()=>{if(destroyed)return;abort();destroyed=true;listeners.clear();state.reusePicker=null;discardSession();history.clear();snapshot=frozen({...snapshot,reusePicker:null,session:null,pending:false,destroyed:true});}});
+  function acknowledgeSaved(document) {
+    if(destroyed || !state.document || fingerprint(document)!==fingerprint(state.document))return false;
+    history.markBaseline(state.candidateKey,document);emit();return true;
+  }
+  return Object.freeze({getSnapshot:()=>snapshot,subscribe:listener=>{if(destroyed)return()=>{};listeners.add(listener);return()=>listeners.delete(listener);},dispatch,acknowledgeSaved,destroy:()=>{if(destroyed)return;abort();destroyed=true;listeners.clear();state.reusePicker=null;discardSession();history.clear();snapshot=frozen({...snapshot,reusePicker:null,session:null,pending:false,destroyed:true});}});
 }

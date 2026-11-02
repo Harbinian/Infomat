@@ -5,9 +5,10 @@ const { hashPassword, requireAuth, requirePermission } = require('../auth');
 const { makeGovernanceAccessMysqlRepository } = require('../governanceAccessMysqlRepository');
 const { mysqlConfigFromEnv } = require('../mysqlConfig');
 const { generateInitialPassword } = require('../passwordPolicy');
+const { employeeLoginName, accountInitialPassword } = require('../accountCreationPolicy');
 const { identityInteger, sessionSubject } = require('../sessionSubject');
 const { maintenanceRequestContext } = require('../accountMaintenanceAuthority');
-const { logRequestFailure } = require('../securityLog');
+const { logRequestFailure, safeErrorCode } = require('../securityLog');
 const { createRegisteredPool } = require('../mysqlPoolRegistry');
 
 const router = express.Router();
@@ -60,7 +61,7 @@ function handleError(res, error) {
     const code = message.includes('login') ? 'LOGIN_NAME_EXISTS' : 'ACCOUNT_EXISTS';
     return res.status(409).json({ error: '登录名、工号或账号已存在', code });
   }
-  logRequestFailure(res, 'IDENTITY_ACCESS_SERVICE_UNAVAILABLE');
+  logRequestFailure(res, error, { status: 503, code: safeErrorCode(error) || 'IDENTITY_ACCESS_SERVICE_UNAVAILABLE' });
   return res.status(503).json({
     error: '账号与授权服务暂不可用',
     code: 'IDENTITY_ACCESS_SERVICE_UNAVAILABLE'
@@ -104,7 +105,7 @@ router.post('/', ...canManageAccount, requirePermission('identity:assign-role'),
   const body = req.body || {};
   const pendingCredential = crypto.randomBytes(48).toString('base64url');
   const account = await repo.createAccount({
-    loginName: body.loginName,
+    loginName: employeeLoginName(body.employeeNo, body.loginName),
     employeeNo: body.employeeNo,
     name: body.name,
     departmentId: body.departmentId,
@@ -116,11 +117,25 @@ router.post('/', ...canManageAccount, requirePermission('identity:assign-role'),
   res.status(201).json(account);
 }));
 
+router.post('/:personId/assign-account', ...canManageAccount, (req, res) => run(res, async () => {
+  const repo = await repository(req, true);
+  const body = req.body || {};
+  const pendingCredential = crypto.randomBytes(48).toString('base64url');
+  const account = await repo.assignAccount(identityInteger(req.params.personId), {
+    expectedPerson: body.expectedPerson,
+    reason: body.reason,
+    pendingPasswordHash: hashPassword(pendingCredential),
+    actorPersonId: actorPersonId(req)
+  });
+  res.status(201).json(account);
+}));
+
 router.patch('/:personId', ...canManageAccount, (req, res) => run(res, async () => {
   const repo = await repository(req, true);
   const body = req.body || {};
   const account = await repo.updateAccount(identityInteger(req.params.personId), {
-    name: body.name,
+    ...(Object.prototype.hasOwnProperty.call(body, 'name') ? { name: body.name } : {}),
+    ...(Object.prototype.hasOwnProperty.call(body, 'employeeNo') ? { employeeNo: body.employeeNo } : {}),
     ...(Object.prototype.hasOwnProperty.call(body, 'departmentId')
       ? { departmentId: body.departmentId }
       : {}),
@@ -140,6 +155,8 @@ router.post('/:personId/role-assignments', ...canAssignRole, (req, res) => run(r
     authorizationBasis: body.authorizationBasis,
     effectiveFrom: body.effectiveFrom,
     effectiveTo: body.effectiveTo,
+    ...(Object.prototype.hasOwnProperty.call(body, 'expectedFinalResponsiblePersonId') ? { expectedFinalResponsiblePersonId: body.expectedFinalResponsiblePersonId } : {}),
+    confirmReplaceFinalResponsiblePerson: body.confirmReplaceFinalResponsiblePerson,
     actorPersonId: actorPersonId(req)
   });
   res.status(201).json(assignment);
@@ -164,7 +181,7 @@ router.post(
 );
 
 router.post('/:personId/activate', ...canManageAccount, (req, res) => run(res, async () => {
-  const initialPassword = generateInitialPassword();
+  const initialPassword = accountInitialPassword();
   const repo = await repository(req, true);
   const body = req.body || {};
   const account = await repo.activateAccount(identityInteger(req.params.personId), {

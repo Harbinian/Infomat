@@ -78,7 +78,7 @@ module.exports=function({transaction,actor,scope,entityScope,current,unchanged,v
   async function write(db,who,r,action){
     r.revision_no++;
     await db.execute('UPDATE data_map_fact_requests SET subject_version_id=?,object_version_id=?,target_department_id=?,target_person_id=?,status=?,revision_no=?,data_json=?,updated_at=UTC_TIMESTAMP(3) WHERE fact_id=?',[r.subject_version_id,r.object_version_id,r.target_department_id,r.target_person_id,r.status,r.revision_no,json(r.data),r.fact_id]);
-    await append(db,who,r,action);return {fact_id:r.fact_id,revision_no:r.revision_no,status:r.status};
+    await append(db,who,r,action);await db.execute('UPDATE data_map_governance_control SET graph_revision=graph_revision+1 WHERE control_id=1');return {fact_id:r.fact_id,revision_no:r.revision_no,status:r.status};
   }
   return {
     factCapabilities(session){return tx(async db=>{const who=await actor(db,session);return {person_id:who.personId,department_id:who.departmentId,can_manage:mdm(who),can_answer:!who.readOnly&&who.permissions.has('governance:draft-department'),schema,formal_governance:formal};});},
@@ -101,6 +101,7 @@ module.exports=function({transaction,actor,scope,entityScope,current,unchanged,v
     });},
     getFact(session,factId,options={}){return tx(async db=>{const who=await actor(db,session);return detail(db,who,await load(db,who,factId),options.before);});},
     createFact(session,payload){return tx(async db=>{
+      await require('./dataMapHandoffControl').assertGraphWriteEnabled(db);
       keys(payload,['request_id','subject_version_id','object_version_id','focus','question','target_department_id','target_person_id']);
       const who=await actor(db,session,'governance:structure-gate');
       return request(db,who,'create_fact',payload,async()=>{
@@ -111,10 +112,11 @@ module.exports=function({transaction,actor,scope,entityScope,current,unchanged,v
         r.data={question:text(payload.question),binding:await source(db,r.subject_version_id,r.object_version_id,payload.focus),answer:null,review:null};
         const now=await latest(db,r);if(now.subject_version_id!==r.subject_version_id||now.object_version_id!==r.object_version_id||now.inactive)throw failure('DEFINITION_FACT_SOURCE_CHANGED',409);
         await db.execute("INSERT INTO data_map_fact_requests(subject_version_id,object_version_id,scope_department_id,target_department_id,target_person_id,status,revision_no,data_json,created_by_person_id,created_at,updated_at) VALUES (?,?,?,?,?,'draft',1,?,?,UTC_TIMESTAMP(3),UTC_TIMESTAMP(3))",[r.subject_version_id,r.object_version_id,r.scope_department_id,r.target_department_id,r.target_person_id,json(r.data),who.personId]);
-        r.fact_id=await lastId(db);await append(db,who,r,'create');return {fact_id:r.fact_id,revision_no:1,status:'draft'};
+        r.fact_id=await lastId(db);await append(db,who,r,'create');await db.execute('UPDATE data_map_governance_control SET graph_revision=graph_revision+1 WHERE control_id=1');return {fact_id:r.fact_id,revision_no:1,status:'draft'};
       });
     });},
     actOnFact(session,factId,action,payload){return tx(async db=>{
+      await require('./dataMapHandoffControl').assertGraphWriteEnabled(db);
       const allowed={edit:['question','target_department_id','target_person_id'],send:[],answer:['answer','evidence_refs','needs_more_info','missing_reason'],more_info:['reason'],rebind:['subject_version_id','object_version_id','reason'],check:['reason','evidence_refs']};
       if(!Object.hasOwn(allowed,action))throw failure('DEFINITION_FORMAL_DECISION_NOT_ENABLED',403);
       keys(payload,['request_id','expected_revision',...allowed[action]]);

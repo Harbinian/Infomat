@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { identityInteger, sameIdentityInteger } = require('./sessionSubject');
 const Ajv2020 = require('ajv/dist/2020');
-const { validateProcessGovernanceV7, validateProcessGovernanceV8 } = require('../../../scripts/process-governance/v7-validator');
+const { validateProcessGovernanceV7, validateProcessGovernanceV8, validateProcessGovernanceV9 } = require('../../../scripts/process-governance/v7-validator');
 const { collectContentChecks, contentBlockingIssues } = require('./processContentChecks');
 
 const V7 = 'process-governance-v7';
@@ -15,9 +15,11 @@ for (const version of [1, 2]) {
 }
 const validateV7 = validator.compile(V7_SCHEMA);
 const validateV8 = validator.compile(JSON.parse(fs.readFileSync(path.join(CONTRACTS_DIR, 'process-governance-v8.schema.json'), 'utf8')));
+const validateV9 = validator.compile(JSON.parse(fs.readFileSync(path.join(CONTRACTS_DIR, 'process-governance-v9.schema.json'), 'utf8')));
 
 const PARTY_STATUSES = new Set(['pending', 'confirmed', 'needs_changes', 'pending_evidence', 'disputed']);
 const REVIEW_ITEM_DIGEST_VERSION = 'process-v7-review-item-v2';
+const V9_REVIEW_ITEM_DIGEST_VERSION = 'process-v7-review-item-v3';
 
 function text(value) {
   return String(value == null ? '' : value).trim();
@@ -134,9 +136,11 @@ function validateAndProjectProcess(document, departments, options = {}) {
     return { errors, contentChecks: collectContentChecks(document, errors), warnings: [],
       blockingIssues: [{ code: 'CONTENT_TECHNICAL_INVALID', message: '当前正文有技术错误，不能继续正式流转。' }], items: [] };
   }
-  const validation = document.schema_version === 'process-governance-v8'
-    ? validateProcessGovernanceV8(document, { schemaValidator: validateV8 })
-    : validateProcessGovernanceV7(document, { schemaValidator: validateV7 });
+  const validation = document.schema_version === 'process-governance-v9'
+    ? validateProcessGovernanceV9(document, { schemaValidator: validateV9 })
+    : document.schema_version === 'process-governance-v8'
+      ? validateProcessGovernanceV8(document, { schemaValidator: validateV8 })
+      : validateProcessGovernanceV7(document, { schemaValidator: validateV7 });
   if (!validation.valid) {
     const errors = validation.errors.map(error => ({ ...error,
       field: String(error.path || '/').replace(/^\//, '').replace(/\//g, '.') || 'document' }));
@@ -200,7 +204,13 @@ function validateAndProjectProcess(document, departments, options = {}) {
     if (!owningDepartment || sameIdentityInteger(executionDepartment.id, owningDepartment.id)) continue;
 
     const snapshot = {
-      digest_version: REVIEW_ITEM_DIGEST_VERSION,
+      digest_version: document.schema_version === 'process-governance-v9'
+        ? V9_REVIEW_ITEM_DIGEST_VERSION : REVIEW_ITEM_DIGEST_VERSION,
+      // Explicit entry points affect data availability. V9 object projections
+      // below also retain every record scope, presence and collection field ref.
+      ...(document.schema_version === 'process-governance-v9' ? {
+        process_context: { entry_behavior_refs: canonicalReviewValue(process.entry_behavior_refs) }
+      } : {}),
       departments: {
         origin_department_code: text(owningDepartment.code),
         origin_department_name: text(owningDepartment.name),
@@ -230,7 +240,30 @@ function validateAndProjectProcess(document, departments, options = {}) {
       carry_state: 'new'
     });
   }
-  if (owningDepartment && !items.length && !blockingIssues.some(issue => issue.code === 'ACTOR_DEPARTMENT_UNRESOLVED')) {
+  // These bindings come only from an explicit case submission, never from a
+  // role name. Historical native review digests above keep their old semantics.
+  const manualParticipants = options.manualParticipants;
+  if (owningDepartment && Array.isArray(manualParticipants)) {
+    for (const participant of manualParticipants) {
+      const department = list(departments).find(d => sameIdentityInteger(d.id, participant.department_id));
+      if (!department || sameIdentityInteger(department.id, owningDepartment.id)) continue;
+      const refs = list(participant.behavior_refs);
+      const selected = refs.length ? list(document.behaviors).filter(b => refs.includes(b.behavior_ref)) : list(document.behaviors);
+      const snapshot = { digest_version: 'process-manual-department-scope-v1',
+        source: refs.length ? { behaviors: selected.map(canonicalReviewValue),
+          relations: selected.map(b => relationProjection(document,b.behavior_ref)),
+          data: selected.map(b => dataProjection(document,b.behavior_ref)),
+          forms: selected.map(b => formProjection(document,b.behavior_ref)) } : canonicalReviewValue(document),
+        participant: canonicalReviewValue(participant), origin_department_id:String(owningDepartment.id) };
+      items.push({stable_item_key:contentHash(['manual-scope',String(department.id),canonicalReviewValue(participant)]),
+        behavior_ref:'manual_scope_'+department.id,behavior_name:'核对本部门责任及接口范围',
+        origin_department_id:identityInteger(owningDepartment.id),origin_department_name:owningDepartment.name,
+        target_department_id:identityInteger(department.id),target_department_name:department.name,
+        actor_role:participant.responsibilities,actor_position:'',item_digest:contentHash(snapshot),item_snapshot:snapshot,
+        origin_status:'pending',counterparty_status:'pending',status:'pending',carry_state:'new'});
+    }
+  }
+  if (owningDepartment && !items.length && !Array.isArray(manualParticipants) && !blockingIssues.some(issue => issue.code === 'ACTOR_DEPARTMENT_UNRESOLVED')) {
     const issue = {
       code: 'ZERO_CROSS_DEPARTMENT_SCOPE_PENDING',
       message: '当前流程没有识别到固定跨部门行为；这不等于业务上确认不涉及跨部门。'
@@ -259,7 +292,8 @@ function mergeReviewItems(previousItems, nextItems) {
     const previous = previousByKey.get(text(next.stable_item_key));
     if (!previous) return { ...next, carry_state: 'new' };
     if (
-      text(previous.item_snapshot && previous.item_snapshot.digest_version) !== REVIEW_ITEM_DIGEST_VERSION ||
+      ![REVIEW_ITEM_DIGEST_VERSION, V9_REVIEW_ITEM_DIGEST_VERSION].includes(text(next.item_snapshot && next.item_snapshot.digest_version)) ||
+      text(previous.item_snapshot && previous.item_snapshot.digest_version) !== text(next.item_snapshot && next.item_snapshot.digest_version) ||
       text(previous.item_digest) !== text(next.item_digest)
     ) {
       return {
@@ -337,6 +371,7 @@ function compareReviewItems(previousItems, nextItems) {
 module.exports = {
   PARTY_STATUSES,
   REVIEW_ITEM_DIGEST_VERSION,
+  V9_REVIEW_ITEM_DIGEST_VERSION,
   V7,
   caseStatusFromItems,
   compareReviewItems,

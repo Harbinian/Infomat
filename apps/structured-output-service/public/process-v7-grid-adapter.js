@@ -11,6 +11,9 @@
   ];
   const DATA_OPERATIONS = ['create', 'update', 'use', 'pending_confirmation'];
   const AVAILABILITY_MODES = ['process_start', 'at_behavior', 'pending_confirmation'];
+  const RECORD_MODELS = ['single_instance', 'record_collection', 'pending_confirmation'];
+  const RECORD_SCOPES = ['new_instance', 'current_instance', 'prior_records', 'collection_metadata', 'pending_confirmation'];
+  const PRESENCE_MODES = ['required', 'if_exists', 'conditional', 'pending_confirmation'];
   const FORM_DESIGN_STATES = ['unspecified', 'current_state', 'proposed_design'];
   const FORM_OPERATIONS = ['create', 'fill', 'modify', 'review', 'approve', 'confirm', 'read', 'archive', 'void'];
   const AREA_TYPES = ['', '基本信息', '明细清单'];
@@ -29,7 +32,10 @@
     authoritative_input: '本流程权威录入点', reuse_existing: '沿用已有值', calculated: '系统计算', external_source: '外部来源自动取得',
     direct_current_process: '当前流程直接取得', depends_on_data: '依赖数据取得',
     process_data: '本流程输出物与数据', external_system: '外部系统',
-    provides_value: '提供字段值', calculation_input: '参与计算', validation_basis: '作为校验依据'
+    provides_value: '提供字段值', calculation_input: '参与计算', validation_basis: '作为校验依据',
+    single_instance: '单条记录', record_collection: '独立记录集合', new_instance: '新建独立记录',
+    current_instance: '当前记录', prior_records: '既有历史记录', collection_metadata: '集合索引与保管信息',
+    required: '必须存在', if_exists: '存在时使用', conditional: '条件成立时创建'
   });
 
   function clone(value) {
@@ -71,8 +77,9 @@
     return { key, label, ...extra };
   }
 
-  function definitions(_documentValue, adapterOptions = {}) {
+  function definitions(documentValue, adapterOptions = {}) {
     const fieldTypes = arrays(adapterOptions.allowedFieldTypes);
+    const nativeV9 = (documentValue?.schema_version || adapterOptions.schemaVersion) === 'process-governance-v9';
     return [
       {
         id: 'data_objects', label: '数据对象', refField: 'data_ref',
@@ -80,6 +87,10 @@
           column('data_ref', '技术标识', { technicalRef: true, readOnly: true }),
           column('data_name', '数据对象名称', { required: true }),
           column('information_type', '信息类型', { required: true, editor: 'select', values: options(INFORMATION_TYPES) }),
+          ...(nativeV9 ? [
+            column('record_model', '记录组织方式', { required: true, editor: 'select', values: options(RECORD_MODELS) }),
+            column('collection_field_refs', '集合索引与保管字段', { editor: 'multi-select', lookup: 'collectionFields', referenceList: true, width: 300 })
+          ] : []),
           column('description', '说明', { editor: 'textarea', width: 320 })
         ]
       },
@@ -100,6 +111,10 @@
           column('data_ref', '数据对象', { required: true, technicalRef: true, editor: 'lookup', lookup: 'data_objects' }),
           column('behavior_ref', '业务行为', { required: true, technicalRef: true, editor: 'lookup', lookup: 'dataBehaviors' }),
           column('operation', '数据操作', { required: true, editor: 'select', values: options(DATA_OPERATIONS) }),
+          ...(nativeV9 ? [
+            column('record_scope', '本次操作的记录范围', { required: true, editor: 'select', values: options(RECORD_SCOPES) }),
+            column('presence', '记录存在条件', { required: true, editor: 'select', values: options(PRESENCE_MODES) })
+          ] : []),
           column('updated_field_refs', '更新字段（可多选）', { editor: 'update-fields', width: 300 })
         ]
       },
@@ -108,9 +123,10 @@
         columns: [
           column('source_ref', '技术标识', { technicalRef: true, readOnly: true }),
           column('data_ref', '数据对象', { required: true, technicalRef: true, editor: 'lookup', lookup: 'data_objects' }),
-          column('source_department', '来源部门'), column('source_process_name', '来源流程'),
+          column('source_department', '来源部门', Array.isArray(adapterOptions.allowedDepartments) ? { editor: 'select', values: [{ value: '', label: '尚未选择' }, ...options(adapterOptions.allowedDepartments)] } : {}), column('source_process_name', '来源流程'),
           column('source_behavior_name', '来源行为'), column('source_data_name', '来源数据'),
           column('availability_mode', '可用时间', { required: true, editor: 'select', values: options(AVAILABILITY_MODES) }),
+          ...(nativeV9 ? [column('presence', '来源记录存在条件', { required: true, editor: 'select', values: options(['required', 'if_exists', 'pending_confirmation']) })] : []),
           column('available_from_behavior_ref', '本流程可用起点', { technicalRef: true, nullable: true, editor: 'lookup', lookup: 'behaviors' })
         ]
       },
@@ -176,8 +192,10 @@
 
   function read(documentValue) {
     const rows = Object.fromEntries(definitions(documentValue).map(item => [item.id, []]));
+    const nativeV9 = documentValue?.schema_version === 'process-governance-v9';
     arrays(documentValue?.data_objects).forEach((dataObject, dataIndex) => {
-      rows.data_objects.push({ ...meta(dataObject.data_ref, dataIndex), data_ref: dataObject.data_ref, data_name: dataObject.data_name, information_type: dataObject.information_type, description: dataObject.description });
+      rows.data_objects.push({ ...meta(dataObject.data_ref, dataIndex), data_ref: dataObject.data_ref, data_name: dataObject.data_name, information_type: dataObject.information_type, description: dataObject.description,
+        ...(nativeV9 ? { record_model: dataObject.record_model, collection_field_refs: clone(dataObject.collection_field_refs) } : {}) });
       arrays(dataObject.fields).forEach((field, index) => rows.data_fields.push({
         ...meta(field.field_ref, index), _source_parent_ref: dataObject.data_ref,
         field_ref: field.field_ref, data_ref: dataObject.data_ref, field_name: field.field_name, field_type: field.field_type, definition: field.definition
@@ -185,14 +203,16 @@
       arrays(dataObject.behavior_links).forEach((link, index) => rows.data_behavior_links.push({
         ...meta(link.link_ref, index), _source_parent_ref: dataObject.data_ref,
         link_ref: link.link_ref, data_ref: dataObject.data_ref, behavior_ref: link.behavior_ref, operation: link.operation,
-        updated_field_refs: arrays(link.updated_field_refs)
+        updated_field_refs: arrays(link.updated_field_refs),
+        ...(nativeV9 ? { record_scope: link.record_scope, presence: link.presence } : {})
       }));
       arrays(dataObject.source_relations).forEach((source, index) => rows.data_source_relations.push({
         ...meta(source.source_ref, index), _source_parent_ref: dataObject.data_ref,
         source_ref: source.source_ref, data_ref: dataObject.data_ref, source_department: source.source_department,
         source_process_name: source.source_process_name, source_behavior_name: source.source_behavior_name,
         source_data_name: source.source_data_name, availability_mode: source.availability_mode,
-        available_from_behavior_ref: source.available_from_behavior_ref
+        available_from_behavior_ref: source.available_from_behavior_ref,
+        ...(nativeV9 ? { presence: source.presence } : {})
       }));
     });
     arrays(documentValue?.forms).forEach((form, formIndex) => {
@@ -251,6 +271,11 @@
     };
     const config = configs[tableId];
     if (!config) throw new Error(`未知表格：${tableId}`);
+    if (context.adapterOptions?.schemaVersion === 'process-governance-v9') {
+      if (tableId === 'data_objects') Object.assign(config.defaults, { record_model: 'pending_confirmation', collection_field_refs: [] });
+      if (tableId === 'data_behavior_links') Object.assign(config.defaults, { record_scope: 'pending_confirmation', presence: 'pending_confirmation' });
+      if (tableId === 'data_source_relations') config.defaults.presence = 'pending_confirmation';
+    }
     const ref = refFactory(config.prefix);
     const row = {
       ...clone(config.defaults),
@@ -272,13 +297,14 @@
     return arrays(tables[tableId]).filter(row => !row._deleted).sort((left, right) => Number(left._order || 0) - Number(right._order || 0));
   }
 
-  function validateRows(tables, adapterOptions, result) {
-    const defs = definitions(null, adapterOptions);
+  function validateRows(tables, adapterOptions, result, documentValue) {
+    const defs = definitions(documentValue, adapterOptions);
     defs.forEach(definition => {
       const refs = new Map();
       orderedActive(tables, definition.id).forEach(row => {
         definition.columns.forEach(spec => {
           const value = row[spec.key];
+          if (spec.referenceList && (!Array.isArray(value) || value.some(ref => typeof ref !== 'string'))) problem(result.errors, row, definition.id, spec.key, 'REFERENCE_LIST_REQUIRED', `${spec.label}必须使用对象字段多选；原输入已保留`);
           const derivesFromObjectField = definition.id === 'form_items'
             && !row._existing
             && ['item_name', 'item_type'].includes(spec.key)
@@ -364,10 +390,11 @@
       result.errors.push({ tableId: '', rowId: '', column: '', severity: 'error', code: 'DRAFT_MISSING', message: '当前没有可编辑流程', focusPath: '' });
       return result;
     }
-    validateRows(tables, adapterOptions, result);
+    validateRows(tables, adapterOptions, result, documentValue);
     if (result.errors.length) return result;
 
     const candidate = clone(documentValue);
+    const nativeV9 = candidate.schema_version === 'process-governance-v9';
     const sourceData = new Map(arrays(documentValue.data_objects).map(item => [item.data_ref, item]));
     const sourceForms = new Map(arrays(documentValue.forms).map(item => [item.form_ref, item]));
 
@@ -376,7 +403,8 @@
       const base = existing ? clone(existing) : (adapterOptions.dataObjectFactory?.(row.data_ref) || {
         data_ref: row.data_ref, fields: [], behavior_links: [], source_relations: [], lifecycle: clone(adapterOptions.pendingLifecycle?.() || {})
       });
-      return { ...base, data_ref: row.data_ref, data_name: clean(row.data_name), description: clean(row.description), information_type: row.information_type };
+      return { ...base, data_ref: row.data_ref, data_name: clean(row.data_name), description: clean(row.description), information_type: row.information_type,
+        ...(nativeV9 ? { record_model: row.record_model, collection_field_refs: clone(row.collection_field_refs) } : {}) };
     });
     const dataMap = new Map(candidate.data_objects.map(item => [item.data_ref, item]));
 
@@ -399,7 +427,7 @@
     orderedActive(tables, 'data_behavior_links').forEach(row => {
       if (!ensureParent(result, row, 'data_behavior_links', 'data_ref', row.data_ref, dataMap, '数据对象')) return;
       if (!ensureParent(result, row, 'data_behavior_links', 'behavior_ref', row.behavior_ref, behaviorMap, '业务行为')) return;
-      if (behaviorMap.get(row.behavior_ref)?.node_type !== 'action' && !(candidate.schema_version === 'process-governance-v8' && behaviorMap.get(row.behavior_ref)?.node_type === 'decision' && row.operation === 'use')) {
+      if (behaviorMap.get(row.behavior_ref)?.node_type !== 'action' && !(['process-governance-v8', 'process-governance-v9'].includes(candidate.schema_version) && behaviorMap.get(row.behavior_ref)?.node_type === 'decision' && row.operation === 'use')) {
         problem(result.errors, row, 'data_behavior_links', 'behavior_ref', 'ACTION_BEHAVIOR_REQUIRED', '判断节点仅允许使用数据作为判断依据；其他操作请关联到实际执行步骤，并行等控制节点不支持数据关系。输入已保留');
         return;
       }
@@ -411,7 +439,8 @@
         link_ref: row.link_ref,
         behavior_ref: row.behavior_ref,
         operation: row.operation,
-        updated_field_refs: row.operation === 'update' ? list(row.updated_field_refs) : []
+        updated_field_refs: row.operation === 'update' ? list(row.updated_field_refs) : [],
+        ...(nativeV9 ? { record_scope: row.record_scope, presence: row.presence } : {})
       });
     });
 
@@ -428,7 +457,8 @@
         ...(existing ? clone(existing) : {}), source_ref: row.source_ref, source_department: clean(row.source_department),
         source_process_name: clean(row.source_process_name), source_behavior_name: clean(row.source_behavior_name),
         source_data_name: clean(row.source_data_name), availability_mode: row.availability_mode,
-        available_from_behavior_ref: availableRef
+        available_from_behavior_ref: availableRef,
+        ...(nativeV9 ? { presence: row.presence } : {})
       });
     });
 
@@ -506,8 +536,8 @@
       if (!ensureParent(result, row, 'field_source_links', 'item_ref', row.item_ref, itemMap, '表单字段')) return;
       if (!forbidMove(result, row, 'field_source_links', 'item_ref', row.item_ref)) return;
       const sourceDataRef = row.source_type === 'external_system' ? null : nullable(row.source_data_ref);
-      const sourceSystemName = row.source_type === 'external_system' ? clean(row.source_system_name) : '';
-      const sourceDataName = row.source_type === 'external_system' ? clean(row.source_data_name) : '';
+      const sourceSystemName = clean(row.source_system_name);
+      const sourceDataName = clean(row.source_data_name);
       if (row.source_type === 'process_data' && !sourceDataRef) {
         problem(result.errors, row, 'field_source_links', 'source_data_ref', 'SOURCE_DATA_REQUIRED', '来源类型为本流程数据时，必须选择数据对象');
       } else if (sourceDataRef && !dataMap.has(sourceDataRef)) {
@@ -550,31 +580,51 @@
 
     candidate.data_objects.forEach(dataObject => {
       const creators = dataObject.behavior_links.filter(link => link.operation === 'create');
-      if (creators.length > 1) {
+      if (creators.length > 1 && !(nativeV9 && dataObject.record_model === 'record_collection')) {
         const conflictingRef = creators[1]?.link_ref || creators[0]?.link_ref;
         const row = orderedActive(tables, 'data_behavior_links').find(item => item.link_ref === conflictingRef);
-        problem(result.errors, row, 'data_behavior_links', 'operation', 'CREATOR_CONFLICT', `数据对象“${dataObject.data_name || dataObject.data_ref}”存在多个已确认创建行为`);
+        if (nativeV9 && dataObject.record_model === 'pending_confirmation') {
+          problem(result.warnings, row, 'data_behavior_links', 'operation', 'RECORD_MODEL_PENDING', `数据对象“${dataObject.data_name || dataObject.data_ref}”的记录组织方式待确认，多个创建行为仍须核对`, 'warning');
+        } else problem(result.errors, row, 'data_behavior_links', 'operation', 'CREATOR_CONFLICT', `数据对象“${dataObject.data_name || dataObject.data_ref}”存在多个已确认创建行为`);
+      }
+      if (nativeV9) {
+        const row = orderedActive(tables, 'data_objects').find(item => item.data_ref === dataObject.data_ref);
+        const fieldRefs = new Set(dataObject.fields.map(field => field.field_ref));
+        if (dataObject.collection_field_refs.some(ref => !fieldRefs.has(ref))) problem(result.errors, row, 'data_objects', 'collection_field_refs', 'REFERENCE_MISSING', '集合索引与保管字段必须属于当前数据对象；原输入已保留');
+        if (dataObject.record_model === 'single_instance' && dataObject.collection_field_refs.length) problem(result.errors, row, 'data_objects', 'collection_field_refs', 'COLLECTION_FIELDS_NOT_APPLICABLE', '单条记录不能指定集合索引与保管字段；请明确调整，原输入已保留');
       }
       const pairs = new Map();
       dataObject.behavior_links.forEach(link => {
         const row = orderedActive(tables, 'data_behavior_links').find(item => item.link_ref === link.link_ref);
+        if (nativeV9) {
+          const scopes = link.operation === 'create' ? ['new_instance', 'pending_confirmation'] : link.operation === 'pending_confirmation' ? ['pending_confirmation'] : ['current_instance', 'prior_records', 'collection_metadata', 'pending_confirmation'];
+          const presence = link.operation === 'create' ? ['required', 'conditional', 'pending_confirmation'] : link.operation === 'pending_confirmation' ? ['pending_confirmation'] : ['required', 'if_exists', 'pending_confirmation'];
+          if (!scopes.includes(link.record_scope)) problem(result.errors, row, 'data_behavior_links', 'record_scope', 'RECORD_SCOPE_CONFLICT', '本次操作与记录范围不一致；请明确调整，原输入已保留');
+          if (!presence.includes(link.presence)) problem(result.errors, row, 'data_behavior_links', 'presence', 'PRESENCE_CONFLICT', '本次操作与记录存在条件不一致；请明确调整，原输入已保留');
+          if (link.record_scope === 'collection_metadata' && dataObject.record_model === 'single_instance') problem(result.errors, row, 'data_behavior_links', 'record_scope', 'COLLECTION_SCOPE_NOT_APPLICABLE', '单条记录不包含集合索引与保管信息；请明确调整，原输入已保留');
+        }
         const validFieldRefs = new Set(dataObject.fields.map(field => field.field_ref));
         const invalidFieldRefs = arrays(link.updated_field_refs).filter(fieldRef => !validFieldRefs.has(fieldRef));
         if (invalidFieldRefs.length) {
           problem(result.errors, row, 'data_behavior_links', 'updated_field_refs', 'REFERENCE_MISSING', `更新字段不属于数据对象“${dataObject.data_name || dataObject.data_ref}”：${invalidFieldRefs.join('、')}`);
         }
+        if (nativeV9 && link.operation === 'update' && link.record_scope !== 'pending_confirmation') {
+          const metadata = new Set(dataObject.collection_field_refs);
+          const mixedFields = arrays(link.updated_field_refs).filter(ref => link.record_scope === 'collection_metadata' ? !metadata.has(ref) : metadata.has(ref));
+          if (mixedFields.length) problem(result.errors, row, 'data_behavior_links', 'updated_field_refs', 'RECORD_FIELD_SCOPE_CONFLICT', '更新字段与记录范围不一致，不能混用独立记录字段和集合索引与保管字段；原输入已保留');
+        }
         if (link.operation === 'update' && !arrays(link.updated_field_refs).length) {
           problem(result.warnings, row, 'data_behavior_links', 'updated_field_refs', 'UPDATED_FIELDS_REQUIRED', `数据对象“${dataObject.data_name || dataObject.data_ref}”的更新操作尚未选择更新字段`, 'warning');
         }
         if (!pairs.has(link.behavior_ref)) pairs.set(link.behavior_ref, []);
-        pairs.get(link.behavior_ref).push(link.operation);
+        pairs.get(link.behavior_ref).push(nativeV9 ? `${link.operation}|${link.record_scope}` : link.operation);
       });
       pairs.forEach((operations, behaviorRef) => {
         const row = orderedActive(tables, 'data_behavior_links').find(item => item.data_ref === dataObject.data_ref && item.behavior_ref === behaviorRef);
         if (new Set(operations).size !== operations.length) {
           problem(result.errors, row, 'data_behavior_links', 'operation', 'RELATION_DUPLICATE', `数据对象“${dataObject.data_name || dataObject.data_ref}”与同一业务行为存在重复数据操作`);
         }
-        if (operations.includes('pending_confirmation') && operations.length > 1) {
+        if (operations.some(operation => nativeV9 ? operation.startsWith('pending_confirmation|') : operation === 'pending_confirmation') && operations.length > 1) {
           problem(result.errors, row, 'data_behavior_links', 'operation', 'PENDING_OPERATION_CONFLICT', '待确认操作不能与已确认操作同时存在');
         }
       });

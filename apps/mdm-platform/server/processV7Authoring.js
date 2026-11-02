@@ -12,6 +12,23 @@ async function state(db, caseId, lock = false) {
       UNIX_TIMESTAMP(a.started_at) AS started_epoch
       FROM process_v7_authoring a LEFT JOIN person p ON p.person_id=a.compiler_person_id
       WHERE a.case_id=? ${lock ? 'FOR UPDATE' : ''}`, [caseId]);
+    // Old workspace submissions may predate the start marker. Read their saved
+    // evidence without changing historical rows or reopening the transfer window.
+    if (row && row.started_epoch == null) {
+      try {
+        const [[saved]] = await db.execute(`SELECT MIN(UNIX_TIMESTAMP(r.created_at)) AS started_epoch
+          FROM process_authoring_revisions r JOIN process_authoring_drafts d ON d.draft_id=r.draft_id
+          WHERE d.case_id=? AND r.operation IN ('save','submit')`, [caseId]);
+        if (saved?.started_epoch != null) {
+          row.started_epoch = saved.started_epoch;
+          row.started_source = 'saved_workspace_history';
+        }
+      } catch (error) {
+        // A supported pre-workspace installation has neither table. Disabling
+        // the workspace must not hide any saved evidence that does exist.
+        if (error.code !== 'ER_NO_SUCH_TABLE' || process.env.PROCESS_AUTHORING_WORKSPACE_ENABLED === '1') throw error;
+      }
+    }
     return row ? { ...row, compiler_person_id: row.compiler_person_id == null ? null : String(row.compiler_person_id),
       started_at: row.started_epoch == null ? null : new Date(Number(row.started_epoch) * 1000).toISOString(), started_epoch: undefined } : null;
   } catch (error) {
@@ -31,7 +48,7 @@ async function activeActor(db, actor, lock = true) {
   const [grants] = await db.execute(`SELECT r.role_code, pr.scope_type, CAST(pr.scope_department_id AS CHAR) AS scope_department_id, permission.perm_code, rp.effect
     FROM person_roles pr JOIN roles r ON r.role_id=pr.role_id
     LEFT JOIN role_permissions rp ON rp.role_id=r.role_id LEFT JOIN permissions permission ON permission.perm_id=rp.perm_id
-    WHERE pr.person_id=CAST(? AS SIGNED) AND pr.assignment_status='active' AND pr.authorization_basis IS NOT NULL
+    WHERE pr.person_id=CAST(? AS SIGNED) AND pr.assignment_status='active'
       AND pr.effective_from IS NOT NULL AND pr.effective_from<=CURRENT_DATE
       AND (pr.effective_to IS NULL OR pr.effective_to>=CURRENT_DATE)
       AND r.status='active' AND r.model_version=? ${lock ? 'FOR SHARE' : ''}`, [String(actor.personId), ACCESS_MODEL_VERSION]);
@@ -58,7 +75,7 @@ async function assertCompiler(db, caseRow, actor, { start = false } = {}) {
   if (caseRow.status === 'closed') throw failure('V7_AUTHORING_CASE_CLOSED');
   const current = await activeActor(db, actor);
   if (!isCompiler(current, caseRow, binding)) throw failure('V7_AUTHORING_COMPILER_REQUIRED', 403);
-  if (start) await markStarted(db, caseRow.id);
+  if (start && !binding.started_at) await markStarted(db, caseRow.id);
   return true;
 }
 async function markStarted(db, caseId) {
@@ -81,7 +98,7 @@ async function candidates(db, caseRow, actor) {
     FROM person p WHERE p.current_department_id=? AND p.status='active' AND p.employment_status='active'
       AND NOT EXISTS(SELECT 1 FROM person_roles pr JOIN roles r ON r.role_id=pr.role_id WHERE pr.person_id=p.person_id
         AND r.role_code='admin' AND r.status='active' AND pr.assignment_status='active'
-        AND pr.authorization_basis IS NOT NULL AND pr.effective_from<=CURRENT_DATE
+        AND pr.effective_from<=CURRENT_DATE
         AND (pr.effective_to IS NULL OR pr.effective_to>=CURRENT_DATE)) ORDER BY p.person_id LIMIT 201`, [caseRow.owning_department_id]);
   return { items: items.slice(0, 200).map(p => ({ ...p, person_id: String(p.person_id), login_available: Boolean(p.login_available) })), truncated: items.length > 200 };
 }
@@ -121,12 +138,12 @@ async function record(db, caseRow, body, actor, reference = null) {
     if (!/^[1-9]\d*$/.test(id)) throw failure('V7_AUTHORING_RECIPIENT_INVALID', 422);
     const [[p]] = await db.execute(`SELECT person_id FROM person WHERE person_id=? AND current_department_id=? AND status='active' AND employment_status='active' FOR SHARE`, [id, caseRow.owning_department_id]);
     const [admins] = await db.execute(`SELECT pr.person_role_id FROM person_roles pr JOIN roles r ON r.role_id=pr.role_id WHERE pr.person_id=? AND r.role_code='admin'
-      AND r.status='active' AND pr.assignment_status='active' AND pr.authorization_basis IS NOT NULL
+      AND r.status='active' AND pr.assignment_status='active'
       AND pr.effective_from<=CURRENT_DATE AND (pr.effective_to IS NULL OR pr.effective_to>=CURRENT_DATE) FOR SHARE`, [id]);
     if (!p || admins.length) throw failure('V7_AUTHORING_RECIPIENT_INVALID', 422);
     recipient = id;
     await db.execute('UPDATE process_v7_authoring SET compiler_person_id=?, assignment_version=assignment_version+1 WHERE case_id=?', [id, caseRow.id]);
-  } else if (authored.has(kind)) await markStarted(db, caseRow.id);
+  } else if (authored.has(kind) && !binding.started_at) await markStarted(db, caseRow.id);
   else if (!recipient) throw failure('V7_AUTHORING_COMPILER_UNASSIGNED');
   await db.execute(`INSERT INTO process_v7_authoring_records(case_id,request_key,request_hash,record_kind,content_text,actor_person_id,recipient_person_id,revision_no,content_hash,assignment_version)
     VALUES (?,?,?,?,?,CAST(? AS SIGNED),?,?,?,?)`, [caseRow.id, key, hash, kind, content, String(actor.personId), recipient, caseRow.current_revision_no, caseRow.current_content_hash, binding.assignment_version]);

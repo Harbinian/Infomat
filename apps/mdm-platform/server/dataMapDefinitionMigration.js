@@ -38,6 +38,7 @@ async function inspectDefinitions(db) {
 }
 
 async function applyDefinitions(db) {
+  await require('./dataMapHandoffControl').assertLegacyWriteAllowed(db,{entryId:'W08:applyDefinitions'});
   const [[lock]] = await db.execute("SELECT GET_LOCK('mdm_definition_migration_v1',10) AS acquired");
   if (Number(lock.acquired) !== 1) throw failure('DEFINITION_MIGRATION_BUSY',409);
   try {

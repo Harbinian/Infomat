@@ -31,7 +31,7 @@ const PAGE_DEFINITIONS = {
     roles: {
       mdm_lead: { title: '查看全局治理事项和发布条件', target: '#/processGovernance', actionLabel: '查看流程治理' },
       department_contact: { title: '查看本部门报送和整改事项', target: '#/mySubmissions', actionLabel: '查看报送' },
-      department_mdm_reviewer: { title: '查看本部门待审核和责任记录', target: '#/todos', actionLabel: '查看待办' },
+      department_mdm_reviewer: { title: '核对本部门流程并作最终确认', target: '#/todos', actionLabel: '查看待办' },
       data_conflict_handler: { title: '查看本人被分派的冲突', target: '#/conflicts', actionLabel: '查看冲突' },
       data_quality_auditor: { title: '查看全局质量发现和整改进度', target: '#/quality', actionLabel: '查看数据质量' },
       decision_group: { title: '查看已升级重大争议', target: '#/conflicts', actionLabel: '查看升级事项' },
@@ -48,7 +48,7 @@ const PAGE_DEFINITIONS = {
     target: '#/roleGuide',
     roles: {
       department_contact: { title: '查看部门主对接人的起草和提交边界', target: '#/roleGuide', actionLabel: '查看角色与责任' },
-      department_mdm_reviewer: { title: '查看部门审核和记录决定的边界', target: '#/roleGuide', actionLabel: '查看角色与责任' },
+      department_mdm_reviewer: { title: '查看部门负责人的最终责任与本人确认条件', target: '#/roleGuide', actionLabel: '查看角色与责任' },
       mdm_lead: { title: '查看任务分派、结构检查和发布条件', target: '#/roleGuide', actionLabel: '查看角色与责任' },
       data_conflict_handler: { title: '查看已分派冲突的处理边界', target: '#/roleGuide', actionLabel: '查看角色与责任' },
       data_quality_auditor: { title: '查看质量审计人的只读和整改边界', target: '#/roleGuide', actionLabel: '查看角色与责任' },
@@ -167,10 +167,10 @@ const PAGE_DEFINITIONS = {
   rbac: {
     title: '账号与授权',
     subtitle: '管理员手工维护账号生命周期和固定MDM工作角色授权。',
-    workflow: ['创建待启用账号', '记录角色授权依据和有效期', '明确启用或停用', '检查访问审计'],
-    sample: '管理员收到确认后的账号信息，创建待启用账号、记录角色授权依据，再明确启用并线下交付一次性临时密码。',
+    workflow: ['创建待启用账号', '设置角色及有效期，按需补充授权依据', '明确启用或停用', '检查访问审计'],
+    sample: '管理员收到确认后的账号信息，创建待启用账号、设置角色及生效日期，授权依据可选填，再明确启用并线下交付一次性临时密码。',
     pitfall: '管理员不能编辑固定权限矩阵，也不能借管理员身份审核、修改或发布业务内容。',
-    doneCriteria: '人员、账号、部门、有效角色、授权依据和访问审计一致。',
+    doneCriteria: '人员、账号、部门、有效角色和访问审计一致；已填写的授权依据保持可追溯。',
     target: '#/rbac',
     roles: {
       admin: { title: '维护账号生命周期和固定角色授权', target: '#/rbac', actionLabel: '进入账号与授权' }

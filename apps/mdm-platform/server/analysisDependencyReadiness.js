@@ -15,6 +15,7 @@ const analysisMarkers = ['dataMapDefinitionSchema', 'v7MappingSchema', 'designHa
 // A known fingerprint only avoids repeating SHOW CREATE parsing. Never cache by
 // elapsed time or connection, and never cache data, authorization or a failed probe.
 async function metadataFingerprint(db, tables, markers) {
+  markers=[...new Set([...markers,require('./dataMapHandoffSchema').MIGRATION_KEY])];
   const placeholders = tables.map(() => '?').join(',');
   const object = names => `JSON_OBJECT(${names.map(n => `'${n}',${n}`).join(',')}) metadata`;
   // One metadata statement per guard: all columns, indexes, references, checks,
@@ -58,7 +59,12 @@ async function inspectStructure(db, statements, markers = []) {
     const [[present]] = await db.execute('SELECT TABLE_NAME,TABLE_COLLATION FROM information_schema.tables WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=?', [table]);
     if (!present) { missing.push(table); continue; }
     const [[row]] = await db.query(`SHOW CREATE TABLE ${table}`);
-    const ddl = row['Create Table'], comparison = compareCreateStatements(sql, ddl);
+    let expected=sql;
+    if(table==='data_map_definition_versions'){
+      const [handoff]=await db.execute('SELECT migration_key FROM schema_migrations WHERE migration_key=?',[require('./dataMapHandoffSchema').MIGRATION_KEY]);
+      if(handoff.length)expected=expected.replace("source_kind IN ('legacy','manual')","source_kind IN ('legacy','manual','governance')");
+    }
+    const ddl = row['Create Table'], comparison = compareCreateStatements(expected, ddl);
     const [collations] = await db.execute('SELECT COLUMN_NAME FROM information_schema.columns WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND COLLATION_NAME IS NOT NULL AND COLLATION_NAME<>?', [table, 'utf8mb4_unicode_ci']);
     if (!comparison.matching || !/ENGINE=InnoDB/i.test(ddl) || /NOT ENFORCED/i.test(ddl) || present.TABLE_COLLATION !== 'utf8mb4_unicode_ci' || collations.length) drift.push({ table, differences: comparison.differences });
   }

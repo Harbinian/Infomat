@@ -6,7 +6,8 @@
   'use strict';
 
   const TARGET_VERSION = 'process-governance-v7';
-  const CURRENT_VERSION = 'process-governance-v8';
+  const PREVIOUS_VERSION = 'process-governance-v8';
+  const CURRENT_VERSION = 'process-governance-v9';
   const SUPPORTED_PROCESS_VERSIONS = [
     'process-governance-v1',
     'process-governance-v2',
@@ -14,7 +15,7 @@
     'process-governance-v4',
     'process-governance-v5',
     'process-governance-v6',
-    TARGET_VERSION, CURRENT_VERSION
+    TARGET_VERSION, PREVIOUS_VERSION, CURRENT_VERSION
   ];
   const LEGACY_DOCUMENT_VERSION = 'document-structured-output-v2';
   const NODE_TYPES = new Set(['', 'action', 'decision', 'parallel_split', 'parallel_join']);
@@ -136,7 +137,7 @@
     documents.forEach((documentValue, index) => {
       const result = options.validateTarget(documentValue, index);
       if (!validationSucceeded(result)) {
-        throw new Error(`第${index + 1}条流程迁移后未通过v7检查：${validationMessage(result, '结构不完整')}`);
+        throw new Error(`第${index + 1}条流程迁移后未通过当前结构检查：${validationMessage(result, '结构不完整')}`);
       }
     });
   }
@@ -332,7 +333,7 @@
     }
     if (mode === 'fixed_department' && rawActor.trim()) {
       const matchedDepartment = context.departments.find(department => rawActor.trim().startsWith(department));
-      if (!matchedDepartment) {
+      if (!matchedDepartment && !context.preserveFixedActorRoles) {
         archiveUnresolvedActorRole(context, {
           record_ref: stableRef('unresolved_actor_role', behaviorRef, rawActor),
           behavior_ref: behaviorRef,
@@ -874,7 +875,11 @@
     const context = {
       sourceVersion,
       migration,
-      departments: uniqueStrings(options.departments).length ? uniqueStrings(options.departments) : DEFAULT_DEPARTMENTS
+      departments: options.preserveFixedActorRoles
+        ? uniqueStrings([...DEFAULT_DEPARTMENTS, ...uniqueStrings(options.departments)])
+        : uniqueStrings(options.departments).length ? uniqueStrings(options.departments) : DEFAULT_DEPARTMENTS,
+      // A catalog refresh cannot erase an already supported V7/V8 fixed actor string.
+      preserveFixedActorRoles: Boolean(options.preserveFixedActorRoles && ['process-governance-v7', 'process-governance-v8'].includes(sourceVersion))
     };
     const behaviors = array(source.behaviors).map((item, index) => normalizeBehavior(item, index, context));
     const behaviorByRef = new Map(behaviors.map(item => [item.behavior_ref, item]));
@@ -1091,10 +1096,28 @@
       assertTargets([sourceSnapshot], options);
       return [sourceSnapshot];
     }
-    const documents = source.schema_version === LEGACY_DOCUMENT_VERSION
-      ? splitLegacyDocument(sourceSnapshot, options)
-      : [migrateProcessDocument(sourceSnapshot, options)];
-    documents.forEach(documentValue => { documentValue.schema_version = CURRENT_VERSION; });
+    const nativePrevious = source.schema_version === PREVIOUS_VERSION
+      || (source.schema_version === TARGET_VERSION && !needsDataFieldUpgrade(sourceSnapshot));
+    const documents = nativePrevious
+      ? [sourceSnapshot]
+      : source.schema_version === LEGACY_DOCUMENT_VERSION
+        ? splitLegacyDocument(sourceSnapshot, options)
+        : [migrateProcessDocument(sourceSnapshot, options)];
+    documents.forEach(documentValue => {
+      documentValue.schema_version = CURRENT_VERSION;
+      // Old content establishes no instance scope, presence rule, or process entry.
+      // Keep its objects and stable references intact and expose only unresolved additions.
+      documentValue.process.entry_behavior_refs = [];
+      array(documentValue.data_objects).forEach(dataObject => {
+        dataObject.record_model = 'pending_confirmation';
+        dataObject.collection_field_refs = [];
+        array(dataObject.behavior_links).forEach(link => {
+          link.record_scope = 'pending_confirmation';
+          link.presence = 'pending_confirmation';
+        });
+        array(dataObject.source_relations).forEach(relation => { relation.presence = 'pending_confirmation'; });
+      });
+    });
     assertTargets(documents, options);
     return documents;
   }

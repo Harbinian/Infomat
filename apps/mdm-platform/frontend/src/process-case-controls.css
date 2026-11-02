@@ -1,0 +1,11 @@
+.case-submission-fields { min-width: 0; overflow-wrap: anywhere; }
+.case-submission-fields .preview-item { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: start; }
+.case-submission-fields label, [data-process-case-controls] .preview-editor label { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.case-submission-fields :is(input, textarea, select), [data-process-case-controls] .preview-editor :is(input, textarea, select) { width: 100%; max-width: 100%; box-sizing: border-box; }
+.case-submission-fields select[multiple] { min-height: 128px; }
+[data-process-case-controls] { min-width: 0; overflow-wrap: anywhere; }
+[data-process-case-controls] .preview-editor fieldset { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; min-width: 0; }
+[data-process-case-controls] :is(h3, h4, p, dl) { max-width: 100%; }
+.deadline-proposal-guidance { border-left: 3px solid var(--accent); padding: 0 16px; margin: 16px 0; line-height: 1.75; }
+.deadline-proposal-guidance ol { padding-left: 22px; }
+.deadline-proposal-guidance li + li { margin-top: 8px; }

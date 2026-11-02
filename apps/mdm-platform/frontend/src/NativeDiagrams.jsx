@@ -1,11 +1,15 @@
+import {businessStatus,businessText} from './businessPresentation.js';
+import {userMessage} from "./businessPresentation.js";
 import React, { useEffect, useRef, useState } from 'react';
 import './native-diagrams.css';
 import { VersionSearch } from './VersionSearch';
+import {protectDiagramLabels} from './governancePresentation.js';
+import { applyDiagramTheme, printDiagram } from './presentation/chartTheme.js';
 
 let assets;
 function loadAssets() {
   if (!assets) assets = (async () => {
-    for (const [name, global] of [['cytoscape.min.js', 'cytoscape'], ['process-diagram.js', 'ProcessDiagram'], ['data-relation-diagram.js', 'DataRelationDiagram']]) {
+    for (const [name, global] of [['cytoscape.min.js', 'cytoscape'], ['process-data-availability.js', 'ProcessDataAvailability'], ['process-diagram.js', 'ProcessDiagram'], ['data-relation-diagram.js', 'DataRelationDiagram']]) {
       if (window[global]) continue;
       await new Promise((resolve, reject) => {
         const script = document.createElement('script');
@@ -23,19 +27,31 @@ const query = () => {
   const p = new URLSearchParams(location.search);
   return { caseId: p.get('diagramCase') || '', versionId: p.get('diagramVersion') || '', mode: p.get('diagramMode') === 'data' ? 'data' : 'process', dataRef: p.get('diagramData') || '' };
 };
-const shown = value => value === undefined || value === null || value === '' ? '原文未填写' : String(value);
+const shown = value => value === undefined || value === null || value === '' ? '原文未填写' : businessText(value);
+const recordLabels = { single_instance: '单个办理实例', record_collection: '独立记录集合',
+  new_instance: '新建独立实例', current_instance: '当前实例', prior_records: '此前记录', collection_metadata: '集合元数据',
+  required: '必须存在或产生', if_exists: '已有时办理', conditional: '有条件产生', pending_confirmation: '待确认',
+  create: '创建', update: '更新', use: '使用' };
+const recordLabel = value => recordLabels[value] || businessStatus(value,'记录要求待核对');
 function details(doc, kind, ref) {
   if (kind === 'behavior') {
     const row = doc.behaviors?.find(item => item.behavior_ref === ref);
-    if (row) return { title: row.behavior_name, fields: [['执行角色', row.current_actor_role], ['业务说明', row.behavior_description], ['触发', row.trigger], ['前置条件', row.precondition], ['输入', row.input_description], ['完成标准', row.completion_standard], ['输出', row.output_description]] };
+    if (row) return { title: row.behavior_name, fields: [['执行角色', row.current_actor_role], ['业务说明', row.behavior_description], ['触发', row.trigger], ['前置条件', row.precondition], ['输入', row.input_description], ['完成标准', row.completion_standard], ['输出', row.output_description],
+      ...(doc.schema_version === 'process-governance-v9' ? [['是否为声明入口', doc.process?.entry_behavior_refs?.includes(ref) ? '是' : '否']] : [])] };
   }
   if (kind === 'data') {
     const row = doc.data_objects?.find(item => item.data_ref === ref);
-    if (row) return { title: row.data_name, fields: [['说明', row.description], ['字段', (row.fields || []).map(field => field.field_name || field.name || field.field_ref).join('、')], ['关联行为数', (row.behavior_links || []).length]] };
+    if (row) return { title: row.data_name, fields: [['说明', row.description], ['字段', (row.fields || []).map(field => field.field_name || field.name || '字段名称未记录').join('、')], ['关联行为数', (row.behavior_links || []).length],
+      ...(doc.schema_version === 'process-governance-v9' ? [
+        ['记录模型', recordLabel(row.record_model)],
+        ['集合元数据字段', (row.collection_field_refs || []).map(fieldRef => row.fields?.find(field => field.field_ref === fieldRef)?.field_name || '字段名称未记录').join('、') || '无'],
+        ['记录引用范围', (row.behavior_links || []).map(link => `${doc.behaviors?.find(behavior => behavior.behavior_ref === link.behavior_ref)?.behavior_name || '环节名称未记录'}：${recordLabel(link.operation)}；${recordLabel(link.record_scope)}；${recordLabel(link.presence)}`).join('\n')],
+        ['来源存在要求', (row.source_relations || []).map(source => `${source.source_data_name || '来源名称未记录'}：${recordLabel(source.presence)}`).join('\n') || '无外部来源']
+      ] : [])] };
   }
   if (kind === 'relation') {
     const row = doc.flow_relations?.find(item => item.relation_ref === ref);
-    if (row) return { title: '流程关系', fields: [['条件', row.condition], ['关系类型', ({ sequence: '顺序', conditional: '条件', parallel: '并行', return: '返回' })[row.relation_type] || row.relation_type]] };
+    if (row) return { title: '流程关系', fields: [['条件', row.condition], ['关系类型', ({ sequence: '顺序', conditional: '条件', parallel: '并行', return: '返回' })[row.relation_type] || businessStatus(row.relation_type,'关系类型待核对')]] };
   }
   return null;
 }
@@ -90,12 +106,12 @@ export function NativeDiagrams({ api, onQueryChange }) {
         if (controller.signal.aborted) return;
         if (String(version.process_version_id) !== versionId || !version.document_id
           || !['published', 'superseded', 'retired'].includes(version.status)
-          || !['process-governance-v7', 'process-governance-v8'].includes(version.schema_version)
+          || !['process-governance-v9', 'process-governance-v8', 'process-governance-v7'].includes(version.schema_version)
           || version.document?.schema_version !== version.schema_version || version.content_hash_verified !== true) {
           throw new Error('固定版本的标识、状态、原生格式或摘要未核对通过，无法绘图。');
         }
         setState({ doc: version.document, caseId, versionId,
-          source: `${version.status === 'published' ? '已发布' : `历史版本（${version.status}）`} · 正式版本 ${version.process_version_id} · ${version.document_no || '未记录制度编号'}` });
+          source: `${version.status === 'published' ? '已发布' : '历史版本'} · ${version.document_no || '未记录制度编号'}` });
       }).catch(error => { if (!controller.signal.aborted) setState({ error }); });
       return () => controller.abort();
     }
@@ -109,22 +125,22 @@ export function NativeDiagrams({ api, onQueryChange }) {
       let versions = [];
       if (draftId) {
         const formal = await api.request('/api/process-design/drafts/' + encodeURIComponent(draftId), { signal: controller.signal });
-        versions = (formal.versions || []).filter(row => ['process-governance-v7', 'process-governance-v8'].includes(row.schema_version));
+        versions = (formal.versions || []).filter(row => ['process-governance-v9', 'process-governance-v8', 'process-governance-v7'].includes(row.schema_version));
       }
       if (controller.signal.aborted) return;
       setState({ busy: true, versions, caseId });
       if (versionId && !versions.some(row => String(row.id) === versionId)) throw new Error('所选正式版本不在该流程可见版本列表中，请重新选择。');
       let doc = detail.revision?.document;
-      let source = `预览修订 ${detail.revision?.revision_no} · 尚未形成正式发布结论`;
+      let source = '当前流程内容 · 尚未正式发布';
       const targetId = versionId || (current?.status === 'published' ? current.id : null);
       if (targetId) {
         const version = await api.request('/api/process-design/versions/' + encodeURIComponent(targetId) + '/content', { signal: controller.signal });
         if (String(version.process_version_id) !== String(targetId) || String(version.document_id) !== String(detail.formal_promotion.document.id)) throw new Error('正式版本与所选流程不一致，无法绘图。');
-        if (!['process-governance-v7', 'process-governance-v8'].includes(version.schema_version) || !version.content_hash_verified) throw new Error('正式版本的原生格式或摘要未核对通过，无法绘图。');
+        if (!['process-governance-v9', 'process-governance-v8', 'process-governance-v7'].includes(version.schema_version) || !version.content_hash_verified) throw new Error('正式版本的原生格式或摘要未核对通过，无法绘图。');
         doc = version.document;
-        source = `${version.status === 'published' ? '已发布' : `历史版本（${version.status}）`} · 正式版本 ${version.process_version_id} · ${version.document_no}`;
+        source = `${version.status === 'published' ? '已发布' : '历史版本'} · ${version.document_no||'制度编号未记录'}`;
       }
-      if (!doc || !['process-governance-v7', 'process-governance-v8'].includes(doc.schema_version)) throw new Error('当前内容不是受支持的原生流程格式，无法绘图。');
+      if (!doc || !['process-governance-v9', 'process-governance-v8', 'process-governance-v7'].includes(doc.schema_version)) throw new Error('当前内容不是受支持的原生流程格式，无法绘图。');
       if (!controller.signal.aborted) setState({ doc, source, caseId, versionId, versions });
     })().catch(error => { if (!controller.signal.aborted) setState(previous => ({ versions: previous.versions, caseId, error })); });
     return () => controller.abort();
@@ -140,7 +156,7 @@ export function NativeDiagrams({ api, onQueryChange }) {
         const onFocus = (kind, ref) => setFocus(details(doc, kind, ref));
         const options = { container: canvas.current, documentData: doc, editable: false };
         const chart = mode === 'process' ? window.ProcessDiagram.mount({ ...options, onFocus }) : window.DataRelationDiagram.mount({ ...options, selectedDataRef: dataRef || doc.data_objects[0].data_ref, onFocus: node => onFocus(node.kind, node.ref) });
-        instance.current = chart; chart.fit(); setRendered({ ready: true });
+        protectDiagramLabels(chart.cy); applyDiagramTheme(chart.cy); instance.current = chart; chart.fit(); setRendered({ ready: true });
         observer = new ResizeObserver(() => { chart.cy.resize(); chart.fit(); }); observer.observe(canvas.current);
       }).catch(error => { if (active) setRendered({ error }); });
     }
@@ -152,7 +168,7 @@ export function NativeDiagrams({ api, onQueryChange }) {
     const token = {}; downloadToken.current = token; setDownloadState({ busy: true });
     const valid = () => downloadToken.current === token && instance.current === chart && location.pathname.replace(/\/$/, '') === '/app/data-map';
     try {
-      const picture = new Image(); picture.src = chart.cy.png({ full: true, scale: 1, bg: '#ffffff', maxWidth: 6000, maxHeight: 6000 }); await picture.decode();
+      const picture = new Image(); picture.src = printDiagram(chart.cy, () => chart.cy.png({ full: true, scale: 1, bg: '#ffffff', maxWidth: 6000, maxHeight: 6000 })); await picture.decode();
       if (!valid()) return;
       const output = document.createElement('canvas'); output.width = Math.max(1000, picture.width); output.height = picture.height + 100;
       const context = output.getContext('2d'); context.fillStyle = '#fff'; context.fillRect(0, 0, output.width, output.height);
@@ -172,35 +188,35 @@ export function NativeDiagrams({ api, onQueryChange }) {
   const noData = doc && mode === 'data' && !doc.data_objects?.length;
   return <section className="card native-diagrams" aria-labelledby="native-diagrams-heading" data-diagram-state={error ? 'error' : doc && (rendered.ready || noData) ? 'ready' : 'idle'}>
     <div className="section-heading"><h2 id="native-diagrams-heading">流程与数据关系图</h2><button type="button" className="secondary" onClick={() => setRevision(value => value + 1)}>刷新图形</button></div>
-    <p>按当前有权查看的流程记录绘图。默认优先读取当前已发布版本，否则标明预览修订；也可独立选择历史正式版本。内容修订仍回到 3001 办理。</p>
+    <p>按当前有权查看的流程记录绘图。默认优先读取当前已发布版本，否则标明预览修订；也可独立选择历史正式版本。需要修改内容时，请回到“流程编制与草稿”办理。</p>
     <VersionSearch api={api} onQueryChange={onQueryChange} onChoose={id => choose({ caseId: '', versionId: id, dataRef: '' })} />
-    {directVersion ? <p data-direct-version>正在按固定版本 #{versionId} 独立查阅，无需先选择案例。历史版本不代表当前有效制度。<button type="button" className="secondary" onClick={() => choose({ caseId: '', versionId: '', dataRef: '' })}>返回案例选图</button></p> : <p className="muted">本次列出接口返回的最多 100 个案例；不代表全部流程。图形查阅和下载不会提交台账输入。</p>}
+    {directVersion ? <p data-direct-version>正在独立查阅所选固定版本，无需先选择流程记录。历史版本不代表当前有效制度。<button type="button" className="secondary" onClick={() => choose({ caseId: '', versionId: '', dataRef: '' })}>返回案例选图</button></p> : <p className="muted">本次最多列出当前有权查阅的 100 条流程记录；不代表全部流程。图形查阅和下载不会提交台账输入。</p>}
     {!directVersion && list.disabled && <p role="status">流程预览与核对尚未开启。可按已有正式版本独立查阅图形。</p>}
     {!directVersion && (list.busy ? <p role="status">正在读取流程列表…</p> : !list.error && !list.disabled && <label className="identity-field">图形流程<select aria-label="图形流程" value={caseId} onChange={event => choose({ caseId: event.target.value, versionId: '', dataRef: '' })}>
-      <option value="">请选择流程</option>{list.rows.map(row => <option key={row.id} value={row.id}>{row.process_name} · 修订 {row.current_revision_no}</option>)}
+      <option value="">请选择流程</option>{list.rows.map(row => <option key={row.id} value={row.id}>{businessText(row.process_name,'流程名称未记录')}</option>)}
     </select></label>)}
     {caseId && !list.disabled && <label className="identity-field">图形版本<select aria-label="图形版本" value={versionId} onChange={event => choose({ versionId: event.target.value, dataRef: '' })}>
       <option value="">自动选择当前来源</option>
-      {versionId && !state.versions?.some(row => String(row.id) === versionId) && <option value={versionId}>待核对版本 {versionId}</option>}
-      {(state.caseId === caseId ? state.versions || [] : []).map(row => <option key={row.id} value={row.id}>正式版本 {row.id} · {row.edition || row.version_no} · {({ published: '已发布', superseded: '历史已发布', retired: '已退役（仅查阅）' })[row.status] || row.status}</option>)}
+      {versionId && !state.versions?.some(row => String(row.id) === versionId) && <option value={versionId}>原选择的版本待核对</option>}
+      {(state.caseId === caseId ? state.versions || [] : []).map(row => <option key={row.id} value={row.id}>{row.document_title||row.title||'流程名称未记录'} · {row.edition||'制度版次未记录'} · {({ published: '已发布', superseded: '历史已发布', retired: '已退役（仅查阅）' })[row.status] || businessStatus(row.status)}</option>)}
     </select></label>}
     {!directVersion && !list.disabled && list.rows?.length === 0 && <p>当前可见范围暂无流程。</p>}
     {state.busy && <p role="status">正在读取流程内容…</p>}
-    {error && <p role="alert">{error.message} 请刷新图形重试；读取失败不表示没有记录。</p>}
+    {error && <p role="alert">{userMessage(error)} 请刷新图形重试；读取失败不表示没有记录。</p>}
     {doc && <>
-      <h3>{doc.process?.process_name || '未命名流程'}</h3><p data-diagram-source>{state.source}</p>
+      <h3>{businessText(doc.process?.process_name || '未命名流程')}</h3><p data-diagram-source>{state.source}</p>
       <div className="actions"><label>图形视图<select aria-label="图形视图" value={mode} onChange={event => choose({ mode: event.target.value })}><option value="process">流程图</option><option value="data">数据关系图</option></select></label>
-        {mode === 'data' && !!doc.data_objects?.length && <label>图形数据对象<select aria-label="图形数据对象" value={dataRef && doc.data_objects.some(row => row.data_ref === dataRef) ? dataRef : doc.data_objects[0].data_ref} onChange={event => choose({ dataRef: event.target.value })}>{doc.data_objects.map(row => <option key={row.data_ref} value={row.data_ref}>{row.data_name}</option>)}</select></label>}
+        {mode === 'data' && !!doc.data_objects?.length && <label>图形数据对象<select aria-label="图形数据对象" value={dataRef && doc.data_objects.some(row => row.data_ref === dataRef) ? dataRef : doc.data_objects[0].data_ref} onChange={event => choose({ dataRef: event.target.value })}>{doc.data_objects.map(row => <option key={row.data_ref} value={row.data_ref}>{businessText(row.data_name,'对象名称未记录')}</option>)}</select></label>}
         <button type="button" className="secondary" disabled={!rendered.ready} onClick={() => instance.current?.fit()}>完整视图</button>
         <button type="button" className="secondary" disabled={!rendered.ready} onClick={() => instance.current?.reset()}>清晰视图</button>
         <button type="button" disabled={!rendered.ready || downloadState.busy} onClick={download}>{downloadState.busy ? '正在生成图片…' : '下载图形 PNG'}</button>
       </div>
       {noData ? <p>当前流程没有数据对象，无法绘制数据关系。</p> : <div className="native-diagram-grid">
         <div ref={canvas} className="native-diagram-viewport" aria-label="流程与数据关系图画布" />
-        <div className="native-diagram-inspector" role="status">{focus ? <><strong>{focus.title}</strong><dl>{focus.fields.map(([label, value]) => <React.Fragment key={label}><dt>{label}</dt><dd>{shown(value)}</dd></React.Fragment>)}</dl></> : <p>点击图中节点查看原始内容。拖动空白处平移，滚轮缩放。</p>}</div>
+        <div className="native-diagram-inspector" role="status">{focus ? <><strong>{businessText(focus.title,'内容名称待核对')}</strong><dl>{focus.fields.map(([label, value]) => <React.Fragment key={label}><dt>{label}</dt><dd>{shown(value)}</dd></React.Fragment>)}</dl></> : <p>点击图中节点查看原始内容。拖动空白处平移，滚轮缩放。</p>}</div>
       </div>}
-      <details><summary>键盘查阅原始内容</summary><div className="actions">{(mode === 'process' ? doc.behaviors || [] : doc.data_objects || []).map(row => <button type="button" className="secondary" key={row.behavior_ref || row.data_ref} onClick={() => setFocus(details(doc, mode === 'process' ? 'behavior' : 'data', row.behavior_ref || row.data_ref))}>{row.behavior_name || row.data_name}</button>)}</div></details>
-      {downloadState.message && <p role="status">{downloadState.message}</p>}{downloadState.error && <p role="alert">{downloadState.error}</p>}
+      <details><summary>键盘查阅原始内容</summary><div className="actions">{(mode === 'process' ? doc.behaviors || [] : doc.data_objects || []).map(row => <button type="button" className="secondary" key={row.behavior_ref || row.data_ref} onClick={() => setFocus(details(doc, mode === 'process' ? 'behavior' : 'data', row.behavior_ref || row.data_ref))}>{businessText(row.behavior_name || row.data_name,'内容名称未记录')}</button>)}</div></details>
+      {downloadState.message && <p role="status">{userMessage(downloadState.message)}</p>}{downloadState.error && <p role="alert">{userMessage(downloadState.error)}</p>}
     </>}
   </section>;
 }

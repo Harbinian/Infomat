@@ -6,6 +6,7 @@ const router = express.Router();
 const { requireAuth, requirePermission } = require('../auth');
 const { terminologyScope } = require('../terminologyAccess');
 const { hasGlobalViewAsync, validateAction } = require('../access');
+const governanceCompatibility = require('../terminologyGovernanceCompatibility');
 const {
   resetTerminologyRepositoryFactory,
   setTerminologyRepositoryFactory,
@@ -28,6 +29,14 @@ function handleDbError(res, error) {
 function runAction(res, action) {
   return action().catch(error => handleDbError(res, error));
 }
+
+// Existing bookmarks remain readable; writes must use the versioned workflow.
+router.use(requireAuth, (req, res, next) => {
+  if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method) && governanceCompatibility.enabled()) {
+    return res.status(409).json({ code: 'TERMINOLOGY_LEGACY_WRITE_RETIRED', error: '公司统一术语治理已启用，请在术语治理页面提报、修订和确认；旧记录保留用于追溯。' });
+  }
+  next();
+});
 
 function normalizeProcessId(value) {
   if (value === undefined || value === null || value === '') return null;
@@ -91,6 +100,18 @@ router.get('/', requireAuth, (req, res) => {
       status: req.query.status || '',
       ...await terminologyScope(req)
     }));
+  });
+});
+
+// Keeps existing todo bookmarks in the numeric namespace while exposing the
+// explicit canonical UUID after cutover. Visibility is rechecked for every read.
+router.get('/:id', requireAuth, (req, res) => {
+  return runAction(res, async () => {
+    if (!/^[1-9]\d*$/.test(req.params.id) || !Number.isSafeInteger(Number(req.params.id))) return res.status(400).json({code:'TERMINOLOGY_LEGACY_ID_INVALID',error:'历史术语编号无效或超出现有接口范围。'});
+    const repo = await terminologyRepository();
+    const term = await repo.getTerm(req.params.id, await terminologyScope(req));
+    if (!term) return res.status(404).json({error:'术语不存在或不在当前可读范围内'});
+    return res.json(term);
   });
 });
 

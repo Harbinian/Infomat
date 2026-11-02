@@ -69,6 +69,9 @@
     const relationRefs = new Set(array(documentValue?.flow_relations).map(item => item.relation_ref));
     const dataRefs = new Set(array(documentValue?.data_objects).map(item => item.data_ref));
     const dataFieldOwners = new Map();
+    array(documentValue?.process?.entry_behavior_refs).forEach(ref => {
+      if (!behaviorRefs.has(ref)) errors.push({ code: 'BROKEN_REF', ref, message: '流程入口引用的环节不存在' });
+    });
     array(documentValue?.flow_relations).forEach(relation => {
       if (relation.from_behavior_ref && !behaviorRefs.has(relation.from_behavior_ref)) {
         errors.push({ code: 'BROKEN_REF', ref: relation.from_behavior_ref, message: `流程关系${relation.relation_ref}的起点不存在` });
@@ -78,6 +81,9 @@
       }
     });
     array(documentValue?.data_objects).forEach(dataObject => {
+      array(dataObject.collection_field_refs).forEach(ref => {
+        if (!array(dataObject.fields).some(field => field.field_ref === ref)) errors.push({ code: 'BROKEN_REF', ref, message: `数据${dataObject.data_name || dataObject.data_ref}的集合索引与保管字段不存在` });
+      });
       duplicateRefs(dataObject.fields, 'field_ref').forEach(ref => errors.push({ code: 'DUPLICATE_REF', ref, message: `对象字段技术标识${ref}重复` }));
       array(dataObject.fields).forEach(field => {
         if (dataFieldOwners.has(field.field_ref)) {
@@ -214,7 +220,7 @@
     const behavior = array(documentValue.behaviors).find(item => item.behavior_ref === behaviorRef);
     if (!dataObject) return ['数据对象不存在'];
     if (!behavior) return ['业务行为不存在'];
-    if (behavior.node_type !== 'action' && !(documentValue.schema_version === 'process-governance-v8' && behavior.node_type === 'decision' && array(operations).every(operation => operation === 'use'))) {
+    if (behavior.node_type !== 'action' && !(['process-governance-v8', 'process-governance-v9'].includes(documentValue.schema_version) && behavior.node_type === 'decision' && array(operations).every(operation => operation === 'use'))) {
       return [behavior.node_type === 'decision' ? '判断节点仅允许使用数据作为判断依据；其他操作请关联到实际执行步骤。输入已保留' : '并行等控制节点不能建立数据操作关系；请关联到实际执行步骤'];
     }
     const selected = unique(array(operations));
@@ -224,7 +230,9 @@
     const remaining = array(dataObject.behavior_links).filter(link => !ignoreLinkRefs.includes(link.link_ref));
     if (selected.includes('create')) {
       const otherCreators = remaining.filter(link => link.operation === 'create' && link.behavior_ref !== behaviorRef);
-      if (otherCreators.length) return ['该数据对象已经有已确认创建行为'];
+      const supportsIndependentRecords = documentValue.schema_version === 'process-governance-v9'
+        && ['record_collection', 'pending_confirmation'].includes(dataObject.record_model);
+      if (otherCreators.length && !supportsIndependentRecords) return ['该数据对象已经有已确认创建行为'];
     }
     const combinedOperations = new Set([
       ...remaining.filter(link => link.behavior_ref === behaviorRef).map(link => link.operation),
@@ -238,6 +246,7 @@
     const migration = documentValue?.migration || {};
     const impacts = [];
     if (kind === 'behavior') {
+      if (array(documentValue.process?.entry_behavior_refs).includes(ref)) impacts.push({ kind: 'process_entry', ref: documentValue.process.process_ref, label: '流程入口' });
       array(migration.work_roles).forEach(item => {
         if (item.behavior_ref === ref) impacts.push({ kind: 'migration.work_role', ref: item.archive_ref, label: '历史工作角色' });
       });
@@ -352,6 +361,19 @@
       return resultError('MERGE_NAME_MISMATCH', '只有去除首尾空白后名称完全相同的数据对象可以归并');
     }
     const objects = [keep, ...removing];
+    if (documentValue.schema_version === 'process-governance-v9') {
+      const recordModels = new Set(objects.map(item => item.record_model));
+      if (recordModels.size > 1 || objects.some(item => array(item.collection_field_refs).length)) return resultError('MERGE_RECORD_SEMANTICS_REVIEW_REQUIRED', '记录组织方式不同或存在集合索引与保管字段，当前归并不能安全决定这些语义；原对象及引用保持不变');
+      const linkSemantics = new Map();
+      for (const object of objects) {
+        for (const link of array(object.behavior_links)) {
+          const key = `${link.behavior_ref}|${link.operation}`;
+          const semantics = `${link.record_scope}|${link.presence}`;
+          if (linkSemantics.has(key) && linkSemantics.get(key) !== semantics) return resultError('MERGE_RECORD_SEMANTICS_CONFLICT', '同一环节的数据操作具有不同记录范围或存在条件，不能自动归并；原记录保持不变');
+          linkSemantics.set(key, semantics);
+        }
+      }
+    }
     const confirmedTypes = unique(objects.map(item => item.information_type).filter(value => value && value !== 'pending_confirmation'));
     if (confirmedTypes.length > 1) return resultError('MERGE_INFORMATION_TYPE_CONFLICT', '数据对象存在不同的已确认信息类型');
     const creators = unique(objects.flatMap(item => array(item.behavior_links).filter(link => link.operation === 'create').map(link => link.behavior_ref)));
@@ -400,7 +422,8 @@
     keep.behavior_links = [...new Map([keep, ...removing].flatMap(item => array(item.behavior_links)).map(link => [relationKey(link), link])).values()];
     const sourceKey = source => [
       source.source_department, source.source_process_name, source.source_behavior_name, source.source_data_name,
-      source.availability_mode, source.available_from_behavior_ref
+      source.availability_mode, source.available_from_behavior_ref,
+      ...(next.schema_version === 'process-governance-v9' ? [source.presence] : [])
     ].map(text).join('|');
     keep.source_relations = [...new Map([keep, ...removing].flatMap(item => array(item.source_relations)).map(source => [sourceKey(source), source])).values()];
     const fieldRefRemap = new Map();
@@ -480,6 +503,11 @@
         const dataObject = next.data_objects.find(item => item.data_ref === command.dataRef);
         if (!dataObject) return resultError('OBJECT_NOT_FOUND', '数据对象不存在');
         const existing = dataObject.behavior_links.filter(link => link.behavior_ref === command.behaviorRef);
+        if (next.schema_version === 'process-governance-v9' && existing.some((link, index) => existing.findIndex(other => other.operation === link.operation) !== index)) {
+          const unchangedOperations = unique(existing.map(link => link.operation)).sort().join('|') === unique(command.operations).sort().join('|');
+          if (unchangedOperations && command.updatedFieldRefs === undefined) return resultOk(next, { selected: { kind: 'data', ref: command.dataRef } });
+          return resultError('DATA_RELATION_SCOPE_SELECTION_REQUIRED', '该环节包含不同记录范围的独立操作，请到数据关系明细或批量表格逐条编辑；当前记录和未应用输入保持不变');
+        }
         const errors = dataOperationHardErrors(next, command.dataRef, command.behaviorRef, command.operations, existing.map(link => link.link_ref));
         if (errors.length) return resultError('DATA_RELATION_BLOCKED', `数据关系未建立：${errors.join('；')}`, { errors });
         const requestedUpdatedFieldRefs = unique(array(command.updatedFieldRefs));
@@ -500,7 +528,8 @@
           dataObject.behavior_links.push({ ...(previous || {
             link_ref: command.refFactory(operation),
             behavior_ref: command.behaviorRef,
-            operation
+            operation,
+            ...(next.schema_version === 'process-governance-v9' ? { record_scope: 'pending_confirmation', presence: 'pending_confirmation' } : {})
           }), updated_field_refs: updatedFieldRefs });
         });
         const integrityErrors = technicalIntegrity(next);
@@ -509,6 +538,10 @@
       }
       case 'add_data_object': {
         const item = clone(command.dataObject || {});
+        if (next.schema_version === 'process-governance-v9') {
+          if (item.record_model === undefined) item.record_model = 'pending_confirmation';
+          if (item.collection_field_refs === undefined) item.collection_field_refs = [];
+        }
         if (!refIsValid(item.data_ref)) return resultError('INVALID_REF', '数据对象技术标识无效');
         if (next.data_objects.some(existing => existing.data_ref === item.data_ref)) return resultError('DUPLICATE_REF', '数据对象技术标识重复');
         next.data_objects.push(item);

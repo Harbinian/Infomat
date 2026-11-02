@@ -108,7 +108,7 @@ CREATE TABLE IF NOT EXISTS roles (
   INDEX idx_roles_parent (parent_role_id),
   INDEX idx_roles_group (role_group),
   INDEX idx_roles_status (status),
-  CHECK (role_group IN ('system','mdm','legacy')),
+  CHECK (role_group IN ('system','mdm','directory','legacy')),
   CHECK (status IN ('active','legacy','retired'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -974,7 +974,7 @@ CREATE TABLE IF NOT EXISTS process_design_drafts (
   document_id BIGINT NOT NULL,
   document_no VARCHAR(128) NOT NULL,
   document_title VARCHAR(255) NOT NULL,
-  planned_edition VARCHAR(16) NOT NULL,
+  planned_edition VARCHAR(16) NULL,
   base_version_id BIGINT NULL,
   active_document_no VARCHAR(128) NULL,
   process_name VARCHAR(255) NOT NULL,
@@ -1490,7 +1490,7 @@ CREATE TABLE IF NOT EXISTS process_design_versions (
   document_id BIGINT NOT NULL,
   document_no VARCHAR(128) NOT NULL,
   document_title VARCHAR(255) NOT NULL,
-  edition VARCHAR(16) NOT NULL,
+  edition VARCHAR(16) NULL,
   version_no VARCHAR(128) NOT NULL,
   department_id BIGINT NOT NULL,
   l1_name VARCHAR(255) NULL,
@@ -1503,7 +1503,7 @@ CREATE TABLE IF NOT EXISTS process_design_versions (
   source_revision_no INT NULL,
   published_by BIGINT NULL,
   published_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  effective_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  effective_at TIMESTAMP NULL DEFAULT NULL,
   supersedes_version_id BIGINT NULL,
   status VARCHAR(32) NOT NULL DEFAULT 'published',
   UNIQUE KEY uq_process_design_versions_no (version_no),

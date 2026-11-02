@@ -270,6 +270,7 @@ function issueFromRule(fieldName, rule) {
 
 function makeDataMapMysqlRepository(pool) {
   async function ensureObject(payload, actorUserId, preserveExisting = false) {
+      await require('./dataMapHandoffControl').assertLegacyWriteAllowed(pool,{entryId:'W08:ensureObject'});
     const normalized = normalizeObjectPayload(payload, actorUserId);
     if (!normalized) return null;
     await pool.execute(
@@ -331,6 +332,7 @@ function makeDataMapMysqlRepository(pool) {
   }
 
   async function replaceFieldLinks(fieldId, payload) {
+      await require('./dataMapHandoffControl').assertLegacyWriteAllowed(pool,{entryId:'W08:replaceFieldLinks'});
     await pool.execute('DELETE FROM data_map_field_system_links WHERE field_id=?', [fieldId]);
     for (const link of fieldSystemLinks(payload)) {
       await pool.execute(
@@ -427,6 +429,7 @@ function makeDataMapMysqlRepository(pool) {
     },
 
     async createContext(payload = {}, actorUserId = null) {
+      await require('./dataMapHandoffControl').assertLegacyWriteAllowed(pool,{entryId:'W07:createContext'});
       const normalized = normalizeContextPayload(payload, actorUserId);
       const result = await pool.execute(
         `INSERT INTO data_map_contexts
@@ -458,20 +461,41 @@ function makeDataMapMysqlRepository(pool) {
       return await this.getContext(insertId(result));
     },
 
-    async listContexts() {
-      return (await rows(
-        pool,
-        `SELECT *
-         FROM data_map_contexts
-         ORDER BY updated_at DESC, id DESC`
-      )).map(publicContext);
+    async listContexts({view,after=null}={}) {
+      return require('./dataMapHandoffControl').readSnapshot(pool,async db=>{
+        await require('./dataMapHandoffCompatibility').requireExplicitView(db,view);
+        if(view!=='current')require('./dataMapHandoffControl').clientUpgrade();
+        const [heads]=await db.execute("SELECT subject_id FROM data_map_effective_heads WHERE subject_kind='context' ORDER BY subject_id");
+        const found=[];
+        for(const h of heads){
+          const v=await require('./dataMapEffectiveReader').readSubject(db,{subjectKind:'context',subjectId:h.subject_id,view});
+          if(v.payload&&(v.referenceable||v.requires_attention))found.push({...v.payload.definition,title:v.payload.definition.title||v.payload.definition.name,dept_id:v.payload.definition.dept_id||v.payload.definition.department_id,id:h.subject_id,context_id:h.subject_id,view,version_ref:v.version_ref,publication_id:v.publication_id,referenceable:v.referenceable,new_reference_allowed:v.new_reference_allowed,requires_attention:v.requires_attention,availability:v.availability,reference_issues:v.reference_issues});
+          else if(v.availability==='source_upgrade_pending')found.push({id:String(h.subject_id),context_id:String(h.subject_id),view,current:null,title:v.last_published_definition?.title||v.last_published_definition?.name||null,dept_id:v.last_published_definition?.dept_id||v.last_published_definition?.department_id||null,...v});
+          else if(v.current===null){
+            // Scope metadata identifies the unavailable context; it is never a
+            // substitute for its withdrawn or otherwise unavailable definition.
+            const scope=await first(db,'SELECT CAST(id AS CHAR) id,CAST(dept_id AS CHAR) dept_id FROM data_map_contexts WHERE id=?',[h.subject_id]);
+            if(scope)found.push({...scope,context_id:String(h.subject_id),...v});
+          }
+        }
+        return found;
+      });
     },
 
-    async getContext(contextId) {
-      return publicContext(await first(pool, 'SELECT * FROM data_map_contexts WHERE id=? LIMIT 1', [contextId]));
+    async getContext(contextId,{view,version=null}={}) {
+      await require('./dataMapHandoffCompatibility').requireExplicitView(pool,view);
+      const v=await require('./dataMapEffectiveReader').readSubject(pool,{subjectKind:'context',subjectId:String(contextId),view,versionRef:version});
+      if(v.view==='legacy_in_use')return {...(v.snapshot.row||v.snapshot),id:String(contextId),view,version_ref:version,fixed_version_ref:v.version_ref,governance_status:v.governance_status,history_completeness:v.history_completeness,original_status:v.original_status,referenceable:false,new_reference_allowed:false,requires_attention:v.requires_attention};
+      if(v.availability==='source_upgrade_pending')return {id:String(contextId),context_id:String(contextId),title:v.last_published_definition?.title||v.last_published_definition?.name||null,dept_id:v.last_published_definition?.dept_id||v.last_published_definition?.department_id||null,...v};
+      if(v.current===null){const scope=await this.getContextScope(contextId);return scope?{...scope,context_id:String(contextId),...v}:null;}
+      return {...v.payload.definition,title:v.payload.definition.title||v.payload.definition.name,dept_id:v.payload.definition.dept_id||v.payload.definition.department_id,id:String(contextId),context_id:String(contextId),view,version_ref:v.version_ref,publication_id:v.publication_id,referenceable:view==='current'&&v.referenceable,new_reference_allowed:view==='current'&&v.new_reference_allowed,requires_attention:v.requires_attention,availability:v.availability,reference_issues:v.reference_issues};
     },
+    // Scope metadata only. These helpers never supply a consumer's definition body.
+    async getContextScope(contextId) {return first(pool,'SELECT CAST(id AS CHAR) id,CAST(dept_id AS CHAR) dept_id FROM data_map_contexts WHERE id=?',[contextId]);},
+    async getFieldScope(fieldId) {return first(pool,'SELECT CAST(id AS CHAR) id,CAST(context_id AS CHAR) context_id FROM data_map_fields WHERE id=?',[fieldId]);},
 
     async updateContext(contextId, payload = {}, actorUserId = null) {
+      await require('./dataMapHandoffControl').assertLegacyWriteAllowed(pool,{entryId:'W07:updateContext'});
       const existing = await this.getContext(contextId);
       if (!existing) return null;
       const normalized = normalizeContextPayload({ ...existing, ...payload }, actorUserId);
@@ -508,7 +532,8 @@ function makeDataMapMysqlRepository(pool) {
 
     async validateFieldName(fieldName) {
       const name = cleanText(fieldName);
-      const termRows = await rows(
+      const unifiedTerminology=require('./terminologyGovernancePolicy').enabled();
+      const termRows = unifiedTerminology ? [] : await rows(
         pool,
         `SELECT term, term_type_code, preferred_term, forbidden_term, definition, scope_type, severity, status
          FROM data_map_terms
@@ -522,7 +547,13 @@ function makeDataMapMysqlRepository(pool) {
       );
       const issues = [
         ...termRows.map(term => issueFromTerm(name, term)).filter(Boolean),
-        ...ruleRows.map(rule => issueFromRule(name, rule)).filter(Boolean)
+        ...ruleRows.map(rule => {
+          const issue=issueFromRule(name,rule);
+          // Old replacement dictionaries describe meanings, so they can only
+          // suggest a review. Technical format constraints retain their gate.
+          return unifiedTerminology&&issue&&cleanText(rule.replacement_value)
+            ? {...issue,severity:'warn',issue_type:'terminology_suggestion',message:'术语用词提示（须按语境人工核对）：'+cleanText(rule.match_value),suggestion:cleanText(rule.replacement_value)} : issue;
+        }).filter(Boolean)
       ];
       return {
         allowed: !issues.some(issue => issue.severity === 'block'),
@@ -531,6 +562,7 @@ function makeDataMapMysqlRepository(pool) {
     },
 
     async createField(payload = {}, actorUserId = null, options = {}) {
+      await require('./dataMapHandoffControl').assertLegacyWriteAllowed(pool,{entryId:'W03:createField'});
       const normalized = normalizeFieldPayload(payload, actorUserId);
       const context = await this.getContext(normalized.context_id);
       if (!context) throw httpError(404, '数据地图上下文不存在');
@@ -579,27 +611,24 @@ function makeDataMapMysqlRepository(pool) {
       return await getFieldWithLinks(fieldId);
     },
 
-    async getFieldsByContext(contextId, { maxRows = null } = {}) {
-      const bounded = Number.isSafeInteger(maxRows) && maxRows >= 0;
-      const fieldRows = await rows(
-        pool,
-        `SELECT f.*, o.object_name_cn AS data_object, o.object_key
-         FROM data_map_fields f
-         LEFT JOIN data_map_objects o ON f.object_id = o.id
-         WHERE f.context_id=?
-         ORDER BY f.id${bounded ? ` LIMIT ${maxRows + 1}` : ''}`,
-        [contextId]
-      );
-      if (bounded && fieldRows.length > maxRows) throw Object.assign(new Error('导出规模超过上限'), { code: 'EXPORT_LIMIT_EXCEEDED', statusCode: 413 });
-      const links = await getLinksForFields(fieldRows.map(row => row.id));
-      return fieldRows.map(row => publicField(row, links.get(Number(row.id)) || []));
+    async getFieldsByContext(contextId,{view,version=null,maxRows=100}={}) {
+      await require('./dataMapHandoffCompatibility').requireExplicitView(pool,view);
+      if(!['current','history'].includes(view)||(view==='history'&&!version))require('./dataMapHandoffControl').clientUpgrade();
+      const found=await require('./dataMapEffectiveReader').contextFields(pool,{contextId:String(contextId),view,versionRef:version});
+      if(found.context.current===null)throw require('./dataMapHandoffControl').failure(found.context.availability==='source_upgrade_pending'?'HANDOFF_SOURCE_UPGRADE_PENDING':'HANDOFF_CONTEXT_UNAVAILABLE',409,{availability:found.context.availability});
+      if(maxRows!==null&&found.items.length>maxRows)throw Object.assign(new Error('导出规模超过上限'),{code:'EXPORT_LIMIT_EXCEEDED',statusCode:413});
+      return found.items.map(v=>({...v.base_snapshot.row,...v.definition,id:v.entity_id,field_name_cn:v.definition.name,business_definition:v.definition.business_meaning,view,version_id:v.version_id,publication_id:v.publication_id,governance_status:v.governance_status,referenceable:view==='current'&&v.referenceable,new_reference_allowed:view==='current'&&v.new_reference_allowed,requires_attention:v.requires_attention,reference_issues:v.reference_issues}));
     },
 
-    async getField(fieldId) {
-      return await getFieldWithLinks(fieldId);
+    async getField(fieldId,{view,version=null}={}) {
+      await require('./dataMapHandoffCompatibility').requireExplicitView(pool,view);
+      const v=await require('./dataMapEffectiveReader').readDefinition(pool,{entityType:'field',entityId:String(fieldId),view,versionId:version});
+      if(v.view==='legacy_in_use')return {...v.snapshot.row,id:String(fieldId),view,version_ref:version,legacy_identities:v.snapshot.identities||[],legacy_system_links:v.snapshot.links||[],referenceable:false,governance_status:v.governance_status};
+      return v.current===null?null:{...v.base_snapshot.row,...v.definition,id:v.entity_id,field_name_cn:v.definition.name,version_id:v.version_id,publication_id:v.publication_id,view,governance_status:v.governance_status,referenceable:v.referenceable,new_reference_allowed:v.new_reference_allowed,requires_attention:v.requires_attention,availability:v.availability,reference_issues:v.reference_issues};
     },
 
     async updateField(fieldId, payload = {}, actorUserId = null) {
+      await require('./dataMapHandoffControl').assertLegacyWriteAllowed(pool,{entryId:'W03:updateField'});
       const existing = await getFieldWithLinks(fieldId);
       if (!existing) return null;
       const normalized = normalizeFieldPayload({ ...existing, ...payload, context_id: existing.context_id }, actorUserId, existing);
@@ -676,6 +705,7 @@ function makeDataMapMysqlRepository(pool) {
     },
 
     async deleteField(fieldId, actorUserId = null) {
+      await require('./dataMapHandoffControl').assertLegacyWriteAllowed(pool,{entryId:'W03:deleteField'});
       await auditUpdate('data_map_field', fieldId, actorUserId, '删除字段', [
         { field_name: 'id', old_value: fieldId, new_value: null, operation: 'delete' }
       ]);
@@ -683,11 +713,16 @@ function makeDataMapMysqlRepository(pool) {
       return affectedRows(result) > 0;
     },
 
-    async getFieldIdentity(fieldId) {
-      return publicIdentity(await first(pool, 'SELECT * FROM data_map_field_identities WHERE field_id=? LIMIT 1', [fieldId]));
+    async getFieldIdentity(fieldId,query={}) {
+      const value=await this.getField(fieldId,query);
+      if(value&&query.view==='legacy_in_use')return {field_id:String(fieldId),view:query.view,version_ref:query.version,original_identities:value.legacy_identities,governance_status:'legacy_unapproved',referenceable:false};
+      return value?{field_id:String(fieldId),view:query.view,version_id:value.version_id,governance_status:value.governance_status,authority:value.authority||null,
+        referenceable:query.view==='current'&&value.referenceable===true,new_reference_allowed:query.view==='current'&&value.new_reference_allowed===true,
+        requires_attention:value.requires_attention===true,reference_issues:value.reference_issues||[]}:null;
     },
 
     async upsertFieldIdentity(fieldId, payload = {}) {
+      await require('./dataMapHandoffControl').assertLegacyWriteAllowed(pool,{entryId:'W04:upsertFieldIdentity'});
       const normalized = normalizeIdentityPayload(payload);
       await pool.execute(
         `INSERT INTO data_map_field_identities
@@ -722,6 +757,7 @@ function makeDataMapMysqlRepository(pool) {
     },
 
     async confirmFieldIdentity(fieldId, payload = {}, actorUserId = null) {
+      await require('./dataMapHandoffControl').assertLegacyWriteAllowed(pool,{entryId:'W04:confirmFieldIdentity'});
       const normalized = normalizeIdentityPayload({ ...payload, confirmed: true, status: 'confirmed' });
       const result = await pool.execute(
         `UPDATE data_map_field_identities
@@ -746,49 +782,16 @@ function makeDataMapMysqlRepository(pool) {
       return affectedRows(result) > 0 ? await this.getFieldIdentity(fieldId) : null;
     },
 
-    async fieldIdentityProgress(scope = {}) {
-      const departmentId = scope.departmentId ? Number(scope.departmentId) : null;
-      const overall = await first(
-        pool,
-        `SELECT COUNT(*) AS total, SUM(CASE WHEN confirmed=1 THEN 1 ELSE 0 END) AS confirmed
-         FROM data_map_field_identities fi
-         JOIN data_map_fields f ON fi.field_id = f.id
-         JOIN data_map_contexts c ON f.context_id = c.id
-         WHERE (? IS NULL OR c.dept_id=?)`,
-        [departmentId, departmentId]
-      ) || { total: 0, confirmed: 0 };
-      const byDomain = await rows(
-        pool,
-        `SELECT COALESCE(o.object_name_cn, '未归类') AS domain,
-                COUNT(fi.id) AS total,
-                SUM(CASE WHEN fi.confirmed=1 THEN 1 ELSE 0 END) AS confirmed
-         FROM data_map_field_identities fi
-         JOIN data_map_fields f ON fi.field_id = f.id
-         JOIN data_map_contexts c ON f.context_id = c.id
-         LEFT JOIN data_map_objects o ON f.object_id = o.id
-         WHERE (? IS NULL OR c.dept_id=?)
-         GROUP BY o.object_name_cn
-         ORDER BY o.object_name_cn`,
-        [departmentId, departmentId]
-      );
-      const total = Number(overall.total || 0);
-      const confirmed = Number(overall.confirmed || 0);
-      return {
-        overall: { total, confirmed, pct: total > 0 ? Math.round((confirmed / total) * 100) : 0 },
-        by_domain: byDomain.map(row => {
-          const rowTotal = Number(row.total || 0);
-          const rowConfirmed = Number(row.confirmed || 0);
-          return {
-            domain: row.domain,
-            total: rowTotal,
-            confirmed: rowConfirmed,
-            pct: rowTotal > 0 ? Math.round((rowConfirmed / rowTotal) * 100) : 0
-          };
-        })
-      };
+    async fieldIdentityProgress(scope={},query={}) {
+      await require('./dataMapHandoffCompatibility').requireExplicitView(pool,query.view);
+      const values=await require('./dataMapHandoffCompatibility').listDefinitions(pool,{entityType:'field',departmentId:scope.departmentId?String(scope.departmentId):null,view:query.view,limit:1000});
+      if(values.next)throw Object.assign(new Error('统计范围超过完整计算上限'),{code:'HANDOFF_IMPACT_INCOMPLETE',statusCode:503});
+      const [[legacy]]=await pool.execute("SELECT COUNT(DISTINCT r.asset_id) n FROM data_map_legacy_registry r JOIN data_map_contexts c ON c.id=JSON_UNQUOTE(JSON_EXTRACT(r.snapshot_json,'$.row.context_id')) WHERE r.asset_kind='field' AND (? IS NULL OR c.dept_id=?)",[scope.departmentId||null,scope.departmentId||null]);
+      return {view:query.view,overall:{total:values.items.length,governed:values.items.length},legacy:{total:Number(legacy.n),governance_status:'legacy_unapproved'},complete:true};
     },
 
     async recordImportBatch(payload = {}) {
+      await require('./dataMapHandoffControl').assertLegacyWriteAllowed(pool,{entryId:'W05:recordImportBatch'});
       const result = await pool.execute(
         `INSERT INTO data_map_import_batches
           (source_type, file_name, context_id, imported_by, row_count, status, note)
@@ -806,77 +809,20 @@ function makeDataMapMysqlRepository(pool) {
       return { id: insertId(result) };
     },
 
-    // R09: the second argument is optional and additive. Without it the previous behaviour is
-    // unchanged; with it the row budget is enforced before the caller builds a workbook, and a
-    // departed client stops the reads instead of letting them run to completion in the background.
-    async exportFieldLedger(scope = {}, { signal = null, maxRows = null } = {}) {
-      // Use one cancellable lease for the export. A disconnected client destroys its in-flight
-      // read, rather than waiting for the next context boundary before noticing the departure.
-      if (typeof pool.getConnection === 'function') {
-        const connection = await pool.getConnection({ signal });
-        const onAbort = () => connection.destroy();
-        if (signal) signal.addEventListener('abort', onAbort, { once: true });
-        try {
-          return await makeDataMapMysqlRepository(connection).exportFieldLedger(scope, { signal, maxRows });
-        } finally {
-          if (signal) signal.removeEventListener('abort', onAbort);
-          connection.release();
-        }
+    // Export the explicit governed view with immutable version and provenance columns.
+    async exportFieldLedger(scope={}, {signal=null,maxRows=1000,view}={}) {
+      await require('./dataMapHandoffCompatibility').requireExplicitView(pool,view);
+      if(view!=='current')require('./dataMapHandoffControl').clientUpgrade();
+      if(typeof pool.getConnection==='function')return require('./dataMapHandoffControl').readSnapshot(pool,db=>makeDataMapMysqlRepository(db).exportFieldLedger(scope,{signal,maxRows,view}));
+      const contexts=await this.listContexts({view}),values=[];
+      for(const context of contexts){
+        if(scope.departmentId&&String(context.dept_id)!==String(scope.departmentId))continue;
+        const fixed=await require('./dataMapEffectiveReader').contextFields(pool,{contextId:String(context.id),view});
+        if(fixed.context.current===null)throw require('./dataMapHandoffControl').failure('HANDOFF_CONTEXT_UNAVAILABLE',409,{context_id:String(context.id),availability:fixed.context.availability});
+        for(const v of fixed.items){values.push({...v,context});if(values.length>(maxRows||1000))throw Object.assign(new Error('导出规模超过上限'),{code:'EXPORT_LIMIT_EXCEEDED',statusCode:413});}
+        if(signal?.aborted)throw Object.assign(new Error('导出已取消'),{code:'EXPORT_ABORTED',statusCode:499});
       }
-      const { identityInteger, sameIdentityInteger } = require('./sessionSubject');
-      const departmentId = scope.departmentId == null ? null : identityInteger(scope.departmentId);
-      if (scope.departmentId != null && departmentId === null) throw Object.assign(new Error('部门标识无法精确表示'), { code: 'EXPORT_SCOPE_INVALID', statusCode: 403 });
-      const limit = Number.isInteger(maxRows) && maxRows > 0 ? maxRows : null;
-      const stopped = () => {
-        if (signal && signal.aborted) throw signal.reason instanceof Error ? signal.reason : Object.assign(new Error('导出已取消'), { code: 'EXPORT_ABORTED', statusCode: 499 });
-      };
-      stopped();
-      let contexts;
-      if (limit !== null) {
-        const where = departmentId ? ' WHERE c.dept_id=?' : '';
-        const params = departmentId ? [departmentId] : [];
-        const probe = await rows(pool, `SELECT f.id FROM data_map_fields f JOIN data_map_contexts c ON c.id=f.context_id${where} LIMIT ${limit + 1}`, params);
-        stopped();
-        if (probe.length > limit) throw Object.assign(new Error(`导出规模超过上限 ${limit} 行`), { code: 'EXPORT_LIMIT_EXCEEDED', statusCode: 413 });
-        contexts = (await rows(pool, `SELECT c.* FROM data_map_contexts c WHERE ${departmentId ? 'c.dept_id=? AND ' : ''}EXISTS (SELECT 1 FROM data_map_fields f WHERE f.context_id=c.id) ORDER BY c.updated_at DESC,c.id DESC LIMIT ${limit + 1}`, params)).map(publicContext);
-        if (contexts.length > limit) throw Object.assign(new Error('导出规模超过上限'), { code: 'EXPORT_LIMIT_EXCEEDED', statusCode: 413 });
-      } else contexts = (await this.listContexts()).filter(context => !departmentId || sameIdentityInteger(context.dept_id, departmentId));
-      const fields = [];
-      for (const context of contexts) {
-        stopped();
-        const contextFields = await this.getFieldsByContext(context.id, { maxRows: limit === null ? null : limit - fields.length });
-        for (const field of contextFields) {
-          stopped();
-          if (limit !== null && fields.length >= limit) {
-            throw Object.assign(new Error(`导出规模超过上限 ${limit} 行`), { code: 'EXPORT_LIMIT_EXCEEDED', statusCode: 413, limit });
-          }
-          const identity = await this.getFieldIdentity(field.id);
-          stopped();
-          fields.push({
-            ...field,
-            identity,
-            authoritative_system_name: identity ? identity.authoritative_system_name : null,
-            maintain_dept_id: identity ? identity.maintain_dept_id : null,
-            authority_system_options: identity ? identity.authority_system_options : null,
-            confirmed_by: identity ? identity.confirmed_by : null,
-            context_id: context.id,
-            context_key: context.context_key,
-            context_title: context.title,
-            dept_id: context.dept_id,
-            dept_name: context.dept_name,
-            process_name: context.title,
-            l3_name: context.l3_name,
-            system_name: field.system_name || consumerSystemsFromLinks(field.system_links || [])[0] || '',
-            authoritative_system: identity ? identity.authoritative_system : '',
-            maintain_dept: identity ? identity.maintain_dept_id : '',
-            confirmed: identity ? identity.confirmed : 0,
-            confirmer: identity ? identity.confirmed_by : '',
-            confirmed_at: identity ? identity.confirmed_at : null
-          });
-        }
-      }
-      stopped();
-      return { fields, identities: fields };
+      return {view,fields:values.map(v=>({...v.base_snapshot.row,...v.definition,id:v.entity_id,field_name_cn:v.definition.name,business_definition:v.definition.business_meaning,context_id:v.context.id,context_title:v.context.title,dept_id:v.context.dept_id,version_id:v.version_id,publication_id:v.publication_id,governance_status:v.governance_status,referenceable:v.referenceable,new_reference_allowed:v.new_reference_allowed,requires_attention:v.requires_attention,reference_issues:v.reference_issues,source_kind:v.source_kind,content_digest:v.content_digest})),identities:[]};
     }
   };
 }

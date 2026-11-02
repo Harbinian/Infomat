@@ -11,7 +11,7 @@ const select=`SELECT CAST(h.handoff_id AS CHAR) handoff_id,CAST(v.handoff_versio
   p.person_name actor_name,DATE_FORMAT(v.created_at,'%Y-%m-%dT%H:%i:%s.%fZ') created_at
   FROM data_map_design_handoffs h JOIN data_map_design_handoff_versions v ON v.handoff_id=h.handoff_id
   LEFT JOIN person p ON p.person_id=v.actor_person_id`;
-module.exports=function({transaction,actor,scope,entityScope,version,request,loadSource,target,unpack,mappingSelect,bindings}){
+module.exports=function({transaction,actor,scope,entityScope,version,request,loadSource,target,unpack,mappingSelect,bindings,assertTargetReferenceable,assertSourceCurrent,targetReferenceStates}){
   const tx=fn=>transaction(async db=>{
     const dependency=require('./v7MappingSchema').MIGRATION_KEY;
     const [markers]=await db.execute('SELECT migration_key FROM schema_migrations WHERE migration_key IN (?,?)',[MIGRATION_KEY,dependency]);
@@ -29,8 +29,8 @@ module.exports=function({transaction,actor,scope,entityScope,version,request,loa
     const [[head]]=await db.execute('SELECT revision_no FROM data_map_v7_mappings WHERE mapping_id=? FOR SHARE',[m.mapping_id]);
     const live=await bindings(db,who,s),effective=live.find(x=>x.mapping_version_id===vid)?.effective_confirmed===true;
     const changed=[];for(const v of [t.o,t.f].filter(Boolean)){
-      const [[h]]=await db.execute('SELECT CAST(current_version_id AS CHAR) version_id FROM data_map_definition_heads WHERE entity_type=? AND entity_id=? FOR SHARE',[v.entity_type,v.entity_id]);
-      if(!h||h.version_id!==v.version_id)changed.push({entity_type:v.entity_type,entity_id:v.entity_id,fixed_version_id:v.version_id,current_version_id:h?.version_id||null});
+      let h;try{h=await require('./dataMapEffectiveReader').readDefinition(db,{entityType:v.entity_type,entityId:v.entity_id,view:'current'});}catch(error){if(error.statusCode!==503&&!['HANDOFF_REFERENCE_UNAVAILABLE','ER_NO_SUCH_TABLE','ER_BAD_FIELD_ERROR'].includes(error.code))throw error;h={referenceable:false};}
+      if(!h.referenceable||h.version_id!==v.version_id)changed.push({entity_type:v.entity_type,entity_id:v.entity_id,fixed_version_id:v.version_id,current_version_id:h.version_id||null});
     }
     const result={m,s,...t,effective,remapped:head.revision_no!==m.revision_no,changed};cache.set(vid,result);return result;
   }
@@ -107,7 +107,9 @@ module.exports=function({transaction,actor,scope,entityScope,version,request,loa
     if(digest(resolved.snapshot)!==r.snapshot_digest)throw failure('DEFINITION_HANDOFF_INTEGRITY_CONFLICT',409);
     const [savedRefs]=await db.execute('SELECT CAST(mapping_version_id AS CHAR) mapping_version_id,side FROM data_map_design_handoff_refs WHERE handoff_version_id=?',[r.handoff_version_id]);
     const ordered=x=>x.map(y=>y.side+':'+y.mapping_version_id).sort();if(json(ordered(savedRefs))!==json(ordered(resolved.refs)))throw failure('DEFINITION_HANDOFF_INTEGRITY_CONFLICT',409);
-    delete r.snapshot_json;return {...r,...s,input:input(s),issues:resolved.issues,effective_confirmed:r.claim_status==='human_confirmed'&&!resolved.issues.length,can_write:writable(who)};
+    const fixed_reference_states=[];
+    for(const ref of resolved.refs){const value=await mapping(db,who,ref.mapping_version_id,new Map());fixed_reference_states.push({...ref,current_source_status:value.s.current_source_status,current_source_issue:value.s.current_source_issue,target_reference_states:await targetReferenceStates(db,value.o.version_id,value.f?.version_id||null)});}
+    delete r.snapshot_json;return {...r,...s,input:input(s),view:vid?'history':'fixed_latest',governance_status:'design_evidence_only',fixed_reference_states,issues:resolved.issues,effective_confirmed:r.claim_status==='human_confirmed'&&!resolved.issues.length,can_write:writable(who)};
   }
   return {
     handoffCapabilities(session){return tx(async db=>{const w=await actor(db,session);scope(w,w.departmentId);return {person_id:w.personId,department_id:w.departmentId,can_write:writable(w)};});},
@@ -127,11 +129,13 @@ module.exports=function({transaction,actor,scope,entityScope,version,request,loa
       const items=[];for(const r of rows.slice(0,50))items.push(await detail(db,w,hid,r.id));return {items,next:rows.length>50?rows[49].id:null};
     });},
     saveDesignHandoff(session,payload){return tx(async db=>{
+      await require('./dataMapHandoffControl').assertGraphWriteEnabled(db);
       keys(payload,['request_id','handoff_id','expected_revision','definition']);const w=await actor(db,session,'governance:structure-gate');
       const hid=payload.handoff_id===null?null:id(payload.handoff_id);
       if(hid){await db.execute('SELECT handoff_id FROM data_map_design_handoffs WHERE handoff_id=? FOR UPDATE',[hid]);await detail(db,w,hid);}
       // Authorization and scope are rechecked even for idempotent replays.
       const resolved=await resolve(db,w,payload.definition);
+      for(const ref of resolved.refs){const value=await mapping(db,w,ref.mapping_version_id,new Map());await assertSourceCurrent(db,value.s);await assertTargetReferenceable(db,value.o.version_id,value.f?.version_id||null);}
       return request(db,w,'design_handoff',payload,async()=>{
         if(!Number.isSafeInteger(payload.expected_revision)||payload.expected_revision<0)throw failure('DEFINITION_REVISION_REQUIRED');
         const [[head]]=hid?await db.execute('SELECT revision_no FROM data_map_design_handoffs WHERE handoff_id=? FOR UPDATE',[hid]):[[null]];
@@ -142,6 +146,7 @@ module.exports=function({transaction,actor,scope,entityScope,version,request,loa
         else{await db.execute('INSERT INTO data_map_design_handoffs(revision_no) VALUES (?)',[revision]);handoffId=await lastId(db);}
         const s=resolved.snapshot;await db.execute('INSERT INTO data_map_design_handoff_versions(handoff_id,revision_no,claim_status,snapshot_json,snapshot_digest,actor_person_id,created_at) VALUES (?,?,?,?,?,?,UTC_TIMESTAMP(3))',[handoffId,revision,s.claim_status,json(s),digest(s),w.personId]);
         const vid=await lastId(db);for(const ref of resolved.refs)await db.execute('INSERT INTO data_map_design_handoff_refs(handoff_version_id,mapping_version_id,side) VALUES (?,?,?)',[vid,ref.mapping_version_id,ref.side]);
+        await db.execute('UPDATE data_map_governance_control SET graph_revision=graph_revision+1 WHERE control_id=1');
         return {handoff_id:handoffId,handoff_version_id:vid,revision_no:revision,issues:resolved.issues};
       });
     });}

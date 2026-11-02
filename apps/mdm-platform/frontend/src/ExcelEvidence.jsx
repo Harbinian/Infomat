@@ -1,3 +1,5 @@
+import {BusinessDetails,BusinessRecordPicker} from "./BusinessDetails.jsx";
+import {businessText,businessStatus,userMessage} from "./businessPresentation.js";
 import React, { useEffect, useRef, useState } from 'react';
 import { StatusPanel } from './components.jsx';
 
@@ -24,21 +26,21 @@ export function ExcelEvidence({ api, draft, setDraft, batchId, canWrite, onRegis
   }
   async function locate(address){if(busy)return;setBusy(true);setError(null);const c=new AbortController();pending.current?.abort();pending.current=c;try{const r=await api.request(endpoint+'/'+batchId+'?'+new URLSearchParams({sheet,address}),{signal:c.signal});if(!c.signal.aborted)setCell(r.cell);}catch(e){if(!c.signal.aborted)setError(e);}finally{if(!c.signal.aborted)setBusy(false);}}
   return <section className="card" aria-label="Excel证据"><h2>Excel 证据读取</h2><p>读取 .xlsx 单元格及公式缓存；不建立业务台账、不计算公式。原文件不修改，登记后保存固定读取快照。</p>
-    {error&&<StatusPanel kind="error" title="Excel 操作未完成，输入保留">{error.message} {error.code}</StatusPanel>}
+    {error&&<StatusPanel kind="error" title="Excel 操作未完成，输入保留">{userMessage(error)} </StatusPanel>}
     <form onSubmit={upload}><fieldset disabled={busy||!canWrite||!!draft?.review||!!draft?.task||!!draft?.closure||!!draft?.pdf||!!draft?.word}>
       <label className="management-input">Excel 文件<input ref={fileInput} aria-label="Excel 文件" type="file" accept=".xlsx" onChange={e=>edit('file',e.target.files[0]||null)}/></label>{d.file&&<p>待登记：{d.file.name}</p>}
       <details><summary>显式关联固定对象、字段或 流程固定来源（可留空）</summary><p>只登记你明确给出的对应关系，不按名称匹配。修改关联需重新登记为独立证据批次，历史批次保留。</p>
         <label className="management-input">关联类型<select aria-label="Excel 关联类型" value={d.kind} onChange={e=>edit('kind',e.target.value)}><option value="definition">对象或字段固定版本</option><option value="mapping">来源映射固定版本</option><option value="v7_source">流程固定来源</option></select></label>
-        {[['ref','固定版本或来源 ID'],['sheet','关联工作表名称'],['address','关联单元格地址'],['basis','关联依据']].map(([k,title])=><label className="management-input" key={k}>{title}<input aria-label={'Excel '+title} value={d[k]} maxLength={k==='basis'?1000:128} onChange={e=>edit(k,e.target.value)}/></label>)}
+        {[["ref","关联的流程、对象或字段"],['sheet','关联工作表名称'],['address','关联单元格地址'],['basis','关联依据']].map(([k,title])=><label className="management-input" key={k}>{title}{k==='ref'?<BusinessRecordPicker api={api} label={title} kind={d.kind==='v7_source'?'source':d.kind==='mapping'?'mappingVersion':'definitionVersion'} value={d[k]} onChange={value=>edit(k,value)}/>:<input aria-label={'Excel '+title} value={d[k]} maxLength={k==='basis'?1000:128} onChange={e=>edit(k,e.target.value)}/>}</label>)}
       </details><button type="submit" className="primary">登记 Excel 证据</button>
     </fieldset></form>
     {busy&&<p role="status">正在读取或登记 Excel，输入保留。</p>}
-    {meta&&!error&&!busy&&<><p>文件：{meta.source.original_name}；原始字节 SHA-256：<span style={{overflowWrap:'anywhere'}}>{meta.source.raw_sha256}</span></p><p>已读取 {meta.coverage.cell_count} 个单元格；公式 {meta.coverage.formula_count} 个。{meta.coverage.extraction_status==='empty'?'未提取到单元格内容。':''}</p><ul>{meta.coverage.not_covered.map(t=><li key={t}>{t}</li>)}</ul>
+    {meta&&!error&&!busy&&<><p>文件：{meta.source.original_name}</p><p>已读取 {meta.coverage.cell_count} 个单元格；公式 {meta.coverage.formula_count} 个。{meta.coverage.extraction_status==='empty'?'未提取到单元格内容。':''}</p><ul>{meta.coverage.not_covered.map(t=><li key={t}>{t}</li>)}</ul>
       <p>显式关联 {meta.links.length} 项；关联不表示业务事实或主数据已认定。</p>
-      <label className="management-input">证据工作表<select aria-label="证据工作表" disabled={busy} value={sheet} onChange={e=>{setSheet(e.target.value);setOffset(0);}}><option value="">请选择工作表</option>{meta.sheets.map(s=><option key={s.name} value={s.name}>{s.name} · {s.cell_count} 个单元格 · {s.state}</option>)}</select></label>
+      <label className="management-input">证据工作表<select aria-label="证据工作表" disabled={busy} value={sheet} onChange={e=>{setSheet(e.target.value);setOffset(0);}}><option value="">请选择工作表</option>{meta.sheets.map(s=><option key={s.name} value={s.name}>{s.name} · {s.cell_count} 个单元格 · {({visible:'可见工作表',hidden:'隐藏工作表',veryHidden:'隐藏工作表'})[s.state]||'工作表状态待核对'}</option>)}</select></label>
       {page&&<><p>当前展示第 {offset+1} 至 {offset+page.cells.length} 个已提取单元格，坐标保持原工作表位置。</p><div className="import-actions"><button className="secondary" disabled={busy||offset===0} onClick={()=>setOffset(Math.max(0,offset-100))}>上一页单元格</button><button className="secondary" disabled={busy||page.next_offset===null} onClick={()=>setOffset(page.next_offset)}>下一页单元格</button></div>
-        <div style={{maxHeight:360,overflow:'auto'}}>{page.cells.map(c=><p key={c.address}><button className="secondary" disabled={busy} onClick={()=>locate(c.address)}>{c.address}</button> · {c.raw_type} · <span style={{overflowWrap:'anywhere'}}>{String(c.normalized_value??'空值或无有效缓存').slice(0,120)}</span>{c.formula_state?' · 公式缓存待核实':''}</p>)}</div></>}
-      {cell&&<details open><summary>原单元格 {cell.sheet_name}!{cell.address}</summary><pre className="analysis-json">{JSON.stringify(cell,null,2)}</pre></details>}
+        <div style={{maxHeight:360,overflow:'auto'}}>{page.cells.map(c=><p key={c.address}><button className="secondary" disabled={busy} onClick={()=>locate(c.address)}>{c.address}</button> · {({n:'数字',s:'文本',b:'是或否',d:'日期',e:'读取异常',z:'空值'})[c.raw_type]||'单元格内容'} · <span style={{overflowWrap:'anywhere'}}>{businessText(String(c.normalized_value??'空值或无有效缓存').slice(0,120))}</span>{c.formula_state?' · 公式缓存待核实':''}</p>)}</div></>}
+      {cell&&<details open><summary>原单元格 {cell.sheet_name}!{cell.address}</summary><BusinessDetails value={cell}/></details>}
     </>}
   </section>;
 }

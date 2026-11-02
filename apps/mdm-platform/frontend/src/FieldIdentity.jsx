@@ -1,8 +1,9 @@
+import {businessName,businessStatus,businessText,userMessage} from "./businessPresentation.js";
 import React, { useEffect, useRef, useState } from 'react';
 import { StatusPanel } from './components.jsx';
 
 const selection = () => new URLSearchParams(location.search).get('identityField') || '';
-const show = value => value === null || value === undefined || value === '' ? '未记录' : String(value);
+const show = value => businessText(value);
 const labels = { needs_review: '待核实', confirmed: '已确认', high: '高', medium: '中', low: '低' };
 const fingerprint = value => JSON.stringify(Object.keys(value).sort().map(key => [key, value[key]]));
 
@@ -88,41 +89,40 @@ export function FieldIdentity({ api, user, context, fields, pending, readAt, dra
       await api.request('/api/field-identities/' + encodeURIComponent(draft.fieldId) + (maintain ? '' : '/confirm'), { method: maintain ? 'PUT' : 'POST', body });
       if (!alive.current) return;
       setDraft(null); setState({ busy: true }); setRevision(value => value + 1);
-      setFeedback({ success: maintain ? '黄金源信息已保存为待核实，请由有权限的部门审核人员确认。' : '已完成原字段身份的部门确认。此状态不代表新模板主数据或权威来源认定。' });
+      setFeedback({ success: maintain ? '字段来源信息已保存为待核实，请由有权办理的部门负责人确认。' : '已完成原字段身份的部门确认。此状态不代表新模板主数据或权威来源认定。' });
     } catch (error) {
-      if (alive.current) setFeedback({ error: `${error.message}${sent ? ' 提交结果需要核对，输入仍保留，请勿直接重试写入。' : ''}` });
+      if (alive.current) setFeedback({ error: `${userMessage(error)}${sent ? ' 提交结果需要核对，输入仍保留，请勿直接重试写入。' : ''}` });
     } finally { lock.current = false; if (alive.current) setBusy(false); }
   }
   return <section className="card" aria-labelledby="field-identity-heading" data-field-identity-state={pending || state.busy ? 'loading' : state.error ? 'error' : ready ? 'ready' : 'empty'}>
-    <div className="section-heading"><h2 id="field-identity-heading">字段身份与黄金源</h2><button className="secondary" disabled={busy || !field || pending} onClick={() => { setState({ busy: true }); setRevision(value => value + 1); }}>刷新字段身份</button></div>
-    <p>选择当前上下文中的字段，核对原黄金源信息及确认记录。保存信息与部门确认分别办理；原确认状态不代表新模板对象或权威来源已经认定。</p>
-    <label className="identity-field">字段身份目标<select aria-label="字段身份目标" disabled={busy || pending} value={field ? fieldId : ''} onChange={event => choose(event.target.value)}>
-      <option value="">请选择字段</option>{(pending ? [] : fields || []).map(row => <option key={row.id} value={row.id}>{row.field_name_cn || row.field_name_en || '未命名字段'}（#{row.id}）</option>)}
+    <div className="section-heading"><h2 id="field-identity-heading">字段来源与确认记录</h2><button className="secondary" disabled={busy || !field || pending} onClick={() => { setState({ busy: true }); setRevision(value => value + 1); }}>刷新字段来源记录</button></div>
+    <p>选择当前上下文中的字段，核对原字段来源信息及确认记录。保存信息与部门确认分别办理；原确认状态不代表新模板对象或权威来源已经认定。</p>
+    <label className="identity-field">选择字段<select aria-label="选择字段" disabled={busy || pending} value={field ? fieldId : ''} onChange={event => choose(event.target.value)}>
+      <option value="">请选择字段</option>{(pending ? [] : fields || []).map(row => <option key={row.id} value={row.id}>{row.field_name_cn || row.field_name_en || '未命名字段'}</option>)}
     </select></label>
-    {pending ? <StatusPanel kind="loading" title="请等待上下文读取完成…" /> : !field ? <p role="status">请选择可见字段；指定字段不存在或不属于当前可见上下文时，不读取其身份。</p> : state.busy ? <StatusPanel kind="loading" title="正在读取字段身份…" /> : state.error ? <StatusPanel kind="error" title="字段身份暂不可用">{state.error.message} 请刷新重试；失败不表示没有身份记录。</StatusPanel> : identity && <div data-field-identity-detail>
-      <h3>{field.field_name_cn || field.field_name_en || '未命名字段'}（#{fieldId}）</h3>
-      {!identity.id ? <p>该字段尚无身份记录。具有本部门编制权限的人员可填写黄金源信息，不按当前人员或部门补造维护责任。</p> : <dl style={{ overflowWrap: 'anywhere', whiteSpace: 'pre-wrap' }}>
+    {pending ? <StatusPanel kind="loading" title="请等待上下文读取完成…" /> : !field ? <p role="status">请选择可见字段；指定字段不存在或不属于当前可见上下文时，不读取其身份。</p> : state.busy ? <StatusPanel kind="loading" title="正在读取字段身份…" /> : state.error ? <StatusPanel kind="error" title="字段身份暂不可用">{userMessage(state.error)} 请刷新重试；失败不表示没有身份记录。</StatusPanel> : identity && <div data-field-identity-detail>
+      <h3>{field.field_name_cn || field.field_name_en || '未命名字段'}</h3>
+      {!identity.id ? <p>该字段尚无身份记录。具有本部门编制权限的人员可填写字段来源信息，不按当前人员或部门补造维护责任。</p> : <dl style={{ overflowWrap: 'anywhere', whiteSpace: 'pre-wrap' }}>
         {[
-          ['身份记录编号', identity.id], ['权威系统名称', identity.authoritative_system_name || identity.authoritative_system], ['权威系统代码', identity.authoritative_system_code],
-          ['维护部门编号', identity.maintain_dept_id], ['负责人（person）编号', identity.owner_person_id], ['历史负责人（user）编号', identity.owner_user_id],
+          ['以哪个系统的记录为准', identity.authoritative_system_name || identity.authoritative_system], ['维护部门', identity.maintain_dept_name||'部门名称未记录'], ['负责人',identity.owner_person_name||'姓名未记录'],
           ['置信度', labels[identity.confidence_level] || identity.confidence_level], ['确认状态', identity.confirmed ? '已确认' : '未确认'], ['原记录状态', labels[identity.status] || identity.status],
-          ['原确认人员编号', identity.confirmed_by_person_id ?? identity.confirmed_by], ['原确认时间', identity.confirmed_at], ['备注', identity.note]
+          ['原确认人', identity.confirmed_by_name||'姓名未记录'], ['原确认时间', identity.confirmed_at], ['备注', identity.note]
         ].map(([name, value]) => <React.Fragment key={name}><dt>{name}</dt><dd>{show(value)}</dd></React.Fragment>)}
       </dl>}
-      <p className="muted">人员、部门编号按原记录展示，不按名称推断。未确认记录中的原确认人和时间可能来自上次确认，不表示本次已通过；旧系统未保存的审核历史无法补全。</p>
+      <p className="muted">人员和部门名称按明确记录展示；未记录的名称不作推断。未确认记录中的原确认人和时间可能来自上次确认，不表示本次已通过；旧系统未保存的审核历史无法补全。</p>
       <FieldIdentityHistory key={fieldId} api={api} fieldId={fieldId} />
-      {ownershipUnresolved && <p role="status">此记录有历史 user 编号但缺少 person 编号。本页及保存接口暂停维护，须先明确人员映射及兼容处理。原记录仍可查阅，不推测人员编号。</p>}
+      {ownershipUnresolved && <p role="status">此记录的历史负责人尚未对应到当前员工，本页暂不能维护。请联系行政人事和维护人员核对；原记录仍保留供查阅。</p>}
       {!draft && <div className="actions">
-        {canMaintain && !ownershipUnresolved && <button onClick={() => start('maintain')}>维护黄金源信息</button>}
+        {canMaintain && !ownershipUnresolved && <button onClick={() => start('maintain')}>维护字段来源信息</button>}
         {canConfirm && identity.id && !identity.confirmed && <button onClick={() => start('confirm')}>办理部门确认</button>}
         {!canMaintain && !canConfirm && <p>当前身份仅可查阅本记录。</p>}
       </div>}
     </div>}
     {draft && <form onSubmit={submit} data-field-identity-form>
-      <h3>{draft.action === 'maintain' ? '维护黄金源信息' : '核对并确认黄金源'}：{draft.fieldName}（#{draft.fieldId}）</h3>
+      <h3>{draft.action === 'maintain' ? '维护字段来源信息' : '核对并确认字段来源'}：{draft.fieldName}</h3>
       {!sameTarget && <p role="status">输入仍绑定上下文 #{draft.contextId}，请切回原上下文后办理，或明确放弃输入。</p>}
       <fieldset disabled={busy || !sameTarget || !ready} style={{ border: 0, padding: 0, minWidth: 0 }}>
-        {[['authoritative_system', '权威系统名称', 255], ['authoritative_system_code', '权威系统代码', 100], ['note', '黄金源备注', 10000]].filter(([name]) => draft.action === 'maintain' || name !== 'note').map(([name, label, maxLength], index) => <label className="identity-field" key={name}>{label}<input ref={index === 0 ? firstInput : undefined} aria-label={label} required={name === 'authoritative_system'} maxLength={maxLength} readOnly={draft.action === 'confirm'} value={draft.values[name]} onChange={event => setDraft({ ...draft, values: { ...draft.values, [name]: event.target.value } })} /></label>)}
+        {[['authoritative_system', '以哪个系统的记录为准', 255], ['note', '字段来源备注', 10000]].filter(([name]) => draft.action === 'maintain' || name !== 'note').map(([name, label, maxLength], index) => <label className="identity-field" key={name}>{label}<input ref={index === 0 ? firstInput : undefined} aria-label={label} required={name === 'authoritative_system'} maxLength={maxLength} readOnly={draft.action === 'confirm'} value={draft.values[name]} onChange={event => setDraft({ ...draft, values: { ...draft.values, [name]: event.target.value } })} /></label>)}
         {draft.action === 'maintain' && <label className="identity-field">置信度<select aria-label="置信度" required value={draft.values.confidence_level} onChange={event => setDraft({ ...draft, values: { ...draft.values, confidence_level: event.target.value } })}><option value="">请选择，不代填事实</option>{!['', 'high', 'medium', 'low'].includes(draft.values.confidence_level) && <option value={draft.values.confidence_level}>{draft.values.confidence_level}（原值）</option>}{['high', 'medium', 'low'].map(value => <option key={value} value={value}>{labels[value]}</option>)}</select></label>}
         {draft.action === 'maintain' && <>
           <p>维护部门仅限字段所属部门，负责人仅限该部门有效人员。未明确责任时可留空，不自动指定。原值不在当前名单中时保留展示，须明确修改才变更。</p>
@@ -130,23 +130,23 @@ export function FieldIdentity({ api, user, context, fields, pending, readAt, dra
           {responsibility.error && <p role="alert">责任名单读取失败，输入已保留。<button type="button" onClick={() => setOptionsRevision(value => value + 1)}>重试责任名单</button></p>}
           <label className="identity-field">维护部门<select aria-label="维护部门" disabled={!responsibility.data} value={draft.values.maintain_dept_id} onChange={event => setDraft({ ...draft, values: { ...draft.values, maintain_dept_id: event.target.value, owner_person_id: event.target.value ? draft.values.owner_person_id : '' } })}>
             <option value="">未指定</option>
-            {draft.values.maintain_dept_id && String(responsibility.data?.department?.id) !== draft.values.maintain_dept_id && <option value={draft.values.maintain_dept_id} disabled>原部门 #{draft.values.maintain_dept_id}（当前不可选）</option>}
-            {responsibility.data?.department && <option value={String(responsibility.data.department.id)}>{responsibility.data.department.name}（#{responsibility.data.department.id}）</option>}
+            {draft.values.maintain_dept_id && String(responsibility.data?.department?.id) !== draft.values.maintain_dept_id && <option value={draft.values.maintain_dept_id} disabled>原部门名称未记录（当前不可选）</option>}
+            {responsibility.data?.department && <option value={String(responsibility.data.department.id)}>{responsibility.data.department.name}</option>}
           </select></label>
           <label className="identity-field">维护负责人<select aria-label="维护负责人" disabled={!responsibility.data || !draft.values.maintain_dept_id} value={draft.values.owner_person_id} onChange={event => setDraft({ ...draft, values: { ...draft.values, owner_person_id: event.target.value } })}>
             <option value="">未指定</option>
-            {draft.values.owner_person_id && !responsibility.data?.people?.some(row => String(row.person_id) === draft.values.owner_person_id) && <option value={draft.values.owner_person_id} disabled>原人员 #{draft.values.owner_person_id}（当前不可选）</option>}
-            {(responsibility.data?.people || []).map(row => <option key={row.person_id} value={String(row.person_id)}>{row.person_name}（#{row.person_id}）</option>)}
+            {draft.values.owner_person_id && !responsibility.data?.people?.some(row => String(row.person_id) === draft.values.owner_person_id) && <option value={draft.values.owner_person_id} disabled>原人员姓名未记录（当前不可选）</option>}
+            {(responsibility.data?.people || []).map(row => <option key={row.person_id} value={String(row.person_id)}>{row.person_name}</option>)}
           </select></label>
           {draft.base.owner_user_id && <p>历史用户编号只读。此记录暂不支持清空人员关联；更换人员会保留历史用户编号，不将两者视为同一身份。</p>}
         </>}
         <p className="input-notice">输入仅保留在当前页面。{draft.action === 'maintain' ? '保存后置为待核实、未确认，同时记录本次维护；未修改的旧责任引用保留。' : '确认使用上方已保存的系统名称和代码，不修改维护内容。'}</p>
         {(draft.uncertain || draft.stale) && <p role="alert">{draft.uncertain ? '上次提交结果需要核对。' : '原记录已变化。'} 请刷新身份记录，与保留的输入逐项核对，再放弃本次输入并重新办理。不会自动重放请求。</p>}
-        <button type="submit" disabled={draft.uncertain || draft.stale || (draft.action === 'maintain' && !responsibility.data) || !(draft.action === 'maintain' ? canMaintain : canConfirm)}>{busy ? '正在提交…' : draft.action === 'maintain' ? '保存黄金源信息（待核实）' : '确认已保存的黄金源'}</button>
+        <button type="submit" disabled={draft.uncertain || draft.stale || (draft.action === 'maintain' && !responsibility.data) || !(draft.action === 'maintain' ? canMaintain : canConfirm)}>{busy ? '正在提交…' : draft.action === 'maintain' ? '保存字段来源信息（待核实）' : '确认已保存的字段来源'}</button>
       </fieldset>
       <button type="button" className="secondary" disabled={busy} onClick={cancel}>放弃本次字段身份输入</button>
     </form>}
-    {feedback.error && <p role="alert" data-field-identity-error>{feedback.error}</p>}
+    {feedback.error && <p role="alert" data-field-identity-error>{userMessage(feedback.error)}</p>}
     {feedback.success && <p role="status" data-field-identity-success>{feedback.success}</p>}
   </section>;
 }
@@ -167,11 +167,14 @@ function FieldIdentityHistory({ api, fieldId }) {
   }, [api, fieldId, query]);
   const value = (text, name) => {
     let parsed; try { parsed = JSON.parse(text); } catch { parsed = text; }
+    // Current directory names cannot establish a historical person's identity.
+    if (/department|dept/.test(name)&&/_id$/.test(name))return parsed==null?'未指定':'历史部门名称未记录';
+    if(/person|confirmed_by/.test(name)&&/(?:_id|_by)$/.test(name))return parsed==null?'未指定':'历史姓名未记录';
     if (name === 'confirmed' && parsed !== null) return parsed ? '已确认' : '未确认';
-    if (['status', 'confidence_level'].includes(name)) return labels[parsed] || ({ rejected: '已拒绝', archived: '已归档' })[parsed] || show(parsed);
+    if (['status', 'confidence_level'].includes(name)) return labels[parsed] || ({ rejected: '已拒绝', archived: '已归档' })[parsed] || businessStatus(parsed);
     return show(parsed);
   };
-  const names = { id: '身份记录编号', field_id: '字段编号', authoritative_system_name: '权威系统', authoritative_system_code: '系统代码', maintain_dept_id: '维护部门编号', owner_user_id: '历史用户编号', owner_person_id: '负责人员编号', confidence_level: '置信度', confirmed: '确认标志', confirmed_by: '原确认人员编号', confirmed_by_person_id: '确认人员编号', confirmed_at: '确认时间', note: '备注', status: '状态' };
+  const names = { id: '身份记录编号', field_id: '字段编号', authoritative_system_name: '权威系统', authoritative_system_code: '系统代码', maintain_dept_id: '维护部门', owner_user_id: '历史用户编号', owner_person_id: '维护负责人', confidence_level: '置信度', confirmed: '确认标志', confirmed_by: '原确认人员', confirmed_by_person_id: '确认人员', confirmed_at: '确认时间', note: '备注', status: '状态' };
   return <section aria-label="字段身份维护与确认记录">
     <button type="button" className="secondary" disabled={state.busy} onClick={() => load('')}>查阅维护与确认记录</button>
     {query && <>
@@ -180,8 +183,8 @@ function FieldIdentityHistory({ api, fieldId }) {
       {state.error && <p role="alert">记录读取失败，请重试；失败不表示没有记录。</p>}
       {state.data && <div data-field-identity-history={state.cursor}>
         {!state.data.items.length && <p>没有可展示的已记录操作，不表示从未审核。</p>}
-        {state.data.items.map(item => <details key={item.id}><summary>{item.description} · 人员 #{item.operated_by_person_id} · {item.operated_at} · 记录 #{item.id}</summary>
-          <dl style={{ overflowWrap: 'anywhere', whiteSpace: 'pre-wrap' }}>{item.changes.map(change => <React.Fragment key={change.field_name}><dt>{names[change.field_name] || change.field_name}</dt><dd>{value(change.old_value, change.field_name)} → {value(change.new_value, change.field_name)}</dd></React.Fragment>)}</dl>
+        {state.data.items.map(item => <details key={item.id}><summary>{item.description} · {item.operated_by_person_name||'办理人姓名未记录'} · {item.operated_at}</summary>
+          <dl style={{ overflowWrap: 'anywhere', whiteSpace: 'pre-wrap' }}>{item.changes.filter(change=>!['id','field_id','authoritative_system_code','owner_user_id'].includes(change.field_name)).map(change => <React.Fragment key={change.field_name}><dt>{names[change.field_name] || '字段内容'}</dt><dd>{value(change.old_value, change.field_name)} → {value(change.new_value, change.field_name)}</dd></React.Fragment>)}</dl>
         </details>)}
         {state.data.next_cursor && <button type="button" onClick={() => load(state.data.next_cursor)}>查看更早记录</button>}
       </div>}

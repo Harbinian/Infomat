@@ -10,7 +10,7 @@ const router = express.Router();
 // terminal boundary allowance. files/fields still enforce exactly one of each.
 const upload = multer({storage:multer.memoryStorage(),limits:{fileSize:LIMITS.bytes,files:1,fields:1,fieldSize:256*1024,parts:3}}).single('file');
 const run = action => (req,res) => Promise.resolve().then(()=>action(req,res)).catch(error => {
-  const known = /^(TEMPLATE_|DEFINITION_)/.test(error.code || '');
+  const known = /^(TEMPLATE_|DEFINITION_|HANDOFF_)/.test(error.code || '');
   const status = known ? error.statusCode || 400 : error.code?.startsWith('LIMIT_') ? 413 : 503;
   res.status(status).json({error:known && error.code.startsWith('TEMPLATE_') && error.message!==error.code ? error.message : status===503?'导入依赖暂不可用，请稍后重试。':'导入未完成，请核对文件、权限或修订号。',
     code:known?error.code:status===413?'TEMPLATE_LIMIT_EXCEEDED':'DEFINITION_SCHEMA_UNAVAILABLE',...(error.field_errors?{field_errors:error.field_errors}:{})});
@@ -18,7 +18,7 @@ const run = action => (req,res) => Promise.resolve().then(()=>action(req,res)).c
 router.use(requireAuth,(req,res,next)=>{res.set('Cache-Control','no-store');next();});
 const repository = async () => (await dataMapRepository()).definitions();
 router.get('/source/:id',run(async(req,res)=>res.json(await (await repository()).getSource(req.session,req.params.id))));
-router.get('/definition/:type/:id',run(async(req,res)=>res.json(await (await repository()).getCurrent(req.session,req.params.type,req.params.id))));
+router.get('/definition/:type/:id',run(async(req,res)=>res.json(await (await repository()).getCurrent(req.session,req.params.type,req.params.id,req.query))));
 router.get('/version/:id',run(async(req,res)=>res.json(await (await repository()).getVersion(req.session,req.params.id))));
 router.get('/capabilities',run(async(req,res)=>res.json(await (await repository()).templateImportActor(req.session))));
 for (const action of ['preview','confirm']) router.post('/'+action,requirePermission('governance:draft-department'),run(async(req,res)=>{
@@ -35,7 +35,7 @@ for (const action of ['preview','confirm']) router.post('/'+action,requirePermis
   if (action==='confirm') return res.json(await repo.importTemplate(req.session,{...options,original_name:originalName},bytes));
   const prepared=await prepareImport(bytes,originalName,options.links||[],who);
   for (const link of prepared.links) {
-    const current=await repo.getCurrent(req.session,link.record_type,link.entity_id);
+    const current=await repo.getCurrent(req.session,link.record_type,link.entity_id,{view:'current'});
     if (String(current.base_snapshot.row.owner_dept_id||'')!==who.departmentId && link.record_type==='object' || current.revision_no!==link.expected_revision) throw failure('DEFINITION_REVISION_CONFLICT',409);
   }
   res.json(prepared);

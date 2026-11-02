@@ -28,15 +28,17 @@ function selectColumns(table) {
 }
 async function rows(db, table, where, params, lock = false) {
   const casts = selectColumns(table);
-  const [result] = await db.execute(`SELECT *${casts ? ', '+casts : ''} FROM ${table} WHERE ${where}${lock ? ' FOR UPDATE' : ''}`, params);
+  const [result] = await db.execute(`SELECT *${casts ? ', '+casts : ''} FROM ${table} WHERE ${where}${lock === 'share' ? ' FOR SHARE' : lock ? ' FOR UPDATE' : ''}`, params);
   return result;
 }
 async function snapshot(db, type, entityId, lock = false) {
   const row = (await rows(db, entityTable(type), 'id=?', [id(entityId)], lock))[0];
   if (!row) throw failure('DEFINITION_ENTITY_NOT_FOUND', 404);
   if (type === 'object') return { row };
-  const identities = await rows(db, 'data_map_field_identities', 'field_id=? ORDER BY id', [entityId], lock);
-  const links = await rows(db, 'data_map_field_system_links', 'field_id=? ORDER BY id', [entityId], lock);
+  // Snapshotting never edits identity/link facts. The parent field remains
+  // locked by the caller; shared locks preserve these source rows until commit.
+  const identities = await rows(db, 'data_map_field_identities', 'field_id=? ORDER BY id', [entityId], lock ? 'share' : false);
+  const links = await rows(db, 'data_map_field_system_links', 'field_id=? ORDER BY id', [entityId], lock ? 'share' : false);
   return { row, identities, links };
 }
 async function lastId(db) { return (await db.execute('SELECT CAST(LAST_INSERT_ID() AS CHAR) AS id'))[0][0].id; }
@@ -51,6 +53,7 @@ function legacyDefinition(type, source) {
   };
 }
 async function insertVersion(db, { type, entityId, revision, parent = null, previous = null, definition, source, sourceKind, actor = null }) {
+  await require('./dataMapHandoffControl').assertLegacyWriteAllowed(db,{entryId:'W08:insertVersion'});
   await db.execute(`INSERT INTO data_map_definition_versions
     (entity_type,entity_id,version_no,object_version_id,supersedes_version_id,schema_version,definition_json,base_snapshot_json,content_digest,base_digest,digest_algorithm,source_kind,created_by_person_id,created_at)
     VALUES (?,?,?,?,?,'data-map-definition-v1',?,?,?,?,'sha256-canonical-json-v1',?,?,UTC_TIMESTAMP(3))`,

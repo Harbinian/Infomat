@@ -8,6 +8,7 @@ async function terminologyScope(req, options = {}) {
   return {
     canViewAll,
     userId: req.session.userId,
+    personId: req.session.personId || req.session.userId,
     departmentId: req.session.departmentId || null,
     departmentName: department && department.name || req.session.departmentName || ''
   };

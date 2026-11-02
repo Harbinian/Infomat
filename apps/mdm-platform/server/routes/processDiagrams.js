@@ -7,6 +7,7 @@ const serviceRoot = path.resolve(__dirname, '../../../structured-output-service'
 const assets = {
   'cytoscape.min.js': require.resolve('cytoscape/dist/cytoscape.min.js', { paths: [serviceRoot] }),
   'process-diagram.js': path.join(serviceRoot, 'public/process-diagram.js'),
+  'process-data-availability.js': path.join(serviceRoot, 'public/process-data-availability.js'),
   'data-relation-diagram.js': path.join(serviceRoot, 'public/data-relation-diagram.js')
 };
 router.get('/assets/:name', requireAuth, (req, res) => {

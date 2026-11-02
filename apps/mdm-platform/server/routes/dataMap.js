@@ -7,7 +7,7 @@ const { dataMapRepository } = require('../dataMapMysqlRepository');
 
 function handleError(res, error) {
   if (error && error.statusCode) {
-    return res.status(error.statusCode).json({ error: error.message });
+    return res.status(error.statusCode).json({ error: error.message,code:error.code });
   }
   if (error && (error.code === 'ER_DUP_ENTRY' || String(error.message).includes('Duplicate entry'))) {
     return res.status(409).json({ error: '数据地图上下文已存在' });
@@ -44,12 +44,10 @@ async function canDraftOwnDepartmentContext(req, payload = {}) {
 
 router.get('/contexts', requireAuth, (req, res) => {
   return runAction(res, async () => {
-    const repo = await dataMapRepository();
-    const contexts = await repo.listContexts();
-    if (await canViewAllDataMap(req)) return res.json(contexts);
-    if (!await canViewOwnDepartmentDataMap(req)) return res.status(403).json({ error: '无权查看数据地图' });
-    const departmentId = Number(req.session.departmentId || 0);
-    res.json(contexts.filter(context => Number(context.dept_id || 0) === departmentId));
+    const global=await canViewAllDataMap(req),own=await canViewOwnDepartmentDataMap(req);
+    if(!global&&!own)return res.status(403).json({error:'无权查看数据地图'});
+    const repo=await dataMapRepository(),contexts=await repo.listContexts(req.query);
+    res.json(global?contexts:contexts.filter(context=>String(context.dept_id||'')===String(req.session.departmentId||'')));
   });
 });
 
@@ -67,15 +65,11 @@ router.post('/contexts', requireAuth, (req, res) => {
 
 router.get('/contexts/:id', requireAuth, (req, res) => {
   return runAction(res, async () => {
-    const repo = await dataMapRepository();
-    const context = await repo.getContext(req.params.id);
-    if (!context) return res.status(404).json({ error: '数据地图上下文不存在' });
-    if (!await canViewAllDataMap(req)) {
-      const departmentId = Number(req.session.departmentId || 0);
-      const canView = await canViewOwnDepartmentDataMap(req) &&
-        Number(context.dept_id || 0) === departmentId;
-      if (!canView) return res.status(403).json({ error: '无权查看该数据地图上下文' });
-    }
+    const repo=await dataMapRepository(),scope=await repo.getContextScope(req.params.id);
+    if(!scope)return res.status(404).json({error:'数据地图上下文不存在'});
+    if(!await canViewAllDataMap(req)&&(!await canViewOwnDepartmentDataMap(req)||String(scope.dept_id)!==String(req.session.departmentId)))return res.status(403).json({error:'无权查看该数据地图上下文'});
+    const context=await repo.getContext(req.params.id,req.query);
+    if(!context)return res.status(404).json({error:'数据地图上下文不可用',code:'HANDOFF_REFERENCE_UNAVAILABLE'});
     res.json(context);
   });
 });
@@ -83,7 +77,7 @@ router.get('/contexts/:id', requireAuth, (req, res) => {
 router.put('/contexts/:id', requireAuth, (req, res) => {
   return runAction(res, async () => {
     const repo = await dataMapRepository();
-    const existing = await repo.getContext(req.params.id);
+    const existing = await repo.getContextScope(req.params.id);
     if (!existing) return res.status(404).json({ error: '数据地图上下文不存在' });
     if (!await canDraftOwnDepartmentContext(req, { dept_id: existing.dept_id })) {
       return res.status(403).json({ error: '只能维护本人部门的数据地图上下文' });

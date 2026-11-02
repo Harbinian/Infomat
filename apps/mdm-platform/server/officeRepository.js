@@ -37,6 +37,18 @@ async function readPublishedOfficeVersions(db) {
 
 async function currentActor(db,session,lock=false) {
   const subject=sessionSubject(session);
+  if(subject.kind==='system_admin') {
+    // Independent administrators have no employee identity. Recheck their
+    // current account and fixed read permissions without granting task actions.
+    if(lock||session.personId||!identityInteger(subject.accountId)||!identityInteger(subject.authVersion))throw denied('系统管理员只能查阅办公室资料，不能办理办公室任务。');
+    const system=require('./systemAdminIdentity'),principal=system.principal(subject.accountId);
+    if(subject.principal!==principal)throw denied('当前登录状态已变化，请重新登录处理。');
+    const user=await system.getSystemAdmin(db,principal);
+    if(!user||user.must_change_password||!sameIdentityInteger(user.authVersion,subject.authVersion))throw denied('当前登录状态已变化或需要修改密码，请重新登录处理。');
+    const {permSet}=await system.permissions(db,principal);
+    if(!permSet.has('governance:read-global')&&!permSet.has('identity:read'))throw denied('无权查看办公室资料。');
+    return {personId:null,admin:true,canReadAll:true,canRoute:false};
+  }
   if(subject.kind!=='person'||!identityInteger(subject.personId)||!identityInteger(subject.accountId)||!identityInteger(subject.authVersion))throw denied('当前登录状态已变化或需要修改密码，请重新登录处理。');
   if(lock) {
     await db.execute('SELECT account_id FROM user_accounts WHERE account_id=? FOR UPDATE',[identityParam(subject.accountId)]);
@@ -90,7 +102,7 @@ function makeOfficeRepository(pool) {
     }
     const versionId=positiveId(payload.process_version_id,'正式流程版本');
     const [rows]=await db.execute("SELECT process_content_json,schema_version,content_hash FROM process_design_versions WHERE id=? AND status='published'",[identityParam(versionId)]);
-    if(!rows.length||!require('./processNativeFormats').supports(rows[0].schema_version))throw failure('请选择已发布的原生V8或受支持V7流程版本');
+    if(!rows.length||!require('./processNativeFormats').supports(rows[0].schema_version))throw failure('请选择已发布的当前原生或受支持历史流程版本');
     const document=typeof rows[0].process_content_json==='string'?JSON.parse(rows[0].process_content_json):rows[0].process_content_json;
     const expected=require('./processPreviewReview').contentHash(document);
     if(document?.schema_version!==rows[0].schema_version||expected!==rows[0].content_hash)throw failure('正式流程内容校验失败，不能分派任务');

@@ -128,8 +128,8 @@ function scopeClause(alias, scope = {}) {
 }
 
 const MAPPING_SELECT = `
-  SELECT m.*,
-         m.process_mapping_record_id AS process_id,
+  SELECT m.*,CAST(m.id AS CHAR) id,CAST(m.process_mapping_record_id AS CHAR) process_mapping_record_id,CAST(m.owner_dept_id AS CHAR) owner_dept_id,CAST(m.approval_dept_id AS CHAR) approval_dept_id,CAST(m.submitted_by AS CHAR) submitted_by,CAST(m.submitted_by_person_id AS CHAR) submitted_by_person_id,
+         CAST(m.process_mapping_record_id AS CHAR) AS process_id,
          r.l3_name AS process_name,
          '流程治理读模型' AS cap_name,
          d.name AS owner_dept_name,
@@ -145,15 +145,18 @@ const MAPPING_SELECT = `
 
 function publicMapping(row) {
   if (!row) return null;
+  const identity=require('./sessionSubject').identityInteger;
   return {
     ...row,
-    id: Number(row.id),
-    process_id: Number(row.process_id || row.process_mapping_record_id || 0),
-    process_mapping_record_id: Number(row.process_mapping_record_id || row.process_id || 0),
-    owner_dept_id: row.owner_dept_id ? Number(row.owner_dept_id) : null,
-    approval_dept_id: row.approval_dept_id ? Number(row.approval_dept_id) : null,
-    submitted_by: row.submitted_by ? Number(row.submitted_by) : null,
-    submitted_by_person_id: row.submitted_by_person_id ? Number(row.submitted_by_person_id) : null,
+    id: identity(row.id),
+    process_id: identity(row.process_id || row.process_mapping_record_id),
+    process_mapping_record_id: identity(row.process_mapping_record_id || row.process_id),
+    owner_dept_id: identity(row.owner_dept_id),
+    approval_dept_id: identity(row.approval_dept_id),
+    submitted_by: identity(row.submitted_by),
+    submitted_by_person_id: identity(row.submitted_by_person_id),
+    ...require('./dataMapHandoffCompatibility').independentAsset('legacy_mapping',row.id),
+    display_context_status:'current_read_model_not_historical_snapshot',
     current_step: Number(row.current_step || 1)
   };
 }

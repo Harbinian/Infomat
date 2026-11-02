@@ -20,7 +20,7 @@
   },
   {
     "href": "/app/todos",
-    "title": "待办收到",
+    "title": "收到的待办",
     "serverPath": "/todos",
     "navigation": 1,
     "group": "myWork"
@@ -40,150 +40,164 @@
     "group": "myWork"
   },
   {
+    "href": "/app/process-authoring",
+    "title": "流程编制与草稿",
+    "serverPath": "/process-authoring",
+    "navigation": 4,
+    "group": "processGovernance"
+  },
+  {
     "href": "/app/process-preview",
     "title": "流程预览与核对",
     "serverPath": "/process-preview",
-    "navigation": 4,
+    "navigation": 5,
     "group": "processGovernance"
   },
   {
     "href": "/app/process-formal",
     "title": "流程正式流转",
     "serverPath": "/process-formal",
-    "navigation": 5,
+    "navigation": 6,
     "group": "processGovernance"
   },
   {
     "href": "/app/v7-mappings",
     "title": "固定来源映射",
     "serverPath": "/v7-mappings",
-    "navigation": 6,
+    "navigation": 7,
     "group": "processGovernance"
   },
   {
     "href": "/app/design-handoffs",
     "title": "设计交接",
     "serverPath": "/design-handoffs",
-    "navigation": 7,
+    "navigation": 8,
     "group": "processGovernance"
   },
   {
     "href": "/app/analysis",
     "title": "分析检查台",
     "serverPath": "/analysis",
-    "navigation": 8,
+    "navigation": 9,
     "group": "processGovernance"
   },
   {
     "href": "/app/data-governance",
     "title": "正式数据治理工作包",
     "serverPath": "/data-governance",
-    "navigation": 9,
+    "navigation": 10,
+    "group": "dataGovernance"
+  },
+  {
+    "href": "/app/data-map-handoffs",
+    "title": "数据地图承接工作区",
+    "serverPath": "/data-map-handoffs",
+    "navigation": 11,
     "group": "dataGovernance"
   },
   {
     "href": "/app/data-map",
     "title": "数据地图台账",
     "serverPath": "/data-map",
-    "navigation": 10,
+    "navigation": 12,
     "group": "outcomes"
   },
   {
     "href": "/app/publications",
     "title": "主数据发布",
     "serverPath": "/publications",
-    "navigation": 11,
+    "navigation": 13,
     "group": "outcomes"
   },
   {
     "href": "/app/organization",
     "title": "组织架构",
     "serverPath": "/organization",
-    "navigation": 12,
+    "navigation": 14,
     "group": "management"
   },
   {
     "href": "/app/roster",
     "title": "花名册",
     "serverPath": "/roster",
-    "navigation": 13,
+    "navigation": 15,
     "group": "management"
   },
   {
     "href": "/app/roles",
-    "title": "角色详细管理",
+    "title": "角色与权限查阅",
     "serverPath": "/roles",
-    "navigation": 14,
+    "navigation": 16,
     "group": "management"
   },
   {
     "href": "/app/role-guide",
     "title": "角色与责任",
     "serverPath": "/role-guide",
-    "navigation": 15,
+    "navigation": 17,
     "group": "management"
   },
   {
     "href": "/app/terms",
     "title": "术语词典",
     "serverPath": "/terms",
-    "navigation": 16,
+    "navigation": 18,
     "group": "management"
   },
   {
     "href": "/app/conflicts",
     "title": "冲突管理",
     "serverPath": "/conflicts",
-    "navigation": 17,
+    "navigation": 19,
     "group": "management"
   },
   {
     "href": "/app/quality",
     "title": "数据质量",
     "serverPath": "/quality",
-    "navigation": 18,
+    "navigation": 20,
     "group": "management"
   },
   {
     "href": "/app/accounts",
     "title": "账号与授权办理",
     "serverPath": "/accounts",
-    "navigation": 19,
+    "navigation": 21,
     "group": "management"
   },
   {
     "href": "/app/access-audit",
     "title": "访问审计",
     "serverPath": "/access-audit",
-    "navigation": 20,
+    "navigation": 22,
     "group": "management"
   },
   {
     "href": "/app/dashboard",
     "title": "统计看板",
     "serverPath": "/dashboard",
-    "navigation": 21,
+    "navigation": 23,
     "group": "management"
   },
   {
     "href": "/app/template-import",
     "title": "模板导入",
     "serverPath": "/template-import",
-    "navigation": 22,
+    "navigation": 24,
     "group": "management"
   },
   {
     "href": "/app/objects",
     "title": "对象与字段",
     "serverPath": "/objects",
-    "navigation": 23,
+    "navigation": 25,
     "group": "management"
   },
   {
     "href": "/app/fact-checks",
     "title": "事实核对",
     "serverPath": "/fact-checks",
-    "navigation": 24,
+    "navigation": 26,
     "group": "management"
   },
   {
@@ -271,20 +285,32 @@
   // Construction does no IO; fetch and timers can be injected for isolated tests.
   function createRequestClient({ fetchImpl = globalThis.fetch, onUnauthorized = () => {}, timeoutMs = 15000, origin = globalThis.location?.origin, setTimer = setTimeout, clearTimer = clearTimeout } = {}) {
     const session = createRequestSession();
+    const activeContexts = new Set();
     const loginPath = '/api/org/login';
+    function resetSession(delivering = null) {
+      session.reset();
+      // Rejecting a late body alone does not stop its rolling session cookie.
+      // End the old transports before a different login can own this client.
+      for (const state of activeContexts) {
+        // The response reporting expiry keeps its own 401 body. Writes waiting
+        // on that CSRF read have sent no business request and receive its error.
+        if (state !== delivering && !(delivering && state.waitingForCsrf)) state.controller.abort();
+      }
+    }
     function context(input, options) {
       const controller = new AbortController();
       const externalSignal = options.signal || (typeof input === 'object' ? input.signal : undefined);
       const signal = externalSignal ? AbortSignal.any([externalSignal, controller.signal]) : controller.signal;
       const timer = timeoutMs > 0 ? setTimer(() => controller.abort(), timeoutMs) : null;
-      return { path: apiPath(input, origin), generation: session.generation, controller, externalSignal, signal, timer, silentUnauthorized: !!options.silentUnauthorized };
+      const state = { path: apiPath(input, origin), generation: session.generation, controller, externalSignal, signal, timer, silentUnauthorized: !!options.silentUnauthorized };
+      activeContexts.add(state); return state;
     }
     function guard(state) {
       if (state.signal.aborted || state.generation !== session.generation) throw aborted();
     }
     function settleStatus(response, state) {
       if (response.status === 401 && state.path !== loginPath) {
-        session.reset();
+        resetSession(state);
         // This response may still deliver its own error body. Other responses
         // from the expired session are rejected by their earlier generation.
         state.generation = session.generation;
@@ -310,7 +336,7 @@
         if (!data || typeof data.csrfToken !== 'string' || !data.csrfToken) throw new RequestError(502, data, 'INVALID_RESPONSE');
         return data.csrfToken;
       } catch (error) { throw failure(error, state); }
-      finally { if (state.timer !== null) clearTimer(state.timer); }
+      finally { activeContexts.delete(state); if (state.timer !== null) clearTimer(state.timer); }
     }
     async function exchange(input, options, state) {
       guard(state);
@@ -323,7 +349,9 @@
         if (!multipart) { headers.set('Content-Type', 'application/json'); requestOptions.body = JSON.stringify(options.body); }
       }
       if (isApiWrite(state.path, method)) {
-        headers.set('X-CSRF-Token', await session.csrf(readCsrf, { signal: state.signal }));
+        state.waitingForCsrf = true;
+        try { headers.set('X-CSRF-Token', await session.csrf(readCsrf, { signal: state.signal })); }
+        finally { state.waitingForCsrf = false; }
         guard(state);
       }
       const names = { accept: 'Accept', 'content-type': 'Content-Type', 'x-csrf-token': 'X-CSRF-Token' };
@@ -351,7 +379,7 @@
         if (data === null && response.status !== 204 && responseType !== 'text-json') throw new RequestError(502, data, 'INVALID_RESPONSE');
         return data;
       } catch (error) { throw failure(error, state); }
-      finally { if (state.timer !== null) clearTimer(state.timer); }
+      finally { activeContexts.delete(state); if (state.timer !== null) clearTimer(state.timer); }
     }
     function guardedResponse(response, state) {
       const readers = new Set(['text', 'json', 'blob', 'arrayBuffer', 'formData', 'bytes']);
@@ -372,7 +400,7 @@
         settleStatus(response, state);
         return guardedResponse(response, state);
       } catch (error) { throw failure(error, state); }
-      finally { if (state.timer !== null) clearTimer(state.timer); }
+      finally { activeContexts.delete(state); if (state.timer !== null) clearTimer(state.timer); }
     }
     async function ensureCsrfToken({ signal } = {}) {
       const state = context('/api/csrf-token', { signal });
@@ -381,9 +409,9 @@
         const token = await session.csrf(readCsrf, { signal: state.signal });
         guard(state); return token;
       } catch (error) { throw failure(error, state); }
-      finally { if (state.timer !== null) clearTimer(state.timer); }
+      finally { activeContexts.delete(state); if (state.timer !== null) clearTimer(state.timer); }
     }
-    return Object.freeze({ request, fetch, ensureCsrfToken, resetSession: () => session.reset(), invalidateToken: () => session.invalidateToken(), get generation() { return session.generation; } });
+    return Object.freeze({ request, fetch, ensureCsrfToken, resetSession: () => resetSession(), invalidateToken: () => session.invalidateToken(), get generation() { return session.generation; } });
   }
   function errorReceipt(status,body){const data=body&&typeof body==='object'?body:{};return {status,code:data.code,fieldErrors:data.field_errors||{},importStatus:data.import_status,details:data.details,message:data.error||'HTTP '+status};}
   function isApiWrite(url,method){return typeof url==='string'&&url.startsWith('/api/')&&url!=='/api/org/login'&&!['GET','HEAD','OPTIONS'].includes(String(method||'GET').toUpperCase());}

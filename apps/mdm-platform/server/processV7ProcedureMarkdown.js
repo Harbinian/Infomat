@@ -1,5 +1,5 @@
 const { supports: supportsNativeProcess } = require('./processNativeFormats');
-// Read-only projection of an immutable native V8/V7 version. No draft lookup, inference,
+// Read-only projection of an immutable native V9/V8/V7 version. No draft lookup, inference,
 // persistence, or conversion to an older process schema.
 const labels = {
   action:'业务行为', decision:'条件判断', parallel_split:'并行分支', parallel_join:'并行汇合',
@@ -20,6 +20,9 @@ const labels = {
   auto_generated:'系统建议', confirmed:'已确认', needs_recheck:'需重新核对', rejected:'已拒绝',
   published:'已发布', superseded:'已被后续版本替代', unclassified:'未分类', needs_review:'待核对'
 };
+const recordLabels = { single_instance:'单个办理实例', record_collection:'独立记录集合',
+  new_instance:'新建独立实例', current_instance:'当前实例', prior_records:'此前记录', collection_metadata:'集合元数据',
+  required:'必须存在或产生', if_exists:'已有时办理', conditional:'有条件产生' };
 function escapeMarkdown(value) {
   return String(value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
     .replace(/[\\`*_{}\[\]()#+.!|~-]/g,'\\$&').replace(/\r\n?/g,'\n').replace(/\n/g,'  \n');
@@ -28,6 +31,7 @@ function processV7ProcedureMarkdown(version) {
   const document=version.document;
   if (!supportsNativeProcess(version.schema_version) || document?.schema_version!==version.schema_version) throw new Error('PROCEDURE_V7_REQUIRED');
   const list=value=>Array.isArray(value)?value:[];
+  const explicitRecords = document.schema_version === 'process-governance-v9';
   const names=new Map();
   const register=(items,key,name)=>list(items).forEach(item=>{if(item[key])names.set(item[key],item[name]||item[key]);});
   register(document.behaviors,'behavior_ref','behavior_name'); register(document.data_objects,'data_ref','data_name'); register(document.forms,'form_ref','form_name');
@@ -37,6 +41,7 @@ function processV7ProcedureMarkdown(version) {
     if(value instanceof Date)return escapeMarkdown(value.toISOString());
     if(Array.isArray(value))return value.length?value.map(v=>format(v,enumValue)).join('；'):'未记录';
     if(typeof value==='boolean')return value?'是':'否';
+    if(enumValue && explicitRecords && recordLabels[value])return recordLabels[value];
     if(enumValue && labels[value])return labels[value];
     if(names.has(value))return escapeMarkdown(names.get(value))+'（'+escapeMarkdown(value)+'）';
     return escapeMarkdown(value);
@@ -47,8 +52,10 @@ function processV7ProcedureMarkdown(version) {
   const fields=(object,definitions)=>{for(const [key,label,enumValue] of definitions)lines.push('- '+label+'：'+format(object?.[key],enumValue));lines.push('');};
   const section=(title,items,render)=>{heading(2,title);if(!list(items).length)lines.push('正式版本未记录。','');else list(items).forEach(render);};
   heading(1,title);
-  fields(version,[['document_no','文件编号'],['edition','版次'],['process_version_id','正式版本标识'],['version_no','正式版本号'],['status','版本状态',true],['published_at','发布时间'],['content_hash','来源内容摘要']]);
+  fields(version,[['document_no','文件编号'],['edition','历史版次记录（不证明企业签批）'],['process_version_id','平台流程版本标识'],['version_no','平台流程版本号'],['status','平台版本状态',true],['published_at','平台发布时间'],['content_hash','来源内容摘要']]);
+  lines.push('平台发布固定流程治理版本。企业制度的来源版次、拟议修订、批准和生效分别管理；本文件不能单独证明企业制度已经签批或生效。','');
   heading(2,'目的与范围');fields(document.process,[['purpose','目的'],['scope','范围'],['owning_department','归口部门'],['process_ref','流程标识'],['capability_domain','能力域'],['business_capability','业务能力'],['classification_status','分类状态',true]]);
+  if(explicitRecords)fields(document.process,[['entry_behavior_refs','声明的流程入口']]);
   section('术语',document.terms,(term,index)=>{heading(3,term.term_name||term.name||'术语 '+(index+1));fields(term,[['definition','定义']]);});
   section('业务行为',document.behaviors,(behavior,index)=>{
     heading(3,(index+1)+'. '+(behavior.behavior_name||'未命名业务行为'));
@@ -60,9 +67,12 @@ function processV7ProcedureMarkdown(version) {
   const stateFields=[['business_validity','业务有效性',true],['custody','保管状态',true],['identifiability_applicability','可识别性是否适用',true],['identifiability','可识别状态',true]];
   section('业务数据与生命周期',document.data_objects,(data,index)=>{
     heading(3,data.data_name||'业务数据 '+(index+1));fields(data,[['data_ref','数据标识'],['description','说明'],['information_type','信息类型',true]]);
+    if(explicitRecords)fields(data,[['record_model','记录模型',true],['collection_field_refs','集合元数据字段']]);
     for(const field of list(data.fields)){heading(4,field.field_name||'数据字段');fields(field,[['field_ref','字段标识'],['field_type','字段类型'],['definition','定义']]);}
-    for(const link of list(data.behavior_links))fields(link,[['behavior_ref','关联行为'],['operation','数据操作',true],['updated_field_refs','更新字段']]);
-    for(const source of list(data.source_relations))fields(source,[['source_department','来源部门'],['source_process_name','来源流程'],['source_behavior_name','来源行为'],['source_data_name','来源数据'],['availability_mode','可用时机',true],['available_from_behavior_ref','开始可用的行为']]);
+    for(const link of list(data.behavior_links))fields(link,[['behavior_ref','关联行为'],['operation','数据操作',true],['updated_field_refs','更新字段'],
+      ...(explicitRecords?[['record_scope','记录引用范围',true],['presence','存在或产生要求',true]]:[])]);
+    for(const source of list(data.source_relations))fields(source,[['source_department','来源部门'],['source_process_name','来源流程'],['source_behavior_name','来源行为'],['source_data_name','来源数据'],['availability_mode','可用时机',true],['available_from_behavior_ref','开始可用的行为'],
+      ...(explicitRecords?[['presence','来源存在要求',true]]:[])]);
     const lifecycle=data.lifecycle;
     if(lifecycle){
       heading(4,'生命周期');fields(lifecycle,[['applicability','是否适用',true],['decision_notes','说明']]);

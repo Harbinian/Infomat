@@ -21,7 +21,7 @@ const mappingSelect=`SELECT CAST(m.mapping_id AS CHAR) mapping_id,CAST(m.source_
 module.exports=function(helpers){
   const fixed=helpers.fixedSource || createFixedSource(helpers.fixedSourceDependencies);
   const {transaction,actor,scope,entityScope,version,request}=helpers;
-  const {tx,writable,refs,nodes,loadSource,unpack,bindings,target}=helpers.mappingContext || require('./fixedMappingContext').createFixedMappingContext({...helpers,fixedSource:fixed});
+  const {tx,writable,refs,nodes,loadSource,unpack,bindings,target,assertTargetReferenceable,assertSourceCurrent,targetReferenceStates}=helpers.mappingContext || require('./fixedMappingContext').createFixedMappingContext({...helpers,fixedSource:fixed});
   return {
     v7MappingCapabilities(session){return tx(async db=>{const who=await actor(db,session);scope(who,who.departmentId);return {person_id:who.personId,department_id:who.departmentId,can_write:writable(who)};});},
     listV7Sources(session,{after=null}={}){return tx(async db=>{
@@ -31,8 +31,9 @@ module.exports=function(helpers){
       // Department filtering must use the current source scope after actor locks.
       const [rows]=await db.execute(sourceSelect+(conditions.length?' WHERE '+conditions.join(' AND '):'')+' ORDER BY data_map_v7_sources.source_id LIMIT 101 FOR SHARE',args);
       // Reference scope is rechecked; moved references are not disclosed in lists.
-      const items=[];let unavailable=false;for(const row of rows.slice(0,100)){try{if(row.source_kind!=='uploaded_material')await fixed.readReference(db,row.source_kind,row,who,scope);}catch(e){if(e.code==='DEFINITION_ACCESS_DENIED')continue;if(['DEFINITION_V7_PREVIEW_DISABLED','DEFINITION_V7_FORMAL_DISABLED'].includes(e.code)){unavailable=true;continue;}if(!['DEFINITION_V7_SOURCE_CHANGED','DEFINITION_V7_NOT_PUBLISHED'].includes(e.code))throw e;}
-        items.push({source_id:row.source_id,source_kind:row.source_kind,source_ref:refs(row),original_name:row.original_name,validation_status:row.validation_status,content_digest:row.content_digest});}
+      const items=[];let unavailable=false;for(const row of rows.slice(0,100)){let source;try{source=await loadSource(db,who,row.source_id);}catch(e){if(e.code==='DEFINITION_ACCESS_DENIED')continue;throw e;}
+        if(source.current_source_status==='unavailable')unavailable=true;
+        items.push({source_id:row.source_id,source_kind:row.source_kind,source_ref:refs(row),original_name:row.original_name,validation_status:row.validation_status,content_digest:row.content_digest,view:'fixed_sources',current_source_status:source.current_source_status,current_source_issue:source.current_source_issue,new_reference_allowed:source.new_reference_allowed});}
       return {items,next:rows.length>100?rows[99].source_id:null,partial:unavailable};
     });},
     registerV7Source(session,payload,bytes=null){return tx(async db=>{
@@ -67,9 +68,10 @@ module.exports=function(helpers){
     getV7MappingHistory(session,sourceId,mappingId,{before=null}={}){return tx(async db=>{
       const who=await actor(db,session),source=await loadSource(db,who,sourceId);
       const [rows]=await db.execute(mappingSelect+' WHERE m.source_id=? AND m.mapping_id=?'+(before?' AND v.mapping_version_id<?':'')+' ORDER BY v.mapping_version_id DESC LIMIT 51',[id(sourceId),id(mappingId),...(before?[id(before)]:[])]);
-      const items=[];for(const row of rows.slice(0,50)){const m=unpack(row);await target(db,who,m.object_version_id,m.field_version_id);items.push({...m,schema_version:source.schema_version});}return {items,next:rows.length>50?String(rows[49].mapping_version_id):null};
+      const items=[];for(const row of rows.slice(0,50)){const m=unpack(row);await target(db,who,m.object_version_id,m.field_version_id);const states=await targetReferenceStates(db,m.object_version_id,m.field_version_id);items.push({...m,schema_version:source.schema_version,view:'history',governance_status:'mapping_evidence_only',current_source_status:source.current_source_status,current_source_issue:source.current_source_issue,target_reference_states:states,new_reference_allowed:source.new_reference_allowed&&states.every(state=>state.new_reference_allowed)});}return {items,next:rows.length>50?String(rows[49].mapping_version_id):null};
     });},
     saveV7Mapping(session,sourceId,payload){return tx(async db=>{
+      await require('./dataMapHandoffControl').assertGraphWriteEnabled(db);
       keys(payload,['request_id','expected_revision','source_digest','local_object_ref','local_field_ref','object_version_id','field_version_id','status','basis']);
       const who=await actor(db,session,'governance:structure-gate'),r=await loadSource(db,who,sourceId);
       if(r.validation_status!=='valid'||r.stale||r.content_digest!==payload.source_digest)throw failure('DEFINITION_V7_SOURCE_CHANGED',409);
@@ -78,7 +80,9 @@ module.exports=function(helpers){
       const objectRef=text(payload.local_object_ref),fieldRef=payload.local_field_ref===null?null:text(payload.local_field_ref);
       const o=r.document.data_objects.find(x=>x.data_ref===objectRef);if(!o||(fieldRef&&!o.fields.some(f=>f.field_ref===fieldRef)))throw failure('DEFINITION_V7_LOCAL_REF_INVALID');
       if((fieldRef===null)!==(payload.field_version_id===null))throw failure('DEFINITION_V7_LOCAL_REF_INVALID');
+      await assertSourceCurrent(db,r);
       const {o:object,f:field}=await target(db,who,payload.object_version_id,payload.field_version_id);
+      await assertTargetReferenceable(db,payload.object_version_id,payload.field_version_id);
       const basis=text(payload.basis,4096),localKey=digest([objectRef,fieldRef]);
       return request(db,who,'v7_mapping',{...payload,source_id:r.source_id},async()=>{
         if(!Number.isSafeInteger(payload.expected_revision)||payload.expected_revision<0)throw failure('DEFINITION_REVISION_REQUIRED');
@@ -95,7 +99,9 @@ module.exports=function(helpers){
           object_id:object.entity_id,object_version_id:object.version_id,field_id:field?.entity_id||null,field_version_id:field?.version_id||null,object_name:object.definition.name,field_name:field?.definition.name||null,
           parent_mapping_version_id:parent?.mapping_version_id||null,status:payload.status,basis,revision_no:revision};
         await db.execute(`INSERT INTO data_map_v7_mapping_versions(mapping_id,revision_no,object_version_id,field_version_id,parent_mapping_version_id,status,snapshot_json,snapshot_digest,actor_person_id,created_at) VALUES (?,?,?,?,?,?,?,?,?,UTC_TIMESTAMP(3))`,[mappingId,revision,snapshot.object_version_id,snapshot.field_version_id,snapshot.parent_mapping_version_id,snapshot.status,json(snapshot),digest(snapshot),who.personId]);
-        return {mapping_id:mappingId,mapping_version_id:await lastId(db),revision_no:revision,status:payload.status};
+        const mappingVersionId=await lastId(db);
+        await db.execute('UPDATE data_map_governance_control SET graph_revision=graph_revision+1 WHERE control_id=1');
+        return {mapping_id:mappingId,mapping_version_id:mappingVersionId,revision_no:revision,status:payload.status};
       });
     });}
   };

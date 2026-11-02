@@ -394,7 +394,14 @@ router.get('/roster', requireAuth, requireOrgPermission('identity:read'), (req, 
   if (!useMysqlIdentityReadModel()) return res.status(409).json({ code: 'MYSQL_IDENTITY_REQUIRED', error: '花名册需要MySQL人员目录' });
   return runAsyncAction(res, async () => {
     const repo = await identityRepository();
-    return res.json({ rows: await repo.listRoster(), source: 'person', publication: null });
+    const permissions = req.effectivePermissions || new Set();
+    const roles = permissions.has('directory:maintain') && requestPersonId(req)
+      ? await repo.getUserRoleCodes(requestPersonId(req)) : [];
+    const contacts = permissions.has('directory:maintain') && requestPersonId(req) &&
+      !roles.some(role => (role.code || role.role_code) === 'admin');
+    const roster = await repo.listRoster();
+    res.set('Cache-Control', 'no-store');
+    return res.json({ rows: contacts ? roster : roster.map(({mobile,email,...person}) => person), source: 'person', publication: null });
   }, '花名册暂时无法读取');
 });
 
@@ -883,6 +890,10 @@ router.post('/me/password', requireAuth, (req, res) => {
       if (!user) return res.status(404).json({ error: '用户不存在' });
       if (!verifyPassword(current_password, user.password_hash)) return res.status(403).json({ error: '当前密码不正确' });
 
+      if (verifyPassword(new_password, user.password_hash)) {
+        return res.status(400).json({ code: 'PASSWORD_REUSE_NOT_ALLOWED', error: '新密码不能与当前密码相同' });
+      }
+
       const strengthError = validatePasswordStrength(new_password, user);
       if (strengthError) return res.status(400).json({ error: strengthError });
 
@@ -899,6 +910,10 @@ router.post('/me/password', requireAuth, (req, res) => {
     const user = legacyDb().prepare('SELECT employee_no, password_hash FROM users WHERE id=?').get(req.session.userId);
     if (!user) return res.status(404).json({ error: '用户不存在' });
     if (!verifyPassword(current_password, user.password_hash)) return res.status(403).json({ error: '当前密码不正确' });
+
+    if (verifyPassword(new_password, user.password_hash)) {
+      return res.status(400).json({ code: 'PASSWORD_REUSE_NOT_ALLOWED', error: '新密码不能与当前密码相同' });
+    }
 
     const strengthError = validatePasswordStrength(new_password, user);
     if (strengthError) return res.status(400).json({ error: strengthError });

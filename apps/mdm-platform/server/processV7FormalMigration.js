@@ -1,6 +1,7 @@
 const crypto = require('node:crypto');
 const { compareCreateStatements } = require('./processV7M0Baseline');
 const { inspectProcessV7PreviewReview } = require('./processV7PreviewReviewMigration');
+const { SUPPORTED_SCHEMAS } = require('./processNativeFormats');
 
 const MIGRATION_KEY = '2026-08-25-process-v7-formal-foundation';
 const PROMOTION_TABLE = 'process_v7_promotions';
@@ -238,9 +239,9 @@ async function formalUsage(pool, inspection) {
     .filter(([key]) => inspection.columns[key].exists).map(([,name]) => `${name} IS NOT NULL`);
   const reviewCount = reviewFields.length ? `(SELECT COUNT(*) FROM process_design_review_tasks WHERE ${reviewFields.join(' OR ')})` : '0';
   const rows = await query(pool, `SELECT ${documentCount} AS document_count,
-    (SELECT COUNT(*) FROM process_design_drafts WHERE schema_version IN ('process-governance-v8','process-governance-v7')) AS draft_count,
-    (SELECT COUNT(*) FROM process_design_versions WHERE schema_version IN ('process-governance-v8','process-governance-v7')) AS version_count,
-    ${reviewCount} AS review_binding_count`);
+    (SELECT COUNT(*) FROM process_design_drafts WHERE schema_version IN (${SUPPORTED_SCHEMAS.map(() => '?').join(',')})) AS draft_count,
+    (SELECT COUNT(*) FROM process_design_versions WHERE schema_version IN (${SUPPORTED_SCHEMAS.map(() => '?').join(',')})) AS version_count,
+    ${reviewCount} AS review_binding_count`, [...SUPPORTED_SCHEMAS, ...SUPPORTED_SCHEMAS]);
   return {promotion_count:inspection.promotion_table.rows, ...Object.fromEntries(Object.entries(rows[0]).map(([key,value])=>[key,Number(value)]))};
 }
 

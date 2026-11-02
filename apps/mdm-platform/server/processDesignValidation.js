@@ -53,4 +53,26 @@ const {parseJsonObject,text,httpError,v7PromotionEvidenceMismatch,v7BlockingIssu
     return { document, preview, promotion, previewCase, revision, formalDocument };
   }
 
-module.exports={validateLockedDraft};
+// Recovery authenticates the original promoted source without requiring the latest preview
+// to match. It never approves the content or bypasses validation on the next submission.
+function validateLockedRecoveryDraft(draft, context, hash) {
+  const { promotion, previewCase, promotedRevision, document: formalDocument } = context || {};
+  const document = parseJsonObject(draft && draft.process_content_json);
+  const sourceDocument = parseJsonObject(promotedRevision && promotedRevision.content_json);
+  const processRef = text(document && document.process && document.process.process_ref);
+  if (!document || !sourceDocument || !processRef || !promotion || !previewCase || !promotedRevision || !formalDocument ||
+    hash(document) !== text(draft.content_hash) || hash(sourceDocument) !== text(draft.content_hash) ||
+    text(document.schema_version) !== text(draft.schema_version) || text(sourceDocument.schema_version) !== text(draft.schema_version) ||
+    Number(promotion.draft_id) !== Number(draft.id) || Number(promotion.document_id) !== Number(draft.document_id) ||
+    Number(formalDocument.id) !== Number(draft.document_id) || Number(formalDocument.owning_department_id) !== Number(draft.department_id) ||
+    Number(promotion.preview_case_id) !== Number(previewCase.id) || Number(promotedRevision.case_id) !== Number(previewCase.id) ||
+    Number(promotion.preview_revision_id) !== Number(promotedRevision.id) ||
+    Number(promotion.preview_revision_no) !== Number(draft.revision_no) || Number(promotedRevision.revision_no) !== Number(draft.revision_no) ||
+    text(promotion.content_hash) !== text(draft.content_hash) || text(promotedRevision.content_hash) !== text(draft.content_hash) ||
+    text(formalDocument.process_ref) !== processRef || text(previewCase.process_ref) !== processRef) {
+    throw v7PromotionEvidenceMismatch(draft, '原正式草稿、提升记录与原始修订依据不一致，不能撤回或退回');
+  }
+  return { document, promotion, promotedRevision };
+}
+
+module.exports={validateLockedDraft,validateLockedRecoveryDraft};

@@ -56,7 +56,8 @@
     }
 
     identity('package', document.export_meta, 'package_ref', '/export_meta');
-    node('process', document.process, 'process_ref', '/process', text(document.process && document.process.process_name) || '未命名流程');
+    const processTarget = node('process', document.process, 'process_ref', '/process', text(document.process && document.process.process_name) || '未命名流程');
+    array(document.process && document.process.entry_behavior_refs).forEach((ref, index) => reference('behavior', ref, `/process/entry_behavior_refs/${index}`, '流程入口', processTarget));
     array(document.terms).forEach((item, index) => node('term', item, 'term_ref', `/terms/${index}`, text(item && item.term_name) || '未命名术语'));
 
     array(document.behaviors).forEach((behavior, index) => {
@@ -80,6 +81,7 @@
       array(data && data.fields).forEach((field, index) => {
         node('data-field', field, 'field_ref', `${path}/fields/${index}`, `${dataLabel} / ${text(field && field.field_name) || '未命名对象字段'}`, dataRef, [dataRef], { dataRef });
       });
+      array(data && data.collection_field_refs).forEach((ref, index) => reference('data-field', ref, `${path}/collection_field_refs/${index}`, '集合索引与保管字段', target, { expectedOwnerRef: dataRef }));
       array(data && data.behavior_links).forEach((link, index) => {
         const linkPath = `${path}/behavior_links/${index}`;
         const operation = link && link.operation;

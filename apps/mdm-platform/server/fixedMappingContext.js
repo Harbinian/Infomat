@@ -31,13 +31,18 @@ function createFixedMappingContext({transaction,actor,scope,entityScope,version,
     if(r.digest_algorithm!==fixed.ALGORITHM||r.content_digest!==null&&fixed.contentHash(r.document)!==r.content_digest)throw failure('DEFINITION_V7_SOURCE_INTEGRITY_CONFLICT',409);
     r.schema_version=typeof r.document?.schema_version==='string'?r.document.schema_version:null;
     r.source_ref=refs(r);r.raw_digest_algorithm=r.raw_sha256?'sha256-raw-bytes':null;r.raw_digest_status=r.raw_sha256?'available':'unavailable';r.stale=false;
+    r.current_source_status='fixed_available';r.current_source_issue=null;
     let options={};
     if(r.source_kind!=='uploaded_material'){
       try{const live=await fixed.readReference(db,r.source_kind,r,who,scope);if(live.scope_department_id!==r.scope_department_id||live.content_digest!==r.content_digest)r.stale=true;options=live.options;}
-      catch(e){if(['DEFINITION_V7_SOURCE_CHANGED','DEFINITION_V7_NOT_PUBLISHED'].includes(e.code))r.stale=true;else throw e;}
+      catch(e){if(['DEFINITION_V7_SOURCE_CHANGED','DEFINITION_V7_NOT_PUBLISHED','DEFINITION_V7_PREVIEW_DISABLED','DEFINITION_V7_FORMAL_DISABLED','DEFINITION_V7_SOURCE_NOT_FOUND'].includes(e.code)||e.statusCode===503){r.stale=true;r.current_source_status='unavailable';r.current_source_issue=e.code;}else throw e;}
     }
     r.current_validation=r.validation_status==='valid'?await fixed.validation(db,r.document,options):r.validation;
-    r.can_confirm=writable(who)&&!r.stale&&r.validation_status==='valid'&&!r.current_validation.errors.length&&!r.current_validation.blocking_issues.length;
+    if(!r.stale&&r.source_kind==='published_version'){
+      try{await assertSourceCurrent(db,r);}catch(error){if(error.code!=='HANDOFF_SCOPE_STALE')throw error;r.current_source_status='superseded';r.current_source_issue=error.code;}
+    }
+    r.new_reference_allowed=!r.stale&&r.current_source_status!=='superseded'&&r.validation_status==='valid'&&!r.current_validation.errors.length&&!r.current_validation.blocking_issues.length;
+    r.can_confirm=writable(who)&&r.new_reference_allowed;
     return r;
   }
   function unpack(r){
@@ -52,11 +57,12 @@ function createFixedMappingContext({transaction,actor,scope,entityScope,version,
       const m=unpack(row);
       // A source read does not grant access to a ledger in another scope.
       try{await target(db,who,m.object_version_id,m.field_version_id);}catch(e){if(e.code==='DEFINITION_ACCESS_DENIED')continue;throw e;}
-      mappings.push(m);
+      const states=await targetReferenceStates(db,m.object_version_id,m.field_version_id);
+      mappings.push({...m,target_referenceable:states.every(state=>state.new_reference_allowed),target_reference_states:states});
     }
     return mappings.map(m=>{const parent=m.local_field_ref?mappings.find(o=>!o.local_field_ref&&o.local_object_ref===m.local_object_ref):null;
-      const needs_recheck=r.stale||!r.can_confirm&&Boolean(r.current_validation.errors.length||r.current_validation.blocking_issues.length)||Boolean(m.local_field_ref&&(!parent||parent.mapping_version_id!==m.parent_mapping_version_id||parent.status!=='confirmed'));
-      return {...m,schema_version:r.schema_version,needs_recheck,effective_confirmed:m.status==='confirmed'&&!needs_recheck};});
+      const needs_recheck=!m.target_referenceable||!r.new_reference_allowed||Boolean(m.local_field_ref&&(!parent||parent.mapping_version_id!==m.parent_mapping_version_id||parent.status!=='confirmed'));
+      return {...m,schema_version:r.schema_version,current_source_status:r.current_source_status,current_source_issue:r.current_source_issue,needs_recheck,effective_confirmed:m.status==='confirmed'&&!needs_recheck,governance_status:'mapping_evidence_only',new_reference_allowed:!needs_recheck};});
   }
   async function target(db,who,objectId,fieldId){
     const o=await version(db,id(objectId),true);if(o.entity_type!=='object')throw failure('DEFINITION_FIELD_OBJECT_MISMATCH',409);
@@ -65,6 +71,23 @@ function createFixedMappingContext({transaction,actor,scope,entityScope,version,
     if(f){scope(who,(await entityScope(db,'field',f.entity_id,true)).departmentId);if(f.entity_type!=='field'||f.object_version_id!==o.version_id||f.base_snapshot.row.object_id!==o.entity_id)throw failure('DEFINITION_FIELD_OBJECT_MISMATCH',409);}
     return {o,f};
   }
-  return Object.freeze({tx,writable,refs,nodes,loadSource,unpack,bindings,target,mappingSelect});
+  async function assertTargetReferenceable(db,objectId,fieldId){
+    const reader=require('./dataMapEffectiveReader');await reader.isVersionReferenceable(db,objectId);if(fieldId)await reader.isVersionReferenceable(db,fieldId);
+  }
+  async function targetReferenceStates(db,objectId,fieldId){
+    const result=[];
+    for(const versionId of [objectId,fieldId].filter(Boolean)){
+      const fixedVersion=await version(db,id(versionId),true);
+      const state=await require('./dataMapEffectiveReader').readDefinition(db,{entityType:fixedVersion.entity_type,entityId:fixedVersion.entity_id,view:'history',versionId:fixedVersion.version_id});
+      result.push({entity_type:fixedVersion.entity_type,entity_id:fixedVersion.entity_id,version_id:fixedVersion.version_id,content_digest:fixedVersion.content_digest,governance_status:state.governance_status,publication_id:state.publication_id||null,eligibility_status:state.eligibility_status,new_reference_allowed:state.new_reference_allowed,requires_attention:state.requires_attention,reference_issues:state.reference_issues||[]});
+    }
+    return result;
+  }
+  async function assertSourceCurrent(db,source){
+    if(source.source_kind!=='published_version')return;
+    const [[row]]=await db.execute('SELECT CAST(d.current_version_id AS CHAR) current_version_id,v.status FROM process_design_versions v JOIN process_design_documents d ON d.id=v.document_id WHERE v.id=? FOR SHARE',[source.process_version_id]);
+    if(!row||row.status!=='published'||row.current_version_id!==source.process_version_id)throw failure('HANDOFF_SCOPE_STALE',409);
+  }
+  return Object.freeze({tx,writable,refs,nodes,loadSource,unpack,bindings,target,mappingSelect,assertTargetReferenceable,assertSourceCurrent,targetReferenceStates});
 }
 module.exports = {createFixedMappingContext};

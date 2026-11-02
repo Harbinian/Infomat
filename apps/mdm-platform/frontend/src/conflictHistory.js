@@ -1,6 +1,6 @@
 // Read-only projection of the existing conflict detail; never infer missing events.
 export function conflictHistory(detail) {
-  const person = (name, id) => name || (id != null ? `人员编号 ${id}` : '人员未记录');
+  const person = (name, id) => name || '人员未记录';
   const result = value => ({ A: '支持 A 方', B: '支持 B 方', compromise: '折中方案' }[value] || value || '未记录');
   const events = [{ time: detail.created_at, action: '冲突记录建立', actor: '人员未记录', note: '建立时间来自当前冲突记录。' }];
   for (const row of detail.assignmentHistory || []) events.push({
