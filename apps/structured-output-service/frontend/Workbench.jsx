@@ -11,26 +11,31 @@ const PRIMARY=['process','behavior','data','form','term'];
 const PREVIEWS = [
   ['术语使用关系','已有术语定义和标识，尚无结构化使用关系。'],['企业目录','部门、岗位、人员和系统仍可能是名称或来源线索，尚无企业身份模型。'],['跨流程解析','保留来源线索，尚不能解析其他流程或自动匹配对象。'],['企业对象映射','尚无企业对象匹配、认定和提升能力。'],['正式核对发布','由3000在其受控范围内完成；本工作台只下载未审核文件。'],['表单执行','可编制表单与字段事实，尚不能执行或填报业务表单。'],['生命周期执行','可查看和维护已记录路径及事件，尚无执行引擎。'],
 ];
-const entityOf=(doc,target)=>resolve(doc,target)?.entity;
 const selectKey=t=>t?JSON.stringify([t.kind,t.parentRef||'',t.ref]):'';
 const targetOf=entry=>({kind:entry.kind,ref:entry.ref,parentRef:entry.parentRef||'',formRef:entry.formRef,areaRef:entry.areaRef,dataRef:entry.dataRef,routeRef:entry.routeRef});
 const parentLabel=(entries,ref)=>referenceName(entries,ref);
 const SUMMARY_KEYS={behavior:['behavior_name','node_type','behavior_description','current_actor_role','completion_standard'],process:['process_name','owning_department','purpose','scope'],data:['data_name','information_type','description','lifecycle.applicability'],form:['form_name','form_no','form_design_state'],'form-item':['item_name','required','instructions','data_field_ref','value_usage_mode','value_origin_mode']};
 
+function ReferenceList({ projection, references, target, entries, dispatch }) {
+  const all=[...references.outgoing,...references.incoming];
+  return <div className="reference-list">{all.map((entry,index)=>{
+      const outgoing=references.outgoing.includes(entry); const destination=outgoing?entry.elementTarget||entry.target:entry.sourceTarget;
+      const sourceRecord=(projection.nodes||[]).filter(node=>entry.path?.startsWith(`${node.path}/`)).sort((a,b)=>b.path.length-a.path.length)[0];
+      return <div key={`${entry.id}-${index}`}><span>{outgoing?'→':'←'} {entry.relationLabel}</span><Button type="link" size="small" disabled={!destination||entry.status!=='valid'} onClick={()=>dispatch({type:'select-reference',reference:entry,direction:outgoing?'outgoing':'incoming',target:destination})}>{destination?businessLabel(entries,destination):entry.status==='external'?'外部来源线索':'关联对象待核对'}</Button>
+        {sourceRecord&&selectKey(sourceRecord)!==selectKey(target)&&<small>子项来源：{KINDS[sourceRecord.kind]||'记录'} · {businessLabel(entries,sourceRecord)}</small>}{entry.status!=='valid'&&<Tag color={entry.status==='external'?'default':'error'}>{entry.status==='external'?'来源线索':'⚠ 关联内容待核对'}</Tag>}</div>;
+    })}</div>;
+}
+
 function ReferenceSummary({ document, target, dispatch }) {
   const projection=useMemo(()=>globalThis.ElementReferences?.buildCatalog(document),[document]);
+  const entries=useMemo(()=>catalog(document),[document]);
   const references=projection ? globalThis.ElementReferences.forTarget(projection,target,{includeDescendants:true}) : {outgoing:[],incoming:[]};
   const all=[...references.outgoing,...references.incoming];
   const anomaly=all.filter(x=>!['valid','external'].includes(x.status));
   return <section className="relation-summary"><div className="section-label">直接关系 <Tag>{references.outgoing.length} 项引用 · {references.incoming.length} 项被引用</Tag>{anomaly.length>0&&<Tag color="error">⚠ {anomaly.length} 项异常</Tag>}</div>
     <Button onClick={()=>dispatch({type:'relations',target})}>查看关系图</Button>
     {target.kind==='term'&&<p className="helper">术语已有定义，尚无结构化使用关系。</p>}
-    {!!all.length&&<Collapse ghost items={[{key:'references',label:'展开引用明细',children:<div className="reference-list">{all.map((entry,index)=>{
-      const outgoing=references.outgoing.includes(entry); const destination=outgoing?entry.elementTarget||entry.target:entry.sourceTarget;
-      const sourceRecord=(projection.nodes||[]).filter(node=>entry.path?.startsWith(`${node.path}/`)).sort((a,b)=>b.path.length-a.path.length)[0];
-      return <div key={`${entry.id}-${index}`}><span>{outgoing?'→':'←'} {entry.relationLabel}</span><Button type="link" size="small" disabled={!destination||entry.status!=='valid'} onClick={()=>dispatch({type:'select-reference',reference:entry,direction:outgoing?'outgoing':'incoming',target:destination})}>{destination?businessLabel(catalog(document),destination):entry.status==='external'?'外部来源线索':'关联对象待核对'}</Button>
-        {sourceRecord&&selectKey(sourceRecord)!==selectKey(target)&&<small>子项来源：{KINDS[sourceRecord.kind]||'记录'} · {businessLabel(catalog(document),sourceRecord)}</small>}{entry.status!=='valid'&&<Tag color={entry.status==='external'?'default':'error'}>{entry.status==='external'?'来源线索':'⚠ 关联内容待核对'}</Tag>}</div>;
-    })}</div>}]} />}
+    {!!all.length&&<Collapse ghost items={[{key:'references',label:'展开引用明细',children:<ReferenceList projection={projection} references={references} target={target} entries={entries} dispatch={dispatch}/>}]} />}
   </section>;
 }
 
@@ -107,8 +112,15 @@ export default function Workbench({controller,integration}) {
   const fileItems=[...(!integration?.serverPersistence?[{key:'new',label:'新建流程'}]:[]),{key:'import',label:integration?.serverPersistence?'上传JSON草稿':'导入 JSON 文件'},{type:'divider'},{key:'info',label:'来源与历史留存'},{key:'history',label:'撤销与重做'}];
   const openCheck=async()=>{const result=await dispatch({type:'check'});if(result?.ok&&!controller.getSnapshot().guard)setDrawer('check');};
   const listChanged=view=>dispatch({type:view==='grid'?'grid-start':'view',view});
-  const referenceFields=state.document?catalog(state.document).filter(x=>x.kind==='data-field'):[];
-  const actorClues=state.document?(state.document.flow_relations||[]).map(relation=>({relation,from:entityOf(state.document,{kind:'behavior',ref:relation.from_behavior_ref}),to:entityOf(state.document,{kind:'behavior',ref:relation.to_behavior_ref})})).filter(x=>x.from?.current_actor_role&&x.to?.current_actor_role&&x.from.current_actor_role!==x.to.current_actor_role):[];
+  const documentEntries=useMemo(()=>catalog(state.document),[state.document]);
+  const referenceFields=useMemo(()=>documentEntries.filter(x=>x.kind==='data-field'),[documentEntries]);
+  const reuseOpen=Boolean(reuse);
+  const referenceFieldOptions=useMemo(()=>reuseOpen?referenceFields.map(x=>({value:x.ref,label:businessLabel(documentEntries,x),disabled:x.ambiguous})):[],[reuseOpen,referenceFields,documentEntries]);
+  const actorClues=useMemo(()=>{
+    // Reuse the catalog's identity checks; rebuilding it for every relation endpoint stalls selection.
+    const behaviors=new Map(documentEntries.filter(x=>x.kind==='behavior'&&!x.ambiguous).map(x=>[x.ref,x.entity]));
+    return (state.document?.flow_relations||[]).map(relation=>({relation,from:behaviors.get(relation.from_behavior_ref),to:behaviors.get(relation.to_behavior_ref)})).filter(x=>x.from?.current_actor_role&&x.to?.current_actor_role&&x.from.current_actor_role!==x.to.current_actor_role);
+  },[state.document,documentEntries]);
   return <div className="workbench-shell">
     <header className="topbar"><div className="brand">流程编制<span>单流程草稿工作台</span></div><button disabled={reading} className="process-title" onClick={()=>state.document&&dispatch({type:'select',target:{kind:'process',ref:state.document.process.process_ref}})}>{state.document?.process?.process_name || '未命名流程'}</button><Tag className="document-status" color={state.pending?'warning':(integration?.dirty??state.dirty)?'processing':'success'}>{status}</Tag><div className="top-actions"><Dropdown disabled={reading} menu={{items:fileItems,onClick:({key})=>{if(key==='import')fileInput.current.click();else if(key==='new')dispatch({type:'new'});else setDrawer(key);}}}><Button>文件 ▾</Button></Dropdown><Button aria-label="检查" disabled={!state.document||reading} loading={state.busy} onClick={openCheck}>检查</Button><Button type="primary" disabled={!state.document||reading} onClick={async()=>{const result=await dispatch({type:'download'});if(result?.ok)setDrawer('download');}}>↓ 下载草稿</Button><Button onClick={()=>setDrawer('help')}>帮助与预览</Button></div></header>
     <input ref={fileInput} aria-label={integration?.serverPersistence?'上传JSON草稿':'导入文件'} className="hidden-file" type="file" accept=".json,application/json" onChange={async event=>{
@@ -139,6 +151,6 @@ export default function Workbench({controller,integration}) {
       {drawer==='help'&&<><Typography.Title level={4}>从流程图开始</Typography.Title><ol className="help-steps"><li>点击环节查看摘要；需要修改时进入“编辑本对象”。</li><li>逐项输入须显式应用；表格与旁边详情共用完整工作副本，一次应用全部修改。</li><li>沿引用查看关系；同名对象通过所属范围和业务说明区分。</li><li>{integration?.serverPersistence?'检查、保存、下载和提交分别操作。保存后由有权人员提交核对；下载用于文件留存和AI对话编辑。':'检查与下载相互独立。下载未审核草稿后，再交接核对。'}</li></ol><div className="motion-setting"><Switch checked={pageReduced||systemReduced} disabled={systemReduced} onChange={setPageReduced}/><span>减少动态效果{systemReduced?'（跟随系统）':''}</span></div><Typography.Title level={4}>按需了解预览能力</Typography.Title><div className="preview-list">{PREVIEWS.map(([name,originalDescription])=>{const description=integration?.serverPersistence&&name==='正式核对发布'?'保存并提交后，在3000的流程核对与正式流转页面按既有职责办理。':originalDescription;return <Button key={name} block onClick={()=>setPreview({name,description})}><span>{name}</span><Tag>预览</Tag></Button>;})}</div></>}
     </Drawer>
     <Modal getContainer={integration?.popupContainer} open={Boolean(preview)} title={`${preview?.name||''} · 预览`} onCancel={()=>setPreview(null)} footer={<Button onClick={()=>setPreview(null)}>了解</Button>}><p>{preview?.description}</p><p>此入口仅说明能力边界，不生成结果或业务状态。</p></Modal>
-    <Modal getContainer={integration?.popupContainer} open={Boolean(reuse)} title="引用已有对象字段" closable={false} maskClosable={false} keyboard={false} footer={<Space><Button onClick={()=>dispatch({type:'reuse-picker-cancel'})}>取消选择</Button><Button aria-label="建立所选引用" type="primary" disabled={!fieldRefs.length||fieldRefs.some(ref=>typeof requiredByFieldRef[ref]!=='boolean')} loading={state.busy} onClick={()=>dispatch({type:'reuse-picker-apply'})}>建立所选引用</Button></Space>}><p>字段定义来自数据对象；表单字段保留自身显示名称、必填性、填写说明及取值事实。</p><Select aria-label="引用对象字段" mode="multiple" value={fieldRefs} options={referenceFields.map(x=>({value:x.ref,label:businessLabel(catalog(state.document),x),disabled:x.ambiguous}))} onChange={values=>dispatch({type:'reuse-picker-update',fieldRefs:values,requiredByFieldRef:Object.fromEntries(values.filter(ref=>typeof requiredByFieldRef[ref]==='boolean').map(ref=>[ref,requiredByFieldRef[ref]]))})} style={{width:'100%'}}/><div className="reuse-required-list">{fieldRefs.map(ref=><div key={ref}><span>{businessLabel(catalog(state.document),{kind:'data-field',ref})}</span><Select aria-label={`必填性 ${businessLabel(catalog(state.document),{kind:'data-field',ref})}`} placeholder="请选择必填性" value={requiredByFieldRef[ref]} options={[{value:true,label:'必填'},{value:false,label:'非必填'}]} onChange={value=>dispatch({type:'reuse-picker-update',requiredByFieldRef:{...requiredByFieldRef,[ref]:value}})} style={{width:150}}/></div>)}</div></Modal>
+    <Modal getContainer={integration?.popupContainer} open={Boolean(reuse)} title="引用已有对象字段" closable={false} maskClosable={false} keyboard={false} footer={<Space><Button onClick={()=>dispatch({type:'reuse-picker-cancel'})}>取消选择</Button><Button aria-label="建立所选引用" type="primary" disabled={!fieldRefs.length||fieldRefs.some(ref=>typeof requiredByFieldRef[ref]!=='boolean')} loading={state.busy} onClick={()=>dispatch({type:'reuse-picker-apply'})}>建立所选引用</Button></Space>}><p>字段定义来自数据对象；表单字段保留自身显示名称、必填性、填写说明及取值事实。</p><Select aria-label="引用对象字段" mode="multiple" value={fieldRefs} options={referenceFieldOptions} onChange={values=>dispatch({type:'reuse-picker-update',fieldRefs:values,requiredByFieldRef:Object.fromEntries(values.filter(ref=>typeof requiredByFieldRef[ref]==='boolean').map(ref=>[ref,requiredByFieldRef[ref]]))})} style={{width:'100%'}}/><div className="reuse-required-list">{fieldRefs.map(ref=><div key={ref}><span>{businessLabel(catalog(state.document),{kind:'data-field',ref})}</span><Select aria-label={`必填性 ${businessLabel(catalog(state.document),{kind:'data-field',ref})}`} placeholder="请选择必填性" value={requiredByFieldRef[ref]} options={[{value:true,label:'必填'},{value:false,label:'非必填'}]} onChange={value=>dispatch({type:'reuse-picker-update',requiredByFieldRef:{...requiredByFieldRef,[ref]:value}})} style={{width:150}}/></div>)}</div></Modal>
   </div>;
 }

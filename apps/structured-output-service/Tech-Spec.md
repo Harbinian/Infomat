@@ -451,6 +451,7 @@ POST /api/validate
 React专项只接受默认健康及Schema实际为V9的隔离候选，来源覆盖V7、V8及V9。先在`artifacts/`内完整应用副本执行`build:workbench`，由该副本提供实际构建的`/workbench/`，不覆盖当前工作区的`public/workbench/`或触碰正式容器。公共运行入口从空白页安装只读网络、文件和持久化观察，再导航React入口；断言旧首页的DOM控制器没有加载，不向生产组件添加测试接口。
 
 ```powershell
+$candidateUrl = 'http://127.0.0.1:<本次独立端口>'
 & scripts/test-v7-performance-browser.ps1 -Surface workbench -BaseUrl $candidateUrl -SourceSchemaVersion process-governance-v9
 & scripts/test-import-normalization-browser.ps1 -Surface workbench -BaseUrl $candidateUrl -SourceSchemaVersion process-governance-v9
 & scripts/test-multi-candidate-atomic-browser.ps1 -Surface workbench -BaseUrl $candidateUrl -SourceSchemaVersion process-governance-v9
@@ -462,7 +463,7 @@ React专项只接受默认健康及Schema实际为V9的隔离候选，来源覆�
 - 导入核对工作台实际提供的“来源与历史留存”及归档数量、完整原生正文保留、早期V7受限规范化、HTML转义、实际下载、V9语义及重导幂等。不把旧页的逐字段差异面板说成React已有功能。
 - 原子拒绝覆盖合法多候选文件的显式选择和取消；无效整批须在校验来源及全部目标后拒绝，不能暴露部分候选。分别保留图属性未应用输入、选择和手工阅读位置，以及跨表未应用副本；随后用实际下载、撤销和重做核对正文与历史事务。错误条改变画布尺寸时核对缩放及世界坐标阅读中心，不把合法尺寸恢复误判为视口丢失。
 
-性能测量针对已加载工作台的文件与交互，不表示网络冷加载、正式容量、人工输入法或业务验收。具体通过结果及截图按本轮候选证据记录，不沿用其他构建的历史结论。
+性能从真实输入事件开始，至对应界面反馈及两帧绘制完成；另记自动化调用总时长，不把定位器开销混入交互门槛。选择上限300毫秒、图修改1秒、下载重导入3秒，其余各项2秒，并检查超过1秒的长任务及绘制间隔。测量针对已加载工作台的文件与交互，不表示网络冷加载、正式容量、人工输入法或业务验收。具体通过结果及截图按本轮候选证据记录，不沿用其他构建的历史结论。
 
 ### 保留首页专项
 
@@ -475,7 +476,7 @@ $candidateUrl = 'http://127.0.0.1:<本次独立端口>'
 & scripts/test-multi-candidate-atomic-browser.ps1 -BaseUrl $candidateUrl
 ```
 
-原子拒绝入口也保留不传`-BaseUrl`时随机分配回环端口、启动及清理自有候选进程的方式，显式3000/3001端口同样被拒绝。其他两个入口不管理服务。测试文件不随Git分发；新检出须先核对本机脚本和依赖，不恢复历史npm别名。V7/V8来源导入V9的通过结果不等于实际运行了历史V7/V8目标实例。
+原子拒绝入口在`-Surface legacy`下保留不传`-BaseUrl`时随机分配回环端口、启动及清理自有候选进程的方式；React专项必须显式提供已隔离构建的候选地址，显式3000/3001端口同样被拒绝。其他两个入口不管理服务。测试文件不随Git分发；新检出须先核对本机脚本和依赖，不恢复历史npm别名。V7/V8来源导入V9的通过结果不等于实际运行了历史V7/V8目标实例。
 
 本机清单中的应用专项覆盖治理流程、评分、服务接口、认知负担、默认四项任务和图编辑等测试。治理流程测试覆盖七步顺序、阶段映射、问题定位、步骤状态和SHA-256标准向量；四项任务测试覆盖默认启用、显式回退和严格开关值、四组映射、动作问题返回流程骨架、候选帮助文案和七步内部状态保留。固定构造器覆盖v1至v5、历史多候选、非法枚举、断裂引用、无法解析角色、未解决`join_mode`、历史工作角色、多创建行为、归并冲突、迁移幂等、失败恢复、当前V9往返和`/api/validate`纯校验。前端固定检查还验证唯一编辑入口所依赖的数据对象选择函数不会被图选择函数覆盖，并检查文件信息及规范化差异的准确展示、待补充项入口、操作帮助四部分和关键工具术语。
 
