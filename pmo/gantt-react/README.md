@@ -19,6 +19,8 @@ npm run preview
 
 ## 本机 Docker 部署（5173）
 
+当前已开启Infomat工作空间样式，镜像为`infomat-pmo:workspace-20261112130123`，仅叠加样式和8项Canvas界面色；既有业务代码、挂载和运行参数保留。当前镜像已在本机准备，启动时使用`up -d --no-build`。下方完整重建命令用于后续已核对的源码更新，须先通过`PMO_IMAGE_TAG`设置新的镜像标签，避免覆盖本次恢复基线。
+
 容器保留 Vite 服务及交付物插件，因此读取、上传、状态写回和行动项发布仍可使用。它是原有内部开发服务的容器化运行方式，不是带登录鉴权的生产发布服务。只在受信任的内网使用，不对公网开放。
 
 `src/` 与 `plugins/` 是**构建进镜像**的（见 `Dockerfile` 的 `COPY`），不随宿主机改动自动更新。修改前端或插件后必须重新执行 `build` 并重建容器，否则容器仍运行旧版本 —— 表现为页面上缺少新功能入口。只有 `pmo/deliverables/`、`pmo/weekly-issues/`、`artifacts/pmo/deliverables/`、`public/`、名册、流程地图和 ECharts 是挂载的。

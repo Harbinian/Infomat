@@ -83,6 +83,7 @@ function Activity({ api, refreshKey }) {
   return <section className="card" data-activity-ready={Boolean(state.data)}><h2>我的治理活动</h2>
     {state.busy ? <StatusPanel kind="loading" title="正在读取治理活动…" /> : state.error ? <><StatusPanel kind="error" title="治理活动暂不可用">{userMessage(state.error)}</StatusPanel><button className="secondary" onClick={() => setRetry(v => v + 1)}>重试读取治理活动</button></> : <>
       <p>近 90 天 {state.data?.summary?.totalActions ?? '待核对'} 次有效治理动作</p>
+      {state.data?.identityNotice&&<p className="muted">{businessText(state.data.identityNotice)}</p>}
       <div className="wb-activity-days">{(state.data?.dates || []).map(day => <button type="button" key={day.date} className={`wb-day wb-level-${day.count >= 6 ? 3 : day.count >= 3 ? 2 : day.count > 0 ? 1 : 0}`} aria-label={`${day.date}，${day.count} 次有效治理动作`} aria-pressed={selected?.date === day.date} title={`${day.date} · ${day.count} 次`} onClick={() => setSelected(day)} />)}</div>
       <p aria-live="polite">{selected ? `${selected.date}：${selected.count} 次有效治理动作；${Object.entries(selected.sources || {}).filter(([, count]) => count > 0).map(([key, count]) => `${selected.sourceLabels?.[key] || '其他业务操作'} ${count}`).join('；') || '无有效治理动作'}` : '点击日期查看当天动作摘要。'}</p>
     </>}
@@ -104,17 +105,18 @@ export function RoleWorkbench({ api, onNavigate }) {
   }, [api, mode, refreshKey]);
   // Never expose data from the previous mode while a replacement request starts.
   const data = state.mode === mode ? state.data : null, roles = (data?.roles || []).map(roleCompletionPresentation);
-  const count = Number.isSafeInteger(data?.summary?.actionableCount) ? data.summary.actionableCount : null;
+  const count = Number.isSafeInteger(data?.summary?.actionableCount) ? data.summary.actionableCount : null, partialConflicts=data?.legacyConflicts?.truncated===true;
   return <div className="role-workbench" data-ready={Boolean(data)}>
     <section className="card welcome"><h2>我现在该做什么</h2>
       <p>先处理当前待办，再按需要查看完整职责。流程材料由主对接人提交，部门负责人核对并最终确认；具体办理资格以对应页面的负责人记录及有效授权核验为准。</p>
-      <div className="wb-summary"><span>当前身份：{data ? roles.filter(role => role.owned).map(role => role.name).join(' / ') || '暂无有效工作角色' : '正在核对'}</span><span>当前部门：{data?.user?.departmentName || '待核对'}</span><strong data-workbench-count>我的待处理：{count === null ? '暂不可用' : `${count} 项`}</strong></div>
+      <div className="wb-summary"><span>当前身份：{data ? roles.filter(role => role.owned).map(role => role.name).join(' / ') || '暂无有效工作角色' : '正在核对'}</span><span>当前部门：{data?.user?.departmentName || '待核对'}</span><strong data-workbench-count>{partialConflicts?'已加载的待处理':'我的待处理'}：{count === null ? '暂不可用' : `${count} 项`}</strong></div>
       <p className="muted">这里合并本人当前有权办理的流程、治理、办公室和数据地图承接事项；角色说明不计入数量。“收到的待办”中的“本人当前办理事项”及统计看板使用同一口径，原部门待办另行列出，不与此数量相加。</p>
       <div className="import-actions wb-toolbar" aria-label="工作台视角"><button className="secondary" aria-pressed={mode === 'todo'} onClick={() => setMode('todo')}>待办优先</button><button className="secondary" aria-pressed={mode === 'all'} onClick={() => setMode('all')}>全量职责</button><button className="secondary" onClick={refresh}>刷新工作台</button></div>
       {state.busy || !data && !state.error ? <StatusPanel kind="loading" title="正在读取工作台…" /> : state.error ? <><StatusPanel kind="error" title="工作台待办暂不可用">{userMessage(state.error)} 当前不能据此判断没有待办。</StatusPanel><button className="secondary" onClick={refresh}>重试读取待办</button></> : <>
         {data.handoff?.availability?.state&&data.handoff.availability.state!=='available'&&<p role="status">数据地图承接：{{disabled:'尚未开启',read_only:'仅供只读查阅',not_prepared:'结构尚未准备'}[data.handoff.availability.state]||'当前不可办理'}。当前计数不代表全部承接已完成。</p>}
-        {count === 0 && <p>当前已读取的业务范围内没有待处理事项。以下为角色办理指引，不计入待办数量。</p>}
-        <div data-next-actions className="wb-actions">{(data.nextActions || []).slice(0, 3).map((action, index) => <article className="import-record" data-next-action key={index}><h3>{index + 1}. {businessText(action.title,'事项名称未记录')}</h3><p className="muted">来源角色：{sourceRoles(action, roles)}</p>{action.handlingGuide?<HandlingGuide value={action.handlingGuide}/>:action.sample&&<p>办理说明：{businessText(action.sample,'办理说明暂无法直接展示，请进入详情核对')}</p>}{roleGuidanceResult(action,roles,data.workItems)&&<p>完成后去哪查看：{roleGuidanceResult(action,roles,data.workItems)}</p>}<Entry target={action.target} onNavigate={onNavigate}>{action.actionLabel}</Entry></article>)}</div>
+        {partialConflicts&&<p role="status">冲突办理事项较多，本次只加载了部分记录。请进入<a href="/app/conflicts" onClick={onNavigate}>冲突管理</a>按范围查阅；当前数量和未显示的事项不能用于判断全部待办已完成。</p>}
+        {count === 0 && !partialConflicts && <p>当前已读取的业务范围内没有待处理事项。以下为角色办理指引，不计入待办数量。</p>}
+        <div data-next-actions className="wb-actions">{(data.nextActions || []).slice(0, 3).map((action, index) => <article className="import-record" data-next-action key={index}><h3>{index + 1}. {businessText(action.title,'事项名称未记录')}</h3><Entry target={action.target} onNavigate={onNavigate}>{action.actionLabel}</Entry><p className="muted">来源角色：{sourceRoles(action, roles)}</p>{action.handlingGuide?<HandlingGuide value={action.handlingGuide}/>:action.sample&&<p>办理说明：{businessText(action.sample,'办理说明暂无法直接展示，请进入详情核对')}</p>}{roleGuidanceResult(action,roles,data.workItems)&&<p>完成后去哪查看：{roleGuidanceResult(action,roles,data.workItems)}</p>}</article>)}</div>
         {!data.nextActions?.length && <StatusPanel title="暂无下一步动作">请查看角色说明，或联系账号管理人员核对授权。</StatusPanel>}
       </>}
     </section>

@@ -401,7 +401,7 @@ async page => {
     assert(unexpectedRequests.length === 0, `发现3001以外的网络请求：${unexpectedRequests.join('，')}`);
     assert(pageErrors.length === 0, `页面异常：${pageErrors.join('；')}`);
     assert(consoleProblems.length === 0, `控制台warning/error：${consoleProblems.join('；')}`);
-    record('业务存储为空，未请求3000、AI或第三方，控制台无warning/error');
+    record('业务存储为空，未请求MDM平台、AI或第三方，控制台无warning/error');
 
     return { passed: true, checks: results };
   } catch (error) {

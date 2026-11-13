@@ -39,6 +39,12 @@ function requiredProbes(env) {
   if (env.PROCESS_DATA_GOVERNANCE_ENABLED === '1') {
     probes.push(...probesFromSql(require('./processDataGovernanceMigration').PROCESS_DATA_GOVERNANCE_SCHEMA_SQL).map(p => p.sql));
   }
+  if (env.QUALITY_AUDIT_ENABLED === '1') {
+    probes.push(...probesFromSql(require('./qualityAuditSchema').SCHEMA_SQL).map(p=>p.sql));
+    probes.push(...probesFromSql(require('./processV7PreviewReviewMigration').PROCESS_V7_PREVIEW_SCHEMA_SQL).map(p=>p.sql));
+    probes.push(...probesFromSql(require('./processV7FormalMigration').PROCESS_V7_FORMAL_SCHEMA_SQL).map(p=>p.sql));
+    probes.push('SELECT process_ref FROM process_design_documents LIMIT 0','SELECT draft_revision_no,content_hash FROM process_design_review_tasks LIMIT 0');
+  }
   return [...new Set(probes)];
 }
 
@@ -60,6 +66,7 @@ function createReadiness({ env = process.env, version, pool, now = Date.now } = 
       sessionConfig(env);
       if(!['0','1'].includes(String(env.DATA_MAP_HANDOFF_ENABLED||'0')))throw new Error('HANDOFF_CONFIGURATION_INVALID');
       if(!['0','1'].includes(String(env.TERMINOLOGY_GOVERNANCE_ENABLED||'0')))throw new Error('TERMINOLOGY_CONFIGURATION_INVALID');
+      require('./qualityAuditSchema').enabled(env);
       if(!['0','1'].includes(String(env.PROCESS_AUTHORING_WORKSPACE_ENABLED||'0')))throw new Error('AUTHORING_WORKSPACE_CONFIGURATION_INVALID');
       if(env.PROCESS_AUTHORING_WORKSPACE_ENABLED==='1'&&env.PROCESS_V7_PREVIEW_ENABLED!=='1')throw new Error('AUTHORING_WORKSPACE_REQUIRES_PREVIEW');
       if (env.PROCESS_V7_AUTHORING_ENABLED === '1' && env.PROCESS_V7_PREVIEW_ENABLED !== '1') throw new Error('AUTHORING_REQUIRES_PREVIEW');
@@ -79,10 +86,11 @@ function createReadiness({ env = process.env, version, pool, now = Date.now } = 
           await require('./todoTermSourceMigration').assertTodoTermSourceReady(connection);
           if(env.TERMINOLOGY_GOVERNANCE_ENABLED==='1')await require('./terminologyGovernanceRepository').assertReady(connection,env);
           if(env.PROCESS_AUTHORING_WORKSPACE_ENABLED==='1'&&!(await require('./processAuthoringWorkspaceSchema').inspectSchema(connection)).ready)throw new Error('AUTHORING_WORKSPACE_SCHEMA_UNAVAILABLE');
+          if(env.QUALITY_AUDIT_ENABLED==='1')await require('./qualityAuditSchema').assertReady(connection);
           for (const [enabled, modulePath] of [
             [env.MDM_SYSTEM_ADMIN_ENABLED === '1', './systemAdminMigration'],
-            [env.PROCESS_V7_PREVIEW_ENABLED === '1' || env.PROCESS_V7_FORMAL_ENABLED === '1', './processV7PreviewReviewMigration'],
-            [env.PROCESS_V7_FORMAL_ENABLED === '1', './processV7FormalMigration'],
+            [env.PROCESS_V7_PREVIEW_ENABLED === '1' || env.PROCESS_V7_FORMAL_ENABLED === '1' || env.QUALITY_AUDIT_ENABLED === '1', './processV7PreviewReviewMigration'],
+            [env.PROCESS_V7_FORMAL_ENABLED === '1' || env.QUALITY_AUDIT_ENABLED === '1', './processV7FormalMigration'],
             [env.PROCESS_V7_AUTHORING_ENABLED === '1', './processV7AuthoringMigration'],
             [env.PROCESS_DATA_GOVERNANCE_ENABLED === '1', './processDataGovernanceMigration']
           ]) if (enabled) {

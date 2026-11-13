@@ -11,7 +11,7 @@ function createRouter({ isEnabled = enabled, authorization, readDepartments } = 
   router.use(['/editor', '/assets'], authorization || requireAuth);
   router.use(['/editor', '/assets'], (req, res, next) => {
     res.set('Cache-Control', 'no-store');
-    if (!isEnabled()) return res.status(503).json({ code: 'PROCESS_AUTHORING_DISABLED', error: '3000流程编制尚未开启。' });
+    if (!isEnabled()) return res.status(503).json({ code: 'PROCESS_AUTHORING_DISABLED', error: 'MDM平台流程编制尚未开启。' });
     return next();
   });
   const action = fn => (req, res) => Promise.resolve().then(() => fn(req, res)).catch(error => {

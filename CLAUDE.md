@@ -4,9 +4,9 @@
 
 ## 开发基线
 
-当前重点是 3000 内的单流程编制、显式保存草稿、提交、核对、退回续修及审核发布，前后端通过 API 分离。用户可下载 JSON，在知识库 AI 对话中编辑后导回；导回内容不继承审核状态。本轮限本地及隔离验证，3001 保留独立、无状态和人工文件交接兼容。
+当前重点是 MDM平台 内的单流程编制、显式保存草稿、提交、核对、退回续修及审核发布，前后端通过 API 分离。用户可下载 JSON，在知识库 AI 对话中编辑后导回；导回内容不继承审核状态。本轮限本地及隔离验证，3001 保留独立、无状态和人工文件交接兼容。
 
-3000 是组织与员工信息的唯一维护源，由行政人事维护；Excel 仅作明确导入材料。业务事实和职责来自用户指定的外部原始材料、实际业务说明和明确确认。`docs/` 中的技术合同、资料副本和历史记录不作为业务真源或治理依据。
+MDM平台 是组织与员工信息的唯一维护源，由行政人事维护；Excel 仅作明确导入材料。业务事实和职责来自用户指定的外部原始材料、实际业务说明和明确确认。`docs/` 中的技术合同、资料副本和历史记录不作为业务真源或治理依据。
 
 开发时先核对 Git 状态并保留已有工作；不擅自暂存、提交、推送或清理历史资产。Secret 只核对配置路径和使用入口，不读取或输出内容。正式数据库、部署、权限、迁移和真实通知按目标及已有授权处理。
 
@@ -17,9 +17,9 @@
 | 跨资产实施、排障、兼容升级和验证选择 | [CODEX.md](CODEX.md) |
 | 目录职责、生成物和历史资产 | [目录职责](DIRECTORY_OWNERSHIP.md)、[仓库边界](REPOSITORY_BOUNDARY.md) |
 | 应用与脚本的消费关系 | [MAINLINE_MAP.md](MAINLINE_MAP.md) |
-| 3000 功能、身份授权、格式与兼容 | [平台入口](apps/mdm-platform/AGENTS.md)、[平台说明](apps/mdm-platform/README.md) |
-| 3000 内编制、草稿保存与 JSON 往返 | [编制合同](apps/mdm-platform/PROCESS_AUTHORING.md) |
-| 3000 构建、目标状态与恢复 | [Docker 说明](apps/mdm-platform/DOCKER.md)、[平台脚本说明](apps/mdm-platform/scripts/README.md) |
+| MDM平台 功能、身份授权、格式与兼容 | [平台入口](apps/mdm-platform/AGENTS.md)、[平台说明](apps/mdm-platform/README.md) |
+| MDM平台 内编制、草稿保存与 JSON 往返 | [编制合同](apps/mdm-platform/PROCESS_AUTHORING.md) |
+| MDM平台 构建、目标状态与恢复 | [Docker 说明](apps/mdm-platform/DOCKER.md)、[平台脚本说明](apps/mdm-platform/scripts/README.md) |
 | 3001 独立工具、文件兼容与工作台 | [应用入口](apps/structured-output-service/AGENTS.md)、[应用说明](apps/structured-output-service/README.md) |
 | PMO 来源、任务增补、生成与页面 | [PMO 入口](pmo/AGENTS.md)、[前端说明](pmo/gantt-react/README.md) |
 | 其他应用 | [应用目录](apps/README.md) |
@@ -33,7 +33,7 @@
 以下命令从仓库根目录执行。构建写入指定的全新 `artifacts/` 目录；目录名按本次任务选择，避免覆盖正在使用的构建。
 
 ```powershell
-# 3000：独立候选前端构建，不覆盖 frontend/dist
+# MDM平台：独立候选前端构建，不覆盖 frontend/dist
 npm --prefix apps/mdm-platform/frontend run build -- --outDir ../../../artifacts/mdm-frontend-candidate
 
 # PMO：只读核对现有来源、生成结果及消费副本
@@ -46,7 +46,7 @@ node scripts/check-pmo-task-data.mjs
 
 测试脚本及夹具仅保留在维护者本机，不随 Git 分发；本机原命令清单在仓库根 `.local-tests/commands.json`。先核对所选脚本、依赖及隔离条件，再直接调用实际存在的工具；清单中的历史命令不表示当前 `package.json` 已注册对应 npm 入口。新检出缺少工具时记录未执行项，不能把空占位内容当作验证步骤。
 
-按影响面验证。纯说明核对事实、状态、命令、引用和差异，不启动应用或连接数据库。界面仅支持 Microsoft Edge、100% 缩放、1699×828 CSS 像素内容可视区；禁止窄屏适配和测试。浏览器验证使用明确的隔离候选地址，不指向正式 3000/3001。
+按影响面验证。纯说明核对事实、状态、命令、引用和差异，不启动应用或连接数据库。界面仅支持 Microsoft Edge、100% 缩放、1699×828 CSS 像素内容可视区；禁止窄屏适配和测试。浏览器验证使用明确的隔离候选地址，不指向正式服务端口 3000/3001。
 
 报告区分“已实现”“已准备”“已开启”和“已验收”。候选代码、自动化、隔离测试和软件部署不能替代实时运行证据、人工体验或业务验收。
 

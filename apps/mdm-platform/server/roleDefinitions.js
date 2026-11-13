@@ -51,7 +51,7 @@ const VISIBLE_TABS = Object.freeze({
     code: 'quality',
     name: '数据质量',
     access: 'role_scoped',
-    reason: '数据质量审计人形成审计发现，MDM工作组组长查看治理结果'
+    reason: '审计人登记发现并复核，本部门主对接人提交整改，负责人及组长按原范围查看'
   },
   rbac: {
     code: 'rbac',
@@ -81,7 +81,7 @@ const BASE_PERMISSIONS = {
   identityRead: perm('identity:read', 'identity', 'read', '查看账号、角色和责任配置', {
     defaultScope: 'global'
   }),
-  directoryRead: perm('directory:read', 'directory', 'read', '读取3000统一组织与人员基础目录', {
+  directoryRead: perm('directory:read', 'directory', 'read', '读取MDM平台统一组织与人员基础目录', {
     defaultScope: 'global'
   }),
   directoryMaintain: perm('directory:maintain', 'directory', 'maintain', '维护全公司组织架构与人员信息，保存直接生效并记录变更原因及前后内容', {
@@ -132,7 +132,7 @@ const BASE_PERMISSIONS = {
     isDangerous: true,
     defaultScope: 'global'
   }),
-  governanceQualityAudit: perm('governance:quality-audit', 'governance', 'quality-audit', '形成数据质量审计发现和整改要求', {
+  governanceQualityAudit: perm('governance:quality-audit', 'governance', 'quality-audit', '登记数据质量发现及整改要求，复核整改并退回或关闭', {
     defaultScope: 'global'
   }),
   governanceHandleAssignedConflict: perm(
@@ -209,7 +209,7 @@ const ROLE_GUIDES = [
     name: 'MDM系统管理员',
     group: 'system',
     description: '维护账号、角色授权和访问审计，并只读查看治理材料',
-    goal: '保证3000的账号入口、授权记录和审计记录可用。',
+    goal: '保证MDM平台的账号入口、授权记录和审计记录可用。',
     firstEntry: { label: '账号与授权', target: '#/rbac' },
     workflow: ['查找由行政人事维护的已有员工，为其开通待启用账号', '设置角色及有效期，按需补充授权依据', '核对后启用账号，必要时另行停用', '在该员工账号行查阅授权记录和访问审计'],
     sample: '行政人事先保存员工资料；管理员收到该员工姓名和工号后，在账号与授权办理中搜索并核对已有员工，先开通账号，再分别办理角色授权和启用。完成后在同一员工账号行查看状态及授权记录。',
@@ -231,7 +231,7 @@ const ROLE_GUIDES = [
     description: '分派治理事项，完成数据对象和生命周期治理，检查结构、证据和责任链，并发布治理版本',
     goal: '在业务流程事实已经明确的前提下，由MDM工作组完成数据对象、关键字段和生命周期治理，使流程地图、数据地图和术语版本具备发布条件。',
     firstEntry: { label: '查看数据治理工作包', target: '/app/data-governance' },
-    workflow: ['查看全局治理事项', '处理数据生命周期治理工作包', '仅在缺少流程事实时向业务部门定向提问', '执行MDM结构卡口并发布'],
+    workflow: ['查看本人待办并按事项分派治理经办人', '办理或核对固定流程版本的治理工作包', '缺少流程事实时向目标部门定向提问', '核对来源、责任及发布条件后审核和发布', '跟踪质量整改、复核结果和未结分歧'],
     sample: 'MDM工作组组长打开固定流程版本对应的工作包，核对待定数据对象、匹配建议、关键字段和生命周期规则；只有缺少业务事实时，才向具体部门发出一个可回答的问题。',
     pitfall: 'MDM工作组组长不能代替部门负责人确认业务事实，也不能直接改写部门材料。',
     doneCriteria: '发布版本具备完整责任证据、结构检查结果和版本记录。',
@@ -265,7 +265,7 @@ const ROLE_GUIDES = [
     description: '起草、修改、提交和整改本部门流程事实，并答复MDM定向提出的业务事实问题',
     goal: '将本部门确认的流程事实整理为可审核材料；收到定向问题时，只补充事实和依据。',
     firstEntry: { label: '编制、保存和提交本部门流程', target: '/app/process-authoring' },
-    workflow: ['在3000新建流程或从原案例继续编制', '保存草稿并补齐来源及实际参与部门', '提交后查看部门负责人核对结果，按退回意见续修', '答复MDM定向提出的业务事实问题'],
+    workflow: ['在MDM平台新建流程或从原案例继续编制', '保存草稿并补齐来源及实际参与部门', '提交后查看部门负责人核对结果，按退回意见续修', '答复MDM定向提出的业务事实问题', '对本部门质量发现提交整改说明和证据，查看复核退回或关闭结果'],
     sample: '部门主对接人收到“该状态在什么条件下失效”的定向问题后，回到制度或表单源文件核对，只填写触发条件和来源位置，不判断它是不是主数据。',
     pitfall: '主对接人不能认定主数据、合并统一对象、决定关键字段或制定生命周期治理规则。',
     doneCriteria: '本部门流程事实已提交；定向问题已有明确答复和可定位依据，未代替MDM作出治理判断。',
@@ -274,7 +274,7 @@ const ROLE_GUIDES = [
       BASE_PERMISSIONS.governanceDraftDepartment,
       BASE_PERMISSIONS.governanceSubmitDepartment
     ],
-    visibleTabs: visibleTabs('roleWorkbench', 'roleGuide', 'processGovernance', 'dataMap')
+    visibleTabs: visibleTabs('roleWorkbench', 'roleGuide', 'processGovernance', 'dataMap', 'quality')
   },
   {
     code: 'department_mdm_reviewer',
@@ -283,7 +283,7 @@ const ROLE_GUIDES = [
     description: '由部门最终负责人本人核对本部门流程事实并作出最终确认，不设置中间审核员或代记录决定',
     goal: '由已登记且具有本部门有效授权的部门负责人，对主对接人提交的流程事实和依据直接核对并最终确认。',
     firstEntry: { label: '查看本部门流程核对事项', target: '/app/process-preview' },
-    workflow: ['查看主对接人提交的本部门事项', '核对当前内容及依据', '本人最终确认或退回修改', '内容变化时重新核对确认'],
+    workflow: ['查看主对接人提交的本部门事项', '核对当前内容及依据', '本人最终确认或退回修改', '设计变化或分歧处理后，重新核对本部门一侧', '查看本部门质量整改进度，审计结论由质量审计人负责'],
     sample: '部门负责人按当前案例、修订和内容摘要核对本部门一侧，亲自填写决定及依据；内容变化时重新确认，不代替另一部门决定。',
     pitfall: '角色授权必须与部门最终负责人登记一致；不能由其他人员代确认，也不代替MDM开展数据治理或发布。',
     doneCriteria: '本部门当前内容具有部门负责人本人确认、来源摘要和依据，未完成或不一致事项明确保留。',
@@ -292,7 +292,7 @@ const ROLE_GUIDES = [
       BASE_PERMISSIONS.governanceReviewDepartment,
       BASE_PERMISSIONS.governanceRecordDepartmentDecision
     ],
-    visibleTabs: visibleTabs('roleWorkbench', 'roleGuide', 'processGovernance', 'dataMap')
+    visibleTabs: visibleTabs('roleWorkbench', 'roleGuide', 'processGovernance', 'dataMap', 'quality')
   },
   {
     code: 'data_conflict_handler',
@@ -318,11 +318,11 @@ const ROLE_GUIDES = [
     group: 'mdm',
     description: '检查数据治理信息并形成审计发现和整改要求',
     goal: '识别数据完整性、准确性和一致性问题，并跟踪整改证据。',
-    firstEntry: { label: '查看字段治理统计', target: '#/quality' },
-    workflow: ['在“数据质量”查阅字段治理统计', '核对统计范围；字段数量不表示质量合格', '需要核对已发布字段时，进入“数据地图台账”查阅'],
-    sample: '数据质量审计人进入“数据质量”，点击“刷新字段统计”，在下方查看当前范围内的现行受控字段和旧资料统计；本页尚未提供审计发现登记、整改要求记录或整改复核办理。',
+    firstEntry: { label: '登记审计发现及复核整改', target: '/app/quality' },
+    workflow: ['核对当前流程设计已由部门负责人本人同意', '登记数据质量发现、依据、责任部门和整改要求', '查看主对接人提交的整改说明及证据', '填写复核依据，合格关闭、不合格退回；设计变化先重新确认并更新依据'],
+    sample: '数据质量审计人在“数据质量”选择当前已由部门负责人本人同意的流程设计，登记发现和整改要求；主对接人提交整改证据后，再记录复核结论。',
     pitfall: '审计人不能替部门修改源数据，也不能发布数据地图。',
-    doneCriteria: '审计职责仍以有依据的结论，以及具备责任部门、处理状态和复核记录的整改事项为完成标准。当前入口只供统计查阅，不能据此认定审计已完成。',
+    doneCriteria: '发现具有已同意的当前设计、责任部门、整改说明及证据和复核依据；合格事项明确关闭，退回事项保留原因及完整历史。字段统计不等于质量合格。',
     permissions: [
       BASE_PERMISSIONS.governanceReadGlobal,
       BASE_PERMISSIONS.governanceQualityAudit
@@ -350,7 +350,7 @@ const ROLE_GUIDES = [
     code: 'hr_directory_manager',
     name: '行政人事信息维护员',
     group: 'directory',
-    description: '由行政人事部维护全公司组织架构与人员信息，3000作为全域统一读取的人员真源',
+    description: '由行政人事部维护全公司组织架构与人员信息，MDM平台作为全域统一读取的人员真源',
     goal: '保持组织架构与人员信息准确，并使每次变更可追溯。',
     firstEntry: { label: '组织架构与花名册', target: '#/persons' },
     workflow: ['核对组织架构和人员现状', '录入变更内容与原因', '保存后直接生效', '核对修改前后内容及操作记录'],
@@ -366,11 +366,11 @@ const RACI_ACTIVITIES = Object.freeze([
   {
     activityCode: 'governance.assigned.work',
     domain: 'governance',
-    name: '办理明确分派的治理事项',
+    name: '办理明确分派的治理事项与工作包',
     responsible: ['mdm_steward'],
     accountable: ['mdm_lead'],
-    consulted: ['department_contact', 'process_business_owner'],
-    informed: ['department_mdm_reviewer'],
+    consulted: ['department_contact', 'department_mdm_reviewer', 'data_quality_auditor', 'process_business_owner'],
+    informed: [],
     requiredPermissions: ['governance:handle-assigned-work'],
     scopeRule: 'assigned_target',
     evidenceRule: '必须存在有效显式分派；案例办理记录绑定来源修订摘要；不授予审核发布权'
@@ -390,10 +390,10 @@ const RACI_ACTIVITIES = Object.freeze([
   {
     activityCode: 'department.material.prepare',
     domain: 'governance',
-    name: '部门流程、数据和术语材料起草',
+    name: '部门流程事实材料编制与提交',
     responsible: ['department_contact'],
     accountable: ['department_final_responsible_person'],
-    consulted: ['business_expert'],
+    consulted: ['mdm_steward', 'business_expert'],
     informed: ['mdm_lead'],
     requiredPermissions: ['governance:draft-department', 'governance:submit-department'],
     scopeRule: 'own_department',
@@ -405,8 +405,8 @@ const RACI_ACTIVITIES = Object.freeze([
     name: '部门负责人本人最终确认及跨部门确认',
     responsible: ['department_mdm_reviewer'],
     accountable: ['department_final_responsible_person'],
-    consulted: ['department_contact', 'related_department_final_responsible_person'],
-    informed: ['mdm_lead'],
+    consulted: ['department_contact', 'mdm_steward', 'related_department_final_responsible_person'],
+    informed: ['mdm_lead', 'data_quality_auditor'],
     requiredPermissions: ['governance:record-department-decision'],
     scopeRule: 'own_department',
     evidenceRule: '主对接人提交后，由当前部门最终负责人且具备本部门有效授权者本人核对并最终确认；确认人和最终责任人一致，绑定当前修订与摘要，不设中间审核员'
@@ -414,26 +414,26 @@ const RACI_ACTIVITIES = Object.freeze([
   {
     activityCode: 'department.material.correct',
     domain: 'governance',
-    name: '部门材料整改',
+    name: '部门材料整改及证据提交',
     responsible: ['department_contact'],
     accountable: ['department_final_responsible_person'],
-    consulted: ['department_mdm_reviewer', 'data_quality_auditor'],
+    consulted: ['mdm_steward', 'data_quality_auditor'],
     informed: ['mdm_lead'],
     requiredPermissions: ['governance:draft-department'],
     scopeRule: 'own_department',
-    evidenceRule: '整改结果保留变更和复核记录'
+    evidenceRule: '主对接人提交整改说明及证据并保留各轮复核；涉及设计变化先由部门负责人重新同意'
   },
   {
     activityCode: 'data.quality.audit',
     domain: 'data',
-    name: '数据质量审计结论',
+    name: '数据质量发现及整改复核结论',
     responsible: ['data_quality_auditor'],
     accountable: ['data_quality_auditor'],
-    consulted: ['department_contact', 'department_mdm_reviewer'],
+    consulted: ['department_contact', 'department_mdm_reviewer', 'mdm_steward'],
     informed: ['mdm_lead', 'department_final_responsible_person'],
     requiredPermissions: ['governance:quality-audit'],
     scopeRule: 'global_read_audit_write',
-    evidenceRule: '审计结论必须记录依据和整改要求'
+    evidenceRule: '先有相关部门负责人对当前设计的本人同意；审计记录绑定准确设计、发现、要求、整改证据和复核依据；不修改部门源数据或授予发布权'
   },
   {
     activityCode: 'governance.conflict.coordinate',
@@ -441,7 +441,7 @@ const RACI_ACTIVITIES = Object.freeze([
     name: '普通冲突协调',
     responsible: ['data_conflict_handler'],
     accountable: ['affected_department_final_responsible_person'],
-    consulted: ['department_mdm_reviewer', 'data_quality_auditor'],
+    consulted: ['department_contact', 'department_mdm_reviewer', 'mdm_steward', 'data_quality_auditor'],
     informed: ['mdm_lead'],
     requiredPermissions: ['governance:handle-assigned-conflict'],
     scopeRule: 'assigned_conflict_only',
@@ -451,13 +451,13 @@ const RACI_ACTIVITIES = Object.freeze([
     activityCode: 'governance.conflict.escalated-decision',
     domain: 'governance',
     name: '重大争议升级决策',
-    responsible: ['data_conflict_handler', 'mdm_lead'],
+    responsible: ['decision_group'],
     accountable: ['decision_group'],
-    consulted: ['affected_department_final_responsible_person', 'department_mdm_reviewer'],
-    informed: ['department_contact'],
+    consulted: ['data_conflict_handler', 'affected_department_final_responsible_person', 'department_mdm_reviewer', 'data_quality_auditor'],
+    informed: ['mdm_lead', 'department_contact'],
     requiredPermissions: ['governance:decide-escalation'],
     scopeRule: 'escalated_conflict_only',
-    evidenceRule: '事项必须已经升级并具备争议证据'
+    evidenceRule: '事项已经升级并具备争议证据；处理人或组长准备材料，决策组记录决定，随后由相关部门负责人分别重新核对，不自动确认'
   },
   {
     activityCode: 'process.handoff.acceptance',
@@ -478,9 +478,9 @@ const RACI_ACTIVITIES = Object.freeze([
     domain: 'process',
     name: '承接冲突协调',
     responsible: ['data_conflict_handler'],
-    accountable: ['mdm_lead'],
-    consulted: ['origin_department_final_responsible_person', 'counterparty_department_final_responsible_person'],
-    informed: ['decision_group'],
+    accountable: ['affected_department_final_responsible_person'],
+    consulted: ['department_contact', 'mdm_steward', 'data_quality_auditor', 'origin_department_final_responsible_person', 'counterparty_department_final_responsible_person'],
+    informed: ['mdm_lead'],
     requiredPermissions: ['governance:handle-assigned-conflict', 'governance:escalate-conflict'],
     scopeRule: 'assigned_handoff_conflict_only',
     evidenceRule: '双方立场、证据、协调方案和部门确认记录只追加保留'
@@ -503,11 +503,23 @@ const RACI_ACTIVITIES = Object.freeze([
     name: '流程地图、数据地图和术语版本发布',
     responsible: ['mdm_lead'],
     accountable: ['mdm_lead'],
-    consulted: ['department_mdm_reviewer', 'data_quality_auditor'],
-    informed: ['decision_group', 'admin'],
+    consulted: ['department_mdm_reviewer', 'mdm_steward', 'data_quality_auditor'],
+    informed: ['department_contact', 'decision_group', 'admin'],
     requiredPermissions: ['governance:publish'],
     scopeRule: 'global',
     evidenceRule: '所需部门决定完整、阻断问题关闭、结构和版本检查通过'
+  },
+  {
+    activityCode: 'directory.maintain',
+    domain: 'directory',
+    name: '组织与人员目录维护操作',
+    responsible: ['hr_directory_manager'],
+    accountable: ['hr_directory_manager'],
+    consulted: [],
+    informed: [],
+    requiredPermissions: ['directory:maintain'],
+    scopeRule: 'global',
+    evidenceRule: '按已明确的组织人员内容维护，保存直接生效；同事务记录前后内容、操作人和原因，不授予账号授权或治理决定权'
   }
 ]);
 

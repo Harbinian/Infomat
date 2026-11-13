@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-console.error('LEGACY_ACCOUNT_SCRIPT_RETIRED：项目名单脚本不得创建或授权3000账号。');
+console.error('LEGACY_ACCOUNT_SCRIPT_RETIRED：项目名单脚本不得创建或授权MDM平台账号。');
 process.exit(1);
 
 const db = require('../server/db');

@@ -1,10 +1,10 @@
-import {userMessage} from "./businessPresentation.js";
+import {businessText,userMessage} from "./businessPresentation.js";
 import React, { useEffect, useState } from 'react';
 import { StatusPanel } from './components.jsx';
 import './role-management.css';
 import { protocol } from './protocol.js';
 import { authoringRolePresentation } from './workbenchReviewPresentation.js';
-import { qualityEntryNotice, roleSubjectName, roleCompletionPresentation } from './rolePresentation.js';
+import { qualityEntryNotice, roleSubjectName, roleCompletionPresentation, governanceAdministrator, roleCurrentItems } from './rolePresentation.js';
 import { canNavigatePage } from './navigationAccess.js';
 
 const selectedRole = () => new URLSearchParams(location.search).get('role') || '';
@@ -16,6 +16,7 @@ const guideActions = [
   ['governance:handle-assigned-conflict', '处理已分派冲突'],
   ['governance:decide-escalation', '决定已升级争议'],
   ['governance:publish', '发布治理版本'],
+  ['governance:quality-audit', '登记质量发现及复核整改'],
   ['identity:manage-account', '办理账号与授权']
 ];
 const list = values => Array.isArray(values) && values.length ? values.join('、') : '未指定';
@@ -60,22 +61,29 @@ export function RoleGuide({ api, user, onNavigate, onQueryChange }) {
   const role = model?.roles.find(item => item.code === currentCode);
   const permissionSet = new Set(user.permissions || []);
   const permissionDescriptions = new Map((model?.permissions || []).map(item => [item.code, item.description]));
-  const missing = guideActions.filter(([permission]) => permissionDescriptions.has(permission) && !permissionSet.has(permission));
+  const readOnly=governanceAdministrator(user);
+  const missing = guideActions.filter(([permission]) => permissionDescriptions.has(permission) && (readOnly&&permission.startsWith('governance:')||!permissionSet.has(permission)));
   const names = codes => list((codes || []).map(item => roleSubjectName(item, model?.roles)));
-  const roleTodos = role ? (todoState.items || []).filter(item => item.roleCode === role.code || item.role_code === role.code || (item.sourceRoles || []).includes(role.code)) : [];
+  const roleTodos = roleCurrentItems(role,user,todoState.items||[]);
   const responsibilities = role?.raciResponsibilities || [];
   const roleRaci = responsibilities.map(item => {
     const marks = [['responsible', 'R'], ['accountable', 'A'], ['consulted', 'C'], ['informed', 'I']]
       .filter(([key]) => item.raci?.[key]).map(([, mark]) => mark);
     return `${item.name}（${marks.join('/')}）`;
   });
-  const firstEntry = role?.firstEntry?.target;
+  const currentItem=roleTodos.find(item=>{const href=protocol.targetHref(item.target);return href&&canNavigatePage(href,user);});
+  const roleOwned=Boolean(role&&owned.has(role.code));
+  const firstEntry = currentItem?.target||role?.firstEntry?.target;
   const firstEntryHref = protocol.targetHref(firstEntry);
-  const readableFirstEntry = firstEntryHref && canNavigatePage(firstEntryHref, user);
+  const entryReady=role?.code==='admin'||!todoState.loading&&!todoState.error;
+  const readableFirstEntry = entryReady&&roleOwned&&(!readOnly||role?.code==='admin')&&firstEntryHref && canNavigatePage(firstEntryHref, user);
+  const entryLabel=roleOwned&&!entryReady?todoState.loading?'正在核对本人下一步':'本人事项暂不可用，请到我的工作台核对':currentItem?'先办理：'+businessText(currentItem.title,'本人当前事项'):role?.firstEntry?.label||'未提供';
   return <div className="role-management" data-role-guide-state={state.loading ? 'loading' : state.error ? 'error' : 'ready'}>
     <section className="card"><h2>角色与责任</h2>
       <p>查看固定角色的目标、使用说明和责任矩阵。当前账号的有效角色与权限来自登录身份；此页只读，不能授予角色；本人能否办理某项业务，以该事项页面核验的有效职责为准。</p>
       <p>流程材料由部门主对接人提交，部门负责人核对并最终确认。办理人须同时是本部门已明确的最终负责人，并具有本部门有效角色授权；角色授权、岗位名称或流程业务负责人任命均不能单独代替这两项条件。</p>
+      <p>C为征询或协作，I为知悉，均不自动产生读取或写入权限。角色说明与具体业务待办分开；本人下一步优先从当前事项进入。</p>
+      {readOnly&&<p role="note">当前管理员身份对治理材料只读，兼任业务角色也不能提交、审核、整改、协调或发布。下方业务角色内容仅供理解职责。</p>}
       <div className="role-management-actions"><button type="button" onClick={() => setRevision(value => value + 1)}>刷新角色说明</button></div>
     </section>
     {state.loading ? <StatusPanel kind="loading" title="正在读取固定角色模型…" /> : state.error ? <StatusPanel kind="error" title="角色说明暂不可用" onRetry={() => setRevision(value => value + 1)}>{userMessage(state.error)} 读取失败不代表角色或权限已变更。</StatusPanel> : <>
@@ -85,8 +93,8 @@ export function RoleGuide({ api, user, onNavigate, onQueryChange }) {
       </section>
       {role && <section className="card" data-role-guide-code={role.code}><h3>{role.name}</h3><p>{role.description || '未提供说明'}</p>
         {role.code === 'data_quality_auditor' && <p role="note">{qualityEntryNotice}</p>}
-        <dl className="identity-grid"><div><dt>角色目标</dt><dd>{role.goal || '未提供'}</dd></div><div><dt>第一步入口</dt><dd>{readableFirstEntry ? <a href={firstEntryHref} onClick={onNavigate}>{role.firstEntry.label}</a> : role.firstEntry?.label || '未提供'}</dd></div><div><dt>可查看页面</dt><dd>{list((role.visibleTabs || []).map(tab => tab.name))}</dd></div><div><dt>当前待办</dt><dd>{userMessage(todoState.loading ? '正在读取…' : todoState.error ? '暂不可用，请到我的工作台核对' : `${roleTodos.length} 项`)}；<a href="/app/workbench" onClick={onNavigate}>进入我的工作台</a></dd></div><div><dt>允许动作</dt><dd>{list((role.permissions || []).map(permission => permissionDescriptions.get(permission) || '权限说明未记录'))}</dd></div><div><dt>角色 RACI 责任</dt><dd>{list(roleRaci)}</dd></div><div><dt>典型样例</dt><dd>{role.sample || '未提供'}</dd></div><div><dt>常见误区</dt><dd>{role.pitfall || '未提供'}</dd></div><div><dt>完成标准</dt><dd>{role.doneCriteria || '未提供'}</dd></div></dl>
-        <p>处理顺序：{list(role.workflow)}</p><p data-role-result-guidance><strong>完成后去哪查看：</strong>{role.resultGuidance || '当前角色尚未提供准确结果位置，请从本人待办进入原事项核对。'}</p>{!readableFirstEntry && <p>此处仅查阅角色说明；当前账号不能从这里打开该角色的第一步页面。请由具有相应资格的人员办理，不会因此增加当前账号权限。</p>}
+        <dl className="identity-grid"><div><dt>角色目标</dt><dd>{role.goal || '未提供'}</dd></div><div><dt>第一步入口</dt><dd>{readableFirstEntry ? <a href={firstEntryHref} onClick={onNavigate}>{entryLabel}</a> : entryLabel}</dd></div><div><dt>可查看页面</dt><dd>{list((role.visibleTabs || []).map(tab => tab.name))}</dd></div><div><dt>当前待办</dt><dd>{userMessage(todoState.loading ? '正在读取…' : todoState.error ? '暂不可用，请到我的工作台核对' : `${roleTodos.length} 项`)}；<a href="/app/workbench" onClick={onNavigate}>进入我的工作台</a></dd></div><div><dt>该角色的权限上限</dt><dd>{list((role.permissions || []).map(permission => permissionDescriptions.get(permission) || '权限说明未记录'))}</dd></div><div><dt>角色 RACI 责任</dt><dd>{list(roleRaci)}</dd></div><div><dt>典型样例</dt><dd>{role.sample || '未提供'}</dd></div><div><dt>常见误区</dt><dd>{role.pitfall || '未提供'}</dd></div><div><dt>完成标准</dt><dd>{role.doneCriteria || '未提供'}</dd></div></dl>
+        <p>处理顺序：{list(role.workflow)}</p><p data-role-handoff-guidance><strong>我交给谁：</strong>{role.handoffGuidance || '请从本人当前事项核对接手人及办理条件。'}</p><p data-role-result-guidance><strong>完成后去哪查看：</strong>{role.resultGuidance || '当前角色尚未提供准确结果位置，请从本人待办进入原事项核对。'}</p>{!readableFirstEntry && <p>此处仅查阅角色说明，不把其他角色的入口或权限变成本人待办。请从我的工作台核对本人当前资格及可查阅范围。</p>}
       </section>}
       <section className="card"><h3>当前不可直接执行的常见动作</h3>
         <p>下列动作缺少对应有效权限。具备权限仍须满足部门范围、对象状态、分派关系及责任依据，办理前仍会核对当前权限和条件。</p>

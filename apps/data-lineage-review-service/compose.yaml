@@ -1,0 +1,122 @@
+name: infomat-data-lineage-review
+
+services:
+  review:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    image: infomat-data-lineage-review-web:local
+    restart: unless-stopped
+    init: true
+    read_only: true
+    environment:
+      REVIEW_HOST_PORT: "9992"
+      REVIEW_NETWORK: all-ip
+      REVIEW_API_ORIGIN: http://api:3093
+    ports:
+      - "9992:3093"
+    networks: [default, review-api]
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "Promise.all([fetch('http://127.0.0.1:3093/matrix'),fetch('http://127.0.0.1:3093/api/progress')]).then(async ([page,api])=>{const p=await api.json();if(!page.ok||!api.ok||!p.batch?.total)process.exitCode=1}).catch(()=>{process.exitCode=1})"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build: .
+    image: infomat-data-lineage-review-api:local
+    restart: unless-stopped
+    init: true
+    read_only: true
+    environment:
+      REVIEW_HOST_PORT: "9992"
+      REVIEW_NETWORK: all-ip
+      REVIEW_POSITION_CATALOG_PATH: /catalog/position-catalog.json
+      REVIEW_FIELD_CATALOG_PATH: /catalog/field-catalog.json
+      REVIEW_FIELD_ADDENDUM_PATH: /catalog/field-addendum.json
+      REVIEW_FIELD_EXTENSION_PATH: /catalog/field-extension.json
+      REVIEW_FIELD_AUDIT_EXTENSION_PATH: /catalog/field-audit-extension.json
+      REVIEW_FIELD_PRESENTATION_PATH: /catalog/field-presentation.json
+      REVIEW_CATALOG_AUDIT_PATH: /catalog/catalog-audit.json
+      REVIEW_CANDIDATE_CATALOG_PATH: /catalog/candidate-catalog.json
+      REVIEW_BATCH_PLANS_PATH: /catalog/collection-batches.json
+    networks: [review-api]
+    volumes:
+      - type: bind
+        source: ../../artifacts/data-lineage-review-service/review-catalog.json
+        target: /catalog/review-catalog.json
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ../../artifacts/data-lineage-review-service/position-catalog.json
+        target: /catalog/position-catalog.json
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ../../artifacts/data-lineage-review-service/field-catalog-20261110.json
+        target: /catalog/field-catalog.json
+        read_only: true
+        bind:
+          create_host_path: false
+      - review-data:/data
+      - type: bind
+        source: ../../artifacts/data-lineage-review-service/field-extension-u8-20261112.json
+        target: /catalog/field-extension.json
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ../../artifacts/data-lineage-review-service/full-audit-20261112/catalog-v3/field-presentation.json
+        target: /catalog/field-presentation.json
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ../../artifacts/data-lineage-review-service/full-audit-20261112/catalog-v3/field-audit-extension.json
+        target: /catalog/field-audit-extension.json
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ../../artifacts/data-lineage-review-service/full-audit-20261112/catalog-v3/catalog-audit.json
+        target: /catalog/catalog-audit.json
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ../../artifacts/data-lineage-review-service/field-addendum-20261110.json
+        target: /catalog/field-addendum.json
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ../../artifacts/data-lineage-review-service/same-name-lineage-candidates-20261110.json
+        target: /catalog/candidate-catalog.json
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ../../artifacts/data-lineage-review-service/collection-batches.json
+        target: /catalog/collection-batches.json
+        read_only: true
+        bind:
+          create_host_path: false
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3093/api/health').then(async r=>{const h=await r.json();if(!r.ok||h.service!=='data-lineage-review-service'||h.scope!=='all-ip'||!h.fieldCatalogDigest||!h.fieldAddendumDigest||!h.fieldItems||!h.positionItems||!h.candidateTargets)process.exitCode=1}).catch(()=>{process.exitCode=1})"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  review-data:
+    name: infomat-data-lineage-review-data
+
+networks:
+  default: {}
+  review-api:
+    internal: true

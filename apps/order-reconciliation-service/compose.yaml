@@ -1,0 +1,48 @@
+name: infomat-order-reconciliation-9998
+services:
+  inventory:
+    image: ${ORDER_IMAGE:?Set the verified local image tag}
+    container_name: infomat-order-reconciliation-9998
+    init: true
+    restart: unless-stopped
+    ports:
+      - "9998:9998"
+    environment:
+      ORDER_ACCESS: lan
+      ORDER_DB_DRIVER: node
+      ORDER_DATA_ROOT: /data
+      SQLITE_TMPDIR: /data
+      MES_LEGACY_TLS: "1"
+      U8_SQL_PASSWORD_FILE: /run/secrets/u8_password
+      MES_SQL_USERNAME_FILE: /run/secrets/mes_username
+      MES_SQL_PASSWORD_FILE: /run/secrets/mes_password
+    volumes:
+      - type: volume
+        source: result_data
+        target: /data
+    secrets:
+      - u8_password
+      - mes_username
+      - mes_password
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs:
+      - /tmp:size=128m,noexec,nosuid
+    mem_limit: 3g
+    cpus: 2.0
+    pids_limit: 128
+    labels:
+      com.infomat.service: order-reconciliation
+      com.infomat.port: "9998"
+secrets:
+  u8_password:
+    file: ${ORDER_SECRET_DIR:?Set the private secret directory}/u8-password
+  mes_username:
+    file: ${ORDER_SECRET_DIR:?Set the private secret directory}/mes-username
+  mes_password:
+    file: ${ORDER_SECRET_DIR:?Set the private secret directory}/mes-password
+volumes:
+  result_data:
+    external: true
+    name: ${ORDER_DATA_VOLUME:-infomat-order-reconciliation-data}

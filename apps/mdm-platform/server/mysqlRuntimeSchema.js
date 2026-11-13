@@ -10,7 +10,7 @@ const DOMAIN_TABLES = {
   guidance: ['process_governance_guidance', 'process_governance_guidance_events'],
   dataMap: ['data_map_objects', 'data_map_contexts', 'data_map_fields', 'data_map_field_identities'],
   mapping: ['mdm_mapping_records', 'mdm_mapping_approval_tasks', 'mdm_mapping_approval_history'],
-  conflict: ['mdm_field_conflicts', 'mdm_term_conflicts', 'mdm_conflict_assignments'],
+  conflict: ['mdm_field_conflicts', 'mdm_term_conflicts', 'mdm_conflict_assignments', 'mdm_conflict_coordination_history', 'mdm_version_log'],
   todo: ['mdm_todos', 'mdm_todo_events', 'mdm_version_log'],
   terminology: ['data_map_terms', 'data_map_term_types', 'terminology_terms', 'terminology_term_types', 'process_mapping_records', 'departments'],
   audit: ['mdm_version_log', 'mdm_change_sets'],

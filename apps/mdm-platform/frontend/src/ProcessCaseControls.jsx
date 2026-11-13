@@ -20,7 +20,7 @@ export function CaseSubmissionFields({value,onChange,departments=[],behaviors=[]
   const source=(index,patch)=>change({sources:sources.map((row,i)=>i===index?{...row,...patch}:row)});
   const participant=(index,patch)=>change({participants:participants.map((row,i)=>i===index?{...row,...patch}:row)});
   return <div className="case-submission-fields">
-    {!participantsOnly&&<><h3>本次提交材料</h3><p>来源和参与范围在3000核对登记；原编制文件的正文保持原样。部门须明确选择，不能从动态角色推断。</p>
+    {!participantsOnly&&<><h3>本次提交材料</h3><p>来源和参与范围在MDM平台核对登记；原编制文件的正文保持原样。部门须明确选择，不能从动态角色推断。</p>
     {field('新编目的',input.purpose,v=>change({purpose:v}))}
     {field('修订原因（新编请明确说明新编）',input.revision_reason,v=>change({revision_reason:v}))}
     {field('本次变化说明（无变化请明确说明）',input.change_summary,v=>change({change_summary:v}))}
@@ -52,7 +52,7 @@ export function ProcessCaseHistory({api,caseRow}){
   async function download(revision){const token=generation.current;try{const result=await api.request(base+encodeURIComponent(caseRow.id)+'/revisions/'+encodeURIComponent(revision.id)+'/document');if(token!==generation.current)return;const url=URL.createObjectURL(new Blob([JSON.stringify(result,null,2)],{type:'application/json;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download=businessFileName(caseRow.process_name,'历史流程编制文件','json');a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}catch(e){if(token===generation.current)setError(e.serverMessage||e.message);}}
   return <section className="card" data-process-case-history><h2>{caseRow.process_name} · 历史查阅</h2><p>当前账号只可查阅参与办理或交接确认时的流程内容及此前必要历史。后续修订和当前办理材料须按当前职责取得权限。</p><button disabled={busy} onClick={()=>load()}>刷新可查历史</button>{error&&<StatusPanel kind="error" title="历史读取未完成">{userMessage(error)}</StatusPanel>}{value&&<><h3>已保存的历史内容</h3>{value.revisions.map(r=><p key={r.id}>保存时间：{businessDateTime(r.created_at)} · {caseRevisionMaterialLabel(r,caseRow)}<button disabled={busy} onClick={()=>download(r)}>下载该次保存的内容</button></p>)}<h3>关联办理记录</h3>{value.events.map(e=><p key={e.id}>{businessDateTime(e.created_at)} · {caseHistoryAction(e)} · {businessText(e.basis_text,'办理依据含技术内容，请查阅原材料')}</p>)}<button disabled={busy||!value.next_before_revision_no&&!value.next_after_event_id} onClick={()=>load(true)}>读取下一页可查历史</button></>}</section>;
 }
-export function ProcessCaseControls({api,detail,draft,setDraft,disabled,onBusyChange,onSaved,refreshKey}){
+export function ProcessCaseControls({api,detail,draft,setDraft,disabled,onBusyChange,onSaved,refreshKey,onNavigate}){
   const row=detail.case,root=base+encodeURIComponent(row.id)+'/governance';
   const [state,setState]=useState(null),[departments,setDepartments]=useState([]),[error,setError]=useState(''),[notice,setNotice]=useState(''),[busy,setBusy]=useState(false);
   const [formalControls,setFormalControls]=useState(null),[history,setHistory]=useState(null);
@@ -101,7 +101,7 @@ export function ProcessCaseControls({api,detail,draft,setDraft,disabled,onBusyCh
     <button type="button" disabled={busy||disabled} onClick={load}>刷新材料与案例状态</button>
     {error&&<StatusPanel kind="error" title="案例办理尚未完成">{userMessage(error)}</StatusPanel>}{notice&&<StatusPanel title="办理回执">{notice}</StatusPanel>}
     {!state&&!error&&<StatusPanel kind="loading" title="正在读取提交材料…">取得当前材料后显示可办动作。</StatusPanel>}
-    {state&&<><SubmissionReview state={state} detail={detail} departments={departments} disabled={busy||disabled} editing={Boolean(own)} onStart={start}/>
+    {state&&<><SubmissionReview state={state} detail={detail} departments={departments} disabled={busy||disabled} editing={Boolean(own)} onStart={start} onNavigate={onNavigate} navigationBlocked={Boolean(draft)}/>
       <details className="review-additional"><summary>补充材料或办理其他事项</summary><p>材料确认、范围变化、暂停终止、归口交接和业务验收各自留痕。只对实际发生的变化建立事项；新提交材料确认不表示发生范围变化。</p><div className="import-actions">{['submission','scope','owner','lifecycle','deadline','acceptance'].filter(allows).map(action=><button type="button" key={action} disabled={busy||disabled} onClick={()=>start(action)}>{names[action]}</button>)}</div></details>
     </>}
     <details className="review-additional"><summary>优化建议、制度版次与历史记录</summary>

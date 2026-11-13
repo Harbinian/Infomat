@@ -1,49 +1,71 @@
-# 3000 Docker部署与维护
+# MDM平台 Docker部署与维护
 
-本文件记录技术运行与恢复状态，不作为业务规则真源。2026-11-02已按用户授权完成3000、3001正式V9更新；3000健康与就绪检查通过，3001健康及V9结构摘要核对通过。软件更新不改变V9技术契约的candidate状态，也不代表业务验收。
+本文件说明当前技术运行和恢复方式，不作为业务规则真源。2026-11-05用户明确授权将本轮5项体验修复部署到MDM平台；17:40（北京时间）完成切换。修复已上线，原功能开关保持；上线后技术复验已完成，真实业务验收和真实使用者评分仍须独立取得。V9技术契约的candidate状态不因此改变。
 
-## 当前实例
+2026-11-12按用户要求将3000发布范围改为全部IPv4接口。仅重建容器的端口映射，应用镜像、功能开关、运行文件和挂载保持；`/api/health`、`/api/ready`及回环和两块网卡地址的页面检查均通过。本次未执行数据库迁移、授权或数据恢复。当前监听回执及原容器见[网络调整记录](../../artifacts/workspace-style-20261112/all-ip/state.json)。
 
-| 对象 | 本批核对结果 |
+## 当前运行
+
+| 项目 | 当前配置及对应验证时点 |
 |---|---|
-| 3000容器 | `infomat-mdm-3000`，`5ab0fc95b176`，healthy |
-| 3000镜像 | `infomat-mdm:v9-20261102-1826608359d7`；来源摘要`b2abe4ca5a2b4bd5f4d22b1fa4899960d8e83556fb561338ae90dec5e51c0699` |
-| 3000入口 | [3000平台](http://127.0.0.1:3000/app/)，宿主机仅绑定127.0.0.1:3000；`/api/health`为ok，`/api/ready`为200、ready=true |
-| 3001容器 | `infomat-structured-output-3001`，`1b39faba3b07`，healthy |
-| 3001镜像 | `infomat-structured:v9-20261102-cf036c0ccc05`，默认process-governance-v9；原宿主0.0.0.0:3001及Docker别名structured-output保留 |
-| 3001入口 | [React工作台](http://127.0.0.1:3001/workbench/)，根路径302转入；`/index.html`旧首页保留 |
-| 数据库 | 原infomat-input-baseline-review-mysql、原infomat_mdm_upgrade_20260916，198张表；未执行DDL、GRANT或正式业务写入 |
-| 原生兼容 | 3000默认V9，支持V8/V7原文；3001默认V9，支持V7/V8来源及显式版本结构查询，旧合同与摘要冻结 |
-| 重启与权限 | 两项容器均unless-stopped；原用户、只读根文件系统、只读配置挂载及端口范围保留 |
+| 入口 | [MDM平台](http://127.0.0.1:3000/app/)，绑定0.0.0.0:3000，另可通过192.168.19.199及192.168.10.184访问 |
+| 容器 | infomat-mdm-3000，8ceff8c7426b，运行且healthy，unless-stopped |
+| 镜像 | infomat-mdm:role-experience-20261105-6e611d0e3d23；[准确镜像ID](../../artifacts/3000-role-experience-deploy-20261105-01/image.json) |
+| 来源摘要 | 877aa3f740ca8b943f505705b3ed95f63e405b4921bba0497da1170e154a0119 |
+| 健康及就绪 | /api/health为200、ok；/api/ready为200、ready=true；摘要匹配冻结镜像 |
+| 数据库 | 既有infomat-input-baseline-review-mysql-3307及infomat_mdm_upgrade_20260916；201张表为2026-11-05核对记录，本次未迁移 |
+| 身份与格式 | person身份、HR v5固定9角色/22权限、13项RACI说明；原生V9及受支持V8/V7保留 |
+| 前端 | 2026-11-05已核对27个冻结资源及313个发布文件；本次沿用同一镜像，未重建前端 |
+| 3001 | 原容器保留，已有全IPv4发布；2026-11-12页面及健康检查通过，未改样式 |
 
-完整容器ID、镜像ID、源码与前端清单见[当前状态](../../artifacts/formal-v9-update-20261102/pending-status.json)、[镜像清单](../../artifacts/formal-v9-update-20261102/images.json)和[正式核对](../../artifacts/formal-v9-update-20261102/live-audit.json)。后续操作前仍须实时核对，不能把本批快照作为永久运行事实。
+当前 MySQL 容器名为 `infomat-input-baseline-review-mysql-3307`，宿主机端口为 `3307`。
 
-## 运行配置与账号
+人工质量审计保持QUALITY_AUDIT_ENABLED=1。编制工作台、预览、正式流转、数据治理、设计交接及术语治理开关沿用，旧V7编制入口仍关闭。仅更新来源摘要配置，没有调整真实人员角色、负责人登记、分派、密码或业务审批。
 
-本次仅对现有应用SQL账号infomat_mdm_upg_app_20260916@172.17.0.1执行用户明确同意的双密码修复：新增有效认证密码并保留原密码，已比对原认证摘要、原授权和业务数据。新受控运行文件由本批runtime-credential-plan.json定位，通过只读文件挂载使用；会话密钥保持原值。私有运行文件及原认证备份仅当前Windows用户和System可读，不进入Git，不通过聊天或日志输出。
+本次修复覆盖项目决定退回修订待办及指引、首屏办理入口、质量成功回执提示、冲突历史时间显示和访问审计时间读取。只替换4个服务端文件及完整已验证前端，其余运行载荷、依赖、启动逻辑和配置描述沿用原镜像；不从脏工作区混入其他应用。见[部署报告](../../artifacts/3000-role-experience-deploy-20261105-01/report.md)、[运行核验](../../artifacts/3000-role-experience-deploy-20261105-01/runtime-verification.json)和[部署回执](../../artifacts/3000-role-experience-deploy-20261105-01/deployment.json)。
 
-现有17个登录账号、298条人员记录、员工密码及授权未清空或重置。历史新账号初始密码文件仍缺失，原路径为目录；已排除该无效可选绑定，同时保留MDM_ACCOUNT_INITIAL_PASSWORD_FILE固定文件策略。文件恢复前，新账号首次启用返回配置不可用；不影响既有账号密码，不自动改用随机策略。
+## 配置、账号及结构准备
 
-镜像沿用准确旧镜像的生产依赖和已发布启动逻辑，源码、前端与技术合同逐文件核验。原功能开关保留：编制工作台、预览、正式流转、数据治理、设计交接及术语治理开启；旧V7编制入口保持关闭，数据治理正常业务模式保持可写。未额外开启其他接口或扩大权限。
+沿用原受保护运行文件、SQL账号及只读挂载；数据库认证、会话密钥和既有双密码策略未调整。未读取或展示正式凭据，未写入Docker Env。当前运行账号88条实际授权保持原表、列范围；本次没有GRANT、DDL、迁移或业务数据回填。
 
-未来重建须使用当前受控运行文件并核对有效挂载、网络别名、功能开关和源码摘要，不能直接重放历史compose、首次prepare或activate命令；这些历史容器引用的旧运行文件未被覆盖。凭据修复脚本已经执行，不能重复轮换或删除保留密码来代替部署。
+账号首次启用仍使用MDM_ACCOUNT_INITIAL_PASSWORD_FILE=/run/secrets/account-initial-password，挂载沿用原受控文件。首次登录必须改密及原重置策略保持。[当前挂载元数据检查](../../artifacts/3000-role-experience-deploy-20261105-01/account-mount-inspection.json)只证明普通文件和只读挂载前提，不代替真实账号启用验收。
 
-## 验证与恢复
+在宿主仓库apps/mdm-platform目录运行：
 
-198张表完整备份已在自有network-none MySQL恢复，逐表全部字段摘要和结构一致。正式更新后198张表的全部字段摘要及SQL授权仍与备份前一致。3000合成编制链14组、原生格式与编辑13项、Edge编制9组通过；3001准确镜像的完整交互与图形28组通过。正式Edge只读检查使用100%缩放、1699×828 CSS像素，登录页与React工作台正常、无横向溢出及页面或控制台错误；31个前端资源摘要与构建清单一致。证据见[更新报告](../../artifacts/formal-v9-update-20261102/report.md)。未执行真实保存、提交、审核或发布，未取得人工输入法或业务验收。
+    npm run inspect:account-initial-password -- --container infomat-mdm-3000
 
-预备容器`infomat-mdm-3000-v9-readonly-r2-20261102`使用当前有效运行文件，镜像`infomat-mdm:v9-readonly-recovery-20261102`支持V9/V8/V7读取。其准确镜像在恢复副本中通过就绪及业务写入拒绝检查；只读模式暂停待办草案后台生成，保留登录和退出会话路径。本批仅核对预备容器身份及挂载，未在正式端口启用只读恢复。
+该命令不读取密码、不连接数据库。管理CLI以宿主当前源码及配套证据定位；本次运行镜像未覆盖旧scripts目录，不假定容器内管理CLI已经同步。
 
-从仓库根核对本批恢复前置条件：
+人工质量的三张表及迁移标记已在此前授权发布中准备，必要SQL列权限也已补齐，历史凭证见[质量与角色交接发布报告](../../artifacts/3000-governance-deploy-20261105-01/report.md)。本次仅验证并保留其当前状态，不重放旧迁移、补授或激活入口。
 
-~~~powershell
-node artifacts/formal-v9-update-20261102/recover-mdm-readonly.cjs check
-~~~
+后续新增结构仍须使用相应版本的scripts/manage-governance-deployment.js，明确目标、服务器UUID和当次部署编号，完成授权、停写、实际备份、独立恢复及当前盘点。运行请求不执行DDL。新写链还须以实际表/列授权验证；ready、人员权限读取或宽DML夹具不能代替运行SQL写能力验证。
 
-确需恢复时，同脚本使用`activate-readonly`：核对当前与预备容器准确ID和镜像，保留当前写服务容器，切换到兼容只读镜像，检查健康、就绪、当前业务字段摘要、结构及授权。该动作会短暂停启3000并关闭业务写入，不操作3001、不恢复旧dump或覆盖正式库；切换失败则尝试恢复本批正常V9容器。批次身份不符时停止，不能绕过守卫重放。
+## 本次备份与保全
 
-旧3000及3001 V8容器保留追溯，不能作为产生V9文件或数据后的通用降级入口。3001故障恢复须使用当前V9不可变镜像及原配置，保持V9文件可导入；不以旧V8写服务回退。备份、失败容器及此前诊断保留，历史受阻状态归入本批history/。
+先只读核对正式版本和上轮发布后的增量；本次前检未发现201表字段摘要、结构或授权变化。随后停止准确MDM平台应用并禁用自动重启，取得新的完整备份，例程、触发器及事件实际均为0。备份保存在仅当前执行用户及System可访问的private目录，不输出内容。
 
-## 历史基线
+该备份已在独立network-none、tmpfs MySQL实际恢复；201张表全部字段摘要、列、索引、约束、引用、字符集和排序规则一致。正常与同版只读镜像在恢复副本上通过就绪、结构、既有账号权限及V9/V8/V7检查，副本数据未变。切换前后及上线后复查，正式201表全部字段摘要、结构和88条授权仍完全一致，包括会话表。此结论限记录时点，不要求后续正常业务写入继续等于该快照。
 
-2026-10-27 N01—N07发布及当时恢复说明保留在[本轮更新前快照](../../artifacts/formal-v9-update-20261102/documentation-before/apps/mdm-platform/DOCKER.md)。其中“当前状态”和命令仅适用于当时批次；本轮完整证据见[机器结果](../../artifacts/formal-v9-update-20261102/verification.json)及[备份恢复凭证](../../artifacts/formal-v9-update-20261102/final-restore-receipt.json)。
+[备份回执](../../artifacts/3000-role-experience-deploy-20261105-01/backup.json)、[实际恢复回执](../../artifacts/3000-role-experience-deploy-20261105-01/restore-receipt.json)、[双镜像验证](../../artifacts/3000-role-experience-deploy-20261105-01/image-probes.json)及[数据保全](../../artifacts/3000-role-experience-deploy-20261105-01/runtime-verification.json)保留准确目标与摘要。正式库未导入任何dump。
+
+上线后，正式入口、登录门槛、健康和全部公开资源已直接核对；写链路在来源摘要与正式镜像一致的合成自有环境执行。63次真实HTTP及真实Edge覆盖相关角色入口、退回续修、质量回执、冲突交接和时间显示。正式真实业务办理及人工输入法体验不由这些技术检查代替。
+
+## 当前恢复入口
+
+全IP调整前的同版容器`infomat-mdm-3000-before-all-ip-20261112`保持停止，准确ID保存在上述网络调整记录中。原`recover.cjs`绑定该旧容器ID，不能直接对新ID执行维护切换。若需使用原同版只读维护入口，先在当次维护授权范围内，从仓库根执行`node artifacts/workspace-style-20261112/bindings.mjs rollback mdm`恢复同版原容器及原回环发布，再运行下述`recover.cjs check`和维护命令。该监听回退复用当前挂载和数据，不回灌旧备份；其他网页服务不受影响。
+
+切换前容器infomat-mdm-3000-before-role-experience-20261105保留停止，原镜像和备份保留追溯。不能回灌本次或更旧dump覆盖上线后增量；不将旧写版本直接当作当前恢复入口。
+
+同版只读备用为infomat-mdm-3000-role-experience-readonly-20261105，准确ID为ffd1f3962f5f2fc8ee7fc96ed5904c3f530f2b52822e12401f0eb9a2a4928f46，保持停止。其代码和来源与当前版本一致，沿用当前运行文件及初始密码只读挂载。外层门禁拒绝业务写入，仅保留登录/退出会话，停止待办后台生成；该效果已在独立恢复副本验证，正式备用未激活。
+
+从仓库根核对元数据：
+
+    node artifacts/3000-role-experience-deploy-20261105-01/recover.cjs check
+
+该检查不连接数据库、不切换服务。需要维护时，按当次授权执行同入口activate-readonly --authorized-readonly-maintenance。入口绑定当前及备用准确ID，从停写开始覆盖故障补偿，保存当时数据、结构和授权摘要后切换同版只读服务。保留正常容器及全部当前增量，不恢复dump；补偿失败会记录实际容器状态，不误报恢复成功。
+
+## 历史定位
+
+本次更新前说明保留于[DOCKER.before](../../artifacts/3000-role-experience-deploy-20261105-01/documentation-before/DOCKER.md)。上轮质量审计及SQL列授权发布见[历史报告](../../artifacts/3000-governance-deploy-20261105-01/report.md)，本轮5项修复的发现和上线前隔离体验见[体验报告](../../artifacts/3000-postlaunch-role-experience-20261105-01/report.md)。更旧初始密码恢复、V9更新和3001记录按历史链追溯。
+
+旧发布及恢复脚本绑定的活动容器ID已过期，仅用于追溯；当前维护使用上文新入口。所有正式备份、原受控配置和历史镜像保留，已清理本次自有测试服务、数据库及浏览器。未暂存、提交或推送。

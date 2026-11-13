@@ -4,13 +4,13 @@
 
 ## 共享编制纯合同
 
-`process-governance/authoring-contracts.js`由3000和3001调用，输入调用方的Ajv构造器，读取既有技术Schema，返回空白模板、兼容校验及JSON安全诊断。模块不创建HTTP应用、不读组织副本、不写文件或数据库；正文结构、旧引用校验及归档语义保持原有规则。验证入口：`node --test apps/mdm-platform/scripts/test-process-authoring-editor.js`及3001的本机 `scripts/test-workbench-controller.mjs`。3000内编制候选与现有人工文件交接的适用状态见[编制实施合同](../apps/mdm-platform/PROCESS_AUTHORING.md)。
+`process-governance/authoring-contracts.js`由MDM平台和3001调用，输入调用方的Ajv构造器，读取既有技术Schema，返回空白模板、兼容校验及JSON安全诊断。模块不创建HTTP应用、不读组织副本、不写文件或数据库；正文结构、旧引用校验及归档语义保持原有规则。验证入口：`node --test apps/mdm-platform/scripts/test-process-authoring-editor.js`及3001的本机 `scripts/test-workbench-controller.mjs`。MDM平台内编制候选与现有人工文件交接的适用状态见[编制实施合同](../apps/mdm-platform/PROCESS_AUTHORING.md)。
 
 ## 当前格式与历史版本兼容
 
-共享纯校验模块 `process-governance/v7-validator.js` 同时导出 V9、V8 和 V7 入口，由 3001 和 3000 按文件版本分派。V9 增加显式入口、记录模型、实例范围和存在条件校验；V8 的 decision + use 及 V7 历史语义分别保留。模块不写文件、不连接数据库。本机V9专项为 `node scripts/process-governance/test-v9-validator.js`；3000原生兼容范围见其README。
+共享纯校验模块 `process-governance/v7-validator.js` 同时导出 V9、V8 和 V7 入口，由 3001 和 MDM平台 按文件版本分派。V9 增加显式入口、记录模型、实例范围和存在条件校验；V8 的 decision + use 及 V7 历史语义分别保留。模块不写文件、不连接数据库。本机V9专项为 `node scripts/process-governance/test-v9-validator.js`；MDM平台原生兼容范围见其README。
 
-本目录放仓库级自动化脚本。当前治理依据来自用户指定的外部原始材料、业务说明与明确确认；以 3000 内编制、保存草稿、提交及核对审核为当前开发主线，保留 3001 用户下载后手动上传的兼容路径。`docs/` 输入只属于历史展示、兼容合同、技术说明或副本，不能决定现行业务事实、人员任命、职责或审批链。表中旧消费链不属于当前治理操作；其生成/同步要求显式兼容用途和目标路径。只服务单个应用的脚本应留在对应应用目录，例如 `apps/mdm-platform/scripts/`。
+本目录放仓库级自动化脚本。当前治理依据来自用户指定的外部原始材料、业务说明与明确确认；以 MDM平台 内编制、保存草稿、提交及核对审核为当前开发主线，保留 3001 用户下载后手动上传的兼容路径。`docs/` 输入只属于历史展示、兼容合同、技术说明或副本，不能决定现行业务事实、人员任命、职责或审批链。表中旧消费链不属于当前治理操作；其生成/同步要求显式兼容用途和目标路径。只服务单个应用的脚本应留在对应应用目录，例如 `apps/mdm-platform/scripts/`。
 
 修改本目录脚本前先读 `AGENTS.md`。涉及命令、输入、输出、副作用、启动规则或验证口径变化时，必须同步更新本 README。
 
@@ -18,6 +18,7 @@
 
 | 脚本 | 作用 | 输入 | 输出 / 副作用 |
 |---|---|---|---|
+| `update-mdm-platform-name.mjs` | 统一当前资料及界面中的「MDM平台」称谓 | Git 已跟踪或未忽略的维护中文本、术语表及指定的立项评审 Markdown | 默认 `--preview` 列出拟更新文件，`--check` 发现旧称时以非零状态退出。仅 `--apply` 写入，PMO 任务变化追加增补批次。执行后通过 `npm run build:pmo-task-data` 更新 PMO 派生数据，按应用构建入口刷新界面，Word 审议稿随 Markdown 单独同步 |
 | `parse-sankey-data.mjs` | 历史展示/兼容解析；保留结构块 v1、hybrid 合并、证据及 `processMappings` 形状，不恢复旧副本的治理权威 | `--legacy-display --domain-map <json> --out <json>`；域输入须有非空 `departments` 对象；默认读取旧 `docs/norms/`，隔离输入可用 `--norms`、`--cross-report`、`--chain-report`、`--work-roles` | 仅写显式 `--out`；只有显式 `--dashboard <html>` 才注入该文件；写入前校验标签唯一性并拒绝覆盖所选输入 |
 | `check-dashboard-data.mjs` | 校验保留历史快照形状、风险枚举、内嵌副本一致及页面消费结构 | `docs/company-sankey-data.json`、`pmo/procedure-management/dashboard.html`；`--legacy-source-comparison` 才比对旧来源正文和指纹 | 只读；结果不证明当前业务或正式实例状态 |
 | `check-dept-domain-mapping.mjs` | 校验显式历史部门域 JSON，不解析组织 Markdown 首代码块，不推定现行组织事实 | 可指定 `--domain-map <json>`、`--snapshot <json>`；无参时只比对保留的技术合同 map 与历史快照 | 只读；部门/域须显式完整，缺少或无效时失败 |
@@ -35,13 +36,13 @@
 | `test-process-governance-mainline-contract.mjs` | 校验当前命令注册与保留历史快照的消费形状、来源元数据和引用结构 | `package.json`、保留快照及仓库脚本 | 只读结构检查，不证明快照为现行治理依据 |
 | `test-root-script-safety.mjs` | 验证旧输入执行门槛、只读规划、精确导入参数、目录归属、共享成果保留、失败不覆盖与统一包日期 | 合成 map/norms/roles/report、fake 导入器、新 profile 和伪文件存在夹具 | 新夹具写 `artifacts/repo-audit/{Asia-Shanghai日期}/root-script-safety-<随机值>/`，共享目录保留哨兵/审计批次写 `artifacts/customer-file-acceptance/`；不运行真实导入器或现有浏览器 |
 | `test-parse-sankey-structure-block.mjs` | 校验流程治理结构块 v1 的 parser 优先读取、hybrid 合并、系统枚举、证据状态和 A1→L3 引用约束 | 内置临时夹具 | 只读校验 |
-| `test-document-structured-output-schema.mjs` | 校验 v2 证据草稿/历史转换技术合同、保留表注释、枚举、待确认字段与结构块 parser | v2 Schema、历史 MySQL 表定义、parser；现行 3000 行为由应用隔离测试另行验证 | 只读，不要求恢复已退役 UI/路由，也不赋予 v2 当前办理资格 |
+| `test-document-structured-output-schema.mjs` | 校验 v2 证据草稿/历史转换技术合同、保留表注释、枚举、待确认字段与结构块 parser | v2 Schema、历史 MySQL 表定义、parser；MDM平台当前行为由应用隔离测试另行验证 | 只读，不要求恢复已退役 UI/路由，也不赋予 v2 当前办理资格 |
 | `build-work-role-data.mjs` | 按显式选定的历史角色/花名册兼容格式生成快照；完整校验角色及“部门 + 岗位”后才原子替换输出 | `--legacy-display --source <md> --roster <md> --out <json>`，可选 `--generated-at` | 只写显式输出；CLI 无默认覆写，不修改输入或数据库，不证明当前 HR 任命 |
 | `test-work-role-contract.mjs` | 校验 v2 可选角色关系、历史空目录与快照形状，隔离验证岗位核验、反例和失败不覆盖 | 技术合同、保留副本/快照及合成夹具；`--legacy-source-comparison` 才逐字比对副本 sourceHash | 夹具写系统临时目录，不覆写保留快照，不证明当前岗位和责任 |
 | `infomat-services.config.json` | MDM、PMO、MySQL固定启动配置 | 固定端口、固定MySQL用户和数据库、固定读模型 | 非敏感配置真源 |
 | `infomat-service-config.mjs` | 读取固定启动配置并合成本机运行环境 | `infomat-services.config.json`、本机 `infomat-services.local.env` | 供启动和冒烟脚本复用 |
 | `repair-infomat-mysql-container.ps1` | 将本机历史MySQL容器调整为固定启动配置 | 固定配置、本机私有env、Docker容器状态 | 只修复本机Docker运行态，不写仓库真源 |
-| `start-infomat-services.ps1` | 固定启动MDM、PMO和项目MySQL | 固定配置、本机私有env、Docker容器`infomat-input-baseline-review-mysql` | 按固定环境启动服务，不修改仓库真源 |
+| `start-infomat-services.ps1` | 固定启动MDM、PMO和项目MySQL | 固定配置、本机私有env、Docker容器`infomat-input-baseline-review-mysql-3307` | 按固定环境启动服务，不修改仓库真源 |
 | `smoke-infomat-services.mjs` | 固定配置下检查MDM和PMO是否可用，并核对V7预览及旧编制入口不再注册 | 固定配置、本机私有env、运行中的服务 | 只读检查，输出会隐藏密码 |
 | `test-infomat-services-config.mjs` | 防止启动配置再次漂移 | 固定配置、启动脚本、冒烟脚本、`.gitignore` | 只读校验 |
 | `information-collection.config.json` | 固定信息表收集服务的监听地址、端口、数据库目标和附件限制 | 非敏感固定配置；`mdm_user`密码通过`COLLECTION_MYSQL_PASSWORD`提供 | 不保存数据库密码、会话密钥或扫描命令 |
@@ -71,7 +72,7 @@ npm run sync:process-governance -- --check-env
 npm run sync:process-governance -- --legacy-display --snapshot artifacts/legacy-display/company-sankey-data.json
 ```
 
-明确获得目标、权限、备份与恢复授权后，才在上述命令增加 `--apply`，并在进程环境配置 `MYSQL_HOST`、`MYSQL_PORT`、`MYSQL_USER`、`MYSQL_PASSWORD`、`MYSQL_DATABASE`。这只是历史展示读模型兼容导入，不替代 3001/3000 当前办理。SQLite 历史工具只使用应用中明确的 `legacy-sqlite:` 名称和独立库；已撤销的四个初始化/同步/导入/检查命令不再恢复。
+明确获得目标、权限、备份与恢复授权后，才在上述命令增加 `--apply`，并在进程环境配置 `MYSQL_HOST`、`MYSQL_PORT`、`MYSQL_USER`、`MYSQL_PASSWORD`、`MYSQL_DATABASE`。这只是历史展示读模型兼容导入，不替代 3001/MDM平台 当前办理。SQLite 历史工具只使用应用中明确的 `legacy-sqlite:` 名称和独立库；已撤销的四个初始化/同步/导入/检查命令不再恢复。
 
 历史副本变化可使带 `--legacy-source-comparison` 的检查失败。该模式用于检查有明确兼容任务的旧消费链；失败需审查版本与输入选择，不应为了得到绿灯重生成保留快照。默认聚合仍检查内嵌数据、消费结构与当前技术行为。
 
@@ -100,7 +101,7 @@ npm run build:work-role-data -- --legacy-display `
 
 ## MDM / PMO 固定启动配置
 
-仅操作3000时，改从`apps/mdm-platform`运行`npm run service:start`、`npm run service:stop`、`npm run service:restart`或`npm run service:check`。应用专用脚本复用本目录`infomat-services.config.json`中的MDM/MySQL/readModels非敏感值，不读取私有env、不初始化数据库、不操作PMO或3001。会话、HTTPS、就绪和恢复条件见[3000发布与恢复](../docs/plans/2026-09-09-mdm-3000-launch/03-发布与恢复.md)。下面的共同开发入口保持原有副作用，不作为3000独立发布命令。
+仅操作MDM平台时，改从`apps/mdm-platform`运行`npm run service:start`、`npm run service:stop`、`npm run service:restart`或`npm run service:check`。应用专用脚本复用本目录`infomat-services.config.json`中的MDM/MySQL/readModels非敏感值，不读取私有env、不初始化数据库、不操作PMO或3001。会话、HTTPS、就绪和恢复条件见[MDM平台发布与恢复](../docs/plans/2026-09-09-mdm-3000-launch/03-发布与恢复.md)。下面的共同开发入口保持原有副作用，不作为MDM平台独立发布命令。
 
 MDM 和 PMO 的仓库根目录启动入口：
 
@@ -115,7 +116,7 @@ npm run start:infomat-services
 | MDM | `127.0.0.1:3000` |
 | PMO | 本机访问 `127.0.0.1:5173`，服务监听 `0.0.0.0:5173` |
 | MySQL | `localhost:3307` |
-| MySQL Docker 容器 | `infomat-input-baseline-review-mysql` |
+| MySQL Docker 容器 | `infomat-input-baseline-review-mysql-3307` |
 | MySQL 用户 / 库 | `sa` / `infomat_mdm`（`sa` 为全局管理账号，具有授权权限） |
 | MySQL 连接池 | `MYSQL_CONNECTION_LIMIT=16` |
 | 读模型 | `MDM_IDENTITY_READ_MODEL=mysql`、`PROCESS_GOVERNANCE_READ_MODEL=mysql` |
@@ -145,11 +146,11 @@ npm run start:infomat-services
 |---|---|
 | MDM | `http://127.0.0.1:3000` 可访问 |
 | PMO | 本机 `http://127.0.0.1:5173` 可访问；同事使用 `http://<本机局域网IP>:5173` |
-| MySQL | Docker 容器 `infomat-input-baseline-review-mysql` 通过 `localhost:3307` 提供服务 |
+| MySQL | Docker 容器 `infomat-input-baseline-review-mysql-3307` 通过 `localhost:3307` 提供服务 |
 | 权限数据 | 本机 `scripts/smoke-infomat-services.mjs` 核对 `ADMIN001`有效账号、`admin`固定角色和当前治理模型版本 |
 | 私有密码 | `scripts/infomat-services.local.env` 包含 `MYSQL_PASSWORD` 和 `MDM_ADMIN_PASSWORD` |
 
-3000现有身份库首次切换到固定RBAC/RACI模型前，在`apps/mdm-platform/`执行：
+MDM平台现有身份库首次切换到固定RBAC/RACI模型前，在`apps/mdm-platform/`执行：
 
 ```powershell
 npm run migrate:rbac-raci-v2:dry-run
@@ -158,7 +159,7 @@ npm run migrate:rbac-raci-v2:apply
 
 迁移只自动保留受控`ADMIN001`管理员，其他旧账号停用，旧角色不自动映射。回滚和补偿必须使用迁移返回的批次编号，完整步骤见`apps/mdm-platform/docs/RBAC-RACI-Migration-Runbook.md`。空身份库使用`npm run bootstrap:admin`，检测到已有身份数据后会拒绝重复初始化。
 
-输入基线问题复核的历史技术入口留在 MDM 平台；是否在目标实例注册并启用须核对实时路由与权限，不能据此认定已开启：
+输入基线问题复核的历史技术入口留在 MDM平台；是否在目标实例注册并启用须核对实时路由与权限，不能据此认定已开启：
 
 ```bash
 cd apps/mdm-platform

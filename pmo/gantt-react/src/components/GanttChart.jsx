@@ -11,14 +11,14 @@ const BAR_HEIGHT = 20;
 const BAR_Y_OFFSET = (ROW_HEIGHT - BAR_HEIGHT) / 2;
 const FONT_STACK = '"Source Han Sans SC", "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif';
 const GANTT_THEME = {
-  panel: '#f7f1e0',
-  panel2: '#fbf6e9',
-  line: 'rgba(58, 46, 31, 0.16)',
-  lineSoft: 'rgba(58, 46, 31, 0.08)',
-  ink: '#2a2014',
-  text: '#3d3023',
-  muted: '#7a6a56',
-  faint: '#b8a88e',
+  panel: '#fafbf8',
+  panel2: '#ffffff',
+  line: '#dce3d7',
+  lineSoft: '#e9eee5',
+  ink: '#26382e',
+  text: '#455b48',
+  muted: '#758078',
+  faint: '#a8b5a0',
   focus: '#c97050',
   gold: '#9a7a30',
   sage: '#6f7d4e',

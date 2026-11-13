@@ -2,7 +2,7 @@
 
 ## 1. 数据边界
 
-本应用与 3000 共用 `infomat_mdm` 数据库，但只读取 `person`、`user_accounts`、`departments`。本应用只写入 `collection_*` 表，不修改 3000 的角色、权限和治理业务表。
+本应用与 MDM平台 共用 `infomat_mdm` 数据库，但只读取 `person`、`user_accounts`、`departments`。本应用只写入 `collection_*` 表，不修改 MDM平台 的角色、权限和治理业务表。
 
 ## 2. 表与责任
 

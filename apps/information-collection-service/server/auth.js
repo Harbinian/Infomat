@@ -137,7 +137,7 @@ function createAuth({ pool, config, surface, audit }) {
       throw error;
     }
     if (identity.must_change_password) {
-      const error = new Error('首次登录必须先在 3000 修改密码');
+      const error = new Error('首次登录必须先在 MDM平台 修改密码');
       error.status = 403;
       error.code = 'PASSWORD_CHANGE_REQUIRED';
       throw error;

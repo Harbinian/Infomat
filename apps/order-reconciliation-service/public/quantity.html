@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>数量与 BOM 核查 · 订单核对</title><link rel="icon" href="data:,"><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/quantity.css"><script src="/quantity.js" type="module"></script></head>
+<body>
+<header class="masthead"><div class="brand-mark" aria-hidden="true">核</div><div><div class="eyebrow">用友 · 转换平台 · 勤哲</div><h1>订单核对</h1></div><nav class="page-nav" aria-label="页面导航"><a id="ledger-link" href="/">订单核对明细</a><a id="statistics-link" href="/statistics">异常统计</a><a href="/quantity-review" aria-current="page">数量与 BOM 核查</a><a id="checks-link" href="/order-checks">逐单数量复核</a><a id="materials-link" href="/material-checks">入库与领料核查</a><a id="chain-link" href="/chain-checks">链路风险核查</a><a id="processing-link" href="/processing-checks">加工流转核查</a></nav><div class="service-note"><span class="status-dot"></span>仅查询，不修改原单据</div></header>
+<main class="quantity-main">
+ <section class="quantity-intro"><div><span class="eyebrow">随盘点保存 · 保留历史</span><h2>数量与 BOM 核查</h2><p id="read-window">正在读取核查记录…</p></div><button id="retry" type="button" class="secondary">重新读取结果</button></section>
+ <section class="batch-bar"><div class="batch-choice"><label for="batch-select">选择盘点记录</label><select id="batch-select"><option>正在加载…</option></select></div><p id="selection-note">从订单核对明细“开始全量盘点”，每次一起只读重查。</p></section>
+ <div id="load-error" class="notice error" role="alert" hidden></div>
+ <div id="review-content" hidden>
+  <section class="quantity-boundary"><strong>历史适用依据仍待核查</strong><p id="basis"></p><p>数值相同不表示历史订单已通过核查。BOM 修改晚于订单、历史子件行缺失、单位或分批依据不清的项目，均保留待核查。新盘点的单据核对与数量核查一起完成后发布；本页“重新读取结果”只读取保存结果，不重跑盘点。</p></section>
+  <section id="quantity-metrics" class="quantity-metrics" aria-label="数量差异概况"></section>
+  <section class="quantity-table"><h3>核查结果与完整明细</h3><p>各项口径不同，不能相加。完整明细保留原数量、订单引用、计算依据和限制；部分文件较大。</p><table><thead><tr><th>核查项目</th><th>结果与判断边界</th><th>明细条数</th><th>完整明细</th></tr></thead><tbody id="review-rows"></tbody></table></section>
+  <section class="quantity-table"><div class="sample-heading"><h3>差异与更改样例</h3><label>选择核查项目 <select id="sample-kind"></select></label></div><p id="sample-note"></p><div id="sample-list"></div></section>
+  <details class="quantity-limitations"><summary>核查范围与未决事项</summary><p id="scope"></p><ul id="limitations"></ul><p id="coverage"></p></details>
+ </div>
+</main></body></html>

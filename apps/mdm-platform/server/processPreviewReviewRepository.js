@@ -187,6 +187,13 @@ function publicEvent(row) {
 }
 
 async function insertEvent(executor, event) {
+  // Capture the name from the actor revalidated in this transaction. Old
+  // events remain unchanged and are never resolved against today's directory.
+  const actorSnapshot = event.actor && event.actor.personId ? {
+    person_id: event.actor.personId,
+    person_name: event.actor.personName || null
+  } : null;
+  const payload = actorSnapshot ? { ...event.payload, actor_snapshot: actorSnapshot } : event.payload;
   await executor.execute(`
     INSERT INTO process_v7_preview_events
       (case_id, revision_id, item_id, event_type,
@@ -205,8 +212,27 @@ async function insertEvent(executor, event) {
     event.actor && event.actor.roleCode || null,
     event.decision || null,
     event.basis || null,
-    event.payload ? JSON.stringify(event.payload) : null
+    payload ? JSON.stringify(payload) : null
   ]);
+}
+
+async function reviewTaskActorSnapshot(executor, task) {
+  const decision = { approved: 'approve', needs_changes: 'needs_changes', rejected: 'reject' }[task && task.status];
+  if (!decision || !task.decided_by || !task.draft_revision_no || !task.content_hash) return null;
+  const matches = await rows(executor, `
+    SELECT CAST(actor_user_id AS CHAR) AS actor_user_id, payload_json
+    FROM process_design_events
+    WHERE draft_id=? AND event_type=?
+      AND JSON_UNQUOTE(JSON_EXTRACT(payload_json,'$.review_task_id'))=?
+      AND JSON_UNQUOTE(JSON_EXTRACT(payload_json,'$.draft_revision_no'))=?
+      AND JSON_UNQUOTE(JSON_EXTRACT(payload_json,'$.content_hash'))=?
+    ORDER BY id LIMIT 2
+  `, [task.draft_id, 'review_' + decision, String(task.id), String(task.draft_revision_no), task.content_hash]);
+  if (matches.length !== 1) return null;
+  const snapshot = parseJson(matches[0].payload_json, {})?.actor_snapshot;
+  if (!snapshot || !sameIdentityInteger(snapshot.person_id, task.decided_by) ||
+      !sameIdentityInteger(matches[0].actor_user_id, task.decided_by)) return null;
+  return { person_id: identityInteger(snapshot.person_id), person_name: snapshot.person_name || null };
 }
 
 async function insertReviewItems(executor, caseId, revisionId, revisionNo, items, actor) {
@@ -308,7 +334,8 @@ async function getCaseDetailFrom(executor, caseId) {
         ...reviewTask,
         id: Number(reviewTask.id),
         draft_id: Number(reviewTask.draft_id),
-        draft_revision_no: reviewTask.draft_revision_no == null ? null : Number(reviewTask.draft_revision_no)
+        draft_revision_no: reviewTask.draft_revision_no == null ? null : Number(reviewTask.draft_revision_no),
+        actor_snapshot: await reviewTaskActorSnapshot(executor, reviewTask)
       } : null;
       formalPromotion.current_version = publicFormalVersionMetadata(currentVersion);
       formalPromotion.department_confirmation = await inspectFormalDepartmentDecision(executor, formalPromotion.draft, reviewTask);
@@ -318,6 +345,7 @@ async function getCaseDetailFrom(executor, caseId) {
   }
   const previewConfirmation = await inspectPreviewDepartmentDecisions(executor, caseRow);
   const governance = await caseGovernance.read(executor,caseRow);
+  const dispute = await require('./processCaseDisputes').currentDisputeReviewState(executor, caseRow, items);
   return {
     case: publicCase(caseRow),
     revision: publicRevision(revision, true),
@@ -325,7 +353,8 @@ async function getCaseDetailFrom(executor, caseId) {
     preview_confirmation: { valid: previewConfirmation.valid, missing: previewConfirmation.missing },
     events: events.map(publicEvent),
     governance,
-    review_dispute_event_id: await require('./processCaseDisputes').currentDisputeEventId(executor,caseId),
+    review_dispute_event_id: dispute.event_id,
+    dispute_revision_return: dispute.revision_return,
     formal_promotion: formalPromotion
   };
 }
@@ -351,6 +380,7 @@ async function currentPreviewActor(connection, actor) {
   if (authority.readOnly) throw repositoryError(403, 'V7_PREVIEW_ADMIN_READ_ONLY', '管理员对治理材料只读，不能执行流程预览核对写操作');
   const roleCodes = authority.roleCodes;
   const current={ ...actor, userId: authority.user.personId, personId: authority.user.personId,
+    personName: authority.user.personName || authority.user.name || null,
     departmentId: authority.user.current_department_id, departmentName: authority.user.departmentName,
     permissions: authority.permissions, roleCodes,
     roleCode: ['mdm_lead', 'department_mdm_reviewer', 'department_contact'].find(code => roleCodes.has(code)) || null };
@@ -1309,7 +1339,8 @@ function makeProcessPreviewReviewRepository(pool) {
             preview_case_id: Number(lockedCase.id),
             preview_revision_id: Number(lockedRevision.id),
             preview_revision_no: Number(lockedRevision.revision_no),
-            content_hash: lockedRevision.content_hash
+            content_hash: lockedRevision.content_hash,
+            actor_snapshot: { person_id: actor.personId, person_name: actor.personName || null }
           })
         ]);
         await insertEvent(connection, {

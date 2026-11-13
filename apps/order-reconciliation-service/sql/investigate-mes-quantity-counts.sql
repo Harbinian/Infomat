@@ -1,0 +1,7 @@
+SELECT N'生产订单中间表新_明细' AS object_name,COUNT_BIG(*) AS row_count FROM dbo.[生产订单中间表新_明细]
+UNION ALL SELECT N'生产订单输入_主表',COUNT_BIG(*) FROM dbo.[生产订单输入_主表]
+UNION ALL SELECT N'产品制造大纲_主表',COUNT_BIG(*) FROM dbo.[产品制造大纲_主表]
+UNION ALL SELECT N'产品制造大纲版次记录页_主表',COUNT_BIG(*) FROM dbo.[产品制造大纲版次记录页_主表]
+UNION ALL SELECT N'产品制造大纲版次记录页_明细',COUNT_BIG(*) FROM dbo.[产品制造大纲版次记录页_明细]
+UNION ALL SELECT N'产品制造大纲流转卡_主表',COUNT_BIG(*) FROM dbo.[产品制造大纲流转卡_主表]
+UNION ALL SELECT N'产品制造大纲流转卡记录版次_明细',COUNT_BIG(*) FROM dbo.[产品制造大纲流转卡记录版次_明细]

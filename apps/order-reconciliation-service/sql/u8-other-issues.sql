@@ -1,0 +1,2 @@
+SELECT h.cCode AS IssueCode,h.dDate AS IssueDate,h.dVeriDate,h.cRdCode,rs.cRdName,h.cSource,h.cMemo,CASE WHEN NULLIF(h.cHandler,N'') IS NOT NULL THEN 1 ELSE 0 END AS HasAuditHandler,r.AutoID,r.cInvCode,r.iQuantity,r.csocode,r.isodid,r.iordercode,r.iorderdid,r.cbMemo,r.cDefine25,r.cDefine28,COUNT_BIG(*) OVER() AS _expectedCount
+FROM dbo.RdRecord09 h JOIN dbo.rdrecords09 r ON r.ID=h.ID LEFT JOIN dbo.Rd_Style rs ON rs.cRdCode=h.cRdCode WHERE h.bRdFlag=0 ORDER BY r.AutoID

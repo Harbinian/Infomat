@@ -87,7 +87,7 @@
 | 错误码 | HTTP | 用户处理 |
 |---|---:|---|
 | `AUTH_REQUIRED` | 401 | 重新登录 |
-| `PASSWORD_CHANGE_REQUIRED` | 403 | 先在 3000 修改首次密码 |
+| `PASSWORD_CHANGE_REQUIRED` | 403 | 先在 MDM平台 修改首次密码 |
 | `FORM_SCOPE_DENIED` / `TASK_SCOPE_DENIED` | 403 | 联系信息收集管理员核对部门授权 |
 | `REVISION_CONFLICT` | 409 | 页面保留本页内容并读取服务器最新修订；填报人明确选择采用服务器内容，或者在服务器答卷仍为开放草稿时保留本页内容并重新保存 |
 | `FORM_ARCHIVED` | 409 | 已归档表单不能修改或发布新任务 |

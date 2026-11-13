@@ -1,4 +1,4 @@
-# 3000 运行与结构维护说明
+# MDM平台 运行与结构维护说明
 
 测试脚本及辅助历史资料仅保留在维护者本机，不随 Git 分发；公开包不提供对应测试命令。本地验证须使用已有工具或明确取得的测试材料，并遵守隔离、权限和验收边界。
 
@@ -7,7 +7,7 @@
 
 ## 正式运行与结构维护分离
 
-3000应用入口`npm start`要求显式配置`MDM_IDENTITY_READ_MODEL=mysql`和`PROCESS_GOVERNANCE_READ_MODEL=mysql`，并提供`MYSQL_HOST`、`MYSQL_PORT`、`MYSQL_USER`、`MYSQL_PASSWORD`、`MYSQL_DATABASE`。`MYSQL_CONNECTION_LIMIT`如提供，必须为正整数。配置缺失、读模型不一致或正式模式启用遗留测试时，进程在监听前退出。运行入口不使用MySQL配置函数中的开发默认值作为回退。
+MDM平台应用入口`npm start`要求显式配置`MDM_IDENTITY_READ_MODEL=mysql`和`PROCESS_GOVERNANCE_READ_MODEL=mysql`，并提供`MYSQL_HOST`、`MYSQL_PORT`、`MYSQL_USER`、`MYSQL_PASSWORD`、`MYSQL_DATABASE`。`MYSQL_CONNECTION_LIMIT`如提供，必须为正整数。配置缺失、读模型不一致或正式模式启用遗留测试时，进程在监听前退出。运行入口不使用MySQL配置函数中的开发默认值作为回退。
 
 应用启动不连接SQLite，也不建表、补列、执行迁移或初始化固定角色。身份、流程治理、指导意见、字段、术语、映射、冲突、待办、审计及流程草稿仓储的首次取得只做必要表列的`SELECT … LIMIT 0`检查。缺表、缺列、无权限或断库返回不可用信息；失败的结构检查关闭对应连接池，下一次请求可以重新检查。该检查不检查完整字段类型、索引、外键及迁移记录一致性，不能替代迁移手册的dry-run和结构漂移检查，也不是业务就绪接口。
 
@@ -35,7 +35,7 @@
 
 ## 命令选择与维护边界
 
-应用目录的`service:start`、`service:stop`、`service:restart`及`service:check`只管理其自有Windows3000进程，不管理当前Docker容器。检查核对进程归属、健康、就绪、来源摘要及同源`/app/`内容；根路径跳转不作为页面不可用，也不跟随未核对的跳转。实际命令和源脚本统一查[当前脚本入口](../scripts/README.md#当前npm命令)。当前Docker部署及实时证据见[DOCKER.md](../DOCKER.md)。
+应用目录的`service:start`、`service:stop`、`service:restart`及`service:check`只管理其自有Windows3000进程，不管理当前Docker容器。检查核对进程归属、健康、就绪、来源摘要及同源`/app/`内容；根路径跳转不作为页面不可用，也不跟随未核对的跳转。实际命令和源脚本统一查[当前脚本入口](../scripts/README.md#npm-命令与本机专项)。当前Docker部署及实时证据见[DOCKER.md](../DOCKER.md)。
 
 | 维护对象 | 具体说明 |
 |---|---|
@@ -59,15 +59,15 @@
 
 getHistoricalReview复用当前账号/人员/auth_version验证，仅既有governance:read-global可读混合历史批次；部门建议不能授予范围。compareHistoricalReviewIssue由调用者指定准确原ID和既有issue_id，继续通过原getAnalysisIssue校验问题及全部关联来源，只返回comparison_only对照，不保存正式关联、不创建问题或待办。管理员保持只读。正式历史关联的有权确认及当前证据未落实前，formal_link_enabled保持false；不将办公室问题办理的逐问题关闭资格扩大为历史批次认定权。
 
-命令及源脚本见[脚本说明](../scripts/README.md#当前npm命令)；阶段合同与运行证据按文末历史快照定位。技术演练不表示正式开启或业务验收。
+命令及源脚本见[脚本说明](../scripts/README.md#npm-命令与本机专项)；阶段合同与运行证据按文末历史快照定位。技术演练不表示正式开启或业务验收。
 
 
 
-## 3000 Docker本机部署
+## MDM平台 Docker本机部署
 
-2026-10-27 11:57:17（北京时间），3000已部署N01—N07，沿用R01—R10，仅替换27项前端资源；服务端272项、依赖、数据结构、真实账号和授权保持。共享编制器源文件不修改，4处固定文字仅在3000消费构建时适配；合同变化拒绝构建。不得据此认定工作区其余源码均已发布。
+部署、开关、容器及镜像标识、表数、备份和同版只读恢复入口统一维护在[Docker说明](../DOCKER.md#当前运行)，使用前核对其记录日期及目标实时状态。本说明不重复旧批次的“最新”表数或恢复对象，也不以工作树源码证明已发布范围。Windows维护命令不管理Docker，不能重放旧批部署、迁移或恢复脚本。
 
-当前容器为`infomat-mdm-3000`，仅提供`http://127.0.0.1:3000/app/`当前前端；根路径跳转，旧HTML和旧公开脚本返回410。沿用原MySQL库、账号、会话配置及权限；预览、正式流程、编制工作区、数据治理、受控承接及术语开关保持开启，旧编制开关保持关闭。最新198表完整备份已在隔离容器恢复核对；正式切换后的197张业务表内容、结构及授权保持。当前镜像、来源摘要、同v5回退和兼容只读恢复统一查[DOCKER.md](../DOCKER.md)，不要重放旧批部署、迁移或恢复脚本。部门最终负责人仍由有权人员按实际授权明确登记，不自动补任命。旧UI退役证据保留在`artifacts/3000-retire-old-ui-20261013/`；历史Docker批次、恢复容器及Windows副本保留用于追溯，不能直接重启替代当前版本。技术运行验证不表示真实案例流转或业务验收已完成。
+根路径转向`/app/`，旧HTML和旧公开脚本返回410；该边界不同于未注册的遗留SQLite接口族。部门最终负责人仍由有权人员明确登记，不自动补任命。旧UI退役证据保留在`artifacts/3000-retire-old-ui-20261013/`；历史Docker批次、恢复容器及Windows副本保留用于追溯，不能直接重启替代当前版本。2026-10-27批次的27项前端资源、272项服务端文件和198表核对结果保留于[原批交付](../../../artifacts/3000-n01-n07-release-20261027/README.md)及[整理前快照](../../../docs/archives/2026-11-11-mdm-documentation/apps/mdm-platform/docs/Current-Runtime-Maintenance.md.before.txt)，只说明当时范围。技术运行验证不表示真实案例流转或业务验收已完成。
 
 
 ## 历史记录

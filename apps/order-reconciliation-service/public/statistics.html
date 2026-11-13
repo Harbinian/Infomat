@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>异常统计 · 订单核对</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/statistics.css">
+  <script src="/statistics.js" type="module"></script>
+</head>
+<body>
+  <header class="masthead">
+    <div class="brand-mark" aria-hidden="true">核</div>
+    <div><div class="eyebrow">用友 · 转换平台 · 勤哲</div><h1>订单核对</h1></div>
+    <nav class="page-nav" aria-label="页面导航"><a id="ledger-link" href="/">订单核对明细</a><a href="/statistics" aria-current="page">异常统计</a><a id="quantity-link" href="/quantity-review">数量与 BOM 核查</a><a id="checks-link" href="/order-checks">逐单数量复核</a><a id="materials-link" href="/material-checks">入库与领料核查</a><a id="chain-link" href="/chain-checks">链路风险核查</a><a id="processing-link" href="/processing-checks">加工流转核查</a></nav>
+    <div class="service-note"><span class="status-dot"></span>仅查询，不修改原单据<span class="separator">/</span>订单核对工具</div>
+  </header>
+  <main class="statistics-main">
+    <section class="batch-bar" aria-label="统计所选盘点记录">
+      <div class="batch-choice"><label for="batch-select">选择盘点记录</label><select id="batch-select"><option value="">正在读取盘点记录…</option></select></div>
+      <div class="batch-state"><span id="batch-status" class="badge neutral">正在加载</span><span id="batch-time">—</span></div>
+      <button id="refresh-statistics" type="button" class="secondary">刷新统计</button>
+    </section>
+    <div id="statistics-status" class="notice" role="status">正在读取所选盘点记录的异常统计。</div>
+    <section class="metrics statistics-metrics" aria-label="异常统计总览">
+      <article class="metric-warning"><span>问题条目</span><strong id="total-issues">—</strong><small>本次全部问题条目</small></article>
+      <article><span>涉及订单明细</span><strong id="affected-records">—</strong><small>同一明细只计一次</small></article>
+      <article><span>异常类型</span><strong id="type-count">—</strong><small>按核对问题分类</small></article>
+      <article><span>月份未知</span><strong id="unknown-issues">—</strong><small>无法归月的问题条目</small></article>
+    </section>
+    <div class="statistics-layout">
+      <section class="statistics-card" aria-labelledby="totals-title">
+        <div class="statistics-heading"><h2 id="totals-title">各类异常总数</h2><span>点击类型查看按月分布</span></div>
+        <div class="statistics-table-wrap">
+          <table class="totals-table"><thead><tr><th scope="col">异常类型</th><th scope="col">问题数</th><th scope="col">涉及明细数</th></tr></thead><tbody id="type-rows"><tr><td colspan="3" class="statistics-empty">正在加载…</td></tr></tbody><tfoot><tr><th scope="row">全部异常</th><td id="type-total">—</td><td id="type-record-total">—</td></tr></tfoot></table>
+        </div>
+        <p class="statistics-footnote">同一订单明细可有多项问题，并涉及多个类型。各类涉及明细数不可直接相加。</p>
+      </section>
+      <section class="statistics-card" aria-labelledby="months-title">
+        <div class="statistics-heading"><h2 id="months-title">按订单月份统计</h2><label class="type-choice" for="type-select">类型 <select id="type-select" disabled><option value="">全部异常</option></select></label></div>
+        <div class="monthly-selection"><strong id="monthly-label">全部异常</strong><span id="monthly-total">—</span></div>
+        <div id="month-timeline" class="month-timeline" role="img" aria-label="订单月份分布，等待统计">等待有效统计</div>
+        <div class="statistics-table-wrap">
+          <table class="months-table"><thead><tr><th scope="col">订单月份</th><th scope="col">数量分布</th><th scope="col">问题数</th><th scope="col">涉及明细数</th></tr></thead><tbody id="month-rows"><tr><td colspan="4" class="statistics-empty">正在加载…</td></tr></tbody><tfoot><tr><th scope="row" colspan="2">所选类型合计</th><td id="month-total">—</td><td id="month-record-total">—</td></tr></tfoot></table>
+        </div>
+        <p class="statistics-footnote">按月份倒序排列，仅列本次有核对明细的月份；没有所选类型问题的月份显示0。“月份未知”单列并计入合计。</p>
+      </section>
+    </div>
+    <footer class="statistics-notes"><p><strong>月份口径：</strong>有用友生产订单的按主单创建日期；仅有销售订单的按销售单据日期。生产日期缺失时不借用销售日期。这里展示本次盘点保存的数据中各月订单的异常分布，不表示异常实际发生月份。</p><p id="scope-note">统计范围为所选盘点记录全部核对明细，与首页检索条件无关。关联待核查另列，不直接计作异常。</p></footer>
+  </main>
+</body>
+</html>

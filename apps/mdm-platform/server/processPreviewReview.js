@@ -166,7 +166,7 @@ function validateAndProjectProcess(document, departments, options = {}) {
   if (!owningName) {
     warnings.push({ code: 'OWNING_DEPARTMENT_PENDING', message: '归口部门尚未明确，需要由MDM工作组组长分派后再生成跨部门核对项。' });
   } else if (!owningDepartment) {
-    const errors = [{ field: 'process.owning_department', message: '归口部门不在3000当前有效部门中' }];
+    const errors = [{ field: 'process.owning_department', message: '归口部门不在MDM平台当前有效部门中' }];
     blockingIssues.push({ code: 'CONTENT_TECHNICAL_INVALID', message: '当前正文的归口部门无效，不能继续正式流转。' });
     return {
       errors,
@@ -195,7 +195,7 @@ function validateAndProjectProcess(document, departments, options = {}) {
       const issue = {
         code: 'ACTOR_DEPARTMENT_UNRESOLVED',
         behavior_ref: text(behavior.behavior_ref),
-        message: `业务行为“${text(behavior.behavior_name) || text(behavior.behavior_ref)}”的执行部门无法与3000有效部门对应。`
+        message: `业务行为“${text(behavior.behavior_name) || text(behavior.behavior_ref)}”的执行部门无法与MDM平台有效部门对应。`
       };
       warnings.push(issue);
       blockingIssues.push(issue);

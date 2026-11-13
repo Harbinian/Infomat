@@ -1,0 +1,9 @@
+WITH Scope AS (
+ SELECT v.MoDId,v.KfuId FROM (VALUES (1000088257,61446),(1000088258,61445),(1000088259,61444),(1000088260,61443),(1000088261,61442),(1000088262,61441),(1000088263,61440),(1000088264,61439),(1000088265,61438),(1000088266,61437),(1000088267,61436),(1000088269,61434)) v(MoDId,KfuId)
+)
+SELECT s.MoDId,s.KfuId,d.MoId,h.MoCode,h.CreateDate,d.RelsDate,d.RelsTime,d.Define25,
+ k.U8ID,k.U8AUTOID,k.[BOM编号] AS kfu_bom,k.[生产编号] AS kfu_production_number
+FROM Scope s LEFT JOIN dbo.mom_orderdetail d ON d.MoDId=s.MoDId
+LEFT JOIN dbo.mom_order h ON h.MoId=d.MoId
+LEFT JOIN KFU8QZ.dbo.momorderdetail k ON k.ID=s.KfuId
+ORDER BY s.MoDId

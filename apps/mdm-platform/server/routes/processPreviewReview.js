@@ -495,6 +495,18 @@ async function describeCaseForActor(repo, actor, detail) {
     result.governance={...g,changes,allowed_actions:g.schema_ready?actions:[]};
     if(g.lifecycle!=='active')result.allowed_actions=result.allowed_actions.filter(a=>!['upload_revision','promote_to_formal_draft'].includes(a));
   }
+  if (detail.dispute_revision_return) {
+    const returned = detail.dispute_revision_return;
+    const current = returned.state === 'awaiting_revision' && sameIdentityInteger(returned.case_id, detail.case.id)
+      && Number(returned.source_revision_no) === Number(detail.case.current_revision_no)
+      && returned.source_content_hash === detail.case.current_content_hash
+      && String(returned.event_id) === String(detail.review_dispute_event_id);
+    const workspaceEnabled = process.env.PROCESS_AUTHORING_WORKSPACE_ENABLED === '1';
+    const canResume = current && detail.case.status !== 'closed' && !actor.roleCodes.has('admin')
+      && sessionSubject(actor).kind !== 'system_admin' && (!detail.governance || detail.governance.lifecycle === 'active')
+      && (result.allowed_actions.includes('upload_revision') || workspaceEnabled && binding?.can_record === true);
+    result.dispute_revision_return = current ? { ...returned, can_resume: Boolean(canResume), resume_mode: workspaceEnabled ? 'workspace' : 'upload' } : null;
+  }
   return result;
 }
 
@@ -580,7 +592,21 @@ async function listProcessWorkbenchItems(actor) {
         reviewItemId: item.id, currentStatus: status, sample: item.behavior_name + '：查看当前修订和原文依据，填写本部门结论；保存后交另一参与部门核对。'
       });
     }
-    if (allowed.includes('upload_revision') && detail.handling_summary.return_reasons.length &&
+    const disputeReturn = detail.dispute_revision_return;
+    if (disputeReturn?.can_resume) {
+      const operation = disputeReturn.resume_mode === 'workspace'
+        ? '在原流程“本次核对”阅读项目决定依据，点击“在MDM平台继续编制本案例”，保存续修草稿；由当前归口主对接人提交新修订。'
+        : '在原流程“本次核对”阅读项目决定依据，完成修改后由当前归口主对接人向同一案例上传新修订。';
+      add('process_case_revision_return', c.id, '按项目决定续修本流程', [], {
+        target: '/app/process-preview?case=' + encodeURIComponent(c.id), currentStatus: 'awaiting_revision',
+        disputeEventId: disputeReturn.event_id, decisionEventId: disputeReturn.decision_event_id,
+        sourceRoles: actor.roleCodes.has('department_contact') ? ['department_contact'] : [],
+        roleHint: actor.roleCodes.has('department_contact') ? 'department_contact' : null,
+        urgency: 'high', sample: (disputeReturn.decision_basis || '当前决定依据未提供，请在原流程核对决定记录。') + ' ' + operation,
+        handlingGuide: { actor: '当前有续修资格的编制人员或归口主对接人', operation,
+          result: '在原案例核对新修订及原决定历史；新来源由MDM组长核对影响，随后按争议办理条件交相关部门重新核对。' }
+      });
+    } else if (allowed.includes('upload_revision') && detail.handling_summary.return_reasons.length &&
       ((detail.items || []).some(item => item.origin_status === 'needs_changes' || item.counterparty_status === 'needs_changes') ||
        (draft.status === 'needs_changes' && detail.handling_summary.current_promotion))) {
       const permissions = detail.authoring?.can_record ? [] : [actor.permissions.has('governance:assign-work') ? 'governance:assign-work' : 'governance:draft-department'];
@@ -635,12 +661,29 @@ async function listProcessWorkbenchItems(actor) {
         }
       }
     }
-    if (allowed.includes('promote_to_formal_draft') && !detail.handling_summary.current_promotion) add('v7_promote', c.id, '将核对完成修订提升为正式草稿', ['governance:assign-work']);
-    if (formalAllowed.includes('submit_formal_draft') && ['draft', 'needs_changes'].includes(draft.status)) add('v7_submit', draft.id, '提交当前修订供负责人确认', detail.authoring?.can_record ? [] : ['governance:draft-department', 'governance:submit-department'], detail.authoring?.can_record ? { target: '/app/process-formal?case=' + c.id } : {});
-    if (formalAllowed.includes('return_formal_draft') && draft.status === 'approved' && formal.department_confirmation?.valid !== true) add('v7_formal_reconfirmation', task.id, '退回后重新提交负责人确认', ['governance:review-department'], { reviewTaskId: task.id });
-    if (formalAllowed.includes('review_formal_draft')) add('v7_formal_review', task.id, '本人确认当前正式修订', ['governance:review-department'], { reviewTaskId: task.id });
-    if (formalAllowed.includes('publish_formal_draft')) add('v7_publish', draft.id, '核对依据并发布正式版本', ['governance:publish'], { draftId: draft.id });
-    else if (draft.status === 'approved' && actor.permissions.has('governance:publish')) add('v7_publish', draft.id, '查看发布缺少的前置条件', ['governance:publish'], { draftId: draft.id });
+    // Formal tasks open the page that owns the action. Keep technical case/revision
+    // bindings in the record while giving the workbench usable handling steps.
+    function addFormal(type,id,label,permissions,guide,extra={}) {
+      add(type,id,label,permissions,{target:'/app/process-formal?case='+encodeURIComponent(c.id),handlingGuide:guide,sample:guide.operation+guide.result,...extra});
+    }
+    if (allowed.includes('promote_to_formal_draft') && !detail.handling_summary.current_promotion) addFormal('v7_promote', c.id, '将核对完成修订提升为正式草稿', ['governance:assign-work'], {
+      actor:'MDM工作组组长',operation:'进入本流程的“流程正式流转”，核对当前修订检查和部门核对结果，点击“生成正式草稿”，明确选择新建或已有流程档案，填写所需内容后再次点击“生成正式草稿”。',
+      result:'在本页“正式草稿与确认记录”查看来源及状态，交归口部门主对接人提交负责人确认；生成草稿不代替确认或发布。'});
+    if (formalAllowed.includes('submit_formal_draft') && ['draft', 'needs_changes'].includes(draft.status)) addFormal('v7_submit', draft.id, '提交当前修订供负责人确认', detail.authoring?.can_record ? [] : ['governance:draft-department', 'governance:submit-department'], {
+      actor:'归口部门主对接人',operation:'进入本流程的“流程正式流转”，阅读“正式草稿与确认记录”及本份材料的术语核对结果；按页面提示补齐所需核对后，点击“提交负责人确认”，核对提示并再次点击同名按钮。',
+      result:'在本页“草稿状态”和“确认任务”查看提交结果，由归口部门负责人本人办理最终确认；本次提交不改变正文。'});
+    if (formalAllowed.includes('return_formal_draft') && draft.status === 'approved' && formal.department_confirmation?.valid !== true) addFormal('v7_formal_reconfirmation', task.id, '退回后重新提交负责人确认', ['governance:review-department'], {
+      actor:'归口部门当前已登记且具有有效授权的负责人',operation:'进入本流程的“流程正式流转”，核对原确认记录与当前负责人资格，按页面的退回修改入口填写原因并确认；交归口主对接人重新提交。',
+      result:'在本页“正式草稿与确认记录”及正式历史核对退回结果；重新提交后，仍须由当前负责人本人确认。'}, { reviewTaskId: task.id });
+    if (formalAllowed.includes('review_formal_draft')) addFormal('v7_formal_review', task.id, '本人确认当前正式修订', ['governance:review-department'], {
+      actor:'归口部门当前已登记且具有有效授权的负责人',operation:'进入本流程的“流程正式流转”，核对正式草稿正文、来源和本份材料的术语判断，点击“部门负责人最终确认”，选择本人结论并填写确认依据，再点击同名按钮保存。',
+      result:'在本页“确认任务”及“查阅本次负责人确认记录”核对本人结论、依据和时间；确认通过后交MDM组长核对发布条件。'}, { reviewTaskId: task.id });
+    if (formalAllowed.includes('publish_formal_draft')) addFormal('v7_publish', draft.id, '核对依据并发布正式版本', ['governance:publish'], {
+      actor:'MDM工作组组长',operation:'进入本流程的“流程正式流转”，核对归口部门负责人对当前正式草稿的本人确认及发布条件，点击“发布正式版本”，阅读发布含义后再次点击同名按钮。',
+      result:'在本页已发布内容及“主档已发布版本查阅”核对固定版本。平台发布不代表企业制度已批准生效，也不自动创建数据治理工作包。'}, { draftId: draft.id });
+    else if (draft.status === 'approved' && actor.permissions.has('governance:publish')) addFormal('v7_publish', draft.id, '查看发布缺少的前置条件', ['governance:publish'], {
+      actor:'MDM工作组组长',operation:'进入本流程的“流程正式流转”，查看“当前任务与待处理事项”及当前修订检查，按所列缺口交由有权人员补齐后刷新核对。',
+      result:'在原流程核对前置条件及办理状态；条件未满足时不能发布，查阅和刷新不代替部门确认。'}, { draftId: draft.id });
   }
   return result;
 }
@@ -733,7 +776,7 @@ router.post('/cases/:id/assign-owner', requireAuth, (req, res) => runAction(res,
   const departmentId = identityInteger(req.body && req.body.department_id);
   const departments = await repo.listDepartments();
   const department = departments.find(item => sameIdentityInteger(item.id, departmentId));
-  if (!department) throw httpError(422, '请选择3000当前有效部门', 'V7_PREVIEW_OWNER_INVALID');
+  if (!department) throw httpError(422, '请选择MDM平台当前有效部门', 'V7_PREVIEW_OWNER_INVALID');
   const preview = validatedPreview({ document: detail.revision.document }, departments, { owningDepartmentName: department.name });
   const updated = await repo.assignOwner(detail.case, department, preview, {
     expectedRevisionNo: expectedRevisionNo(req.body || {}),

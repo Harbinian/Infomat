@@ -16,4 +16,5 @@ router.get('/cases/:id',run((q,r)=>r.detail(q.session,q.params.id)));
 router.post('/cases/:id/actions',run((q,r)=>r.act(q.session,q.params.id,q.body)));
 router.setRepositoryFactory=value=>{factory=value;};
 router.resetRepositoryFactory=()=>{factory=null;};
+router.getRepository=repository;
 module.exports=router;

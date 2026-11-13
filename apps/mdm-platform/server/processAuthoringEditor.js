@@ -52,7 +52,7 @@ function enums(departments) {
     departments: names.map(department_name => ({ department_name, domain: '' })),
     rosterRolesByDepartment: Object.fromEntries(names.map(name => [name, []])),
     organizationCatalogMode: 'departments_only', organizationCatalogSource: { source: '3000', status: 'current_departments' },
-    positionInfo: { status: 'unavailable', message: '部门取自3000有效目录；岗位请按实际业务填写并核对，不代表人员任命或授权。' },
+    positionInfo: { status: 'unavailable', message: '部门取自MDM平台有效目录；岗位请按实际业务填写并核对，不代表人员任命或授权。' },
     fieldType: ['文本', '长文本', '数字', '日期', '日期时间', '金额', '枚举', '布尔', '部门', '人员', '文件编号', '签名', '图片', '附件', '二维码']
   };
 }

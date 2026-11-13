@@ -27,6 +27,10 @@ let identityRepositoryFactory = null;
 
 let processDataGovernanceRepositoryFactory = null;
 let handoffWorkbenchFactory = null;
+let processDisputeWorkbenchFactory = null;
+let qualityAuditWorkbenchFactory = null;
+let assignedCaseWorkRepositoryFactory = null, assignedCaseWorkRepository = null;
+let legacyConflictRecheckRepositoryFactory = null;
 const WORKBENCH_CACHE_TTL_MS = 15 * 1000;
 const roleGroupsCache = new Map();
 const workbenchResponseCache = new Map();
@@ -357,6 +361,7 @@ function buildNextActions(workItems, ownedRoles) {
     target: item.target,
     actionLabel: item.actionLabel,
     sample: item.sample,
+    ...(item.handlingGuide ? { handlingGuide: item.handlingGuide } : {}),
     sourceRoles: item.sourceRoles || [item.roleHint].filter(Boolean),
     requiredPermissions: item.requiredPermissions || [],
     priority: item.urgency || 'medium'
@@ -519,6 +524,113 @@ async function loadHandoffWorkItems(session) {
   return (await handoffWorkbenchFactory()).read(session);
 }
 
+async function loadProcessDisputeWorkItems(identity, session) {
+  if (!useMysqlIdentityReadModel() || !useMysqlProcessGovernanceReadModel() || process.env.PROCESS_V7_PREVIEW_ENABLED !== '1'
+    || identity.roleCodes.includes('admin') || session.identityKind === 'system_admin'
+    || !identity.roleCodes.some(code => ['mdm_lead','data_conflict_handler','decision_group'].includes(code))) return [];
+  const repo = processDisputeWorkbenchFactory ? await processDisputeWorkbenchFactory() : await require('./processCaseDisputes').getRepository();
+  const data = await repo.workbench(session);
+  if (!Array.isArray(data?.items)) throw new Error('流程争议待办未能完整读取。');
+  const items = new Map();
+  for (const row of data.items) {
+    const allowed = row.allowed_actions || [];
+    let role, permission, label, operation;
+    if (row.state === 'unassigned' && allowed.includes('assign')) {
+      role='mdm_lead';permission='governance:assign-work';label='分派本流程争议协调人';
+      operation='在本流程“责任与历史”的“流程责任与争议办理”中，点击“分派争议协调人”，明确选择人员并填写依据，再点击“保存本次治理办理”。';
+    } else if (row.state === 'coordinating' && allowed.some(action => ['coordinate','request_recheck'].includes(action))) {
+      role='data_conflict_handler';permission='governance:handle-assigned-conflict';label='办理本人已分派的流程争议';
+      operation='在本流程“责任与历史”核对争议及双方依据，按当前情况记录争议协调、交回参与部门重新核对，或补齐升级材料后提交项目决策组；填写依据并保存本次治理办理。';
+    } else if (row.state === 'escalated' && allowed.includes('decide')) {
+      role='decision_group';permission='governance:decide-escalation';label='记录本流程项目决策';
+      operation='在本流程“责任与历史”核对升级材料、各方观点和依据，点击“记录项目决策”，明确选择决定并填写依据，再点击“保存本次治理办理”。';
+    } else if (row.state === 'source_changed' && allowed.includes('rebase')) {
+      role='mdm_lead';permission='governance:assign-work';label='核对流程修订对争议的影响';
+      operation='在本流程“责任与历史”阅读原争议与当前修订，点击“核对修订影响并恢复办理”，填写依据并保存；后续按最新争议状态交接。';
+    } else continue;
+    // Readable responsibilities and optional reassignment are not outstanding
+    // tasks. This projection counts one concrete dispute per current actor.
+    if (!identity.roleCodes.includes(role) || !identity.permSet.has(permission)) continue;
+    const caseId = identityInteger(row.case_id);
+    if (caseId == null) throw new Error('流程争议待办缺少准确案例。');
+    const guide={actor:ROLE_GUIDES.find(value=>value.code===role).name,operation,
+      result:'在原流程“争议协调与决定历史”核对已保存记录及当前状态；协调和决定不代替参与部门本人重新核对。'};
+    items.set(String(caseId),{id:'process-case-dispute:'+caseId,type:'process_case_dispute',governanceType:'process_case_dispute',
+      title:label+'：'+row.process_name,caseId,state:row.state,currentStatus:row.state,target:'/app/process-preview?case='+encodeURIComponent(caseId),
+      actionLabel:label,nextStep:label,canAct:true,sourceRoles:[role],roleHint:role,requiredPermissions:[permission],urgency:'high',
+      sample:guide.operation+guide.result,handlingGuide:guide});
+  }
+  return [...items.values()];
+}
+
+async function loadQualityAuditWorkItems(identity,session){
+  if(!useMysqlIdentityReadModel()||process.env.QUALITY_AUDIT_ENABLED!=='1'||identity.roleCodes.includes('admin')||session.identityKind==='system_admin'||!identity.roleCodes.some(code=>['mdm_lead','data_quality_auditor','department_contact'].includes(code)))return [];
+  const repo=qualityAuditWorkbenchFactory?await qualityAuditWorkbenchFactory():require('./qualityAudits').getRepository();
+  const data=await repo.workbench(session),items=[];
+  for(const detail of data.items){
+    const row=detail.finding,allowed=detail.allowed_actions||[];
+    let roleCode,label,nextStep;
+    if(allowed.includes('submit_rectification')){roleCode='department_contact';label='提交整改说明及证据';nextStep='核对原发现和整改要求，填写本次整改说明及证据并提交复核。';}
+    else if(allowed.includes('review')){roleCode='data_quality_auditor';label='复核整改证据';nextStep='核对整改说明及证据，填写依据后选择合格关闭或退回整改。';}
+    else if(!detail.design_gate.valid&&allowed.includes('revise_design_basis')){roleCode='data_quality_auditor';label='核对已变化的审计依据';nextStep='流程设计变化或原确认失效；先完成负责人本人重新确认，再明确更新审计依据。';}
+    else if(identity.roleCodes.includes('mdm_lead')){roleCode='mdm_lead';label='跟踪质量整改进度';nextStep='查看责任部门、整改证据及复核历史，跟踪当前待办。';}
+    else continue;
+    const stateName={awaiting_rectification:'待提交整改',awaiting_review:'待质量复核',closed:'已关闭'}[row.state]||'待核对状态';
+    items.push(normalizeWorkItem({id:'quality-audit:'+row.finding_id,type:'quality_audit',title:row.title,target:'/app/quality?finding='+encodeURIComponent(row.finding_id),roleCode,roleHint:roleCode,sourceRoles:[roleCode],canAct:true,actionLabel:label,governanceType:'quality_audit',sourceType:'quality_audit',department:row.department_snapshot.name,responsiblePerson:row.department_snapshot.name+'主对接人',confirmPerson:'数据质量审计人',currentStatus:stateName,nextStep,handlingGuide:{actor:ROLE_GUIDES.find(role=>role.code===roleCode).name,operation:nextStep,result:'在同一项质量审计发现的办理历史中核对本次结果。'}}));
+  }
+  return items;
+}
+
+async function loadAssignedCaseWorkItems(identity, session) {
+  if (!useMysqlIdentityReadModel() || !useMysqlProcessGovernanceReadModel() || process.env.PROCESS_V7_PREVIEW_ENABLED !== '1'
+    || identity.roleCodes.includes('admin') || session.identityKind === 'system_admin' || !identity.roleCodes.includes('mdm_steward')
+    || !identity.permSet.has('governance:handle-assigned-work') || !identity.permSet.has('governance:read-assigned-context')) return [];
+  const repo = assignedCaseWorkRepositoryFactory ? await assignedCaseWorkRepositoryFactory()
+    : assignedCaseWorkRepository || (assignedCaseWorkRepository = require('../governanceResponsibilities').makeGovernanceResponsibilitiesRepository(createRegisteredPool(process.env, 'governanceResponsibilities')));
+  const result = await repo.pendingCaseWork(workbenchActor(identity, session));
+  if (!Array.isArray(result?.items)) throw new Error('治理经办待办未能完整读取。');
+  return result.items.filter(row => row.target_type === 'case' && row.assignment_kind === 'steward' && row.allowed_actions?.includes('record_work')).map(row => {
+    const caseId = identityInteger(row.target_id);
+    if (caseId == null) throw new Error('治理经办待办缺少准确案例。');
+    const label = '登记本流程的经办说明及依据';
+    const guide = { actor: 'MDM治理经办人',
+      operation: '在本流程“责任与历史”核对当前分派及流程材料，点击“记录治理经办情况”，填写治理经办内容和本次办理依据，再点击“保存本次治理办理”。',
+      result: '保存后将同一流程交由MDM组长在“责任与历史”的“治理经办记录”查阅，继续原有办理；登记说明不代表案例完成、组长已审核、部门确认或发布。' };
+    return normalizeWorkItem({id:'process-assigned-work:'+caseId,type:'process_assigned_work',governanceType:'process_assigned_work',
+      title:row.process_name,caseId,target:'/app/process-preview?case='+encodeURIComponent(caseId),
+      roleHint:'mdm_steward',sourceRoles:['mdm_steward'],requiredPermissions:['governance:handle-assigned-work'],canAct:true,
+      department:row.department_name||null,currentStatus:'待登记本次经办说明',actionLabel:label,nextStep:label,
+      handlingGuide:guide,sample:guide.operation+guide.result});
+  });
+}
+
+function legacyConflictKey(item) {
+  const encoded=String(item?.id||'').match(/^legacy-conflict:(field|term):([1-9]\d*)$/);
+  if(encoded)return identityInteger(encoded[2])==null?null:encoded[1]+':'+String(identityInteger(encoded[2]));
+  const type=item?.conflict_type||item?.conflictType,id=identityInteger(item?.conflict_id||item?.conflictId);
+  if(['field','term'].includes(type)&&id!=null)return type+':'+String(id);
+  const target=String(item?.target||'');
+  if(!/^(?:\/app|#)\/conflicts\?/.test(target))return null;
+  const query=new URLSearchParams(target.slice(target.indexOf('?')+1)),queryType=query.get('type')||'field',queryId=identityInteger(query.get('id'));
+  return ['field','term'].includes(queryType)&&queryId!=null?queryType+':'+String(queryId):null;
+}
+
+async function loadLegacyConflictRechecks(identity,session){
+  if(!useMysqlIdentityReadModel()||identity.roleCodes.includes('admin')||session.identityKind==='system_admin'
+    ||!identity.roleCodes.some(code=>['mdm_lead','department_mdm_reviewer','data_conflict_handler','decision_group'].includes(code)))return {items:[],managed:new Set(),truncated:false};
+  const repo=legacyConflictRecheckRepositoryFactory?await legacyConflictRecheckRepositoryFactory():await require('../conflictMysqlRepository').conflictRepository();
+  const result=await repo.listRecheckWorkItems(session);
+  if(!Array.isArray(result?.items))throw new Error('冲突重核待办未能完整读取。');
+  const items=new Map(),managed=new Set();
+  for(const row of result.items){
+    const key=legacyConflictKey(row);
+    if(!key||row.type!=='legacy_conflict_recheck')throw new Error('冲突重核待办缺少准确事项。');
+    managed.add(key);items.set(key,normalizeWorkItem(row));
+  }
+  for(const row of result.managed_conflicts||[]){const key=legacyConflictKey(row);if(key)managed.add(key);}
+  return {items:[...items.values()],managed,truncated:Boolean(result.truncated)};
+}
+
 router.get('/', requireAuth, (req, res) => {
   return runAsyncAction(res, async () => {
     const mode = req.query.mode === 'all' ? 'all' : 'todo';
@@ -620,14 +732,17 @@ router.get('/', requireAuth, (req, res) => {
     const closureItems=officeRepo?.closureWorkItems?await officeRepo.closureWorkItems(req.session):[];
     // This discovery and every resource qualification run outside the legacy
     // response cache. No persistent todo IDs or guessed mapping links are used.
-    const handoff=await loadHandoffWorkItems(req.session);
+    const [handoff,processDisputes,qualityAuditItems,assignedCaseWorkItems,legacyRechecks]=await Promise.all([loadHandoffWorkItems(req.session),loadProcessDisputeWorkItems(identity,req.session),loadQualityAuditWorkItems(identity,req.session),loadAssignedCaseWorkItems(identity,req.session),loadLegacyConflictRechecks(identity,req.session)]);
     const handoffItems=administrator?[]:normalizeWorkItems(handoff.work_items||[]);
-    const dynamicItems=[...handoffItems,...closureItems];
-    const liveActions=dynamicItems.length?buildNextActions([...dynamicItems,...body.workItems.filter(i=>i.type!=='guidance')],ownedRoles):body.nextActions;
-    const response={...body,workItems:dynamicItems.length?[...dynamicItems,...body.workItems.filter(i=>mode==='all'||i.type!=='guidance')]:body.workItems,
-      nextActions:liveActions,handoff:{availability:handoff.availability,actionableCount:handoffItems.length},
-      summary:{...body.summary,priorityCount:liveActions.length,actionableCount:body.summary.actionableCount+dynamicItems.length,
-        governance:{...body.summary.governance,dataMapHandoffs:handoffItems.length}}};
+    const disputeItems=administrator?[]:normalizeWorkItems(processDisputes);
+    const dynamicItems=[...assignedCaseWorkItems,...legacyRechecks.items,...qualityAuditItems,...disputeItems,...handoffItems,...closureItems];
+    const baseItems=body.workItems.filter(item=>!legacyRechecks.managed.has(legacyConflictKey(item)));
+    const removedTasks=body.workItems.filter(item=>item.type!=='guidance'&&!baseItems.includes(item)).length;
+    const liveActions=dynamicItems.length||removedTasks?buildNextActions([...dynamicItems,...baseItems.filter(i=>i.type!=='guidance')],ownedRoles):body.nextActions;
+    const response={...body,workItems:dynamicItems.length?[...dynamicItems,...baseItems.filter(i=>mode==='all'||i.type!=='guidance')]:baseItems,
+      nextActions:liveActions,handoff:{availability:handoff.availability,actionableCount:handoffItems.length},legacyConflicts:{actionableCount:legacyRechecks.items.length,truncated:legacyRechecks.truncated},
+      summary:{...body.summary,priorityCount:liveActions.length,actionableCount:body.summary.actionableCount-removedTasks+dynamicItems.length,
+        governance:{...body.summary.governance,dataMapHandoffs:handoffItems.length,processCaseDisputes:disputeItems.length,qualityAudits:qualityAuditItems.length,assignedCaseWork:assignedCaseWorkItems.length,legacyConflictRechecks:legacyRechecks.items.length}}};
     res.setHeader('Cache-Control', 'no-store');
     res.json(response);
   }, useMysqlIdentityReadModel() ? '工作台待办暂不可用，请稍后重试' : null);
@@ -650,5 +765,13 @@ router.resetProcessDataGovernanceRepositoryFactory = () => {
 router.clearWorkbenchCaches = clearWorkbenchCaches;
 router.setHandoffWorkbenchFactory = factory => { handoffWorkbenchFactory = factory; };
 router.resetHandoffWorkbenchFactory = () => { handoffWorkbenchFactory = null; };
+router.setProcessDisputeWorkbenchFactory = factory => { processDisputeWorkbenchFactory = factory; };
+router.resetProcessDisputeWorkbenchFactory = () => { processDisputeWorkbenchFactory = null; };
+router.setQualityAuditWorkbenchFactory = factory => { qualityAuditWorkbenchFactory = factory; };
+router.resetQualityAuditWorkbenchFactory = () => { qualityAuditWorkbenchFactory = null; };
+router.setAssignedCaseWorkRepositoryFactory = factory => { assignedCaseWorkRepositoryFactory = factory; };
+router.resetAssignedCaseWorkRepositoryFactory = () => { assignedCaseWorkRepositoryFactory = null; };
+router.setLegacyConflictRecheckRepositoryFactory = factory => { legacyConflictRecheckRepositoryFactory = factory; };
+router.resetLegacyConflictRecheckRepositoryFactory = () => { legacyConflictRecheckRepositoryFactory = null; };
 
 module.exports = router;

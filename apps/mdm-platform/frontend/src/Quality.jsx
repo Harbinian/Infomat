@@ -1,12 +1,12 @@
 import {businessText,userMessage} from "./businessPresentation.js";
 import {qualityProgress} from './qualityProgressModel.js';
-import { qualityEntryNotice } from './rolePresentation.js';
+import { QualityAudit } from './QualityAudit.jsx';
 import React, { useEffect, useState } from 'react';
 import { StatusPanel } from './components.jsx';
 import './identity-directory.css';
 
 // One explicit scoped read; current governance and legacy confirmation are not interchangeable.
-export function Quality({ api, onNavigate }) {
+export function Quality({ api, user, draft, setDraft, onNavigate, onQueryChange }) {
   const [revision, setRevision] = useState(0);
   const [state, setState] = useState({ busy: true });
   useEffect(() => {
@@ -19,11 +19,11 @@ export function Quality({ api, onNavigate }) {
   }, [api, revision]);
   const data = state.data;
   return <div className="identity-module" data-quality-state={state.busy ? 'loading' : state.error ? 'error' : 'ready'}>
+    <QualityAudit api={api} user={user} draft={draft} setDraft={setDraft} onQueryChange={onQueryChange}/>
     <section className="card">
-      <div className="section-heading"><h1>数据质量</h1><button className="secondary" onClick={() => setRevision(value => value + 1)}>刷新字段统计</button></div>
+      <div className="section-heading"><h2>字段治理统计</h2><button className="secondary" onClick={() => setRevision(value => value + 1)}>刷新字段统计</button></div>
       <p>查看当前身份可见的字段治理统计。现行受控台账、已登记的旧资料和历史身份确认记录分别说明，数量不代表数据值质量合格。</p>
-      <p>数据质量审计人可点击“刷新字段统计”，核对当前查阅范围内的字段治理数量；结果显示在下方统计区。需要核对已发布的字段定义时，可进入<a href="/app/data-map" onClick={onNavigate}>数据地图台账</a>查阅。</p>
-      <p role="note">{qualityEntryNotice}</p>
+      <p>点击“刷新字段统计”可核对当前查阅范围内的字段治理数量；结果显示在下方统计区。需要核对已发布的字段定义时，可进入<a href="/app/data-map" onClick={onNavigate}>数据地图台账</a>查阅。刷新统计不代表登记、整改或完成审计。</p>
     </section>
     {state.busy ? <StatusPanel kind="loading" title="正在读取字段统计…" /> : state.error ? <StatusPanel kind="error" title={state.error.status === 403 ? '无权查看字段统计' : '字段统计暂不可用'}>{userMessage(state.error)} 请核对当前身份或点击“刷新字段统计”重试；读取失败不表示没有记录。</StatusPanel> : data.kind==='controlled' ? <>
       <section className="card"><h2>现行受控字段</h2>

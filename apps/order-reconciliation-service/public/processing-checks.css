@@ -1,0 +1,44 @@
+.processing-main .checks-heading{margin-bottom:12px}
+.processing-main .checks-boundary{margin-bottom:10px}
+.processing-main .checks-metrics{gap:10px;margin-bottom:8px}
+.processing-metrics article{min-width:0;flex:1;padding:11px 14px;gap:12px}
+.processing-metrics article span{max-width:160px;line-height:1.5}
+.processing-metrics article strong{font-size:23px;color:#a46920}
+.processing-metrics p{max-width:300px;font-size:11px;flex:1.3}
+.processing-coverage{font-size:11px;line-height:1.7;color:var(--muted);margin:0 0 10px;flex-shrink:0}
+.processing-coverage[hidden]{display:none}
+.processing-main .checks-filters{gap:10px;padding:11px 14px;align-items:flex-end}
+.processing-main .checks-filters select{width:145px;font-size:12px}
+.processing-main .checks-filters #category{width:245px}
+.processing-main .checks-filters #component{width:245px}
+.processing-main .checks-filters input{width:170px;font-size:12px}
+.processing-main .checks-filters button{font-size:12px;padding:8px 13px}
+.processing-main .checks-export{font-size:12px;white-space:nowrap}
+.processing-main table{width:100%;table-layout:fixed}
+.processing-main th,.processing-main td{padding:10px}
+.processing-main td.number{font-variant-numeric:tabular-nums;white-space:normal}
+.processing-main small{display:block;color:var(--muted);font-size:10px;line-height:1.5;margin-top:4px}
+.processing-class{width:115px}
+.processing-kind{width:215px}
+.processing-sales{width:150px}
+.processing-order{width:165px}
+.processing-material{width:150px}
+.processing-number{width:105px}
+.processing-time{width:155px}
+.processing-action{width:60px}
+.processing-main .check-status{color:#9c5d22}
+.processing-main .check-status.pending{color:var(--muted)}
+.processing-drawer{width:980px}
+.processing-drawer .detail-grid{grid-template-columns:165px minmax(0,1fr)}
+.processing-drawer .check-detail-block h3{margin:18px 0 10px}
+.processing-drawer .detail-grid dd{line-height:1.7}
+.processing-detail-links{display:flex;gap:20px;margin-top:20px;font-size:12px}
+.processing-detail-links a{color:var(--blue)}
+.processing-drawer .drawer-note{margin-top:18px}
+.processing-main .checks-empty{height:150px}
+.processing-main .checks-table-wrap{min-height:130px}
+.processing-main .table-footer{min-height:48px}
+.processing-main .table-footer p{max-width:75%;line-height:1.6}
+.processing-main .notice{flex-shrink:0}
+.processing-main [hidden]{display:none}
+.processing-main~.drawer-overlay[hidden]{display:none}

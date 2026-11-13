@@ -1,4 +1,4 @@
-# 3000 RBAC 与 RACI 接口约定
+# MDM平台 RBAC 与 RACI 接口约定
 
 ## 1. 通用规则
 
@@ -12,7 +12,7 @@
 
 ### `GET /api/rbac/model`
 
-返回模型版本、固定权限、七个角色、角色使用说明、每个角色的`visibleTabs`和十一项RACI活动。
+当前代码返回`rbac-raci-v5-2026-10-19`模型、二十二项权限、九个固定角色、角色使用说明、每个角色的`visibleTabs`和十三项RACI说明活动。九角色包括系统组一个、MDM组七个、目录维护组一个；活动说明不自动授予权限或任命人员。部署及显式模型迁移须同版，实际目标版本另行核对。
 
 对`/api/rbac/model`发起POST、PUT、PATCH或DELETE时返回：
 
@@ -35,15 +35,17 @@
 
 权限：`identity:manage-account`和`identity:assign-role`。
 
+该入口保留为已有员工开户的兼容接口，不创建员工主档。没有员工记录返回`PERSON_DIRECTORY_RECORD_REQUIRED`，姓名或部门与已有员工不一致返回`PERSON_IDENTITY_MISMATCH`。新账号登录名与工号一致；现有账号及历史登录名不自动重写。当前页面对已选员工使用`POST /api/org/accounts/:personId/assign-account`，绑定已读取的`expectedPerson`、原因和当前维护资格。目录资料由行政人事另行维护，见[目录接口](../DIRECTORY_API.md)。
+
 请求示例：
 
 ```json
 {
-  "loginName": "employee001",
+  "loginName": "EMP001",
   "employeeNo": "EMP001",
   "name": "示例人员",
   "departmentId": 10,
-  "reason": "部门确认开通3000账号",
+  "reason": "部门确认开通MDM平台账号",
   "roleAssignments": [
     {
       "roleCode": "department_contact",
@@ -60,13 +62,7 @@
 
 ### `PATCH /api/org/accounts/:personId`
 
-维护姓名或部门。变更部门时必须同时提交：
-
-- `changeReason`
-- 新`departmentId`
-- 至少一项新部门角色`roleAssignments`
-
-系统自动撤销旧部门角色并递增`auth_version`。
+该兼容接口不再修改员工姓名、工号或部门；提交一致资料时返回原记录且不写入，实际变更返回`PERSON_DIRECTORY_MAINTENANCE_REQUIRED`。员工调部等目录变化由行政人事按当前目录约束办理；系统不自动撤销原部门角色、变更负责人或停用账号。角色变化改用专用授权接口，已有账号和审计保留。
 
 ### `POST /api/org/accounts/:personId/role-assignments`
 
@@ -81,6 +77,8 @@
 - `effectiveTo`
 
 部门角色必须与人员所属部门一致；全局角色不得携带部门范围。
+
+`roleCode=department_mdm_reviewer`保留兼容标识，表示部门负责人本人核对及最终确认。专用授权须携带`expectedFinalResponsiblePersonId`；替换另一人还须`confirmReplaceFinalResponsiblePerson=true`，在同一事务核对现任、明确交接并同步最终责任登记。只有组织登记与本人有效同部门授权一致时才可确认，不设置中间审核员；原授权及历史意见不据此自动补任命或升格为当前确认。
 
 ### `POST /api/org/accounts/:personId/role-assignments/:assignmentId/revoke`
 
@@ -142,7 +140,7 @@
   "subjectId": "PROC-001",
   "subjectVersion": "V2",
   "decision": "approved",
-  "decisionBasis": "部门负责人2026-07-30线下确认",
+  "decisionBasis": "部门负责人本人核对并确认",
   "evidenceReference": "会议纪要第3项",
   "decidedAt": "2026-07-30T09:30:00+08:00"
 }
@@ -151,6 +149,8 @@
 `decision`只允许`approved`、`returned`、`rejected`。
 
 服务端从部门记录取得最终责任人，不接受客户端提交责任人。
+
+当前部门最终确认由符合登记及有效授权的负责人本人办理；主对接人或其他人员不能代记录。该决定接口及旧枚举继续兼容，不替代正式审核任务绑定或恢复门槛。
 
 ### `GET /api/governance/decision-records`
 
@@ -165,3 +165,7 @@
 | 角色或权限矩阵写操作 | `405 CORE_GOVERNANCE_MODEL_READ_ONLY` |
 
 旧接口不得写入`users/user_roles`作为正式身份数据。
+
+## 历史追溯
+
+[2026-11-11整理前快照](../../../docs/archives/2026-11-11-mdm-documentation/apps/mdm-platform/docs/RBAC-RACI-API-Contract.md.before.txt)保留旧模型数量、账号目录混合维护及原示例。接口路径、字段、角色标识及旧决定枚举继续按兼容合同解释，不因说明更新迁移或改写既有记录。

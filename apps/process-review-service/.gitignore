@@ -1,0 +1,9 @@
+node_modules/
+artifacts/
+local-data/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+tests/
+.env
+.env.*

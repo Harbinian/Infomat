@@ -1,4 +1,4 @@
-// Only precise resource identities and known 3000 page contexts may cross pages.
+// Only precise resource identities and known MDM platform page contexts may cross pages.
 const resourceKinds = ['package', 'handoff', 'conflict', 'fact', 'publication'];
 const positiveId = value => typeof value === 'string' && /^[1-9]\d*$/.test(value);
 const uuid = value => typeof value === 'string' && /^[a-f\d]{8}-(?:[a-f\d]{4}-){3}[a-f\d]{12}$/i.test(value);

@@ -14,7 +14,7 @@ export function conflictHistory(detail) {
   if (detail.resolved_at || detail.resolution || detail.resolved_by != null) events.push({
     time: detail.resolved_at, action: '处理决定记录', actor: person(null, detail.resolved_by), note: detail.resolution || '决定内容未记录'
   });
-  // API timestamps are displayed unchanged. Equal timestamps keep source order;
+  // Retain original API timestamps for ordering. Equal timestamps keep source order;
   // missing or unparseable timestamps have no chronological position.
   const order = value => value && Number.isFinite(Date.parse(value)) ? Date.parse(value) : Infinity;
   return events.sort((a, b) => {

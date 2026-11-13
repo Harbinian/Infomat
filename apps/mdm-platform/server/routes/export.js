@@ -54,7 +54,7 @@ router.get('/excel', requireAuth, async (req, res) => {
     // second in-memory workbook; aborting the archive also stops a stalled download.
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', 'attachment; filename=mdm-data-map-field-ledger.xlsx');
-    workbook = new ExcelJS.stream.xlsx.WorkbookWriter({ stream: res, creator: 'MDM 平台', created: new Date() });
+    workbook = new ExcelJS.stream.xlsx.WorkbookWriter({ stream: res, creator: 'MDM平台', created: new Date() });
     stopWorkbook = () => { workbook.zip.abort(); res.destroy(); };
     abortScope.signal.addEventListener('abort', stopWorkbook, { once: true });
 

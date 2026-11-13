@@ -1,0 +1,104 @@
+{
+  "version": "full-inventory-20261112-v8",
+  "scope": {
+    "account": "333",
+    "u8Database": "UFDATA_333_2025",
+    "approvedSales": "SO_SOMain.iStatus=1 and nonblank cVerifier",
+    "productionStatuses": [
+      3,
+      4
+    ],
+    "historicalScope": "all existing records in the selected current databases, without date or closed-order exclusion"
+  },
+  "productionNumber": {
+    "type": "string",
+    "length": 18,
+    "comparison": "raw-exact",
+    "salesDetailCardinality": "one-to-one",
+    "reuseAllowed": false
+  },
+  "qualityNumber": {
+    "comparison": "raw-exact",
+    "normalization": "none",
+    "semanticEquivalence": "not-yet-defined",
+    "nullFallback": false
+  },
+  "identity": {
+    "numericReferences": "integer parsing for technical IDs only; raw evidence retained",
+    "mesLocalProductionNumber": "distinct from U8 production number"
+  },
+  "association": {
+    "salesToProduction": "OrderType=1, OrderDId=iSOsID; verify OrderCode if present",
+    "kfuToU8": "333 account plus U8AUTOID detail reference; verify U8ID parent reference",
+    "mesIntermediate": "u8autoid+u8id plus scoped task or KFU source composite evidence",
+    "mesTraveler": "scoped task production number plus U8 part number within that sales source; unique matches only"
+  },
+  "execution": {
+    "anyRequiredReadFailure": "fail-entire-batch",
+    "publish": "atomic-after-all-source-reads-and-local-persistence",
+    "ruleUpdates": "between-completed-inventories-only",
+    "crossSourceSnapshot": "read-windows-not-a-single-instant"
+  },
+  "responsibility": "not-required-for-first-inventory",
+  "evidenceLimit": "snapshot differences do not prove actor, exact modification time or cause",
+  "quantityReview": {
+    "enabled": true,
+    "version": 2,
+    "historyPolicy": "order-adopted-bom-and-explicit-change-scope",
+    "insufficientEvidence": "pending-review",
+    "publication": "same-batch-atomic",
+    "retention": "immutable-batch-files-and-report"
+  },
+  "materialChecks": {
+    "enabled": true,
+    "version": 1,
+    "historyPolicy": "order-adopted-bom-and-explicit-change-scope",
+    "confirmation": "current-record-facts-only",
+    "publication": "same-batch-atomic",
+    "retention": "append-only-with-separate-supplement-provenance"
+  },
+  "orderChecks": {
+    "enabled": true,
+    "version": 1,
+    "confirmation": "corresponding-record-numeric-difference-only",
+    "history": "append-only-no-recalculation",
+    "publication": "same-batch-atomic"
+  },
+  "chainChecks": {
+    "enabled": true,
+    "version": 1,
+    "confirmation": "current-record-conflict-only",
+    "backlog": "pending-with-positive-remaining-no-sla-inference",
+    "history": "append-only-no-recalculation",
+    "publication": "same-batch-atomic",
+    "actions": "read-only-no-unlock-no-voucher"
+  },
+  "processingChecks": {
+    "enabled": true,
+    "version": 1,
+    "scope": "all-approved-production-with-component-filter",
+    "triggers": "actual-processing-and-qualified-final-inspection",
+    "quantity": "actual-progress-audited-signed-net",
+    "history": "append-only-no-recalculation",
+    "publication": "same-batch-atomic",
+    "sla": "not-defined",
+    "exceptions": "explicit-applicability-evidence-only",
+    "confirmation": "current-record-gap-only",
+    "actions": "read-only-no-voucher"
+  },
+  "unifiedStatistics": {
+    "enabled": true,
+    "version": 1,
+    "policy": "review-priority-v1",
+    "publication": "same-batch-atomic",
+    "history": "append-only-no-recalculation",
+    "actions": "read-only-no-unlock-no-voucher",
+    "persistence": {
+      "enabled": true,
+      "version": 1,
+      "identity": "stable-source-and-check-classification",
+      "failedBatch": "break-observation",
+      "history": "read-frozen-only-never-rewrite"
+    }
+  }
+}

@@ -5,6 +5,7 @@ const {
 const { identityInteger, sameIdentityInteger } = require('./sessionSubject');
 const { lockAndAssertMaintenanceAuthority } = require('./accountMaintenanceAuthority');
 const { prepareDepartmentHeadAppointment, registerDepartmentHead } = require('./departmentHeadAppointment');
+const { timestampColumns, timeRow } = require('./governanceTimeProjection');
 
 // Explicit identity opt-in keeps default helper consumers on their
 // original projection/binding path. Display rows never grant authority.
@@ -906,7 +907,7 @@ function makeGovernanceAccessMysqlRepository(pool, maintenanceContext = null) {
                ${systemEnabled ? identityReadColumn('se.actor_account_id', 'actor_system_account_id') : 'NULL AS actor_system_account_id'},
                ${identityReadColumn('e.target_person_id')}, target.person_name AS target_name,
                ${identityReadColumn('e.account_id')}, ${identityReadColumn('e.person_role_id')}, e.reason, e.payload_json,
-               e.migration_batch_id, e.created_at
+               e.migration_batch_id, e.created_at, ${timestampColumns('e', ['created_at'])}
         FROM identity_access_events e
         LEFT JOIN person actor ON actor.person_id=e.actor_person_id
         ${systemEnabled ? 'LEFT JOIN system_admin_events se ON se.identity_event_id=e.event_id LEFT JOIN system_admin_accounts sa ON sa.account_id=se.actor_account_id' : ''}
@@ -915,7 +916,7 @@ function makeGovernanceAccessMysqlRepository(pool, maintenanceContext = null) {
         ORDER BY e.created_at DESC, e.event_id DESC
         LIMIT ${limit}
       `, params);
-      return events.map(event => normalizeIdentityRead(event, ['event_id', 'actor_person_id', 'actor_system_account_id', 'target_person_id', 'account_id', 'person_role_id']));
+      return events.map(event => normalizeIdentityRead(timeRow(event), ['event_id', 'actor_person_id', 'actor_system_account_id', 'target_person_id', 'account_id', 'person_role_id']));
     },
 
     async recordGovernanceDecision(payload = {}) {

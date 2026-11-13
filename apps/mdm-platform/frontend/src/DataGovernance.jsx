@@ -71,13 +71,18 @@ export function DataGovernance({ api, draft, setDraft, onNavigate, user, termino
       const bench = await api.request(ROOT + '/workbench?mode=' + nextMode, { signal:controller.signal });
       if (token !== generation.current) return;
       setWorkbench({ ...bench, feature });
+      let packageActions = [];
       if (target.id) {
         const data = await api.request(ROOT + (target.kind === 'fact' ? '/fact-requests/' : '/work-packages/') + encodeURIComponent(target.id), { signal:controller.signal });
         if (token !== generation.current) return;
         setDetail(data);
+        packageActions = data.allowed_actions || [];
         setSelectedId(previous => (data.details || []).some(row => String(row.id) === String(previous)) ? previous : String(data.details?.[0]?.id || ''));
       }
-      if (bench.allowed_actions?.includes('reconcile') && !feature.read_only) {
+      // Assigned stewards can ask facts and record responsibility without the
+      // separate permission to create a work package.
+      if (!feature.read_only && (bench.allowed_actions?.includes('reconcile')
+        || packageActions.some(action => ['request_business_fact', 'decide_detail'].includes(action)))) {
         const rows = await api.request('/api/org/departments', { signal:controller.signal });
         if (token === generation.current) setDepartments(Array.isArray(rows) ? rows : rows.departments || []);
       }

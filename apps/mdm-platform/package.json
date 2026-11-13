@@ -11,6 +11,7 @@
     "migrate:governance-responsibilities:apply": "node scripts/manage-governance-responsibilities.js --apply",
     "migrate:governance-responsibilities:compensate": "node scripts/manage-governance-responsibilities.js --compensate",
     "check:native-process-consistency": "node scripts/check-native-process-consistency.js",
+    "inspect:account-initial-password": "node scripts/inspect-account-initial-password.js",
     "manage:system-admin": "node scripts/manage-system-admin.js",
     "bootstrap:system-admin": "node scripts/bootstrap-system-admin.js",
     "manage:process-v7-authoring": "node scripts/manage-process-v7-authoring.js",

@@ -53,7 +53,7 @@ export function FormalCheckLocations({checks,document,caseId,authoringEnabled,on
       <p>{formalIssueLabel(issue)}</p>
       {location?<BusinessDetails value={formalSourcePresentation(location.value)}/>:<p>原检查未提供可准确定位的对应内容，不能根据填写项序号猜测。请返回原案例，结合“流程内容”中的“{formalIssueBusinessPath(issue)}”核对原材料后重新检查。</p>}
     </article>}
-    <p>正文由本流程已明确的编制人员修改；主对接人核对材料并提交。{authoringEnabled?'需要修改时，请返回原案例，点击“在3000继续编制本案例”，保存草稿并提交新修订。':'需要修改时，请在原编制文件中修订，再由有权人员向原案例上传修改后的编制文件。'}提交后，在同一案例的“流程预览与核对”查看重新检查和部门核对结果，再回到“流程正式流转”查看可办动作。</p>
+    <p>正文由本流程已明确的编制人员修改；主对接人核对材料并提交。{authoringEnabled?'需要修改时，请返回原案例，点击“在MDM平台继续编制本案例”，保存草稿并提交新修订。':'需要修改时，请在原编制文件中修订，再由有权人员向原案例上传修改后的编制文件。'}提交后，在同一案例的“流程预览与核对”查看重新检查和部门核对结果，再回到“流程正式流转”查看可办动作。</p>
     <a href={'/app/process-preview?case='+encodeURIComponent(caseId)} onClick={onLeave}>打开本案例核对材料与修订入口</a>
   </section>;
 }
@@ -384,7 +384,7 @@ export function ProcessFormal({ api, draft, setDraft, user, terminologyDraft, se
   }
   const protectLink = e => { if (busyRef.current || !abandon()) e.preventDefault(); };
   return <div className="process-preview process-formal">
-    <section className="card"><h2>按当前修订办理正式流转</h2>{authoringEnabled && onNavigate && selected && detail && <p><a href={'/app/process-authoring?case='+encodeURIComponent(selected)+'&case_revision='+encodeURIComponent(detail.case.current_revision_no)+'&case_hash='+encodeURIComponent(detail.case.current_content_hash)} onClick={event=>onNavigate(event,event.currentTarget.href)}>在3000从原案例继续编制</a></p>}<p>主对接人提交材料，参与部门负责人核对；形成正式草稿后，由归口部门负责人最终确认，再由有发布权限的人员发布。{authoringEnabled?'正式正文沿用已提交的固定修订；需要修改时，返回同一案例继续编制、保存并提交新修订，也可上传修改后的编制文件。':'正式正文沿用上传修订；需要修改时，返回同一案例上传3001修订。'}</p>
+    <section className="card"><h2>按当前修订办理正式流转</h2>{authoringEnabled && onNavigate && selected && detail && <p><a href={'/app/process-authoring?case='+encodeURIComponent(selected)+'&case_revision='+encodeURIComponent(detail.case.current_revision_no)+'&case_hash='+encodeURIComponent(detail.case.current_content_hash)} onClick={event=>onNavigate(event,event.currentTarget.href)}>在MDM平台从原案例继续编制</a></p>}<p>主对接人提交材料，参与部门负责人核对；形成正式草稿后，由归口部门负责人最终确认，再由有发布权限的人员发布。{authoringEnabled?'正式正文沿用已提交的固定修订；需要修改时，返回同一案例继续编制、保存并提交新修订，也可上传修改后的编制文件。':'正式正文沿用上传修订；需要修改时，返回同一案例上传3001修订。'}</p>
       <label>选择流程案例<select aria-label="选择流程案例" disabled={busy || loading} value={selected} onChange={e => select(e.target.value)}><option value="">请选择案例</option>{(list?.items || []).map(c => <option key={c.id} value={c.id}>{c.process_name}</option>)}</select></label>
       <div className="import-actions"><button disabled={busy || loading} onClick={() => load()}>刷新正式办理状态</button></div>
       {list && <p className="muted">当前返回{list.items?.length || 0}个可访问案例，最多显示200个。</p>}
@@ -408,7 +408,7 @@ export function ProcessFormal({ api, draft, setDraft, user, terminologyDraft, se
         {draft.kind === 'review' && <><p>由归口部门负责人本人作出最终确认，系统记录办理身份及时间，不代录他人决定。</p><label>部门负责人确认结论<select aria-label="部门负责人确认结论" value={draft.decision} onChange={e => update({ decision: e.target.value })}><option value="">请选择</option>{[...new Set([...(detail?.formal_allowed_decisions || []), ...(draft.decision ? [draft.decision] : [])])].filter(v => decisions[v]).map(v => <option key={v} value={v} disabled={!detail?.formal_allowed_decisions?.includes(v)}>{decisions[v]}</option>)}</select></label>{draft.decision === 'approve' && <label>部门负责人确认依据<textarea aria-label="部门负责人确认依据" rows={4} maxLength={1000} value={draft.note} onChange={e => update({ note: e.target.value })} /></label>}</>}
         {draft.kind === 'submit' && <p>提交当前正式草稿，由归口部门负责人本人最终确认。此操作不会改变正文。</p>}
         {['withdraw', 'return-for-changes'].includes(draft.kind) && <>
-          <p>{draft.kind === 'withdraw' ? '由原提交人撤回尚未办结的确认任务，正式草稿回到需要修改。' : '由归口部门负责人将已拒绝或已通过但未发布的正式草稿退回修改，保留原决定及依据。'} 后续必须重新提交负责人确认；{authoringEnabled?'需要修改正文时，在3000从原案例续修，保存并提交新修订后，再完成核对和提升。':'需要修改正文时，回3001修订后上传原案例，再完成核对和提升。'}</p>
+          <p>{draft.kind === 'withdraw' ? '由原提交人撤回尚未办结的确认任务，正式草稿回到需要修改。' : '由归口部门负责人将已拒绝或已通过但未发布的正式草稿退回修改，保留原决定及依据。'} 后续必须重新提交负责人确认；{authoringEnabled?'需要修改正文时，在MDM平台从原案例续修，保存并提交新修订后，再完成核对和提升。':'需要修改正文时，回3001修订后上传原案例，再完成核对和提升。'}</p>
           <label>撤回或退回原因<textarea aria-label="撤回或退回原因" rows={4} maxLength={1000} value={draft.note} onChange={e => update({ note: e.target.value })} /></label>
         </>}
         {draft.kind === 'review' && ['reject','needs_changes'].includes(draft.decision) && <><label>具体问题<textarea aria-label="具体问题" rows={3} maxLength={4000} value={draft.problem} onChange={e=>update({problem:e.target.value})}/></label><label>判断依据<textarea aria-label="判断依据" rows={3} maxLength={4000} value={draft.basis} onChange={e=>update({basis:e.target.value})}/></label><label>修改要求<textarea aria-label="修改要求" rows={3} maxLength={4000} value={draft.revisionRequest} onChange={e=>update({revisionRequest:e.target.value})}/></label></>}

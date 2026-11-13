@@ -1613,3 +1613,37 @@ tr.dlv-high-risk { border-left: 3px solid var(--focus); }
     width: 100%;
   }
 }
+
+/* Infomat workspace presentation */
+:root {
+  color-scheme: light;
+  font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+  --workspace-ink: #26382e;
+  --workspace-muted: #758078;
+  --workspace-line: #e3e8e0;
+  --workspace-bg: #f6f7f4;
+  --workspace-primary: #365c43;
+  --workspace-soft: #eef3e9;
+  --workspace-nav: #213a2d;
+  --workspace-selected: #c7dfba;
+}
+
+:root {
+  --bg: #f6f7f4; --bg-deep: #e8eee2; --panel: #fafbf8; --panel-2: #fff;
+  --line: #dce3d7; --line-soft: #e9eee5; --ink: #26382e; --text: #455b48;
+  --muted: #758078; --faint: #a8b5a0;
+  --shadow: 0 8px 28px #263e2510; --shadow-sm: 0 4px 12px #263e250b;
+}
+:root .header { background: #213a2d; border-color: #3c5141; }
+:root .header h1 { color: #eef4eb; font-size: 18px; font-weight: 600; }
+:root .header .subtitle { color: #b5c6ae; }
+:root .page-tabs { background: #2c4737; border-color: #52694c; }
+:root .page-tabs button { color: #c3d1bf; }
+:root .page-tabs button.active { background: #c7dfba; color: #203d29; }
+:root .page-tabs button:hover { background: #3c5743; color: #fff; }
+:root .page-tabs button.active:hover { background: #c7dfba; color: #203d29; }
+:root .filter-bar { background: #fafbf8; }
+:root .filter-bar select, :root .filter-bar input { background: #fff; border-color: #dce2d7; }
+:root .filter-bar select:focus, :root .filter-bar input:focus { outline-color: #83b790; border-color: #75906d; }
+:root .quick-filter.active, :root .level-btn.active { background: #365c43; color: #fff; }
+/* End Infomat workspace presentation */

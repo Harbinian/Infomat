@@ -1,0 +1,207 @@
+[
+  {
+    "id": "mdm",
+    "name": "MDM平台",
+    "label": "流程与数据治理",
+    "category": "governance",
+    "description": "进入流程编制、草稿提交与审核，以及组织、人员和数据治理工作。",
+    "port": 3000,
+    "path": "/app/",
+    "access": "host",
+    "icon": "layers",
+    "color": "green",
+    "tags": [
+      "主数据",
+      "组织",
+      "人员",
+      "审核",
+      "MDM"
+    ],
+    "pageMarker": "MDM"
+  },
+  {
+    "id": "authoring",
+    "name": "单流程编制",
+    "label": "独立编制工作台",
+    "category": "governance",
+    "description": "编写和检查单个流程，下载 JSON 后手工交接至 MDM平台。",
+    "port": 3001,
+    "path": "/workbench/",
+    "access": "host",
+    "icon": "flow",
+    "color": "green",
+    "tags": [
+      "流程",
+      "JSON",
+      "3001",
+      "无状态"
+    ],
+    "pageMarker": "流程编制",
+    "note": "内容通过主动下载保留"
+  },
+  {
+    "id": "process-review",
+    "name": "流程联合评审",
+    "label": "跨部门走查与问题跟进",
+    "category": "governance",
+    "description": "浏览评审材料、组织流程走查，记录意见并跟进问题处理。",
+    "port": 3090,
+    "path": "/",
+    "access": "host",
+    "icon": "review",
+    "color": "green",
+    "tags": [
+      "评审",
+      "会议",
+      "走查",
+      "跨部门"
+    ],
+    "pageMarker": "流程联合评审",
+    "note": "隔离演练 · 使用合成身份"
+  },
+  {
+    "id": "pmo",
+    "name": "PMO 项目看板",
+    "label": "项目计划与协作",
+    "category": "collaboration",
+    "description": "查看项目甘特图、任务进度与交付安排，定位需要跟进的工作。",
+    "port": 5173,
+    "path": "/",
+    "access": "host",
+    "icon": "gantt",
+    "color": "blue",
+    "tags": [
+      "项目",
+      "任务",
+      "甘特图",
+      "PMO",
+      "计划"
+    ],
+    "pageMarker": "PMO"
+  },
+  {
+    "id": "data-map",
+    "name": "数据地图",
+    "label": "系统、表与字段链路",
+    "category": "data",
+    "description": "浏览用友、勤哲与转换平台的表字段关系，定位字段及关联线索。",
+    "port": 9997,
+    "path": "/",
+    "access": "host",
+    "icon": "network",
+    "color": "purple",
+    "tags": [
+      "用友",
+      "勤哲",
+      "KFU",
+      "表",
+      "字段",
+      "血缘"
+    ],
+    "pageMarker": "表字段链路"
+  },
+  {
+    "id": "lineage-review",
+    "name": "字段血缘与主键评审",
+    "label": "字段收集与职责核对",
+    "category": "data",
+    "description": "进入字段收集工作台，核对职责矩阵、血缘、取值与待确认事项。",
+    "port": 9992,
+    "path": "/matrix",
+    "access": "host",
+    "icon": "matrix",
+    "color": "purple",
+    "tags": [
+      "字段",
+      "主键",
+      "血缘",
+      "CRUD",
+      "RACI",
+      "矩阵"
+    ],
+    "pageMarker": "字段评审"
+  },
+  {
+    "id": "orders",
+    "name": "订单链路核对",
+    "label": "跨系统订单盘点",
+    "category": "query",
+    "description": "查看订单链路、批次快照和跨系统核对结果，定位差异与依据。",
+    "port": 9998,
+    "path": "/",
+    "access": "host",
+    "icon": "orders",
+    "color": "amber",
+    "tags": [
+      "订单",
+      "盘点",
+      "对账",
+      "差异",
+      "用友",
+      "勤哲"
+    ],
+    "pageMarker": "订单核对"
+  },
+  {
+    "id": "u8-query",
+    "name": "出入库订单查询",
+    "label": "用友单据归属核查",
+    "category": "query",
+    "description": "只读查询出入库订单归属，核查销售质量编号及相关单据信息。",
+    "port": 3088,
+    "path": "/",
+    "access": "host",
+    "icon": "box",
+    "color": "amber",
+    "tags": [
+      "用友",
+      "U8",
+      "出入库",
+      "质量编号",
+      "查询"
+    ],
+    "pageMarker": "出入库订单归属查询"
+  },
+  {
+    "id": "functions",
+    "name": "部门职能参考",
+    "label": "职能、能力域与流程参考",
+    "category": "collaboration",
+    "description": "按部门浏览职能原文、能力域分类和流程配套建议，辅助查阅与讨论。",
+    "port": 9999,
+    "path": "/",
+    "access": "host",
+    "icon": "building",
+    "color": "blue",
+    "tags": [
+      "职能",
+      "部门",
+      "能力域",
+      "桑基图",
+      "参考"
+    ],
+    "pageMarker": "部门职能",
+    "note": "参考与建议仍需业务确认"
+  },
+  {
+    "id": "code-map",
+    "name": "Infomat 代码地图",
+    "label": "程序结构与源码定位",
+    "category": "engineering",
+    "description": "查看仓库模块依赖、接口关联与源码快照，为开发和维护提供线索。",
+    "port": 18080,
+    "path": "/",
+    "access": "host",
+    "icon": "code",
+    "color": "slate",
+    "tags": [
+      "代码",
+      "源码",
+      "开发",
+      "接口",
+      "依赖"
+    ],
+    "pageMarker": "代码地图",
+    "note": "静态快照，非实时运行链路"
+  }
+]

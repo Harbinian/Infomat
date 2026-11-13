@@ -31,7 +31,7 @@ export function organizationInputErrors(before, after, enums = {}) {
     const old = before?.behaviors?.find(item => item.behavior_ref === behavior.behavior_ref) || {};
     if (!same(old.current_actor_role, behavior.current_actor_role) && behavior.current_actor_role && (!behavior.actor_assignment_mode || behavior.actor_assignment_mode === 'fixed_department')) {
       const actor = splitRole(behavior.current_actor_role, roles);
-      if (!actor.department || (!manualPositions && !roles[actor.department]?.includes(actor.position))) errors.push(manualPositions ? '执行部门请选择3000中的有效部门，岗位按实际填写待核对；原有输入已保留' : '执行部门与岗位请选择原表中的对应组合；原有输入已保留');
+      if (!actor.department || (!manualPositions && !roles[actor.department]?.includes(actor.position))) errors.push(manualPositions ? '执行部门请选择MDM平台中的有效部门，岗位按实际填写待核对；原有输入已保留' : '执行部门与岗位请选择原表中的对应组合；原有输入已保留');
     }
     const previous = old.countersign_target_departments || [];
     for (const name of behavior.countersign_target_departments || []) if (!previous.includes(name) && !departments.includes(name)) errors.push('会签目标部门请选择员工基础信息表中的部门；原有输入已保留');

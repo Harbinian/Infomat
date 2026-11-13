@@ -80,6 +80,8 @@ async function inspectUsingPermit(pool,db,options,permit){
       tables:capture.manifest.tables.map(({columns,...table})=>table),exceptions:capture.manifest.exceptions},side_effects:'none'};
 }
 async function inspectGovernanceDeployment(pool,options={}){
+  if(options.component==='quality-audit')return require('./qualityAuditSchema').inspectPreparation(pool,options);
+  if(options.component!==undefined)throw fail('GOVERNANCE_MIGRATION_COMPONENT_INVALID');
   const db=await pool.getConnection();
   try{
     const permit=await authorization.createMigrationPermit(db,options);
@@ -87,6 +89,8 @@ async function inspectGovernanceDeployment(pool,options={}){
   }finally{db.release();}
 }
 async function applyGovernanceDeployment(pool,options={}){
+  if(options.component==='quality-audit')return require('./qualityAuditSchema').applyPreparation(pool,options);
+  if(options.component!==undefined)throw fail('GOVERNANCE_MIGRATION_COMPONENT_INVALID');
   const db=await pool.getConnection();let locked=false;
   try{
     const permit=await authorization.createMigrationPermit(db,options,{write:true});

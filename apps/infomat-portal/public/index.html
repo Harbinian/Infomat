@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Infomat 应用门户：流程编制、数据核对、项目协作与开发工具的统一入口。">
+  <title>Infomat · 工作门户</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" type="module"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">跳到应用目录</a>
+  <aside class="sidebar" aria-label="门户导航">
+    <a class="brand" href="/" aria-label="Infomat 门户首页"><img src="/favicon.svg" alt="" width="38" height="38"><span>Infomat<small>信息化工作空间</small></span></a>
+    <p class="nav-label">工作空间</p>
+    <nav id="workspace-nav"></nav>
+    <p class="nav-label category-label">按用途浏览</p>
+    <nav id="category-nav" aria-label="应用分类"></nav>
+    <div class="sidebar-bottom">
+      <div class="sidebar-caption"><span class="sidebar-symbol">↗</span><strong>一个入口，连接工作</strong><p>各应用独立运行<br>在新标签页中打开</p></div>
+      <button id="help-button" class="help-button"><span aria-hidden="true">ⓘ</span> 门户使用说明 <span aria-hidden="true">↗</span></button>
+      <div class="sidebar-foot">INFOMAT <span>WORKSPACE / 01</span></div>
+    </div>
+  </aside>
+  <div class="shell">
+    <header class="topbar"><div class="breadcrumb">工作空间 <span>/</span> <strong>应用中心</strong></div><div class="topbar-right"><time id="today"></time><span class="header-divider"></span><span class="environment">桌面门户</span></div></header>
+    <main id="main" tabindex="-1">
+      <section class="intro" aria-labelledby="page-title">
+        <div><p class="eyebrow">YOUR WORK, CONNECTED</p><h1 id="page-title">工作，从这里开始<span>。</span></h1><p class="intro-copy">流程编制、数据核对与项目协作，一个入口直达。</p></div>
+        <div class="intro-mark" aria-hidden="true"><span></span><span></span><span></span><span></span><i>INFOMAT</i></div>
+      </section>
+      <section class="overview" aria-label="应用概况">
+        <div><span class="metric-icon" id="apps-icon"></span><p><strong id="total-count">—</strong><span>已收录应用</span></p></div>
+        <div><span class="status-dot"></span><p><strong id="reachable-count">—</strong><span>网页可访问</span></p></div>
+        <div><span class="metric-icon" id="local-icon"></span><p><strong id="local-count">—</strong><span>网络入口</span></p></div>
+        <div class="check-control"><span id="check-time">尚未检查网页</span><button id="refresh-status" type="button"><span id="refresh-icon"></span>刷新状态</button></div>
+      </section>
+      <section class="directory" aria-labelledby="directory-title">
+        <div class="directory-toolbar"><div><h2 id="directory-title">全部应用 <span id="result-count">—</span></h2><p id="directory-caption">找到需要的应用，继续手头的工作。</p></div>
+          <div class="search-box"><span id="search-icon"></span><input id="search" type="search" placeholder="搜索应用、用途或端口" aria-label="搜索应用、用途或端口" autocomplete="off"><kbd>/</kbd></div>
+        </div>
+        <div id="notice" class="notice" role="status" hidden></div>
+        <div id="applications" class="application-grid" aria-live="polite"><p class="loading">正在加载应用目录…</p></div>
+        <div id="empty-state" class="empty-state" hidden><span id="empty-icon"></span><h3 id="empty-title"></h3><p id="empty-copy"></p><button id="reset-filter">查看全部应用</button></div>
+        <footer class="directory-footer"><span>入口状态仅表示门户服务器已取得对应网页响应；具体业务可用性以应用内结果为准。</span><span>INFOMAT · WORKSPACE</span></footer>
+      </section>
+    </main>
+  </div>
+  <dialog id="help-dialog" aria-labelledby="help-title"><div class="dialog-heading"><span class="eyebrow">ABOUT THIS WORKSPACE</span><button id="close-help" aria-label="关闭使用说明">×</button></div><h2 id="help-title">门户使用说明</h2><p>选择应用卡片中的“进入应用”，在新标签页中打开原应用。各应用的账号、权限和数据仍由各自系统管理。</p><dl><dt>搜索与收藏</dt><dd>可按名称、用途、关键词和端口搜索。星标收藏只保存在当前浏览器，门户不保存业务内容。</dd><dt>网页状态</dt><dd>检查固定入口的网页响应，结果最多缓存 30 秒。它不代表容器健康、数据库连接正常、业务功能可用或已经验收；局域网终端能否访问仍以该终端实测为准。</dd><dt>访问地址</dt><dd>应用入口沿用当前门户的主机地址。可通过服务器任一局域网 IPv4 地址访问门户，再进入相应应用。</dd><dt>应用内容边界</dt><dd>流程联合评审保留隔离演练身份；部门职能配套保留参考与建议性质。门户不改变任何应用的业务状态或确认结果。</dd></dl><button id="confirm-help" class="primary-button">知道了</button></dialog>
+</body>
+</html>

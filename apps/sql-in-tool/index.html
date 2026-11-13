@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="离线将 Excel 单列内容转换为 SQL IN 查询条件。">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'none'; img-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Excel 列转 SQL IN</title>
+  <style>
+    :root { color-scheme: light; font-family: "Segoe UI", "Microsoft YaHei", sans-serif; color: #203047; background: #f3f5f9; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 1200px; }
+    button, select, input, textarea { font: inherit; }
+    button, select { cursor: pointer; }
+    button { border: 1px solid #d3dce8; border-radius: 8px; padding: 9px 17px; background: white; color: #34445c; font-weight: 600; }
+    button:hover:not(:disabled) { border-color: #6577df; background: #f4f5ff; }
+    button:disabled { opacity: .45; cursor: not-allowed; }
+    button.primary { background: #4456cb; border-color: #4456cb; color: white; }
+    button.primary:hover:not(:disabled) { background: #3445b3; }
+    :focus-visible { outline: 3px solid #a4aff6; outline-offset: 3px; }
+    .topbar { height: 66px; padding: 0 44px; display: flex; align-items: center; justify-content: space-between; background: white; border-bottom: 1px solid #e3e8f0; }
+    .brand { display: flex; gap: 12px; align-items: center; font-weight: 650; }
+    .mark { background: #4456cb; color: white; width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; font: 700 13px Consolas, monospace; }
+    .local { font-size: 13px; color: #53647a; display: flex; gap: 8px; align-items: center; }
+    .dot { width: 7px; height: 7px; background: #42967c; border-radius: 50%; }
+    main { max-width: 1540px; margin: 0 auto; padding: 30px 36px 22px; }
+    h1 { font-size: 29px; letter-spacing: -.7px; margin: 0 0 10px; font-weight: 650; }
+    .intro { color: #64748b; margin: 0; font-size: 14px; }
+    .options { margin: 24px 0 20px; display: flex; flex-wrap: wrap; gap: 22px; align-items: center; background: white; border: 1px solid #dfe5ef; padding: 16px 20px; border-radius: 12px; font-size: 14px; }
+    .select-field { display: flex; align-items: center; gap: 10px; }
+    select { background: #f8f9fc; color: #203047; padding: 7px 28px 7px 10px; border: 1px solid #cdd7e6; border-radius: 6px; }
+    .checks { display: flex; align-items: center; gap: 21px; margin-left: auto; }
+    .check { display: inline-flex; align-items: center; gap: 7px; cursor: pointer; white-space: nowrap; }
+    input[type="checkbox"] { width: 15px; height: 15px; margin: 0; accent-color: #4456cb; }
+    .workspace { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+    .panel { background: white; border: 1px solid #dfe5ef; border-radius: 12px; min-width: 0; overflow: hidden; }
+    .panel-head { height: 74px; padding: 0 22px; display: flex; align-items: center; gap: 10px; }
+    .step { font: 600 12px Consolas, monospace; color: #5566ce; background: #eef0ff; padding: 5px 7px; border-radius: 5px; }
+    h2 { font-size: 16px; font-weight: 650; margin: 0; }
+    .head-actions { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+    .head-actions button { font-size: 13px; padding: 7px 12px; }
+    textarea { display: block; resize: vertical; width: calc(100% - 44px); min-height: 270px; height: 270px; margin: 0 22px; padding: 17px; border: 1px solid #d5deeb; border-radius: 8px; font: 14px/1.8 Consolas, "Microsoft YaHei", monospace; color: #203047; tab-size: 4; }
+    textarea::placeholder { color: #99a5b5; }
+    #output { background: #f8f9fd; color: #3445a6; }
+    .panel-foot { padding: 14px 22px 18px; min-height: 52px; font-size: 12px; color: #708096; }
+    .stats { display: flex; gap: 18px; flex-wrap: wrap; }
+    .stats strong { color: #34445c; font-weight: 650; }
+    .feedback { margin-top: 16px; padding: 13px 17px; border-radius: 8px; background: #eaf0ff; color: #465c94; min-height: 46px; font-size: 13px; line-height: 20px; }
+    .feedback[data-kind="error"] { background: #fff0ee; color: #a5362b; }
+    .feedback[data-kind="success"] { background: #e8f5ef; color: #287256; }
+    .notes { display: flex; justify-content: space-between; gap: 24px; margin-top: 17px; color: #758298; font-size: 12px; line-height: 1.8; }
+    .notes p { margin: 0; }
+    code { font-family: Consolas, monospace; }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="mark">IN</span> 数据转换工具</div>
+    <div class="local"><span class="dot" aria-hidden="true"></span> 离线使用 · 数据仅在当前页面处理</div>
+  </header>
+  <main>
+    <h1>Excel 列转 SQL IN</h1>
+    <p class="intro">复制 Excel 中的一列，粘贴后自动生成查询条件，再复制到 SQL 编辑器。</p>
+    <div class="options" aria-label="转换选项">
+      <label class="select-field" for="value-type">值类型
+        <select id="value-type"><option value="text">文本（加单引号）</option><option value="number">数字（不加引号）</option></select>
+      </label>
+      <label class="select-field" for="dialect">文本转义
+        <select id="dialect"><option value="standard">标准 SQL / SQL Server</option><option value="mysql">MySQL（反斜杠转义开启）</option></select>
+      </label>
+      <div class="checks">
+        <label class="check"><input type="checkbox" id="trim" checked>去掉首尾空白</label>
+        <label class="check"><input type="checkbox" id="dedupe" checked>去除重复值</label>
+        <label class="check"><input type="checkbox" id="skip-header">跳过首行表头</label>
+        <label class="check"><input type="checkbox" id="multiline">每行一个值</label>
+      </div>
+    </div>
+    <div class="workspace">
+      <section class="panel" aria-labelledby="input-title">
+        <div class="panel-head">
+          <span class="step">01</span><h2 id="input-title"><label for="input">粘贴 Excel 单列</label></h2>
+          <div class="head-actions"><button id="example" type="button">填入示例</button><button id="clear" type="button" disabled>清空</button></div>
+        </div>
+        <textarea id="input" spellcheck="false" placeholder="例如：&#10;A001&#10;A002&#10;A003&#10;&#10;仅粘贴需要查询的那一列。" aria-describedby="input-help"></textarea>
+        <div class="panel-foot" id="input-help">支持 Windows 换行及 Excel 双引号包裹的单元格；粘贴多列时会提示修正。</div>
+      </section>
+      <section class="panel" aria-labelledby="output-title">
+        <div class="panel-head">
+          <span class="step">02</span><h2 id="output-title"><label for="output">SQL 查询条件</label></h2>
+          <div class="head-actions"><button id="copy" type="button" class="primary" disabled>复制 SQL 条件</button></div>
+        </div>
+        <textarea id="output" readonly spellcheck="false" placeholder="IN ('A001', 'A002', 'A003')" aria-describedby="output-help"></textarea>
+        <div class="panel-foot stats" id="output-help">
+          <span>输入 <strong id="row-count">0</strong> 行</span><span>输出 <strong id="value-count">0</strong> 项</span>
+          <span>忽略空行 <strong id="blank-count">0</strong></span><span>去重 <strong id="duplicate-count">0</strong></span>
+        </div>
+      </section>
+    </div>
+    <div class="feedback" id="feedback" role="status" aria-live="polite">等待粘贴。编号、工号等带前导零的内容，请使用文本模式。</div>
+    <footer class="notes">
+      <p>用法：在查询中写 <code>WHERE 字段名</code>，再粘贴右侧条件。只生成条件，不连接数据库。<br>文本中的单引号会自动转义；默认保留前导零，字符 <code>NULL</code> 按普通文本处理。</p>
+      <p>所有内容仅保留在当前页面内存中，关闭后不保存。<br>Excel 已丢失的前导零或数字精度，无法通过本工具恢复。</p>
+    </footer>
+  </main>
+  <script id="converter">
+    'use strict';
+
+    // Excel clipboard text is TSV; quoted cells can contain tabs and newlines.
+    function parseExcelColumn(source) {
+      if (source === '') return [];
+      const text = source.replace(/\r\n?/g, '\n');
+      const rows = [];
+      let cell = '';
+      let columns = 1;
+      let quoted = false;
+      let closedQuote = false;
+      let atStart = true;
+      let rowNumber = 1;
+      for (let index = 0; index < text.length; index += 1) {
+        const char = text[index];
+        if (quoted) {
+          if (char === '"') {
+            if (text[index + 1] === '"') { cell += '"'; index += 1; }
+            else { quoted = false; closedQuote = true; }
+          } else cell += char;
+          continue;
+        }
+        if (char === '\t') {
+          columns += 1;
+          atStart = true;
+          closedQuote = false;
+        } else if (char === '\n') {
+          if (columns !== 1) throw new Error(`第 ${rowNumber} 行包含多列，请只复制 Excel 中的一列。`);
+          rows.push({ value: cell, row: rowNumber });
+          cell = '';
+          columns = 1;
+          atStart = true;
+          closedQuote = false;
+          rowNumber += 1;
+        } else if (closedQuote) {
+          throw new Error(`第 ${rowNumber} 行的双引号格式不完整，请重新复制该单元格。`);
+        } else if (atStart && char === '"') {
+          quoted = true;
+          atStart = false;
+        } else {
+          cell += char;
+          atStart = false;
+        }
+      }
+      if (quoted) throw new Error(`第 ${rowNumber} 行的双引号未闭合，请重新复制该单元格。`);
+      if (columns !== 1) throw new Error(`第 ${rowNumber} 行包含多列，请只复制 Excel 中的一列。`);
+      // A final record separator from Excel is not an additional empty cell.
+      if (!text.endsWith('\n') || closedQuote) rows.push({ value: cell, row: rowNumber });
+      return rows;
+    }
+
+    function convertColumnToSqlIn(source, options) {
+      const rows = parseExcelColumn(source);
+      const stats = { rows: rows.length, values: 0, blanks: 0, duplicates: 0, header: options.skipHeader && rows.length > 0 };
+      const values = [];
+      const seen = new Set();
+      const numericPattern = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/;
+      for (const entry of rows.slice(stats.header ? 1 : 0)) {
+        const value = options.trim ? entry.value.trim() : entry.value;
+        if (value === '') { stats.blanks += 1; continue; }
+        if (options.type === 'number' && !numericPattern.test(value)) {
+          throw new Error(`第 ${entry.row} 行不是有效数字。请修正该行，或切换到文本模式；本次未生成条件。`);
+        }
+        if (options.dedupe && seen.has(value)) { stats.duplicates += 1; continue; }
+        seen.add(value);
+        if (options.type === 'number') values.push(value);
+        else {
+          let escaped = value;
+          if (options.dialect === 'mysql') {
+            escaped = escaped.replace(/\\/g, '\\\\').replace(/\0/g, '\\0').replace(/\u001a/g, '\\Z');
+          } else if (escaped.includes('\0')) {
+            throw new Error(`第 ${entry.row} 行包含空字符，请修正该行后再转换。`);
+          }
+          values.push(`'${escaped.replace(/'/g, "''")}'`);
+        }
+      }
+      stats.values = values.length;
+      const sql = values.length === 0 ? '' : options.multiline ? `IN (\n  ${values.join(',\n  ')}\n)` : `IN (${values.join(', ')})`;
+      return { sql, stats };
+    }
+  </script>
+  <script id="interface">
+    'use strict';
+    const byId = (id) => document.getElementById(id);
+    const input = byId('input');
+    const output = byId('output');
+    const copyButton = byId('copy');
+    const feedback = byId('feedback');
+    let revision = 0;
+    let composing = false;
+
+    function showFeedback(message, kind = 'info') {
+      feedback.textContent = message;
+      feedback.dataset.kind = kind;
+    }
+
+    function render() {
+      revision += 1;
+      byId('clear').disabled = input.value === '';
+      byId('example').disabled = input.value !== '';
+      byId('dialect').disabled = byId('value-type').value === 'number';
+      copyButton.disabled = true;
+      output.value = '';
+      for (const id of ['row-count', 'value-count', 'blank-count', 'duplicate-count']) byId(id).textContent = '0';
+      if (composing) { showFeedback('正在输入，输入完成后自动转换。'); return; }
+      try {
+        const result = convertColumnToSqlIn(input.value, {
+          type: byId('value-type').value, dialect: byId('dialect').value,
+          trim: byId('trim').checked, dedupe: byId('dedupe').checked,
+          skipHeader: byId('skip-header').checked, multiline: byId('multiline').checked
+        });
+        output.value = result.sql;
+        copyButton.disabled = result.sql === '';
+        for (const [id, key] of [['row-count', 'rows'], ['value-count', 'values'], ['blank-count', 'blanks'], ['duplicate-count', 'duplicates']]) byId(id).textContent = String(result.stats[key]);
+        if (input.value === '') showFeedback('等待粘贴。编号、工号等带前导零的内容，请使用文本模式。');
+        else if (!result.sql) showFeedback('没有可转换的值。请检查空行及“跳过首行表头”选项；未生成空的 IN ()。');
+        else {
+          let message = `已生成 ${result.stats.values} 项查询条件，可直接复制。`;
+          if (result.stats.header) message += ' 已跳过首行表头。';
+          if (byId('value-type').value === 'number') message += ' 数字按原文输出，未转为 JavaScript 数值。';
+          else if (byId('dialect').value === 'mysql') message += ' 适用于开启反斜杠转义的 MySQL 会话。';
+          showFeedback(message, 'success');
+        }
+      } catch (error) { showFeedback(error.message, 'error'); }
+    }
+
+    input.addEventListener('input', render);
+    input.addEventListener('compositionstart', () => { composing = true; render(); });
+    input.addEventListener('compositionend', () => { composing = false; render(); });
+    for (const id of ['value-type', 'dialect', 'trim', 'dedupe', 'skip-header', 'multiline']) byId(id).addEventListener('change', render);
+    byId('example').addEventListener('click', () => {
+      if (input.value !== '') return;
+      input.value = "A001\nA002\nA002\nO'Brien\n00123";
+      byId('value-type').value = 'text';
+      byId('skip-header').checked = false;
+      render();
+      input.focus();
+    });
+    byId('clear').addEventListener('click', () => { input.value = ''; render(); input.focus(); });
+
+    async function copySql() {
+      if (copyButton.disabled || !output.value) return;
+      const copiedValue = output.value;
+      const copiedRevision = revision;
+      let copied = false;
+      if (navigator.clipboard && window.isSecureContext) {
+        try { await navigator.clipboard.writeText(copiedValue); copied = true; } catch { /* Local file permissions vary; use the selection fallback. */ }
+      }
+      if (copiedRevision !== revision) return;
+      if (!copied) {
+        output.focus();
+        output.select();
+        try { copied = document.execCommand('copy'); } catch { copied = false; }
+      }
+      showFeedback(copied ? '已复制 SQL 条件。' : '自动复制未成功，已选中结果，请按 Ctrl+C 复制。', copied ? 'success' : 'info');
+    }
+    copyButton.addEventListener('click', copySql);
+    render();
+  </script>
+</body>
+</html>

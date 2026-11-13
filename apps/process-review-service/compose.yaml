@@ -1,0 +1,23 @@
+name: infomat-process-review
+
+services:
+  review:
+    build: .
+    image: infomat-process-review:workspace-20261112130123
+    restart: unless-stopped
+    environment:
+      REVIEW_LAN_IP: "${REVIEW_LAN_IP:?Set the host LAN IPv4 addresses separated by commas}"
+    ports:
+      - "0.0.0.0:3090:3090"
+    volumes:
+      - review-data:/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3090/api/health').then(r=>r.json()).then(h=>{if(h.service!=='process-review-service'||h.network!=='lan'||h.formalIntegration!==false)process.exitCode=1}).catch(()=>{process.exitCode=1})"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+volumes:
+  review-data:
+    external: true
+    name: infomat-process-review-data

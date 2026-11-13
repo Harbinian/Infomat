@@ -1,0 +1,1 @@
+SELECT CONVERT(nvarchar(100),SERVERPROPERTY('ProductVersion')) AS product_version,CONVERT(nvarchar(100),SERVERPROPERTY('Edition')) AS edition,CONVERT(nvarchar(100),SERVERPROPERTY('ProductLevel')) AS product_level

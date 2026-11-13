@@ -1,0 +1,17 @@
+{
+  "name": "infomat-process-review-service",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Independent process review rehearsal service with opt-in Docker LAN access",
+  "engines": { "node": ">=22.13.0" },
+  "scripts": {
+    "start": "node server.mjs",
+    "import:directory": "node scripts/import-directory.mjs"
+  },
+  "dependencies": {
+    "cytoscape": "3.33.1",
+    "cytoscape-dagre": "2.5.0",
+    "dagre": "0.8.5"
+  }
+}

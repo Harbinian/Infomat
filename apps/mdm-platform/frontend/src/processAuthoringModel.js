@@ -53,7 +53,7 @@ export function authoringContentDirty(workspace, snapshot = workspace?.controlle
 export function authoringMaterialsDirty(workspace) { return Boolean(workspace && fingerprint(workspace.submission) !== workspace.savedSubmission); }
 export function authoringOwner(user) { return `${user.personId}:${user.departmentId}`; }
 export function editorEndpoint(url) {
-  if (typeof url !== 'string' || !/^\/api\/(template|enums|schema|validate)$/.test(url)) throw new Error('编制器只能调用3000的同源编制接口。');
+  if (typeof url !== 'string' || !/^\/api\/(template|enums|schema|validate)$/.test(url)) throw new Error('编制器只能调用MDM平台的同源编制接口。');
   return `${AUTHORING_ROOT}/editor/${url.slice(5)}`;
 }
 export function createEditorFetch(api) {

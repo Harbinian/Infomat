@@ -2,7 +2,7 @@
 
 ## 1. 公共约定
 
-接口前缀为`/api/process-data-governance`，使用3000现有登录会话。除`GET /status`外，功能默认关闭；未开启`PROCESS_DATA_GOVERNANCE_ENABLED`时返回503；旧试点版本配置不再生效。
+接口前缀为`/api/process-data-governance`，使用MDM平台现有登录会话。除`GET /status`外，功能默认关闭；未开启`PROCESS_DATA_GOVERNANCE_ENABLED`时返回503；旧试点版本配置不再生效。
 
 所有写接口继续执行服务端权限、工作包固定`process_version_id`来源、对象状态、来源摘要和乐观并发检查。请求中的角色、部门或允许操作列表均不作为授权凭证。
 

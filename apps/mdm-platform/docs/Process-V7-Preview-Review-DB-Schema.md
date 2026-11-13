@@ -15,10 +15,10 @@
 
 - `case_ref`是预览案例稳定标识。
 - `process_ref`来自原生正文，只用于确认同一案例的新修订仍是同一流程，不是正式`process_version_id`。
-- `revision_no`由3000逐次增加。
+- `revision_no`由MDM平台逐次增加。
 - `content_hash`按规范化JSON计算SHA-256，相同案例中不得重复。
 - `stable_item_key`由业务行为稳定引用和承接部门组成。
-- `item_digest`覆盖业务行为、执行部门、相连流程关系和数据关系。摘要变化时，3000重新打开该项。
+- `item_digest`覆盖业务行为、执行部门、相连流程关系和数据关系。摘要变化时，MDM平台重新打开该项。
 
 ## 3. 原生正式基础
 

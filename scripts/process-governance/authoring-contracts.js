@@ -1,4 +1,4 @@
-// Pure authoring contracts shared by 3000/3001. Input: caller-owned Ajv constructor.
+// Pure authoring contracts shared by MDM platform/3001. Input: caller-owned Ajv constructor.
 // Reads technical schemas only; returns new documents or validation diagnostics.
 // No HTTP application, database, private configuration, organization snapshot or listening socket.
 const fs = require('node:fs');

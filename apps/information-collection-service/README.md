@@ -10,9 +10,9 @@
 ## 系统边界
 
 - 身份来源：只读复用 `infomat_mdm` 的 `person -> user_accounts` 链路。
-- 业务数据：只写入 `collection_*` 表，不写 3000 治理业务表。
+- 业务数据：只写入 `collection_*` 表，不写 MDM平台 治理业务表。
 - 附件正文：写入 `COLLECTION_FILE_ROOT`；MySQL 只保存元数据、哈希和扫描状态。
-- 运行依赖：MySQL，不依赖正在运行的 3000、3001 或 PMO 服务。
+- 运行依赖：MySQL，不依赖正在运行的 MDM平台、3001 或 PMO 服务。
 - 首期非目标：匿名填报、审核退回、消息通知、条件跳转，以及对已有发布历史的表单、任务、答卷和附件执行物理删除。
 
 ## 首次部署
@@ -31,7 +31,7 @@ npm --prefix apps/information-collection-service run bootstrap:admin
 
 5. 仅在取得恢复开发或启用目标的明确授权后执行 `npm run start:information-collection`；本机 `scripts/smoke-information-collection.mjs` 用于定向检查两个端口的健康及登录边界，不作为本轮默认步骤。
 
-不得把 3000 的 `admin` 角色自动映射为信息收集管理员。部署负责人必须确认首位管理员工号后再执行初始化。
+不得把 MDM平台 的 `admin` 角色自动映射为信息收集管理员。部署负责人必须确认首位管理员工号后再执行初始化。
 
 ## 本地访问
 

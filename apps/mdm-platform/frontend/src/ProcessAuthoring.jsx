@@ -202,7 +202,7 @@ export function ProcessAuthoring({ api, user, draft, setDraft, onNavigate }) {
       acceptReceipt(workspace, attempt, receipt); notify(workspace);
       if (!viewGuard.current.current(stamp)) return;
       updateLocation(workspace, stamp);
-      setNotice(attempt.kind === 'submit' ? reviewProgress(receipt.case_detail)?.awaitingRecheck ? '已提交，待负责人重新核对。原核对意见和历史记录保留，请进入原案例查看本次修订。' : '本次提交已接收，请进入原案例查看当前修订的核对与正式流转状态。' : authoringDirty(workspace) ? '请求中的草稿已保存。请求期间新增的输入仍保留，请继续应用并保存。' : '草稿已保存到3000，可以退出后重新打开继续编制。保存不代表提交或审核通过。');
+      setNotice(attempt.kind === 'submit' ? reviewProgress(receipt.case_detail)?.awaitingRecheck ? '已提交，待负责人重新核对。原核对意见和历史记录保留，请进入原案例查看本次修订。' : '本次提交已接收，请进入原案例查看当前修订的核对与正式流转状态。' : authoringDirty(workspace) ? '请求中的草稿已保存。请求期间新增的输入仍保留，请继续应用并保存。' : '草稿已保存到MDM平台，可以退出后重新打开继续编制。保存不代表提交或审核通过。');
       await refreshList(stamp).catch(() => { if(viewGuard.current.current(stamp))setNotice('本次操作已保存；列表暂未刷新，可稍后重试刷新列表。当前编制内容仍保留。'); });
     } catch (failure) {
       if (definiteRejection(failure)) workspace.attempt = null;
@@ -229,7 +229,7 @@ export function ProcessAuthoring({ api, user, draft, setDraft, onNavigate }) {
         {entry.showSelector && <label>选择已保存编制草稿<select aria-label="选择已保存编制草稿" disabled={busy} value={record?.id || ''} onChange={event => event.target.value && openWorkspace(event.target.value)}><option value="">请选择已保存草稿</option>{list.items.map(item => <option key={item.id} value={item.id}>{item.process_name || item.document?.process?.process_name || '未命名流程'} · {businessDateTime(item.updated_at)}</option>)}</select></label>}
         {caseId && <div><p>当前是所选原流程的续修入口。由该流程当前有资格的主对接人或已明确的编制人员点击下方按钮；具体资格仍会再次核对。若已提交内容在读取后发生变化，本次续修会停止，并保留填写内容。保存后仍在本页继续编制，提交后到本流程核对结果查看。</p><button disabled={busy || !caseSource} onClick={continueCase}>从原案例继续编制</button></div>}
         {caseRequest.current && <StatusPanel title="原案例续修请求尚待核对">上次选定的流程内容及填写的材料已保留。请再次点击“从原案例继续编制”核对原请求；不会重新选择最新修订。</StatusPanel>}
-        {entry.canUpload && <p className="muted">如需导回在流程知识库AI对话中修改的编制文件，请在下方编制器点击“文件”，选择上传草稿，核对替换内容后点击“保存草稿”。由当前有资格的主对接人提交，随后在“本流程核对结果”查看。平台不会自动连接AI，文件中的审核信息不构成3000的审核凭证。</p>}
+        {entry.canUpload && <p className="muted">如需导回在流程知识库AI对话中修改的编制文件，请在下方编制器点击“文件”，选择上传草稿，核对替换内容后点击“保存草稿”。由当前有资格的主对接人提交，随后在“本流程核对结果”查看。平台不会自动连接AI，文件中的审核信息不构成MDM平台的审核凭证。</p>}
         {draft && !canEdit && <p className="muted">当前草稿正文只读，不能上传文件替换。可点击“下载编制文件”主动留存；需要修改时，请由本流程已明确的编制人员打开同一草稿续修。</p>}</>}
     </section>
     {error && <StatusPanel kind="error" title="编制操作未完成">{userMessage(error)}</StatusPanel>}

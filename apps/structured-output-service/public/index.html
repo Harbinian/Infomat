@@ -2827,7 +2827,7 @@
       {
         title: '7. 评审与交接',
         action: '编制人处理结构阻断并核对业务提示，下载最终待核对文件后重新导入；业务核对记录和结构预审问题处理记录在JSON之外分别保存。',
-        completion: '结构错误为零，往返内容和稳定引用一致，文件名及SHA-256已核对；当前v8文件由用户手工上传，是否受控接收由3000核对。'
+        completion: '结构错误为零，往返内容和稳定引用一致，文件名及SHA-256已核对；当前v8文件由用户手工上传，是否受控接收由MDM平台核对。'
       }
     ];
     const COMPACT_TASK_HELP = Object.freeze([
@@ -2922,7 +2922,7 @@
           ['业务提示', '页面根据现有内容发现的缺项、矛盾或待核对事项。业务提示不阻止阶段草稿下载，也不等于业务结论。'],
           ['待定', '现有事实或证据不足，暂时不能可靠填写或确认。保持待定比猜测或虚构内容更符合治理要求。'],
           ['独立结构预审', '在新的核对上下文中，只依据待审JSON和对应结构规则检查必需结构、引用、字段归位和对象拆分，不判断流程事实是否正确。'],
-          ['3000停止边界', '3001只负责未审核编制，不判断3000的实际启用状态。用户手工上传前，由3000按功能开关、权限、部门范围、修订及内容摘要核对受支持的V7/V8文件，再按审核和发布要求办理。后续数据治理工作包仅支持明确选择的已发布V7版本，不自动建立工作包，也不将V8降级。']
+          ['MDM平台停止边界', '3001只负责未审核编制，不判断MDM平台的实际启用状态。用户手工上传前，由MDM平台按功能开关、权限、部门范围、修订及内容摘要核对受支持的V7/V8文件，再按审核和发布要求办理。后续数据治理工作包仅支持明确选择的已发布V7版本，不自动建立工作包，也不将V8降级。']
         ]
       }
     ];
@@ -5161,7 +5161,7 @@
         const sourceLabel = direction === 'outgoing' && reference.sourceTarget && api.targetKey(reference.sourceTarget) !== api.targetKey(target) ? `<p class="technical-note">引用位置：${escapeHtml(targetLabel(reference.sourceTarget))}</p>` : '';
         return `<li data-element-reference-status="${escapeAttribute(reference.status)}" data-reference-path="${escapeAttribute(reference.path)}"><div class="element-reference-title"><span>${escapeHtml(reference.relationLabel)}</span><span class="reference-status">${statusLabels[reference.status] || '待核对'}</span></div>${sourceLabel}<span class="technical-note">${direction === 'incoming' ? '引用方：' : '引用目标：'}</span>${link}${reference.status === 'wrong-owner' ? `<p class="inline-warning">声明的对象：${escapeHtml(reference.expectedOwnerRef || '未填写')}；实际字段归属：${escapeHtml(reference.target?.parentRef || '无法定位')}。请在表单引用入口明确修正。</p>` : ''}<details><summary>查看稳定标识与引用位置</summary><code>${escapeHtml(reference.ref)}</code><p>${escapeHtml(reference.path)}</p></details></li>`;
       }).join('') || '<li>当前没有记录此方向的引用。</li>'}</ul></div>`;
-      return `<section class="item-card element-references" data-element-references aria-label="元素关系引用"><h3>元素关系引用</h3><p class="technical-note">按当前文件中的稳定标识定位。存在性与字段归属检查不表示业务事实已确认；查看引用不会修改草稿。</p>${renderDirection('outgoing', '本项引用了什么')}${renderDirection('incoming', '哪些元素引用本项')}${renderFeaturePreview('cross-process', '解析跨流程引用', '跨流程来源仍是待核对线索；正式版本引用须在3000核对。')}${renderFeaturePreview('enterprise-mapping', '企业对象与字段映射', '尚未读取或绑定3000企业对象、字段及映射版本。')}</section>`;
+      return `<section class="item-card element-references" data-element-references aria-label="元素关系引用"><h3>元素关系引用</h3><p class="technical-note">按当前文件中的稳定标识定位。存在性与字段归属检查不表示业务事实已确认；查看引用不会修改草稿。</p>${renderDirection('outgoing', '本项引用了什么')}${renderDirection('incoming', '哪些元素引用本项')}${renderFeaturePreview('cross-process', '解析跨流程引用', '跨流程来源仍是待核对线索；正式版本引用须在MDM平台核对。')}${renderFeaturePreview('enterprise-mapping', '企业对象与字段映射', '尚未读取或绑定MDM平台企业对象、字段及映射版本。')}</section>`;
     }
 
     function reviewFacts(entries) {
@@ -5270,7 +5270,7 @@
       const data = currentDocument();
       const objects = (data.data_objects || []).map(item => reviewLink('data', item.data_ref, `${item.data_name || '未命名数据'}${item.behavior_links?.length ? '' : '（暂未关联环节）'}`)).join('');
       const forms = (data.forms || []).map(item => reviewLink('form', item.form_ref, `${item.form_name || '未命名表单'}${item.behavior_links?.length ? '' : '（暂未关联环节）'}`)).join('');
-      return `<div class="review-catalog">${section('全流程数据', '包含暂未关联到环节的数据对象。', `<div class="review-links">${objects || '<p>尚无数据对象。</p>'}</div>`)}${section('全流程表单', '包含暂未关联到环节的表单和记录。', `<div class="review-links">${forms || '<p>尚无表单。</p>'}</div>`)}</div><details class="element-preview-section"><summary>3000治理能力预览</summary><div class="feature-preview-list">${renderFeaturePreview('enterprise-catalog', '企业元素目录', '尚未读取企业目录；当前文件内的元素使用本地稳定标识。')}${renderFeaturePreview('mapping-recheck', '映射变更重检', '固定来源摘要与企业映射版本的重检须在3000进行。')}</div></details>`;
+      return `<div class="review-catalog">${section('全流程数据', '包含暂未关联到环节的数据对象。', `<div class="review-links">${objects || '<p>尚无数据对象。</p>'}</div>`)}${section('全流程表单', '包含暂未关联到环节的表单和记录。', `<div class="review-links">${forms || '<p>尚无表单。</p>'}</div>`)}</div><details class="element-preview-section"><summary>MDM平台治理能力预览</summary><div class="feature-preview-list">${renderFeaturePreview('enterprise-catalog', '企业元素目录', '尚未读取企业目录；当前文件内的元素使用本地稳定标识。')}${renderFeaturePreview('mapping-recheck', '映射变更重检', '固定来源摘要与企业映射版本的重检须在MDM平台进行。')}</div></details>`;
     }
 
     function openReviewTarget(target, root = false) {
@@ -5554,7 +5554,7 @@
         ['部门事实初核', '业务核对人核对全部流程事实。跨部门内容由归口部门和承接部门分别确认本方事实。未确认内容保持待定，并在JSON之外记录证据、确认主体和关闭条件。'],
         ['最终v8独立结构预审', 'MDM工作组或Codex检查最终v8的结构错误、字段归位、对象拆分和生命周期结构。编制人关闭硬性结构错误；保留建议原值时，在外部问题处理记录中说明理由。'],
         ['重新导入、最终下载和交接', '编制人重新导入整改后的文件，核对版本、数量、内容、稳定引用和往返完整性，再分别交接最终v8、结构预审问题处理记录和部门业务核对记录。'],
-        ['当前停止边界', '3001只负责未审核编制，不判断3000的实际启用状态。用户手工上传前，由3000按功能开关、权限、部门范围、修订及内容摘要核对受支持的V7/V8文件，再按审核和发布要求办理。后续数据治理工作包仅支持明确选择的已发布V7版本，不自动建立工作包，也不将V8降级。']
+        ['当前停止边界', '3001只负责未审核编制，不判断MDM平台的实际启用状态。用户手工上传前，由MDM平台按功能开关、权限、部门范围、修订及内容摘要核对受支持的V7/V8文件，再按审核和发布要求办理。后续数据治理工作包仅支持明确选择的已发布V7版本，不自动建立工作包，也不将V8降级。']
       ];
       governanceDrawerContent.innerHTML = `${renderRoleOperationSequence(true)}<div class="governance-drawer-list">${phases.map((phase, index) => `
         <section class="governance-drawer-card"><strong>${index + 1}. ${escapeHtml(phase[0])}</strong><p>${escapeHtml(phase[1])}</p></section>
@@ -5720,7 +5720,7 @@
               <article class="tool-help-card"><h3>使用人和责任</h3><p>编制人维护当前流程；业务核对人确认实际流程、表单、数据和跨部门事实；MDM工作组检查结构并组织后续交接。页面检查不能代替任何一方确认。</p></article>
               <article class="tool-help-card"><h3>开始前准备</h3><p>选择一条真实流程，准备可以核对的制度、表单、台账和实际做法，并明确编制人和不同人员担任的业务核对人。教学样例不能作为业务事实。</p></article>
               <article class="tool-help-card"><h3>保存和恢复</h3><p>3001不自动保存。每轮完成后由用户主动下载；关闭或刷新后，只能重新导入已下载文件继续编制。源文件不会被修改。</p></article>
-              <article class="tool-help-card"><h3>当前交接边界</h3><p>3001下载未审核的单流程v8文件，由用户手工上传3000。3000按实际启用状态、权限和版本规则核对受支持的V7/V8；后续数据治理工作包仍限定已发布V7。3001不自动上传、不读取企业目录，也不降级文件。</p></article>
+              <article class="tool-help-card"><h3>当前交接边界</h3><p>3001下载未审核的单流程v8文件，由用户手工上传MDM平台。MDM平台按实际启用状态、权限和版本规则核对受支持的V7/V8；后续数据治理工作包仍限定已发布V7。3001不自动上传、不读取企业目录，也不降级文件。</p></article>
             </div>`
           )}
           ${section(
@@ -5766,7 +5766,7 @@
             <button class="button" data-action="open-governance-drawer">查看完整治理流程</button>
           </div>
           <div class="governance-flow-grid">${flowCards}</div>
-          <p class="boundary"><strong>当前停止边界：</strong>3001只负责未审核编制，不判断3000的实际启用状态。用户手工上传前，由3000按功能开关、权限、部门范围、修订及内容摘要核对受支持的V7/V8文件，再按审核和发布要求办理。后续数据治理工作包仅支持明确选择的已发布V7版本，不自动建立工作包，也不将V8降级。</p>
+          <p class="boundary"><strong>当前停止边界：</strong>3001只负责未审核编制，不判断MDM平台的实际启用状态。用户手工上传前，由MDM平台按功能开关、权限、部门范围、修订及内容摘要核对受支持的V7/V8文件，再按审核和发布要求办理。后续数据治理工作包仅支持明确选择的已发布V7版本，不自动建立工作包，也不将V8降级。</p>
         </section>`;
       }
       const entry = currentEntry();
@@ -6343,8 +6343,8 @@
           <section class="next-stage-card next"><h3>技术状态</h3><p>结构错误必须关闭。业务待定不阻止下载，但应在外部核对记录中写明证据、确认主体和关闭条件。</p></section>
           <section class="next-stage-card future"><h3>外部材料</h3><p>准备结构预审问题处理记录和部门业务核对记录。3001不会生成、保存或嵌入这些记录。</p></section>
         </div>
-        <p class="boundary"><strong>3000停止边界：</strong>3001只负责未审核编制，不判断3000的实际启用状态。用户手工上传前，由3000按功能开关、权限、部门范围、修订及内容摘要核对受支持的V7/V8文件，再按审核和发布要求办理。后续数据治理工作包仅支持明确选择的已发布V7版本，不自动建立工作包，也不将V8降级。</p>
-        ${renderLastDownloadResult()}<details class="element-preview-section"><summary>3000核对与发布能力预览</summary><div class="feature-preview-list">${renderFeaturePreview('department-review', '跨部门核对', '部门范围、确认记录和案例修订在3000办理；此按钮尚未接通。')}${renderFeaturePreview('publish', '审核与发布', '下载仍是未审核草稿；正式审核、批准与发布在3000进行。')}${renderFeaturePreview('data-governance', '数据治理工作包', '3000工作包目前限定明确选择的已发布V7；本页不生成工作包。')}</div></details>`
+        <p class="boundary"><strong>MDM平台停止边界：</strong>3001只负责未审核编制，不判断MDM平台的实际启用状态。用户手工上传前，由MDM平台按功能开关、权限、部门范围、修订及内容摘要核对受支持的V7/V8文件，再按审核和发布要求办理。后续数据治理工作包仅支持明确选择的已发布V7版本，不自动建立工作包，也不将V8降级。</p>
+        ${renderLastDownloadResult()}<details class="element-preview-section"><summary>MDM平台核对与发布能力预览</summary><div class="feature-preview-list">${renderFeaturePreview('department-review', '跨部门核对', '部门范围、确认记录和案例修订在MDM平台办理；此按钮尚未接通。')}${renderFeaturePreview('publish', '审核与发布', '下载仍是未审核草稿；正式审核、批准与发布在MDM平台进行。')}${renderFeaturePreview('data-governance', '数据治理工作包', 'MDM平台工作包目前限定明确选择的已发布V7；本页不生成工作包。')}</div></details>`
       )}`;
     }
 
@@ -7050,7 +7050,7 @@
             ${renderLifecycleStateFields(`data_objects.${dataIndex}.lifecycle.entry_state`, '这条数据进入本流程时的状态', lifecycle.entry_state)}
             <div class="cross-department-list">${routes || '<div class="inline-note">尚未记录生命周期路径。可以先核对入口状态；没有依据的内容保留待确认。</div>'}</div>
           </details>
-          <p class="boundary"><strong>边界：</strong>当前v8文件记录未审核的单流程事实和建议，可由用户下载后手工上传3000，由3000按实际启用状态、权限与版本规则核对。生命周期缺口属于业务提示，不阻止草稿下载。</p>
+          <p class="boundary"><strong>边界：</strong>当前v8文件记录未审核的单流程事实和建议，可由用户下载后手工上传MDM平台，由MDM平台按实际启用状态、权限与版本规则核对。生命周期缺口属于业务提示，不阻止草稿下载。</p>
           ${renderFeaturePreview('lifecycle-execution', '执行归档与销毁', '3001只记录生命周期事实与建议，不执行真实归档、停用或销毁。')}
         </div>
       </section>`;
@@ -9944,7 +9944,7 @@
         <div class="review-readiness-actions">
           <button class="button small" data-action="refresh-structure-score"${scoreState.status === 'pending' ? ' disabled' : ''}>重新检查六方面</button>
         </div>
-        <p class="boundary"><strong>责任边界：</strong>3001只提供评审准备检查和整改定位，不保存现场确认、依据或评审结论，也不与3000通信。3000的V7技术链路默认关闭，真实单流程试点待验收；不得把本次下载描述为可直接导入3000。</p>
+        <p class="boundary"><strong>责任边界：</strong>3001只提供评审准备检查和整改定位，不保存现场确认、依据或评审结论，也不与MDM平台通信。MDM平台的V7技术链路默认关闭，真实单流程试点待验收；不得把本次下载描述为可直接导入MDM平台。</p>
       </section>`;
     }
 
@@ -9965,7 +9965,7 @@
           <section class="next-stage-card next">
             <span class="next-stage-badge">下一步</span>
             <h3>完成部门事实核对后，保存最终v8文件</h3>
-            <p>3001不记录现场核对记录。请分别保存最终v8、结构预审问题处理记录和部门业务核对记录。3001只负责未审核编制，不判断3000的实际启用状态。用户手工上传前，由3000按功能开关、权限、部门范围、修订及内容摘要核对受支持的V7/V8文件，再按审核和发布要求办理。后续数据治理工作包仅支持明确选择的已发布V7版本，不自动建立工作包，也不将V8降级。</p>
+            <p>3001不记录现场核对记录。请分别保存最终v8、结构预审问题处理记录和部门业务核对记录。3001只负责未审核编制，不判断MDM平台的实际启用状态。用户手工上传前，由MDM平台按功能开关、权限、部门范围、修订及内容摘要核对受支持的V7/V8文件，再按审核和发布要求办理。后续数据治理工作包仅支持明确选择的已发布V7版本，不自动建立工作包，也不将V8降级。</p>
           </section>
           <section class="next-stage-card future">
             <span class="next-stage-badge">后续规划</span>

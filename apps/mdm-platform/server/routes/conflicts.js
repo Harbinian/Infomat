@@ -2,6 +2,7 @@ const { sendMysqlUnavailable } = require('../mysqlRuntimeSchema');
 const express = require('express');
 const { logRequestFailure } = require('../securityLog');
 const router = express.Router();
+const {identityInteger}=require('../sessionSubject');
 const {
   requireAuth,
   getUserByIdAsync,
@@ -34,7 +35,7 @@ function sendRepositoryResult(res, result, successBody = { success: true }) {
   if (result && result.ok === false) {
     return res.status(result.statusCode || 400).json({ error: result.error || '操作失败' });
   }
-  return res.json(successBody);
+  return res.json(result?.success===true?result:successBody);
 }
 
 async function permissionSet(req) {
@@ -66,28 +67,32 @@ async function canDecideEscalatedConflict(req) {
 }
 
 async function conflictScope(req) {
-  const perms = await permissionSet(req);
-  let mode = 'none';
-  if (perms.has('governance:read-global')) mode = 'global';
-  else if (perms.has('governance:read-assigned-context')) mode = 'assigned';
-  else if (perms.has('governance:read-escalated-context')) mode = 'escalated';
-  else if (perms.has('governance:read-department')) mode = 'department';
+  const [perms,roles]=await Promise.all([permissionSet(req),getUserRoleCodesAsync(req.session.personId||req.session.userId)]),codes=new Set(roles.map(r=>r.code||r.role_code));
+  const modes=[perms.has('governance:read-global')?'global':null,perms.has('governance:read-department')?'department':null,
+    perms.has('governance:read-assigned-context')&&perms.has('governance:handle-assigned-conflict')&&codes.has('data_conflict_handler')?'assigned':null,
+    perms.has('governance:read-escalated-context')&&perms.has('governance:decide-escalation')&&codes.has('decision_group')?'escalated':null].filter(Boolean);
+  const mode=modes.includes('global')?'global':modes.length>1?'combined':modes[0]||'none';
   return {
     mode,
+    modes,
     canViewAll: mode === 'global',
     userId: req.session.personId || req.session.userId,
-    departmentId: req.session.departmentId || null
+    departmentId: req.identity?.current_department_id ?? req.identity?.department_id ?? req.session.departmentId ?? null,
+    actor_session:conflictSession(req)
   };
 }
+function conflictSession(req){return {personId:req.session.personId,userId:req.session.userId,accountId:req.session.accountId,authVersion:req.session.authVersion,
+  departmentId:req.identity?.current_department_id??req.identity?.department_id??req.session.departmentId,identityKind:req.session.identityKind};}
 
 async function conflictActor(req, extra = {}) {
   return {
-    actor_session: { personId:req.session.personId,userId:req.session.userId,accountId:req.session.accountId,authVersion:req.session.authVersion,departmentId:req.session.departmentId,identityKind:req.session.identityKind },
+    actor_session: conflictSession(req),
     expected_token: req.body?.expected_token,
     actor_user_id: req.session.userId,
     actor_person_id: req.session.personId || req.session.userId,
     actor_dept_id: req.session.departmentId || null,
     canManageAll: false,
+    request_body:req.body||{},
     ...extra
   };
 }
@@ -193,7 +198,7 @@ router.post('/:id/final-decide', requireAuth, (req, res) => {
     const type = conflictTypeFromQuery(req);
     const conflict = await repo.getConflict(req.params.id, type, { canViewAll: true });
     if (!conflict) return res.status(404).json({ error: '冲突不存在' });
-    if (conflict.status === 'escalated') {
+    if (conflict.status === 'escalated' || conflict.escalated) {
       if (!await canDecideEscalatedConflict(req)) return res.status(403).json({ error: '无升级冲突处理权限' });
     } else if (!await canManageGeneralConflict(req)) {
       return res.status(403).json({ error: '无一般冲突处理权限' });
@@ -235,6 +240,12 @@ router.post('/:id/reopen', requireAuth, (req, res) => {
   });
 });
 
+router.post('/:id/department-recheck',requireAuth,(req,res)=>runAction(res,async()=>{
+  if(!await requestHasAnyPermission(req,['governance:record-department-decision']))return res.status(403).json({error:'须由当前有效部门负责人本人重核'});
+  const repo=await conflictRepository();
+  return sendRepositoryResult(res,await repo.departmentRecheck(req.params.id,conflictTypeFromQuery(req),await conflictActor(req)));
+}));
+
 router.post('/:id/archive', requireAuth, (req, res) => {
   return runAction(res, async () => {
     if (!await requestHasAnyPermission(req, ['governance:structure-gate'])) return res.status(403).json({ error: '无冲突归档权限' });
@@ -249,7 +260,7 @@ router.post('/:id/resolve', requireAuth, (req, res) => {
     const repo = await conflictRepository();
     const conflict = await repo.getConflict(req.params.id, 'field', { canViewAll: true });
     if (!conflict) return res.status(404).json({ error: '冲突不存在' });
-    if (conflict.status === 'escalated') {
+    if (conflict.status === 'escalated' || conflict.escalated) {
       if (!await canDecideEscalatedConflict(req)) return res.status(403).json({ error: '无升级冲突处理权限' });
     } else if (!await canManageGeneralConflict(req)) {
       return res.status(403).json({ error: '无一般冲突处理权限' });
@@ -268,7 +279,7 @@ router.post('/term/:id/resolve', requireAuth, (req, res) => {
     const repo = await conflictRepository();
     const conflict = await repo.getConflict(req.params.id, 'term', { canViewAll: true });
     if (!conflict) return res.status(404).json({ error: '冲突不存在' });
-    if (conflict.status === 'escalated') {
+    if (conflict.status === 'escalated' || conflict.escalated) {
       if (!await canDecideEscalatedConflict(req)) return res.status(403).json({ error: '无升级冲突处理权限' });
     } else if (!await canManageGeneralConflict(req)) {
       return res.status(403).json({ error: '无一般冲突处理权限' });

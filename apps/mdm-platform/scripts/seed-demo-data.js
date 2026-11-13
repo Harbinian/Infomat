@@ -5,7 +5,7 @@
  * Idempotent — skips records that already exist.
  * Run: node scripts/seed-demo-data.js
  */
-console.error('LEGACY_ACCOUNT_SCRIPT_RETIRED：演示脚本不得创建3000账号。');
+console.error('LEGACY_ACCOUNT_SCRIPT_RETIRED：演示脚本不得创建MDM平台账号。');
 process.exit(1);
 
 const db = require('../server/db');

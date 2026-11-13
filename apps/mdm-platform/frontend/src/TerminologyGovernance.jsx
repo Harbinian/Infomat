@@ -3,7 +3,7 @@ import {BusinessDirectoryPicker} from "./BusinessDetails.jsx";
 import {businessName,businessText} from "./businessPresentation.js";
 import React, {useEffect,useRef,useState} from 'react';
 import {StatusPanel,useInputProtection} from './components.jsx';
-import {actionsOf,displayState,exactFailure,impactDecisionLabels,ownerKey,retainWriteFailure,sourceKindLabels,termActionLabels,termDefinitionHeading,termId,termStateLabel,termValues,terminologyRoot,updateEditableDraft} from './terminologyGovernanceModel.js';
+import {actionsOf,displayState,exactFailure,impactDecisionLabels,ownerKey,referenceLocation,retainWriteFailure,sourceKindLabels,termActionLabels,termDefinitionHeading,termId,termStateLabel,termValues,terminologyRoot,updateEditableDraft} from './terminologyGovernanceModel.js';
 import './terminology-governance.css';
 
 const text=value=>businessText(value);
@@ -147,7 +147,7 @@ export function TerminologyGovernance({api,user,draft,setDraft,onQueryChange,leg
           <div className="term-actions">{actionButtons(detail)}</div>
           <div className="term-history"><div className="term-section-title"><h4>引用影响清单</h4><button type="button" className="secondary" disabled={impactBusy} onClick={loadImpact}>{impactBusy?'正在读取…':'查看当前有权读取的引用'}</button></div>{usageImpact&&!usageImpact.items?.length&&<p>当前有权读取的材料中没有本词条的固定引用。</p>}{usageImpact?.items?.length>0&&<ul className="term-impact-list">{usageImpact.items.map(row=><li key={row.target_type+':'+row.target_id}>
             <a href={'/app/terms?'+new URLSearchParams({target_type:row.target_type,target_id:String(row.target_id)})}>{({process_draft:'流程草稿',process_version:'流程正式版本',data_definition:'数据定义版本',work_package:'数据治理工作包',handoff_revision:'数据交接修订'})[row.target_type]||'相关材料'} · {businessName(row)}</a><span> · 引用 · {row.fixed?'已固定历史引用':'可修订材料，变化后须重核'}</span>
-            {(row.items||[]).map((item,index)=><p key={index}>{item.location} · 定义 {businessName(item)} · {item.reason}</p>)}
+            {(row.items||[]).map((item,index)=><p key={index}>{referenceLocation(row,item)} · 定义 {businessName(item.term_snapshot||item)} · {text(item.reason)}</p>)}
             {(row.impact_decisions||[]).map((decision,index)=><p key={decision.event_id||index}>已记录处置：{impactDecisionLabels[decision.decision]||businessStatus(decision.decision,'处置方式待核对')} · {decision.reason} · {decision.created_at||'时间未记录'}</p>)}
             {row.impact_allowed&&<button type="button" className="secondary" disabled={Boolean(draft)||busy} onClick={()=>startImpact(row)}>记录该引用的影响处置</button>}
           </li>)}</ul>}</div>

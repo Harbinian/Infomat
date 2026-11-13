@@ -1,4 +1,4 @@
-// Windows-only 3000 lifecycle manager. No migration, secret-file loading,
+// Windows-only MDM platform lifecycle manager. No migration, secret-file loading,
 // Docker, account or other service operations. Private values are inherited.
 const fs = require('node:fs');
 const path = require('node:path');

@@ -12,18 +12,21 @@ const oldSampleEnd = '；受影响部门重新核对。';
 const displayFields = item => ({ title: item.title, actionLabel: item.actionLabel, sample: item.sample, nextStep: item.nextStep,
   ...(item.handlingGuide ? { handlingGuide: item.handlingGuide } : {}) });
 const authoringSteps = new Map([
-  ['上传3001下载的未审核V7/V8', '在3000编制并保存未审核草稿，也可导入JSON草稿'],
-  ['在3001补充或修订本部门流程事实后上传原案例', '在3000从原案例续修，保存并提交新修订后重新核对']
+  ['上传3001下载的未审核V7/V8', '在MDM平台编制并保存未审核草稿，也可导入JSON草稿'],
+  ['在3001补充或修订本部门流程事实后上传原案例', '在MDM平台从原案例续修，保存并提交新修订后重新核对']
 ]);
+const authoringFirstStep = '在MDM平台新建流程或从原案例继续编制';
+const authoringSample = '部门主对接人核对制度或表单原文后，在MDM平台新建流程或从原案例继续编制，保存草稿并补齐来源、实际参与部门及责任范围，再提交部门负责人核对。提交后在原案例查看核对结果，收到修改意见时从同一案例续修；收到MDM定向问题时，只补充事实和来源依据，不作主数据等治理判断。';
 export function authoringRolePresentation(role, enabled) {
   if (!enabled || role?.code !== 'department_contact' || !Array.isArray(role.workflow)) return role;
-  return { ...role, workflow: role.workflow.map(step => authoringSteps.get(step) || step) };
+  return { ...role, workflow: role.workflow.map(step => authoringSteps.get(step) || step), sample: authoringSample };
 }
 function roleActionPresentation(item, enabled) {
   const contact = item?.roleCode === 'department_contact' || item?.roleHint === 'department_contact' || item?.id === 'guide:department_contact';
   const oldStep = '上传3001下载的未审核V7/V8';
-  if (!enabled || !contact || typeof item.title !== 'string' || !item.title.endsWith('：' + oldStep)) return item;
-  return { ...item, title: item.title.slice(0, -oldStep.length) + authoringSteps.get(oldStep) };
+  if (!enabled || !contact || typeof item.title !== 'string') return item;
+  if (item.title.endsWith('：' + oldStep)) return { ...item, title: item.title.slice(0, -oldStep.length) + authoringSteps.get(oldStep), sample: authoringSample };
+  return item.title.endsWith('：' + authoringFirstStep) ? { ...item, sample: authoringSample } : item;
 }
 function projectionKey(item) {
   const fields = [item?.target, item?.title, item?.actionLabel, item?.sample];
@@ -45,7 +48,7 @@ export function returnedItemPresentation(item, detail, authoringEnabled = false)
   const awaiting = matches && reviewProgress(detail)?.awaitingRecheck === true;
   const label = awaiting ? '已提交，查看负责人重新核对进度' : '查看修改意见与当前修订';
   const instruction = awaiting ? '原意见和历史保留，请进入案例查看当前修订的负责人核对进度。'
-    : authoringEnabled ? '原意见和历史保留，请进入案例查看修改意见与当前修订；如需修改，可按当前授权在3000从原案例续修，保存并提交新修订后重新核对。'
+    : authoringEnabled ? '原意见和历史保留，请进入案例查看修改意见与当前修订；如需修改，可按当前授权在MDM平台从原案例续修，保存并提交新修订后重新核对。'
       : '原意见和历史保留，请进入案例查看修改意见与当前修订；如需修改，完成修订后上传原案例。';
   const basis = originalReturnBasis(item.sample);
   const suffix = typeof item.title === 'string' && item.title.startsWith(oldAction + '：') ? item.title.slice(oldAction.length) : '';
@@ -115,7 +118,7 @@ export async function loadWorkbenchReviewPresentation(api, data, { signal, isCur
   const items = [...(data?.nextActions || []), ...(data?.workItems || [])].filter(item => returned(item) || scopeReview(item));
   const hasHandoffs = (data?.workItems || []).some(handoffItem);
   const knownProjection = item => item?.actionLabel === oldAction;
-  const hasRoleGuidance = data?.roles?.some(role => role.code === 'department_contact' && role.workflow?.some(step => authoringSteps.has(step)));
+  const hasRoleGuidance = data?.roles?.some(role => role.code === 'department_contact' && role.workflow?.some(step => authoringSteps.has(step) || step === authoringFirstStep));
   if (!items.length && !(data?.nextActions || []).some(knownProjection) && !hasRoleGuidance && !hasHandoffs) return data;
   const current = () => !signal?.aborted && isCurrent();
   if (!current()) throw canceled();

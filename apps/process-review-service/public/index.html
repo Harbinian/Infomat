@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>流程联合评审 · 本地演练</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='10' fill='%23255ed6'/%3E%3Cpath d='M13 34L34 13M16 13h18v18' stroke='white' fill='none' stroke-width='4'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/review-layout.css">
+  <script src="/vendor/dagre.min.js" defer></script>
+  <script src="/vendor/cytoscape.min.js" defer></script>
+  <script src="/vendor/cytoscape-dagre.js" defer></script>
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand"><span class="brand-symbol">↗</span><div>流程联合评审<small>跨部门 · 同一材料 · 留痕讨论</small></div></div>
+      <div class="nav-label">评审工作区</div>
+      <nav id="navigation" aria-label="主导航"></nav>
+      <div class="sidebar-note"><span class="status-dot"></span> 独立评审服务<p>先核对事实与交接，再形成问题和后续行动。</p><small id="review-network-note">仅供本机隔离演练</small></div>
+    </aside>
+    <div class="workspace">
+      <header class="topbar">
+        <div><span class="environment-pill" id="review-network">本地隔离演练</span><span class="environment-note">身份未接入正式员工</span></div>
+        <div class="topbar-actions"><span id="sync-status" role="status"></span><button id="export-button" class="button subtle">导出评审包</button><label class="identity-label">演练身份<select id="identity-select" aria-label="选择本地演练身份"></select></label></div>
+      </header>
+      <div id="notice" class="notice" hidden role="status"></div>
+      <main id="main" tabindex="-1"><div class="loading">正在连接本地评审服务…</div></main>
+      <footer class="app-footer"><span>材料确认、批次走查与问题关闭分别留痕；本地演练不代表正式业务验收。</span><span id="draft-status"></span></footer>
+    </div>
+  </div>
+  <dialog id="work-dialog" aria-labelledby="dialog-title"><form id="dialog-form"><header class="dialog-header"><div><span class="eyebrow">评审操作</span><h2 id="dialog-title"></h2></div><button type="button" class="icon-button" data-close-dialog aria-label="保留输入并关闭">×</button></header><div id="dialog-body" class="dialog-body"></div><div id="dialog-error" class="form-error" hidden role="alert"></div><footer class="dialog-footer"><span id="dialog-retention">未提交输入仅保留在本次页面会话。</span><button type="button" class="button subtle" data-close-dialog>保留输入并关闭</button><button type="submit" class="button primary" id="dialog-submit">保存</button></footer></form></dialog>
+  <div id="toast" class="toast" hidden role="status"></div>
+</body>
+</html>

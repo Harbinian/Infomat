@@ -2,6 +2,8 @@ const { sendMysqlUnavailable } = require('../mysqlRuntimeSchema');
 const express = require('express');
 const { logRequestFailure } = require('../securityLog');
 const router = express.Router();
+const {identityInteger,sameIdentityInteger:same}=require('../sessionSubject');
+const qualityActivity=require('../qualityAuditActivity');
 const {
   requireAuth,
   getUserEffectivePermissionsAsync
@@ -30,10 +32,7 @@ function dateOnly(value) {
 }
 
 function isoDate(offsetDays) {
-  const date = new Date();
-  date.setHours(12, 0, 0, 0);
-  date.setDate(date.getDate() + offsetDays);
-  return date.toISOString().slice(0, 10);
+  return new Date(Date.now()+8*3600000+offsetDays*86400000).toISOString().slice(0,10);
 }
 
 function activityLevel(count) {
@@ -43,9 +42,12 @@ function activityLevel(count) {
   return 0;
 }
 
-function dateRange(days) {
-  return Array.from({ length: days }, (_, index) => isoDate(index - days + 1));
+function dateRange(days,endDate) {
+  const last=Date.parse(endDate+'T12:00:00Z');
+  return Array.from({ length: days }, (_, index) => new Date(last+(index-days+1)*86400000).toISOString().slice(0,10));
 }
+
+function filterId(value){const result=identityInteger(value);if(result==null)throw Object.assign(new Error('请选择有效的人员或部门筛选条件'),{statusCode:400});return result;}
 
 function buildBaseQuery(scope, req, query) {
   const params = {};
@@ -54,18 +56,19 @@ function buildBaseQuery(scope, req, query) {
   if (scope === 'me') {
     filters.push('actor_user_id = @currentUserId');
     params.currentUserId = req.session.userId;
+    params.currentPersonId = identityInteger(req.identity?.personId ?? req.identity?.person_id ?? req.session.personId);
   } else if (scope === 'team') {
     filters.push('department_id = @currentDepartmentId');
-    params.currentDepartmentId = req.session.departmentId || -1;
+    params.currentDepartmentId = req.identity?.current_department_id ?? req.identity?.department_id ?? req.session.departmentId ?? -1;
   }
 
   if (query.department_id) {
     filters.push('department_id = @departmentId');
-    params.departmentId = Number(query.department_id);
+    params.departmentId = filterId(query.department_id);
   }
   if (query.user_id) {
-    filters.push('actor_user_id = @userId');
-    params.userId = Number(query.user_id);
+    if(/^person:/.test(query.user_id)){filters.push('actor_person_id = @personId');params.personId=filterId(query.user_id.slice(7));}
+    else{filters.push('actor_user_id = @userId');params.userId=filterId(query.user_id);}
   }
 
   return { filters, params };
@@ -73,10 +76,14 @@ function buildBaseQuery(scope, req, query) {
 
 function filterRows(rows, filters, params) {
   return rows.filter(row => filters.every(filter => {
-    if (filter === 'actor_user_id = @currentUserId') return row.actorUserId === params.currentUserId;
-    if (filter === 'department_id = @currentDepartmentId') return row.departmentId === params.currentDepartmentId;
-    if (filter === 'department_id = @departmentId') return row.departmentId === params.departmentId;
-    if (filter === 'actor_user_id = @userId') return row.actorUserId === params.userId;
+    // A legacy user ID never establishes a person link, even when numbers match.
+    if (filter === 'actor_user_id = @currentUserId') return params.currentPersonId!=null
+      ? row.actorIdentityKind==='person'&&same(row.actorPersonId,params.currentPersonId)
+      : row.actorIdentityKind!=='person'&&same(row.actorUserId,params.currentUserId);
+    if (filter === 'department_id = @currentDepartmentId') return same(row.departmentId,params.currentDepartmentId);
+    if (filter === 'department_id = @departmentId') return same(row.departmentId,params.departmentId);
+    if (filter === 'actor_user_id = @userId') return row.actorIdentityKind!=='person'&&same(row.actorUserId,params.userId);
+    if (filter === 'actor_person_id = @personId') return row.actorIdentityKind==='person'&&same(row.actorPersonId,params.personId);
     return true;
   }));
 }
@@ -86,7 +93,7 @@ function addSource(target, sourceType, count = 1) {
 }
 
 function buildPayload({ scope, days, startDate, endDate, rows }) {
-  const byDate = new Map(dateRange(days).map(date => [date, { date, count: 0, level: 0, sources: {}, sourceLabels: {} }]));
+  const byDate = new Map(dateRange(days,endDate).map(date => [date, { date, count: 0, level: 0, sources: {}, sourceLabels: {} }]));
   const userMap = new Map();
   const departmentMap = new Map();
 
@@ -97,9 +104,11 @@ function buildPayload({ scope, days, startDate, endDate, rows }) {
     addSource(day.sources, row.sourceType);
     day.sourceLabels[row.sourceType] = row.sourceLabel;
 
-    if (row.actorUserId != null) {
-      const user = userMap.get(row.actorUserId) || {
-        userId: row.actorUserId,
+    const person=row.actorIdentityKind==='person',userKey=person?'person:'+row.actorPersonId:row.actorUserId;
+    if (userKey != null) {
+      const user = userMap.get(userKey) || {
+        userId: userKey,
+        ...(person?{identityKind:'person',personId:row.actorPersonId}:{}),
         name: row.actorName || `用户${row.actorUserId}`,
         employeeNo: row.employeeNo || '',
         departmentId: row.departmentId,
@@ -111,7 +120,8 @@ function buildPayload({ scope, days, startDate, endDate, rows }) {
       user.count += 1;
       user.activeDays.add(day.date);
       addSource(user.sources, row.sourceType);
-      userMap.set(row.actorUserId, user);
+      if(person&&row.actorName)user.name=row.actorName;
+      userMap.set(userKey, user);
     }
 
     if (row.departmentId != null) {
@@ -125,6 +135,7 @@ function buildPayload({ scope, days, startDate, endDate, rows }) {
       department.count += 1;
       department.activeDays.add(day.date);
       addSource(department.sources, row.sourceType);
+      if(person&&row.departmentName)department.name=row.departmentName;
       departmentMap.set(row.departmentId, department);
     }
   });
@@ -170,9 +181,15 @@ router.get('/heatmap', requireAuth, async (req, res) => {
     const startDate = isoDate(-days + 1);
     const repo = await auditRepository();
     const base = buildBaseQuery(scope, req, req.query);
-    const rows = filterRows(await repo.listActivityRows({ startDate, endDate }), base.filters, base.params);
-    return res.json(buildPayload({ scope, days, startDate, endDate, rows }));
+    const quality=qualityActivity.qualityAuditActivity();
+    const [legacyRows,qualityRows]=await Promise.all([repo.listActivityRows({startDate,endDate}),quality?quality.listActivityRows(req.session,{scope,startDate,endDate}):[]]);
+    const rows = filterRows([...legacyRows,...qualityRows], base.filters, base.params);
+    const payload=buildPayload({ scope, days, startDate, endDate, rows });
+    if(scope==='me'&&base.params.currentPersonId!=null)payload.identityNotice='本人活动按明确的人员身份统计。未建立人员关联的旧账号活动保留在管理查询中，不计入本人活动。';
+    return res.json(payload);
   } catch (error) {
+    if(error.code?.startsWith('QUALITY_AUDIT_'))return res.status(error.statusCode||503).json({error:'人工质量审计活动暂不可用，请联系维护人员核对'});
+    if(error.statusCode===400)return res.status(400).json({error:error.message});
     if (sendMysqlUnavailable(res, error)) return;
     logRequestFailure(res, error);
     return res.status(500).json({ error: '服务器错误' });
@@ -181,5 +198,7 @@ router.get('/heatmap', requireAuth, async (req, res) => {
 
 router.setAuditRepositoryFactory = setAuditRepositoryFactory;
 router.resetAuditRepositoryFactory = resetAuditRepositoryFactory;
+router.setQualityAuditActivityFactory=qualityActivity.setQualityAuditActivityFactory;
+router.resetQualityAuditActivityFactory=qualityActivity.resetQualityAuditActivityFactory;
 
 module.exports = router;

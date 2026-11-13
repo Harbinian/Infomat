@@ -5,7 +5,7 @@
 ## 适用边界
 
 - `scripts/` 放跨 `docs/`、`pmo/`、`apps/mdm-platform/` 的解析、生成、注入、校验和固定启动脚本。
-- 只服务 MDM 平台的脚本留在 `apps/mdm-platform/scripts/`。
+- 只服务 MDM平台的脚本留在 `apps/mdm-platform/scripts/`。
 - 只服务 PMO 前端或插件的脚本留在 `pmo/`、`pmo/scripts/` 或对应应用目录。
 - 本目录不放一次性调查脚本、日志、截图、数据库、缓存或运行输出。
 

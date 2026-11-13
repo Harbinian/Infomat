@@ -51,7 +51,7 @@ const PAGE_DEFINITIONS = {
       department_mdm_reviewer: { title: '查看部门负责人的最终责任与本人确认条件', target: '#/roleGuide', actionLabel: '查看角色与责任' },
       mdm_lead: { title: '查看任务分派、结构检查和发布条件', target: '#/roleGuide', actionLabel: '查看角色与责任' },
       data_conflict_handler: { title: '查看已分派冲突的处理边界', target: '#/roleGuide', actionLabel: '查看角色与责任' },
-      data_quality_auditor: { title: '查看质量审计人的只读和整改边界', target: '#/roleGuide', actionLabel: '查看角色与责任' },
+      data_quality_auditor: { title: '查看质量发现登记、整改复核及源数据只读边界', target: '#/roleGuide', actionLabel: '查看角色与责任' },
       decision_group: { title: '查看重大争议决定边界', target: '#/roleGuide', actionLabel: '查看角色与责任' },
       admin: { title: '查看管理员只管身份、不管业务的边界', target: '#/roleGuide', actionLabel: '查看角色与责任' }
     }
@@ -157,11 +157,11 @@ const PAGE_DEFINITIONS = {
   },
   quality: {
     title: '数据质量',
-    subtitle: '查看主数据质量和黄金源确认进度。',
-    workflow: ['查看质量概览', '定位未确认字段', '处理字段冲突', '跟踪黄金源进度'],
-    sample: '发现待确认黄金源不一致时，先看字段台账和消费系统，再进入冲突协调。',
-    pitfall: '不要因为流程建议落位就直接认定黄金源；黄金源必须按字段确认。',
-    doneCriteria: '字段完整性、待确认黄金源和冲突处理状态都有记录。',
+    subtitle: '按权限办理审计发现、整改及复核，另行查阅字段统计。',
+    workflow: ['先由部门负责人本人同意当前流程设计', '审计人登记发现、责任部门和整改要求', '主对接人提交整改说明及证据', '审计人复核，合格关闭、不合格退回'],
+    sample: '办理开启后，在同一项发现中提交整改证据并记录复核依据；设计变化先重新确认，再明确更新审计依据。',
+    pitfall: '字段统计不表示质量合格；审计人不能修改部门源数据或代替负责人同意设计。',
+    doneCriteria: '发现、整改证据及复核结论均可追溯；关闭仅代表该项整改复核通过。',
     target: '#/quality'
   },
   rbac: {

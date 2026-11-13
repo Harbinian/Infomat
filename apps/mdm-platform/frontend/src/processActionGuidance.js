@@ -14,7 +14,21 @@ export function formalAccountabilityContext(detail, user = {}) {
 }
 
 // Only current server-returned material and confirmations select the visible next step.
-export function submissionNextStep(state, review) {
+export function submissionNextStep(state, review, detail = null) {
+  const returned = detail?.dispute_revision_return, row = detail?.case;
+  if (returned?.state === 'awaiting_revision' && row && row.status !== 'closed'
+    && String(returned.case_id) === String(row.id) && Number(returned.source_revision_no) === Number(row.current_revision_no)
+    && returned.source_content_hash === row.current_content_hash && String(returned.event_id) === String(detail.review_dispute_event_id)) {
+    const canResume = returned.can_resume === true;
+    const workspace = returned.resume_mode === 'workspace';
+    return {kind: 'revision_return', title: canResume ? '下一步：按项目决定续修本流程' : '下一步：由当前有权人员按项目决定续修',
+      basis: businessText(returned.decision_basis || '当前决定依据未提供，请在“责任与历史”核对原决定记录。', '决定依据含技术内容，请在原决定记录核对'),
+      message: (canResume ? workspace ? '请从本案例继续编制，保存续修草稿，再由当前归口主对接人提交新修订。' : '请核对原决定后完成修订，由当前归口主对接人在本案例上传新修订。'
+        : '当前账号没有本案例续修资格，可查阅原决定；由当前有续修资格的编制人员或归口主对接人办理。')
+        + '原决定、意见和历史保留；提交后在同一案例核对新修订，由MDM组长核对修订影响，再按争议办理条件交相关部门重新核对。',
+      target: canResume && workspace ? '/app/process-authoring?case=' + encodeURIComponent(row.id) + '&case_revision=' + encodeURIComponent(row.current_revision_no) + '&case_hash=' + encodeURIComponent(row.current_content_hash) : null,
+      actionLabel: '在MDM平台继续编制本案例'};
+  }
   if (state?.schema_ready === false) return {kind: 'unavailable', title: '当前材料办理功能尚未准备完成', message: '请由维护人员先核对材料办理功能。当前只能查阅已有流程内容，不能据此认定提交材料完整或要求部门重复提交。'};
   const issues = new Set((state?.blocking_issues || []).map(issue => issue.code));
   const submission = state?.submission;

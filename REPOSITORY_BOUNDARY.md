@@ -19,7 +19,7 @@ Infomat 是一个信息化治理工作仓库，不是单一源码仓库。它允
 | 资产类型 | 说明 | 主要位置 |
 |---|---|---|
 | 信息化资料库 | 制度、流程地图、数据地图、组织架构、方案文档 | `docs/` |
-| 可运行系统 | MDM 平台、文档结构化输出辅助服务、信息表收集服务及其测试和维护脚本 | `apps/` |
+| 可运行系统 | MDM平台、文档结构化输出辅助服务、信息表收集服务及其测试和维护脚本 | `apps/` |
 | PMO / 项目管理展示工具 | 流程地图驾驶舱、甘特图、项目管理页面、交付物工作台 | `pmo/` |
 | 仓库级脚本工具 | 跨资料、跨页面、跨 app 的解析、注入、生成、校验脚本 | `scripts/` |
 | AI 协作工作区 | 当前指令、按需执行说明、上下文架构、仓库偏好和项目技能；历史上下文按需追溯 | `AGENTS.md`、`CODEX.md`、`docs/architecture/context-management.md`、`.codex/config.toml`、`.agents/`；历史上下文在 `MEMORY.md` |
@@ -55,13 +55,13 @@ Infomat 是一个信息化治理工作仓库，不是单一源码仓库。它允
 | 数据类型 | 当前入口 | 禁止误判 |
 |---|---|---|
 | 部门到域映射 | 用户指定外部材料及明确业务确认；旧说明位置仍在 `docs/organization/` | 旧资料和展示快照只用于历史兼容，不反推当前组织事实 |
-| 组织与员工信息 | 3000 为唯一维护源，由行政人事维护；保存直接生效并记录前后内容、操作人和原因 | Excel 仅作明确导入材料；花名册 Markdown 和只读快照是副本，不从岗位猜任命或角色，不将未收录解释为离职 |
+| 组织与员工信息 | MDM平台 为唯一维护源，由行政人事维护；保存直接生效并记录前后内容、操作人和原因 | Excel 仅作明确导入材料；花名册 Markdown 和只读快照是副本，不从岗位猜任命或角色，不将未收录解释为离职 |
 | 工作角色目录与岗位映射 | 有权主体确认的目录及任命；`docs/organization/`保留旧副本 | 不从原文称谓、岗位同名、人员、RBAC角色或旧副本自动生成正式口径 |
-| 流程治理输入 | 用户指定外部原始材料、业务说明及确认；3000 内编制草稿，兼容用户手工导入单流程 JSON | 导回内容不继承审核状态；`docs/norms/` 及驾驶舱不作为当前治理输入或业务确认 |
+| 流程治理输入 | 用户指定外部原始材料、业务说明及确认；MDM平台 内编制草稿，兼容用户手工导入单流程 JSON | 导回内容不继承审核状态；`docs/norms/` 及驾驶舱不作为当前治理输入或业务确认 |
 | 工作角色只读快照 | `docs/work-role-data.json` | 只由 `scripts/build-work-role-data.mjs` 生成，不手工维护、不包含人员名单 |
 | PMO 流程地图展示 | `pmo/procedure-management/dashboard.html` 内嵌 `#sankey-data` | 不绕过 `scripts/parse-sankey-data.mjs` 手工重造数据 |
 | PMO 项目计划 | [PMO README](pmo/README.md) 路由到当前计划维护入口及生成器 | 不把 XLSX 备份或展示快照当默认维护入口 |
-| MDM 平台源码 | `apps/mdm-platform/server/`、`frontend/`、`public/`、`scripts/` | 不把流程治理资料直接写进平台源码 |
+| MDM平台源码 | `apps/mdm-platform/server/`、`frontend/`、`public/`、`scripts/` | 不把流程治理资料直接写进平台源码 |
 | MDM MySQL 运行配置 | [应用 README](apps/mdm-platform/README.md)、`scripts/infomat-services.config.json`及本机私有配置路径 | 配置不证明目标实例正在运行；`apps/mdm-platform/data/*.db`仅为历史或测试数据，数据库文件和凭据均不得提交 |
 
 ## 4. 变更规则
@@ -70,9 +70,9 @@ Infomat 是一个信息化治理工作仓库，不是单一源码仓库。它允
 
 | 任务类型 | 应改位置 | 不应触碰 |
 |---|---|---|
-| 编制或治理流程、能力及系统关系 | 指定外部材料、业务确认、3000 编制及治理记录；3001 人工文件交接和旧展示链按兼容范围维护 | 不把`docs/norms/`副本或旧parser结果当作当前业务决定 |
+| 编制或治理流程、能力及系统关系 | 指定外部材料、业务确认、MDM平台 编制及治理记录；3001 人工文件交接和旧展示链按兼容范围维护 | 不把`docs/norms/`副本或旧parser结果当作当前业务决定 |
 | 修改流程地图驾驶舱样式或展示 | `pmo/procedure-management/` | `docs/norms/` 流程输入基线和源文件材料 |
-| 修改 MDM 平台能力 | `apps/mdm-platform/` | `pmo/`、`docs/superpowers/` |
+| 修改 MDM平台能力 | `apps/mdm-platform/` | `pmo/`、`docs/superpowers/` |
 | 修改信息表收集服务 | `apps/information-collection-service/`；根级固定启动和迁移入口在 `scripts/` | MDM 治理业务表、`docs/norms/`、PMO 真源；身份表只读复用 |
 | 修改项目甘特图或 PMO 看板 | `pmo/` | `apps/mdm-platform/` |
 | 增加仓库级转换或校验 | `scripts/` | app 内部测试脚本，除非脚本只服务该 app |

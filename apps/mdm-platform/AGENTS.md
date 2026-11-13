@@ -2,7 +2,7 @@
 
 ## 术语治理实现入口
 
-统一词典实现及开关、引用、旧数据兼容和验证入口见 `TERMINOLOGY_GOVERNANCE.md`。业务依据仍取用户明确确认，不把该实现说明或旧词表作为新业务真源。普通开发只做显式隔离迁移准备；正式结构准备须使用 `scripts/manage-governance-deployment.js`，取得对应目标授权并核验数据库身份、备份、成功恢复凭证及盘点摘要。该工具不发布应用、开启功能或切换受控写入。术语引用在3000保存，3001文件结构及人工下载上传边界保持有效。
+统一词典实现及开关、引用、旧数据兼容和验证入口见 `TERMINOLOGY_GOVERNANCE.md`。业务依据仍取用户明确确认，不把该实现说明或旧词表作为新业务真源。普通开发只做显式隔离迁移准备；正式结构准备须使用 `scripts/manage-governance-deployment.js`，取得对应目标授权并核验数据库身份、备份、成功恢复凭证及盘点摘要。该工具不发布应用、开启功能或切换受控写入。术语引用在MDM平台保存，3001文件结构及人工下载上传边界保持有效。
 
 本文件只约束 apps/mdm-platform/ 的实现与维护；根 AGENTS.md 持续适用。当前规则放在本入口，产品说明、历史批次和测试细节按任务读取 README.md、scripts/README.md；docs/ 不是业务真源。
 
@@ -21,8 +21,8 @@
 - 保留 Express + MySQL；新增接口放 server/routes/ 并在 server/index.js 注册。同源 React + Vite 前端独立于PMO，仅开放 /app/ 当前前端，根路径转向该入口；旧 public/index.html 已删除。本地 ECharts、logo 和模板按显式静态白名单提供，不使用CDN或共用5173。开发代理只连明确隔离后端，公开构建不得包含材料、用户数据、Secret或服务端源码。
 - MySQL使用 MYSQL_HOST、MYSQL_PORT、MYSQL_USER、MYSQL_PASSWORD、MYSQL_DATABASE、MYSQL_CONNECTION_LIMIT。SQLite仅保留历史迁移与隔离测试，公开命令须有 legacy-sqlite: 前缀；不得恢复正式回退或新增SQLite能力。表结构、接口、账号、字段或状态变化须说明兼容、历史影响和验证，不能擅自迁移正式库。
 - 人员身份为 person -> user_accounts -> person_roles，一人一账号；独立admin无人员关联且默认关闭，治理只读。users/user_roles、users.role、requireRole与SQLite不作正式授权。
-- RBAC使用 server/auth.js 的现有权限中间件及 server/access.js 的范围核验，不按角色名称直接放行。代码模型 rbac-raci-v5-2026-10-19、九个固定角色（系统、MDM、目录维护三组）、二十二项权限、十二项RACI活动由 server/roleDefinitions.js 固定；v5代码与显式模型迁移须同批切换，v3目标按职责v4、人事角色v5顺序升级，当前运行版本另查部署记录。管理页只读，不自定义角色、继承、通配权限或矩阵。
-- 组织与员工目录由`hr_directory_manager`使用独立`directory:maintain`维护，3000为员工唯一维护源；保存直接生效并在同事务记录前后内容、操作人和原因。系统间基础读取接口默认关闭，合同见`DIRECTORY_API.md`，不返回联系方式、账号或授权。
+- RBAC使用 server/auth.js 的现有权限中间件及 server/access.js 的范围核验，不按角色名称直接放行。代码模型 rbac-raci-v5-2026-10-19、九个固定角色（系统、MDM、目录维护三组）、二十二项权限、十三项RACI说明活动由 server/roleDefinitions.js 固定；v5代码与显式模型迁移须同批切换，v3目标按职责v4、人事角色v5顺序升级，当前运行版本另查部署记录。当前分工见ROLE_HANDOFFS.md；RACI说明不授予权限或改写历史。管理页只读，不自定义角色、继承、通配权限或矩阵。
+- 组织与员工目录由`hr_directory_manager`使用独立`directory:maintain`维护，MDM平台为员工唯一维护源；保存直接生效并在同事务记录前后内容、操作人和原因。系统间基础读取接口默认关闭，合同见`DIRECTORY_API.md`，不返回联系方式、账号或授权。
 - admin只管理已有员工的账号、授权和访问审计，治理材料及组织人员目录只读；叠加业务角色也不能写。部门角色只授予人员所属部门；授予部门负责人角色时，在账号授权事务内明确同步最终责任登记，替换须核对现任并确认交接，不扩展管理员的通用目录编辑权。最终负责人仅取 departments.final_responsible_person_id，不猜姓名、岗位或历史常量。旧账号保留，权限及身份变化处理旧数据兼容。
 
 ## 流程核对与正式流转

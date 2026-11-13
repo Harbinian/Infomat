@@ -1,7 +1,7 @@
 name: infomat-5173
 services:
   pmo:
-    image: infomat-pmo:${PMO_IMAGE_TAG:-local}
+    image: infomat-pmo:${PMO_IMAGE_TAG:-workspace-20261112130123}
     build:
       context: ../..
       dockerfile: pmo/gantt-react/Dockerfile

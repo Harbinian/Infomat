@@ -1,4 +1,4 @@
-// Consumed by 3000 only. Node/edge identities, geometry and shared renderers stay intact.
+// Consumed by MDM platform only. Node/edge identities, geometry and shared renderers stay intact.
 export const chartTheme = {
   animation: false,
   backgroundColor: 'transparent', color: ['#a44e3c', '#667961', '#946528', '#8b6b52', '#a43e30'],

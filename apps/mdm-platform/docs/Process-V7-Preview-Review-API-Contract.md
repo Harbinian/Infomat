@@ -2,23 +2,23 @@
 
 基础路径：`/api/process-v7-preview`
 
-所有接口要求用户已登录。写接口继续使用3000现有CSRF保护、人员身份、部门范围和固定权限。
+所有接口要求用户已登录。写接口继续使用MDM平台现有CSRF保护、人员身份、部门范围和固定权限。
 
 旧单流程试点配置不再生效。预览和正式写接口不读取旧`PROCESS_V7_TRIAL_PROCESS_REF`；开关、权限、部门范围、稳定标识、状态、修订和摘要检查通过后，可以办理不同流程。同一案例的新修订保持原`process_ref`，另一流程另建案例；仓储复核锁定案例与来源正文，不自动合并或回填旧记录。
 
-JSON请求正文上限为2MB。接口不接受文件路径或任意数据库查询，只接收用户浏览器上传并解析后的原生V7/V8 JSON。路径与机器标识保留V7兼容命名，下文正式链路门槛也适用于受支持V8；后续数据治理工作包支持已发布原生V8或受支持V7，按实际版本处理，不降级正文。
+JSON请求正文上限为2MB。接口不接受文件路径或任意数据库查询，只接收用户浏览器上传并解析后的原生V9及受支持V8/V7 JSON。路径与机器标识保留V7兼容命名，下文正式链路门槛按实际V9/V8/V7版本适用；后续数据治理工作包支持已发布原生V9或受支持V8/V7，按实际版本处理，不降级正文。
 
 `GET /status`要求有效登录，即使预览关闭也返回HTTP 200及`Cache-Control: no-store`。`enabled`说明预览入口是否开启，`formal_enabled`仅在预览与正式开关均开启时为true；边界字段仍为`preview_only=true`、`publishable=false`和空正式版本标识。它不读取案例、不授予办理权限。页面先读取此状态；关闭时显示“流程预览与核对尚未开启”，不请求案例列表或详情，不把关闭状态表示为暂无记录。其他预览接口关闭时继续返回503及`V7_PREVIEW_DISABLED`，未提交输入仍保留在当前页面内存中。
 
 ## 只读工作台聚合与编辑意见
 
-`GET /cases/:id`沿用原响应，增加只读`handling_summary`：`return_reasons`来自各部门已保存的退回依据或当前正式审核意见；`prerequisites`列明未完成的核对、当前提升/审核绑定及下一办理角色；`current_promotion`表示提升记录是否绑定当前预览修订和摘要。该摘要是当前记录的投影，不是新增业务事实或审批决定。原字段与写请求兼容保持；旧V3格式仅历史保留，现行原生V7/V8按实际版本办理，无数据库迁移或历史回填。旧客户端可以忽略新增字段。
+`GET /cases/:id`沿用原响应，增加只读`handling_summary`：`return_reasons`来自各部门已保存的退回依据或当前正式审核意见；`prerequisites`列明未完成的核对、当前提升/审核绑定及下一办理角色；`current_promotion`表示提升记录是否绑定当前预览修订和摘要。该摘要是当前记录的投影，不是新增业务事实或审批决定。原字段与写请求兼容保持；旧V3格式仅历史保留，现行原生V9及受支持V8/V7按实际版本办理，无数据库迁移或历史回填。旧客户端可以忽略新增字段。
 
 `GET /api/role-workbench?mode=todo|all`从既有案例、当前核对项、提升记录、草稿及审核任务读取V7事项，复用原`workItems`、`nextActions`和`governance`聚合结构；`governance.v7Tasks`补充V7来源集合。事项类型为`v7_preview_review`、`v7_returned`、`v7_scope`、`v7_promote`、`v7_submit`、`v7_formal_review`和`v7_publish`。类型只标识只读投影，不写通用待办表。
 
 事项的`id`由类型和原对象ID组成，`caseId/revisionNo/contentHash`绑定当前预览，按需带`reviewItemId/reviewTaskId/draftId`；`sourceRoles`、`requiredPermissions`保留来源角色及所需权限。`target`沿用`#/processGovernance?workspace=v7Preview&v7Case=...`，部门项增加`v7Item`定位。办理入口仍以详情返回的`allowed_actions/formal_allowed_actions`和服务端实时检查为准；工作台的`canAct`表示可进入当前事项，不是写接口授权凭证。
 
-聚合按当前案例、身份权限和部门范围读取原生V7/V8事项，不用旧精确试点变量限定单流程。管理员（包括叠加业务角色）不生成V7办理任务；范围卡口解除后不再作为待办。可变MySQL响应不再缓存15秒，并返回`Cache-Control: no-store`。任一已启用来源查询失败时返回503，不伪装成空待办；正式功能已启用时缺少正式表也必须报错。正常完成后在下一次读取消失，相关修订变化后依据既有重开规则重新出现。
+聚合按当前案例、身份权限和部门范围读取原生V9及受支持V8/V7事项，不用旧精确试点变量限定单流程。管理员（包括叠加业务角色）不生成V7办理任务；范围卡口解除后不再作为待办。可变MySQL响应不再缓存15秒，并返回`Cache-Control: no-store`。任一已启用来源查询失败时返回503，不伪装成空待办；正式功能已启用时缺少正式表也必须报错。正常完成后在下一次读取消失，相关修订变化后依据既有重开规则重新出现。
 
 管理员工作台不查询个人办公室任务及问题复核待办；独立管理员没有人员ID，不能将空人员标识传入个人业务查询。业务人员继续实时读取有权办理的事项，已启用来源失败仍返回503。
 
@@ -30,13 +30,13 @@ JSON请求正文上限为2MB。接口不接受文件路径或任意数据库查�
 |---|---|---|
 | `GET /cases` | 查询当前人员可以查看的案例和本人待核对数量 | 治理材料读取权限 |
 | `POST /cases` | 上传原生V8或受支持V7文件并建立预览案例 | `governance:draft-department`或`governance:assign-work` |
-| `GET /cases/:id` | 查看当前修订、只读原生V7/V8预览、核对项和操作记录 | 案例参与部门或全局读取权限 |
-| `POST /cases/:id/revisions` | 上传3001修改后的新修订 | 归口部门`governance:draft-department`或`governance:assign-work` |
+| `GET /cases/:id` | 查看当前修订、只读原生V9及受支持V8/V7预览、核对项和操作记录 | 案例参与部门或全局读取权限 |
+| `POST /cases/:id/revisions` | 主动上传原案例的新修订；平台内保存及提交另用编制草稿接口 | 归口部门`governance:draft-department`或`governance:assign-work` |
 | `POST /cases/:id/revisions/preview` | 只读比较拟上传修订与当前修订 | 与正式上传相同；取消后不写数据库 |
 | `POST /cases/:id/assign-owner` | 为归口部门待定的案例选择有效部门 | `governance:assign-work` |
 | `POST /cases/:id/scope-decision` | 记录归口变化或零跨部门范围决定 | `mdm_lead`且具有`governance:assign-work` |
 | `GET /cases/:id/formal-targets?document_no=...` | 按完整制度编号精确查找可承接的已有主档 | `mdm_lead`且具有`governance:assign-work` |
-| `POST /cases/:id/promote` | 把核对完成的当前修订提升为原生V7/V8正式草稿 | `mdm_lead`且具有`governance:assign-work`；正式开关已开启 |
+| `POST /cases/:id/promote` | 把核对完成的当前修订提升为原生V9及受支持V8/V7正式草稿 | `mdm_lead`且具有`governance:assign-work`；正式开关已开启 |
 
 上传正文：
 
@@ -72,11 +72,11 @@ JSON请求正文上限为2MB。接口不接受文件路径或任意数据库查�
 - `pending_evidence`：待补证据；
 - `disputed`：存在分歧。
 
-3000根据当前人员所在部门判断记录归口部门结果还是承接部门结果，不接受客户端指定核对方。
+MDM平台根据当前人员所在部门判断记录归口部门结果还是承接部门结果，不接受客户端指定核对方。
 
 新修订先调用`POST /cases/:id/revisions/preview`。该接口返回新增、沿用、重新打开、移除和受影响部门，不创建修订、核对项或事件。用户确认后再调用正式上传接口。
 
-每条核对项的`item_snapshot.digest_version`固定为`process-v7-review-item-v2`。摘要包含完整业务行为、相连流程关系、相连数据对象及其字段和生命周期、相连表单及其操作、区域和字段。系统按稳定技术标识排序无序数组；只改变数组排列或无关对象时，核对项摘要不变。相关内容变化、旧核对项缺少`digest_version`或摘要版本不一致时，系统把双方结果重置为`pending`，并把`carry_state`设为`reopened`。
+核对项的`item_snapshot.digest_version`按原生格式分派：V8/V7继续使用`process-v7-review-item-v2`，V9使用`process-v7-review-item-v3`并绑定显式入口、记录模型、实例范围及存在条件。旧摘要和意见不回填。摘要包含完整业务行为、相连流程关系、相连数据对象及其字段和生命周期、相连表单及其操作、区域和字段。系统按稳定技术标识排序无序数组；只改变数组排列或无关对象时，核对项摘要不变。相关内容变化、旧核对项缺少`digest_version`或摘要版本不一致时，系统把双方结果重置为`pending`，并把`carry_state`设为`reopened`。
 
 ## 3. 受控提升与正式接口
 
@@ -109,7 +109,7 @@ JSON请求正文上限为2MB。接口不接受文件路径或任意数据库查�
 }
 ```
 
-提升时，服务端按实际版本重新校验原生V7/V8正文、当前有效部门、未解决卡口、案例状态、当前修订号、内容摘要、`process_ref`、归口部门和目标主档。路由完成检查后，仓储在事务内锁定案例，再次检查功能开关、案例稳定标识与内容绑定和未解决卡口。相同案例修订和摘要重复提升时，接口返回原主档和原草稿，不创建第二份记录。正式草稿的原生V7/V8正文在3000中只读；内容需要修改时，编制人员必须回到3001修改并上传新修订。已发布原生V8或受支持V7/V8主档也不能使用通用下一版草稿或旧结构化导入入口生成V3草稿；路由层和仓储层均执行该门禁。正式草稿处于`draft`或`needs_changes`时，新修订完成预览核对后可以受控重新提升到同一草稿；已经提交、审核通过、拒绝或发布时不能覆盖。
+提升时，服务端按实际版本重新校验原生V9及受支持V8/V7正文、当前有效部门、未解决卡口、案例状态、当前修订号、内容摘要、`process_ref`、归口部门和目标主档。路由完成检查后，仓储在事务内锁定案例，再次检查功能开关、案例稳定标识与内容绑定和未解决卡口。相同案例修订和摘要重复提升时，接口返回原主档和原草稿，不创建第二份记录。正式草稿的原生V9及受支持V8/V7正文在MDM平台中只读；内容需要修改时，可在MDM平台从原案例续修并显式保存，由主对接人提交新修订；也可经3001主动下载、上传文件交接。编制者保存、主对接人独立提交，具体资格及恢复条件见[编制合同](../PROCESS_AUTHORING.md)。已发布原生V9或受支持V8/V7主档也不能使用通用下一版草稿或旧结构化导入入口生成V3草稿；路由层和仓储层均执行该门禁。正式草稿处于`draft`或`needs_changes`时，新修订完成预览核对后可以受控重新提升到同一草稿；已经提交、审核通过、拒绝或发布时不能覆盖。
 
 `ZERO_CROSS_DEPARTMENT_SCOPE_PENDING`只能由`confirmed_no_cross_department`解除；`OWNING_DEPARTMENT_CHANGE_PENDING`只能在保留当前归口部门，或按源文件归口部门重新投影成功后解除；`ACTOR_DEPARTMENT_UNRESOLVED`不能通过范围决定解除。任一未解决卡口都会阻止提升。正式审核阶段出现卡口时，系统禁止审核通过，但保留“需要修改”和“拒绝”处理入口。
 
@@ -119,10 +119,10 @@ JSON请求正文上限为2MB。接口不接受文件路径或任意数据库查�
 |---|---|---|
 | `POST /api/process-design/drafts/:id/submit` | 提交正式审核 | 重新校验提升证据；审核任务绑定修订号和内容摘要 |
 | `POST /api/process-design/review-tasks/:id/decision` | 记录正式审核结论 | 审核任务必须仍绑定当前修订号和内容摘要 |
-| `POST /api/process-design/drafts/:id/publish` | 发布原生V7正式版本 | 草稿已审核通过；重新校验V7、提升证据、版次、当前版本指针和审核摘要 |
-| `GET /api/process-design/versions/:processVersionId/content` | 读取不可变正式版本正文 | 按当前身份和部门范围读取；原生V7/V8按实际版本重新计算并返回摘要核对结果 |
+| `POST /api/process-design/drafts/:id/publish` | 发布原生V9及受支持V8/V7正式版本 | 草稿已审核通过；按实际原生版本重新校验正文、提升证据、版次、当前版本指针和审核摘要 |
+| `GET /api/process-design/versions/:processVersionId/content` | 读取不可变正式版本正文 | 按当前身份和部门范围读取；原生V9及受支持V8/V7按实际版本重新计算并返回摘要核对结果 |
 | `PUT /api/process-design/drafts/:id/content` | 修改正式草稿正文 | 原生V8/V7固定返回`409 V7_CONTENT_READ_ONLY` |
-| `POST /api/process-design/documents/:id/drafts` | 通过通用入口创建下一版草稿 | 当前主档或正式版本为原生V7/V8时返回`409 V7_CONTENT_READ_ONLY` |
+| `POST /api/process-design/documents/:id/drafts` | 通过通用入口创建下一版草稿 | 当前主档或正式版本为原生V9及受支持V8/V7时返回`409 V7_CONTENT_READ_ONLY` |
 | `POST /api/process-design/import-structured-output` | 导入旧`document-structured-output-v2` | 目标主档或正式版本为原生V8/V7时返回`409 V7_CONTENT_READ_ONLY` |
 
 原生流程的提交、审核和发布请求必须同时携带用户当前页面显示的修订号和内容摘要。三个请求的主要字段如下：
@@ -174,7 +174,7 @@ JSON请求正文上限为2MB。接口不接受文件路径或任意数据库查�
 | 409 | `REVIEW_TASK_ALREADY_DECIDED` | 该审核任务已经记录结论 |
 | 409 | `V7_FORMAL_BASE_VERSION_CONFLICT` | 主档当前版本指针或计划版次已变化 |
 | 409 | `V7_FORMAL_BLOCKING_ISSUES` | 提交、审核通过或发布时仍有未解决卡口 |
-| 409 | `V7_CONTENT_READ_ONLY` | 不能在3000直接改写原生V8/V7正式正文，也不能为原生V8/V7主档创建通用V3下一版或通过旧结构化导入覆盖 |
+| 409 | `V7_CONTENT_READ_ONLY` | 不能在MDM平台直接改写原生V8/V7正式正文，也不能为原生V8/V7主档创建通用V3下一版或通过旧结构化导入覆盖 |
 | 422 | `V7_FORMAL_EXPECTED_REVISION_REQUIRED` | 未传入有效的当前修订号 |
 | 422 | `V7_FORMAL_EXPECTED_CONTENT_HASH_REQUIRED` | 未传入有效的64位内容摘要 |
 | 422 | `V7_PREVIEW_CONTENT_INVALID` | 文件不是有效原生V8/V7或缺少必要稳定引用 |
@@ -203,3 +203,7 @@ JSON请求正文上限为2MB。接口不接受文件路径或任意数据库查�
 ## 历史追溯
 
 整理前原文、阶段记录和已废止说明保留在[历史快照](../../../docs/archives/2026-10-09-leaf-docs/apps/mdm-platform/docs/Process-V7-Preview-Review-API-Contract.md.before.txt)。仅在核对决策依据、兼容或历史问题时读取；它不覆盖本文的当前说明。
+
+## 历史追溯
+
+[2026-11-11整理前快照](../../../docs/archives/2026-11-11-mdm-documentation/apps/mdm-platform/docs/Process-V7-Preview-Review-API-Contract.md.before.txt)保留原V7/V8范围及3001操作指引。V7命名的接口、表名、开关、错误码及受支持V8/V7摘要标识继续兼容，不因说明更新重写正文或审核记录。

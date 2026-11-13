@@ -6,6 +6,7 @@ const { ACCESS_MODEL_VERSION } = require('./roleDefinitions');
 const { withMysqlTransactionDeadline } = require('./boundedMysql');
 const { assertV7PreviewEnabled } = require('./processV7TrialScope');
 const { assertProcessDataGovernanceEnabled, assertProcessDataGovernanceWritable, isProcessDataGovernanceEnabled, isProcessDataGovernanceReadOnly } = require('./processDataGovernanceScope');
+const { timestampColumns, timeRow } = require('./governanceTimeProjection');
 const RESPONSIBILITIES_MIGRATION_KEY = '2026-10-19-governance-responsibilities-v1';
 
 const text = value => String(value == null ? '' : value).trim();
@@ -14,7 +15,7 @@ function migrationError(error) {
   if (error && ['ER_NO_SUCH_TABLE', 'ER_BAD_FIELD_ERROR'].includes(error.code)) return fail('RESPONSIBILITY_MIGRATION_REQUIRED', '治理职责结构尚未准备，请先完成受控迁移', 503);
   return error;
 }
-async function rows(db, sql, params = []) { const [result] = await db.execute(sql, params); return result; }
+async function rows(db, sql, params = []) { const [result] = await db.execute(sql, params); return result.map(timeRow); }
 async function one(db, sql, params = []) { return (await rows(db, sql, params))[0] || null; }
 function assertResponsibilityScope(type, { write = false } = {}) {
   if (type === 'case') return assertV7PreviewEnabled();
@@ -49,7 +50,8 @@ async function requirePrepared(db, lock = false) {
 async function assignment(db, type, id, kind, lock = false) {
   await requirePrepared(db, lock);
   return normalized(await one(db, `SELECT a.*, CAST(a.target_id AS CHAR) AS target_id, CAST(a.person_id AS CHAR) AS person_id,
-    CAST(a.department_id AS CHAR) AS department_id, CAST(a.actor_person_id AS CHAR) AS actor_person_id, p.person_name
+    CAST(a.department_id AS CHAR) AS department_id, CAST(a.actor_person_id AS CHAR) AS actor_person_id, p.person_name,
+    ${timestampColumns('a', ['created_at', 'updated_at'])}
     FROM process_governance_responsibilities a LEFT JOIN person p ON p.person_id=a.person_id
     WHERE a.target_type=? AND a.target_id=CAST(? AS SIGNED) AND a.assignment_kind=? ${lock ? 'FOR UPDATE' : ''}`, [type, exactId(id), kind]));
 }
@@ -170,11 +172,13 @@ function makeGovernanceResponsibilitiesRepository(pool) {
       }
       const history = await rows(pool, `SELECT e.*, CAST(e.id AS CHAR) AS id, CAST(e.target_id AS CHAR) AS target_id,
         CAST(e.person_id AS CHAR) AS person_id, CAST(e.previous_person_id AS CHAR) AS previous_person_id,
-        CAST(e.actor_person_id AS CHAR) AS actor_person_id, p.person_name, a.person_name AS actor_name
+        CAST(e.actor_person_id AS CHAR) AS actor_person_id, p.person_name, a.person_name AS actor_name,
+        ${timestampColumns('e', ['created_at'])}
         FROM process_governance_responsibility_events e LEFT JOIN person p ON p.person_id=e.person_id
         JOIN person a ON a.person_id=e.actor_person_id WHERE e.target_type=? AND e.target_id=CAST(? AS SIGNED) ORDER BY e.id DESC LIMIT 100`, [type, exactId(id)]);
       const work_records = type === 'case' ? await rows(pool, `SELECT w.*, CAST(w.id AS CHAR) AS id, CAST(w.case_id AS CHAR) AS case_id,
-        CAST(w.actor_person_id AS CHAR) AS actor_person_id,p.person_name AS actor_name
+        CAST(w.actor_person_id AS CHAR) AS actor_person_id,p.person_name AS actor_name,
+        ${timestampColumns('w', ['created_at'])}
         FROM process_governance_work_records w JOIN person p ON p.person_id=w.actor_person_id
         WHERE w.case_id=CAST(? AS SIGNED) ORDER BY w.id DESC LIMIT 100`, [exactId(id)]) : [];
       return { target_type: type, target_id: exactId(id), process_ref: row.process_ref, process_name: row.process_name,
@@ -246,7 +250,8 @@ function makeGovernanceResponsibilitiesRepository(pool) {
       const qualification = await current(pool, actor);
       if (qualification.admin) return { items: [] };
       const assigned = await rows(pool, `SELECT a.*, CAST(a.target_id AS CHAR) AS target_id, CAST(a.person_id AS CHAR) AS person_id,
-        CAST(a.department_id AS CHAR) AS department_id FROM process_governance_responsibilities a WHERE a.person_id=CAST(? AS SIGNED)
+        CAST(a.department_id AS CHAR) AS department_id,${timestampColumns('a', ['created_at', 'updated_at'])}
+        FROM process_governance_responsibilities a WHERE a.person_id=CAST(? AS SIGNED)
         AND a.target_type IN (${enabledTypes.map(() => '?').join(',')}) ORDER BY a.updated_at DESC`, [exactId(actor.personId), ...enabledTypes]);
       const items = [];
       for (const binding of assigned) {
@@ -271,6 +276,33 @@ function makeGovernanceResponsibilitiesRepository(pool) {
       return { items };
     } catch (error) { throw migrationError(error); }
   }
-  return { describe, assign, recordWork, workbench };
+  async function pendingCaseWork(actor) {
+    if (process.env.PROCESS_V7_PREVIEW_ENABLED !== '1') return { items: [] };
+    return transaction(pool, async db => {
+      await requirePrepared(db, true);
+      const qualification = await current(db, actor, true);
+      if (!steward(qualification)) return { items: [] };
+      // An exact-bound note removes only the pending-entry reminder for this
+      // assignment/source. Optional further notes stay available in the case.
+      // Query the binding directly rather than the capped historical display.
+      const items = await rows(db, `SELECT CAST(a.target_id AS CHAR) AS target_id,
+        CAST(a.person_id AS CHAR) AS person_id,CAST(a.department_id AS CHAR) AS department_id,
+        a.revision_no AS assignment_revision_no,c.process_ref,c.process_name,c.status,
+        c.current_revision_no AS source_revision,c.current_content_hash AS source_hash,d.name AS department_name
+        FROM process_governance_responsibilities a
+        JOIN process_v7_preview_cases c ON c.id=a.target_id
+        LEFT JOIN departments d ON d.id=c.owning_department_id
+        WHERE a.target_type='case' AND a.assignment_kind='steward'
+          AND a.person_id=CAST(? AS SIGNED) AND c.status<>'closed'
+          AND c.current_revision_no>0 AND c.current_content_hash IS NOT NULL
+          AND NOT EXISTS(SELECT 1 FROM process_governance_work_records w
+            WHERE w.case_id=c.id AND w.actor_person_id=a.person_id
+              AND w.assignment_revision_no=a.revision_no
+              AND w.source_revision_no=c.current_revision_no AND w.source_content_hash=c.current_content_hash)
+        ORDER BY a.updated_at DESC,a.target_id`, [exactId(actor.personId)]);
+      return { items: items.map(item => ({ ...item, target_type: 'case', assignment_kind: 'steward', allowed_actions: ['record_work'] })) };
+    });
+  }
+  return { describe, assign, recordWork, workbench, pendingCaseWork };
 }
 module.exports = { RESPONSIBILITIES_MIGRATION_KEY, makeGovernanceResponsibilitiesRepository, hasAssignedResponsibility, assertAssignedSteward, assertResponsibilityScope, fail, migrationError, steward, lead };

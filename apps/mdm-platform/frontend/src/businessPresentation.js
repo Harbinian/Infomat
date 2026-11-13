@@ -21,7 +21,7 @@ export function businessEvidence(value){
 }
 export function businessFileName(name,fallback,extension){return businessText(name||fallback,fallback).replace(/[\\/:*?"<>|]/g,'_')+'.'+extension;}
 export function businessMaterialSource(value) {
-  if (value === 'authoring-workspace.json') return '在3000编制并提交的流程材料';
+  if (value === 'authoring-workspace.json') return '在MDM平台编制并提交的流程材料';
   return value ? businessText(value, '原材料名称未记录') : '原材料名称未记录';
 }
 export function businessName(record, fallback = '名称未记录') {

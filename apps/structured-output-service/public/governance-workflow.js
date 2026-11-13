@@ -52,7 +52,7 @@
       id: 'handoff',
       number: 7,
       label: '评审与交接',
-      responsibility: '核对六方面、结构阻断、业务提示、外部材料和3000停止边界',
+      responsibility: '核对六方面、结构阻断、业务提示、外部材料和MDM平台停止边界',
       primaryAction: '处理首个阻断或打开最终交接卡'
     }
   ]);
@@ -80,7 +80,7 @@
       order: 4,
       role: 'MDM工作组',
       action: '核对结构错误、待定项、文件名和SHA-256，接收v8文件及JSON之外的核对记录。',
-      handoff: '受控接收；暂不导入3000'
+      handoff: '受控接收；暂不导入MDM平台'
     })
   ]);
 

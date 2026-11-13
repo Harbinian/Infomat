@@ -1,0 +1,23 @@
+const express=require('express');
+const {requireAuth}=require('../auth');
+const {createRegisteredPool}=require('../mysqlPoolRegistry');
+const {makeQualityAuditRepository}=require('../qualityAuditRepository');
+const {enabled}=require('../qualityAuditSchema');
+const {fail}=require('../qualityAuditPolicy');
+const {logRequestFailure}=require('../securityLog');
+const router=express.Router();let instance,factory;
+const repository=()=>factory?factory():instance||(instance=makeQualityAuditRepository(createRegisteredPool(process.env,'qualityAudit')));
+router.use(requireAuth,(req,res,next)=>{res.set('Cache-Control','no-store');next();});
+const run=(fn,{status=false}={})=>(req,res)=>Promise.resolve().then(()=>{if(!enabled()){if(status)return {enabled:false,can_read:false,can_register:false,read_only:true};throw fail('QUALITY_AUDIT_DISABLED',503);}return fn(req,repository());}).then(value=>res.json(value)).catch(error=>{
+  if(error.code?.startsWith('QUALITY_AUDIT_'))return res.status(error.statusCode||503).json({error:fail(error.code).message,code:error.code});
+  logRequestFailure(res,error);res.status(503).json({error:'质量审计暂不可用，请保留输入后重试',code:'QUALITY_AUDIT_UNAVAILABLE'});
+});
+router.get('/status',run((q,r)=>r.status(q.session),{status:true}));
+router.get('/options',run((q,r)=>r.options(q.session)));
+router.get('/findings',run((q,r)=>r.list(q.session,q.query)));
+router.get('/findings/:id',run((q,r)=>r.detail(q.session,q.params.id,q.query)));
+router.get('/requests/:id',run((q,r)=>r.receipt(q.session,q.params.id)));
+router.post('/findings',run((q,r)=>r.create(q.session,q.body)));
+router.post('/findings/:id/actions',run((q,r)=>r.act(q.session,q.params.id,q.body)));
+router.setRepositoryFactory=value=>{factory=value;};router.resetRepositoryFactory=()=>{factory=null;};router.getRepository=repository;
+module.exports=router;

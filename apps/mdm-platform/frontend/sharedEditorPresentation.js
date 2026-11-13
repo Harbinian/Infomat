@@ -1,4 +1,4 @@
-// Only the 3000 consumer uses this build-time label projection. Shared source,
+// Only the MDM platform consumer uses this build-time label projection. Shared source,
 // controller behavior, file bytes and the independent 3001 build stay unchanged.
 const labels = [
   ["'上传JSON草稿'", "'上传草稿'", 2],

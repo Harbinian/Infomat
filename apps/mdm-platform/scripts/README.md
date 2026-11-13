@@ -1,12 +1,22 @@
 # MDM 应用脚本说明
 
-本目录维护 3000 的运行、结构准备、兼容工具及本机专项验证。当前功能和接口分别见 [README](../README.md)、[编制合同](../PROCESS_AUTHORING.md)、[目录合同](../DIRECTORY_API.md)、[术语合同](../TERMINOLOGY_GOVERNANCE.md)和[数据承接合同](../DATA_MAP_HANDOFF.md)。目标运行状态和恢复入口由 [DOCKER.md](../DOCKER.md) 维护，每次操作实时核对，不重放历史发布脚本。
+人工质量审计的受控结构准备复用`manage-governance-deployment.js`，显式增加`--component quality-audit`；省略该参数仍执行原有治理准备。`--inspect`只读，`--apply`仍要求准确目标、UUID、盘点摘要、实际备份与独立恢复回执、停写证据及授权。只创建新增审计结构及标记，不开启`QUALITY_AUDIT_ENABLED`，不回填旧检查器。完整参数和恢复条件见[DOCKER.md](../DOCKER.md)，操作合同见[QUALITY_AUDIT.md](../QUALITY_AUDIT.md)。
+
+本轮专项：`node --test scripts/test-quality-audit-configuration.js`仅检查配置与静态就绪探针；`node scripts/test-quality-audit-migration-mysql.js --output <新证据目录>`创建并清理自有tmpfs MySQL，核验备份、独立恢复和受控迁移；`node scripts/test-quality-audit-workflow-mysql-api.js --output <新证据目录>`仅从明确标为合成的历史persona导出恢复自有库，通过真实身份、负责人确认、事务和HTTP核验闭环。后者不预填成功审计记录，不连接正式库。脚本不得换成正式导出或默认连接。
+
+本目录维护 MDM平台 的运行、结构准备、兼容工具及本机专项验证。当前功能和接口分别见 [README](../README.md)、[编制合同](../PROCESS_AUTHORING.md)、[目录合同](../DIRECTORY_API.md)、[术语合同](../TERMINOLOGY_GOVERNANCE.md)和[数据承接合同](../DATA_MAP_HANDOFF.md)。目标运行状态和恢复入口由 [DOCKER.md](../DOCKER.md) 维护，每次操作实时核对，不重放历史发布脚本。
+
+角色入口及交接按[当前已确认分工](../ROLE_HANDOFFS.md)核对；普通冲突方案、重大决定和部门重核的技术合同见[CONFLICT_RECHECK.md](../CONFLICT_RECHECK.md)。新旧前后端须同版，缺少新轮UUID或核对令牌的旧解决请求不能直接关闭冲突。既有日志原样保留，新轮事件不回填旧确认。
+
+`start-quality-audit-owned-ui.js --output <全新artifacts目录> --frontend <独立构建绝对路径>`只创建自有回环候选及tmpfs合成库。可选`--synthetic-conflict-fixture`仅生成两条待处理测试冲突，不预填分派、方案、确认或关闭；`--synthetic-account-initialization`仅生成本夹具的随机初始测试凭据供真实首次启用，停止时移除该测试文件。两者都不读取正式凭据或私有配置。向夹具`stop_file`写入停止标记会关闭子服务并移除其自有数据库，不操作正式MDM平台或3001。
+
+需要验证实际运行权限时，显式增加`--runtime-grants <已核对的SHOW GRANTS JSON快照>`。该选项只将快照中的读取及DML权限按原表、列范围映射到新建自有库及测试账号，并逐条核对实际授权；拒绝跨库、全局权限、DDL、再次授权权及附加SQL。证据包括授权源摘要、实际授权及后端源码清单。未指定时仍采用历史宽DML夹具，不能用它证明正式SQL账号可写。`node --test scripts/test-owned-runtime-grants.js`验证解析、权限范围和自有目标拒绝边界，不连接数据库；真实启动后的`runtime-grants.json`另记录实际授权核对结果。
 
 测试脚本及夹具不随 Git 分发。本机原命令在仓库根 `.local-tests/commands.json` 的本应用条目；先检查脚本、依赖及隔离前提，再直接执行实际脚本。历史聚合命令可能包含已撤销的 npm 别名，不能原样重放。缺少工具时记录未执行项。
 
 ## 构建与验证选择
 
-前端候选在 `frontend/` 运行 `npm run build -- --outDir <仓库artifacts内全新目录>`，保留现有 `frontend/dist`。真实浏览器使用明确的隔离候选地址、Edge 100% 和 1699×828 CSS 像素，仅桌面；不指向正式 3000/3001。
+前端候选在 `frontend/` 运行 `npm run build -- --outDir <仓库artifacts内全新目录>`，保留现有 `frontend/dist`。真实浏览器使用明确的隔离候选地址、Edge 100% 和 1699×828 CSS 像素，仅桌面；不指向正式 服务端口 3000/3001。
 
 | 变化 | 验证范围与入口 |
 |---|---|
@@ -14,6 +24,7 @@
 | 编制编辑器纯合同 | 本机 `node --test scripts/test-process-authoring-editor.js`，只用纯合同及随机回环 HTTP |
 | 编制草稿保存、提交、并发与恢复 | 本机 `scripts/test-process-authoring-workspace-mysql.js`，仅自有临时 MySQL 和合成账号 |
 | 页面显示和输入保护 | 按 `frontend/tests/` 的相关模型检查及本主题浏览器脚本选择；合成会话不能替代真实登录和人工输入法体验 |
+| 工作台正式交接及争议待办 | 本机 `node --test scripts/test-formal-workbench-guidance.js scripts/test-workbench-process-disputes.js scripts/test-workbench-governance-actor.js scripts/test-workbench-availability.js`；仅注入的合成记录、身份及随机回环 HTTP，不连接数据库或写业务记录；实际候选另查 Edge 办理结果 |
 | 权限、身份与范围 | 有权、无权和越权路径；服务端校验、事务锁、身份精度及兼容范围见[身份事务合同](../docs/Identity-Transaction-Contract.md) |
 | 迁移与准备 | 真实自有隔离库验证幂等、漂移、失败回滚或补偿、历史内容及引用保留；正式目标另需授权、备份及真实恢复凭证 |
 
@@ -51,9 +62,9 @@
 
 ## 正式流转开关维护
 
-2026-10-19 17:38当前3000已沿用同一镜像开启`PROCESS_V7_FORMAL_ENABLED=1`，预览保持开启，编制归属及数据治理工作包保持关闭。该操作未修改源码、模型、表结构、数据库权限或人员授权；每个部门最终负责人由用户在前端配置，未登记或有效授权不齐时拒绝最终确认。
+2026-10-19 17:38历史发布记录：当时MDM平台沿用同一镜像开启`PROCESS_V7_FORMAL_ENABLED=1`，预览保持开启，编制归属及数据治理工作包当时保持关闭。后续开关及恢复入口按[Docker说明](../DOCKER.md)核对，不沿用该批次状态。该操作未修改源码、模型、表结构、数据库权限或人员授权；每个部门最终负责人由用户在前端配置，未登记或有效授权不齐时拒绝最终确认。
 
-本次受控入口及证据位于`artifacts/3000-formal-enable-20261019-01/`，输入为准确的当前镜像、现有连接及用户授权；输出为备份、恢复、开关切换和验证记录。只有deploy涉及3000容器启停及单一开关变更，SQL仅检查和备份，不写业务行。prepare、deploy已完成，不得重放；verify是绑定本次快照的保留性核对，后续正常办理后不能拿旧数据摘要作当前不变断言。日常健康及恢复按[Docker说明](../DOCKER.md#正式流转开启与恢复)执行，不恢复旧dump覆盖后续记录。
+本次受控入口及证据位于`artifacts/3000-formal-enable-20261019-01/`，输入为准确的当前镜像、现有连接及用户授权；输出为备份、恢复、开关切换和验证记录。只有deploy涉及MDM平台容器启停及单一开关变更，SQL仅检查和备份，不写业务行。prepare、deploy已完成，不得重放；verify是绑定本次快照的保留性核对，后续正常办理后不能拿旧数据摘要作当前不变断言。日常健康及恢复按[Docker说明](../DOCKER.md#当前恢复入口)执行，不恢复旧dump覆盖后续记录。
 
 ## 治理职责迁移与专项验证
 
@@ -61,7 +72,7 @@
 
 `migrate:department-accountability:inspect/apply/compensate -- --target <host:port/database>`要求显式MySQL环境和匹配目标，不加载私有配置。先完成v4职责迁移，再应用该策略；工作树已支持的后续模型保持原版本。策略快照记录原目录说明及历史决定水位；旧确认保留但须现负责人重新确认。补偿仅限没有新策略办理记录的情况，先补偿部门策略，再补偿职责模型；有使用记录时拒绝自动恢复，不能覆盖数据或直接启动旧代码。
 
-v4治理经办角色、案例/工作包分派、案例负责人及正式恢复代码，连同独立部门确认策略，已于2026-10-19部署3000并通过实时验证。运行模型由v3扩展至v4，8角色、20权限、12项RACI活动；本批不包含工作树的HR v5功能。严格身份读取要求代码与模型迁移同批切换，不能只替换程序。迁移保留原七个角色标识与全部人员授权，新增职责、任命事件、案例办理记录和备份表，不自动授予角色、任命人员或改写V8/V7正文。
+v4治理经办角色、案例/工作包分派、案例负责人及正式恢复代码，连同独立部门确认策略，已于2026-10-19部署MDM平台并通过实时验证。该批次运行模型由v3扩展至v4，8角色、20权限、12项RACI活动；本批不包含工作树的HR v5功能。严格身份读取要求代码与模型迁移同批切换，不能只替换程序。迁移保留原七个角色标识与全部人员授权，新增职责、任命事件、案例办理记录和备份表，不自动授予角色、任命人员或改写V8/V7正文。
 
 维护入口要求显式`MYSQL_HOST/PORT/DATABASE/USER/PASSWORD`及匹配的`--target host:port/database`，不加载私有配置。取得目标授权、备份及恢复条件后，先inspect核对依赖、DDL、旧权限和模型基线，再apply并核对ready。本批通过受控发布脚本调用冻结v4的同一迁移函数；`artifacts/3000-governance-responsibilities-20261019-02/`保留完整备份、隔离恢复、数据保留及上线证据。已完成的发布入口不能重放；后续操作以目标当前状态和新授权为准。
 
@@ -74,14 +85,21 @@ v4治理经办角色、案例/工作包分派、案例负责人及正式恢复�
 | 工作类型 | 当前入口 | 副作用及条件 |
 |---|---|---|
 | 原生格式与入口一致性 | `npm run check:native-process-consistency` | 只读静态检查，不启动应用、不连库 |
+| 新账号初始密码挂载检查 | `npm run inspect:account-initial-password -- --container <准确容器名或ID>` | 只读Docker指定容器的身份、状态和挂载，以及宿主文件类型；不读取密码或私有配置，不连接数据库 |
 | React 候选构建 | 在 `frontend/` 运行 `npm run build -- --outDir <artifacts内全新目录>` | 写指定构建目录；保留当前 `frontend/dist` |
 | Windows 部署副本 | `service:start`、`service:stop`、`service:restart`、`service:check` | 管理专用部署副本；不管理 Docker，目标与授权见 Docker 说明 |
-| 3000 Docker | [DOCKER.md](../DOCKER.md) 的运行与恢复入口 | 核对实际目标、准确源码及恢复条件，不重放历史发布脚本 |
+| MDM平台 Docker | [DOCKER.md](../DOCKER.md) 的运行与恢复入口 | 核对实际目标、准确源码及恢复条件，不重放历史发布脚本 |
 | 治理职责、部门责任、目录角色及术语结构 | `migrate:governance-responsibilities:*`、`migrate:department-accountability:*`、`migrate:hr-directory-role:*`、`migrate:terminology:*` | 后缀按 package.json 选择；inspect/dry-run 仍须核对目标，正式写入另需授权及恢复条件 |
 | 受控目标的编制结构准备 | `node scripts/manage-process-authoring-schema.js` | 只按上文明确目标、盘点摘要和授权参数执行 |
 | 历史 SQLite 工具 | `legacy-sqlite:*` | 仅历史迁移或隔离测试，不作为正式运行和授权入口 |
 
 专项覆盖、隔离条件和参数保留在相关主题章节。缺少本机清单或工具时记录未执行项，不将历史验证结果写成本次通过。
+
+### 新账号初始密码挂载
+
+`inspect:account-initial-password`要求显式容器，检查固定目标`/run/secrets/account-initial-password`是否为只读bind挂载，宿主源是否为普通文件；目录、符号链接、缺失源和可写挂载均不满足前提。可另传`--candidate-file <宿主绝对路径>`，仅报告拟恢复文件的路径类型，不修改挂载或现有文件。输出仅含指定容器身份、挂载和路径元数据，不读取`Config.Env`或运行配置。
+
+退出码0只表示挂载与文件类型前提满足，2表示前提不齐，1表示参数或检查失败；不证明密码内容符合策略、运行策略已生效或账号启用成功。合成回归可运行`node -r ./scripts/testHelpers/blockRealMysql.js --test scripts/test-account-initial-password-inspection.js scripts/test-account-creation-policy.js`。后续恢复仍使用已确认的固定文件策略，先取得有效受控文件和正式维护授权，再核对准确镜像、原运行文件、停启影响及恢复入口；不把旧目录当文件重挂、不覆盖旧目录、不删除策略变量来切换随机密码。当前缺口及运行边界见[Docker说明](../DOCKER.md#配置账号及结构准备)。
 
 ## 组织与员工目录专项
 

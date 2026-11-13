@@ -2,7 +2,7 @@
 /**
  * 单流程离线校验器（V7/V8/V9按文件版本校验，保留兼容命令名）。
  *
- * 不启动 3001，直接调用 3001 与 3000 共用的同一份规则：
+ * 不启动 3001，直接调用 3001 与 MDM平台 共用的同一份规则：
  *   - 结构：docs/contracts/process-governance-v{7,8,9}.schema.json（JSON Schema 2020-12）
  *   - 语义：scripts/process-governance/v7-validator.js（引用、端点、节点类型、字段归属）
  * 两者由 apps/structured-output-service/server.js 按 schema_version 分派。

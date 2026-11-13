@@ -2,6 +2,7 @@ const { sendMysqlUnavailable } = require('../mysqlRuntimeSchema');
 const express = require('express');
 const { logRequestFailure } = require('../securityLog');
 const router = express.Router();
+router.use('/audits', require('./qualityAudits'));
 
 const { requireAuth, getUserEffectivePermissionsAsync } = require('../auth');
 const { dataMapRepository } = require('../dataMapMysqlRepository');

@@ -226,7 +226,7 @@ router.get('/departments', requireAuth, (req, res) => {
 function rejectOrganizationTruthWrite(req, res) {
   return res.status(405).json({
     code: 'ORGANIZATION_TRUTH_READ_ONLY',
-    error: '组织与部门真源只读，3000 账号管理只能选择现有部门。'
+    error: '组织与部门真源只读，MDM平台 账号管理只能选择现有部门。'
   });
 }
 

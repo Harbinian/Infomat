@@ -1,7 +1,8 @@
 import {businessStatus} from './businessPresentation.js';
 import {userMessage} from './businessPresentation.js';
 import {businessName} from "./businessPresentation.js";
-import {responsibilityGuidance,governanceActionInstruction} from './businessGuidance.js';
+import {responsibilityGuidance,governanceActionInstruction,businessDateTime} from './businessGuidance.js';
+import {formalHistoricalName} from './terminologyGovernanceModel.js';
 import { useEffect, useRef, useState } from 'react';
 import { StatusPanel } from './components.jsx';
 import { DepartmentAccountability, accountabilityFailureText, accountabilitySnapshot } from './DepartmentAccountability.jsx';
@@ -16,15 +17,15 @@ const failureText = error => accountabilityFailureText(error) || (/MIGRATION_REQ
   ? '责任与争议办理所需的存储结构尚未准备；原有流程核对仍可使用。请联系维护人员核对准备状态。'
   : error.status === 404 ? '当前入口或对象不可读取，请核对当前身份与服务版本。' : error.message);
 const blankState = () => ({ loading: true, data: null, error: null });
-const revisionInstruction = authoringEnabled => authoringEnabled ? '在3000从原案例续修，保存并提交新修订后重新核对' : '完成修订后上传原案例';
+const revisionInstruction = authoringEnabled => authoringEnabled ? '在MDM平台从原案例续修，保存并提交新修订后重新核对' : '完成修订后上传原案例';
 
 function History({ title, items, authoringEnabled = false }) {
   return <details><summary>{title}</summary>{items?.length ? items.map((item, i) => <article className="preview-item" key={item.event_id || item.id || i}>
-    <p>{actionNames[item.action || item.payload?.action || item.event_type] || ({ steward: '治理经办任命', owner: '业务负责人任命', work_record: '治理经办记录' })[item.assignment_kind || item.record_type] || '治理记录'} · {item.actor_name || item.actor_person_name || '办理人姓名未记录'} · {item.created_at || ''}</p>
-    {(item.person_name || '姓名未记录') && <p>责任人员：{item.person_name || '姓名未记录'}</p>}
+    <p>{actionNames[item.action || item.payload?.action || item.event_type] || ({ steward: '治理经办任命', owner: '业务负责人任命', work_record: '治理经办记录' })[item.assignment_kind || item.record_type] || '治理记录'} · {item.actor_snapshot || item.payload?.actor_snapshot ? formalHistoricalName(item) : item.actor_name || item.actor_person_name || '办理人姓名未记录'} · {businessDateTime(item.created_at)}</p>
+    {(item.person_id || item.person_name || item.assignment_kind) && <p>责任人员：{item.person_name || '姓名未记录'}</p>}
     {(item.content || item.content_text) && <p>{item.content || item.content_text}</p>}<p>{item.basis || item.basis_text || '依据见原办理记录'}</p>
     {(item.decision || item.payload?.decision) && <p>决定：{({ recheck: '交回参与部门重新核对', return_for_revision: revisionInstruction(authoringEnabled) })[item.decision || item.payload?.decision] || businessStatus(item.decision || item.payload?.decision,'处理决定说明未记录')}</p>}
-    {item.payload?.escalation_materials && <div><p>争议事项：{item.payload.escalation_materials.issue_summary}</p><p>影响范围：{item.payload.escalation_materials.impact_scope}</p><p>已协调情况：{item.payload.escalation_materials.coordination_history}</p>{item.payload.escalation_materials.positions?.map(p=><p key={p.department_id}>部门标识 {businessName(p)}：{p.position}；依据：{p.basis}</p>)}</div>}
+    {item.payload?.escalation_materials && <div><p>争议事项：{item.payload.escalation_materials.issue_summary}</p><p>影响范围：{item.payload.escalation_materials.impact_scope}</p><p>已协调情况：{item.payload.escalation_materials.coordination_history}</p>{item.payload.escalation_materials.positions?.map(p=><p key={p.department_id}>{businessName(p,'当时部门名称未记录')}：{p.position}；依据：{p.basis}</p>)}</div>}
   </article>) : <p>暂无办理记录。</p>}</details>;
 }
 
@@ -129,7 +130,7 @@ export function CaseGovernance({ api, targetType = 'case', targetId, sourceRevis
       <History title="争议协调与决定历史" items={dispute.data?.history} authoringEnabled={authoringEnabled} />
     </>}</>}
     {error && <StatusPanel kind="error" title="本次治理办理未完成">{userMessage(error)}</StatusPanel>}{notice && <StatusPanel title="治理办理已保存">{notice}</StatusPanel>}
-    {ownDraft && <section className="preview-editor" ref={editor} tabIndex={-1}><h3>{actionNames[ownDraft.action]}</h3><p>办理对象：《{businessName(responsibility.data,targetType === 'case' ? '所选流程' : '所选工作包')}》。</p><p>{governanceActionInstruction(ownDraft.action)}</p><p>填写内容尚未提交，仅保留在当前页面。若流程内容、责任人或争议状态变化，请先核对最新记录，再按页面提示继续。</p>
+    {ownDraft && <section className="preview-editor" ref={editor} tabIndex={-1}><h3>{actionNames[ownDraft.action]}</h3><p>办理对象：《{businessName(ownDraft.domain === 'dispute' ? dispute.data : responsibility.data,targetType === 'case' ? '所选流程' : '所选工作包')}》。</p><p>{governanceActionInstruction(ownDraft.action)}</p><p>填写内容尚未提交，仅保留在当前页面。若流程内容、责任人或争议状态变化，请先核对最新记录，再按页面提示继续。</p>
       {stale && <StatusPanel kind="error" title="责任、来源或争议记录已变化">输入仍保留，不能套用到新状态。请核对最新记录，保留需要的文字后明确放弃旧输入，再重新办理。</StatusPanel>}
       {!loading && !permissions?.includes(ownDraft.action) && <StatusPanel title="当前身份或状态已不能办理此动作">当前输入保留供核对。</StatusPanel>}
       {ownDraft.resultUnknown && <StatusPanel title="提交结果需核对">请求结果尚未确认，已保留输入并暂停重复提交。请刷新责任与争议记录，对照历史核对结果；确认后明确放弃本次输入，再按最新状态继续。</StatusPanel>}
@@ -137,7 +138,7 @@ export function CaseGovernance({ api, targetType = 'case', targetId, sourceRevis
         {['assign_steward', 'assign_owner', 'assign'].includes(ownDraft.action) && <label>{ownDraft.action === 'assign' ? '争议协调人' : ownDraft.action === 'assign_owner' ? '流程业务负责人' : '治理经办人'}<select aria-label={ownDraft.action === 'assign' ? '争议协调人' : ownDraft.action === 'assign_owner' ? '流程业务负责人' : '治理经办人'} value={ownDraft.person_id} required onChange={e => update({ person_id: e.target.value })}><option value="">请选择本次任命</option>{ownDraft.action !== 'assign' && <option value="__clear__">解除当前任命（需填写依据）</option>}{(ownDraft.action === 'assign' ? dispute.data?.candidates || [] : assignmentCandidates).map(p => <option key={p.person_id} value={p.person_id}>{p.person_name || '姓名未记录'}</option>)}</select></label>}
         {ownDraft.action === 'record_work' && <label>治理经办内容<textarea aria-label="治理经办内容" rows={4} maxLength={4000} required value={ownDraft.content} onChange={e => update({ content: e.target.value })} /></label>}
         {ownDraft.action === 'decide' && <label>项目决策结果<select aria-label="项目决策结果" required value={ownDraft.decision} onChange={e => update({ decision: e.target.value })}><option value="">请选择决定</option><option value="recheck">交回参与部门重新核对</option><option value="return_for_revision">{revisionInstruction(authoringEnabled)}</option></select></label>}
-        {['escalate','decide'].includes(ownDraft.action) && <><p>升级材料完整后才能提交项目决策组；项目决定仍须由相关部门重新核对。</p>{[['issue_summary','争议事项'],['impact_scope','影响范围'],['coordination_history','已协调情况']].map(([key,label])=><label key={key}>{label}<textarea aria-label={label} required maxLength={4000} rows={3} value={ownDraft.escalation_materials?.[key] || ''} onChange={e=>update({escalation_materials:{...ownDraft.escalation_materials,[key]:e.target.value}})}/></label>)}{(ownDraft.escalation_materials?.positions || []).map((p,index)=><div key={p.department_id}><h4>{dispute.data?.related_departments?.find(d=>String(d.department_id)===String(p.department_id))?.department_name || '部门名称未记录'}</h4>{[['position','观点'],['basis','依据']].map(([key,label])=><label key={key}>本方{label}<textarea aria-label={(p.department_name||'部门名称未记录')+label} required rows={3} maxLength={4000} value={p[key]} onChange={e=>update({escalation_materials:{...ownDraft.escalation_materials,positions:ownDraft.escalation_materials.positions.map((item,i)=>i===index?{...item,[key]:e.target.value}:item)}})}/></label>)}</div>)}</>}
+        {['escalate','decide'].includes(ownDraft.action) && <><p>升级材料完整后才能提交项目决策组；项目决定仍须由相关部门重新核对。</p>{[['issue_summary','争议事项'],['impact_scope','影响范围'],['coordination_history','已协调情况']].map(([key,label])=><label key={key}>{label}<textarea aria-label={label} required maxLength={4000} rows={3} value={ownDraft.escalation_materials?.[key] || ''} onChange={e=>update({escalation_materials:{...ownDraft.escalation_materials,[key]:e.target.value}})}/></label>)}{(ownDraft.escalation_materials?.positions || []).map((p,index)=><div key={p.department_id}><h4>{dispute.data?.related_departments?.find(d=>String(d.department_id)===String(p.department_id))?.department_name || '部门名称未记录'}</h4>{[['position','观点'],['basis','依据']].map(([key,label])=><label key={key}>本方{label}<textarea aria-label={(dispute.data?.related_departments?.find(d=>String(d.department_id)===String(p.department_id))?.department_name||p.department_name||'部门名称未记录')+label} required rows={3} maxLength={4000} value={p[key]} onChange={e=>update({escalation_materials:{...ownDraft.escalation_materials,positions:ownDraft.escalation_materials.positions.map((item,i)=>i===index?{...item,[key]:e.target.value}:item)}})}/></label>)}</div>)}</>}
         <label>本次办理依据<textarea aria-label="本次办理依据" rows={4} maxLength={4000} required value={ownDraft.basis} onChange={e => update({ basis: e.target.value })} /></label>
         <button className="primary" type="submit" disabled={loading || stale || !permissions?.includes(ownDraft.action) || ownDraft.action === 'assign_owner' && responsibility.data?.department_accountability?.eligible !== true}>保存本次治理办理</button>
       </fieldset></form><button disabled={busy || disabled} onClick={() => { if (window.confirm('是否明确放弃本次未提交输入？')) { setDraft(null); setError(''); } }}>放弃本次治理输入</button>

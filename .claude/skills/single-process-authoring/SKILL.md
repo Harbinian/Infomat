@@ -9,4 +9,4 @@ description: 编制或续修单个业务流程，产出制度正文、候选流�
 
 参考文件、资产和脚本均位于 `.agents/skills/single-process-authoring/`。离线校验入口为 `node .agents/skills/single-process-authoring/scripts/validate-process-v8.mjs <文件.json>`，不启动服务；配套本机结构及依赖须齐备。按文件实际版本校验，候选源码不证明目标实例已支持。
 
-只交付待核对草案；不自动写入或发布到 3000、3001，不伪造校验记录、分数或摘要。
+只交付待核对草案；不自动写入或发布到 MDM平台、3001，不伪造校验记录、分数或摘要。

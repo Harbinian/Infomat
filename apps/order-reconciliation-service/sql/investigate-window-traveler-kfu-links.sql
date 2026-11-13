@@ -1,0 +1,6 @@
+SELECT ID,U8ID,U8AUTOID,[账套号],[BOM编号],[生产编号],[零件编号],[创建日期]
+FROM dbo.momorderdetail
+WHERE [账套号]=N'333' AND
+ (([生产编号]=N'SN2603241000044820' AND [零件编号]=N'SC26032600011')
+ OR ([生产编号]=N'SP2510271000031947' AND [零件编号]=N'SC25102800451'))
+ORDER BY ID

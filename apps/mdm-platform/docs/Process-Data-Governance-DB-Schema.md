@@ -2,7 +2,7 @@
 
 ## 1. 数据边界
 
-新结构只保存3000在流程发布后的MDM治理工作。流程业务事实继续以`process_design_versions.process_content_json`中的不可变原生V8/V7正文为准；新表不复制完整原生V8/V7正文，也不保存或修改用户选择的3001文件。
+新结构只保存MDM平台在流程发布后的MDM治理工作。流程业务事实继续以`process_design_versions.process_content_json`中的不可变原生V8/V7正文为准；新表不复制完整原生V8/V7正文，也不保存或修改用户选择的3001文件。
 
 迁移键：`2026-08-27-process-data-governance-v1`。
 

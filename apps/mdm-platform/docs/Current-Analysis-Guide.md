@@ -1,4 +1,4 @@
-# 3000 固定来源、分析与证据说明
+# MDM平台 固定来源、分析与证据说明
 
 测试脚本及辅助历史资料仅保留在维护者本机，不随 Git 分发；公开包不提供对应测试命令。本地验证须使用已有工具或明确取得的测试材料，并遵守隔离、权限和验收边界。
 
@@ -81,7 +81,7 @@ status/inspect成功保留workers/queue数组，追加readiness、worker_state�
 
 迁移键 `2026-09-17-analysis-runs-v1`，增加八张 `data_map_analysis_*` 表，依赖 定义版本/固定来源映射/设计交接。`npm.cmd run migrate:analysis-runs -- --target <host:port/database>` 默认只读 dry-run；支持互斥 `--inspect`、`--dry-run`、`--apply`，要求明确且匹配的 `MYSQL_HOST/PORT/USER/PASSWORD/DATABASE`，不读 `.env`、不在启动时执行 DDL。无历史回填，不改原台账、V7、设计关系、正式问题、工作包或待办。
 
-正式执行前须另获授权并备份。MySQL DDL 中断后先 inspect，再续建缺失表；只可对本次创建且逐表确认为空的增量表按 `finding_evidence → finding_inputs → findings → evidence → attempts → steps → inputs → runs` 逆序补偿。已有记录时保留表，使用获准的完整备份恢复；旧代码回退可保留增量表。本步可复验入口和副作用见 [scripts/README.md](../scripts/README.md#当前npm命令)。迁移、实际启用和业务验收须分别取得目标证据。
+正式执行前须另获授权并备份。MySQL DDL 中断后先 inspect，再续建缺失表；只可对本次创建且逐表确认为空的增量表按 `finding_evidence → finding_inputs → findings → evidence → attempts → steps → inputs → runs` 逆序补偿。已有记录时保留表，使用获准的完整备份恢复；旧代码回退可保留增量表。本步可复验入口和副作用见 [scripts/README.md](../scripts/README.md#npm-命令与本机专项)。迁移、实际启用和业务验收须分别取得目标证据。
 
 ## 设计交接关系
 
@@ -99,7 +99,7 @@ API 前缀 `/api/design-handoffs`：GET `capabilities`、`sources/:id`（选项�
 
 迁移键 `2026-09-17-design-handoffs-v1`，新增 `data_map_design_handoffs`、`data_map_design_handoff_versions`、`data_map_design_handoff_refs`，依赖 固定来源映射。无启动DDL、旧数据回填或自动生成关系，不改旧V7、工作包、问题或待办状态。`npm.cmd run migrate:design-handoffs -- --target <host:port/database>` 默认 dry-run，支持互斥的 `--inspect`、`--dry-run`、`--apply`，要求明确目标环境变量，不加载 `.env`。正式执行须另获授权并备份；DDL中断先inspect再续建，仅本次新增且确认空表可按 refs、versions、handoffs 逆序补偿；有历史时保留增量表，采用获准备份恢复，不能清空重建。回退旧代码可以保留三表。
 
-可复验入口见 [scripts/README.md](../scripts/README.md#当前npm命令)。实现及隔离技术验证不证明正式环境迁移、开启或真实业务验收。
+可复验入口见 [scripts/README.md](../scripts/README.md#npm-命令与本机专项)。实现及隔离技术验证不证明正式环境迁移、开启或真实业务验收。
 
 
 ## 固定流程来源与台账映射
@@ -118,7 +118,7 @@ API 前缀 `/api/v7-mappings`：GET `capabilities`、`sources`、`sources/:id`�
 
 错误码以 `DEFINITION_V7_*` 标识解析、固定引用、映射状态、父映射、来源摘要、修订、完整性及迁移问题；保留既有 `DEFINITION_*` 身份、台账和幂等错误。400 输入不合法，401 身份失效，403 无权，404 来源/定位不存在，409 版本、来源或状态冲突，413 超限，503 迁移、既有功能开关或依赖不可用。响应不返回 SQL、堆栈或受限材料。输入仅在页面内存保存；失败、取消切换及重新登录保留原输入和提交时版本，恢复身份后重新核对访问范围，409 不自动更新或重放。
 
-验证入口及源脚本见[脚本说明](../scripts/README.md#当前npm命令)。固定来源成功不代表分析、编制答复、办公室材料或工作包已通过各自准入。实际副本、目标库及运行开关分别核对；历史批次证据按文末快照定位。
+验证入口及源脚本见[脚本说明](../scripts/README.md#npm-命令与本机专项)。固定来源成功不代表分析、编制答复、办公室材料或工作包已通过各自准入。实际副本、目标库及运行开关分别核对；历史批次证据按文末快照定位。
 
 ## 台账事实核对
 

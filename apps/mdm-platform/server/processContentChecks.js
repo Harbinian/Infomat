@@ -34,7 +34,7 @@ function normalize(document, issue, options = {}) {
   // Messages are evidence; editable names and displayed row numbers are not identity.
   for (const name of [...(document.behaviors || []), ...(document.data_objects || []), ...(document.forms || [])]
     .flatMap(item => [item.behavior_name, item.data_name, item.form_name]).filter(Boolean).sort((a, b) => b.length - a.length)) identity = identity.replaceAll(name, '<subject>');
-  return { category: issue.category, message: actorNeedsCatalog ? '执行部门及岗位需要结合3000当前有效部门核对；固定来源分析不推断部门身份。' : issue.message, path,
+  return { category: issue.category, message: actorNeedsCatalog ? '执行部门及岗位需要结合MDM平台当前有效部门核对；固定来源分析不推断部门身份。' : issue.message, path,
     group: pending ? 'confirmation' : 'incomplete', rule_code: issue.ruleCode || null, identity,
     // Existence and record-scope unknowns remain visible as confirmations, but
     // cannot pass a formal gate. This flag is derived from the server evaluator,

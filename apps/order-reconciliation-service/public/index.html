@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>订单核对 · 9998</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" type="module"></script>
+</head>
+<body>
+  <header class="masthead">
+    <div class="brand-mark" aria-hidden="true">核</div>
+    <div><div class="eyebrow">用友 · 转换平台 · 勤哲</div><h1>订单核对</h1></div>
+    <nav class="page-nav" aria-label="页面导航"><a href="/" aria-current="page">订单核对明细</a><a id="statistics-link" href="/statistics">异常统计</a><a id="quantity-link" href="/quantity-review">数量与 BOM 核查</a><a id="checks-link" href="/order-checks">逐单数量复核</a><a id="materials-link" href="/material-checks">入库与领料核查</a><a id="chain-link" href="/chain-checks">链路风险核查</a><a id="processing-link" href="/processing-checks">加工流转核查</a></nav>
+    <div class="service-note"><span class="status-dot"></span>仅查询，不修改原单据<span class="separator">/</span>订单核对工具</div>
+  </header>
+  <main>
+    <section class="batch-bar" aria-label="盘点记录">
+      <div class="batch-choice"><label for="batch-select">选择盘点记录</label><select id="batch-select"><option value="">尚无盘点记录</option></select></div>
+      <div class="batch-state"><span id="batch-status" class="badge neutral">尚未开始</span><span id="batch-time">—</span></div>
+      <button id="start-batch" class="primary" type="button">开始全量盘点</button>
+    </section>
+    <div id="global-status" class="notice" role="status" hidden></div>
+    <div id="error-message" class="notice error" role="alert" hidden></div>
+    <section class="metrics" aria-label="本次盘点概况">
+      <article><span>用友销售明细</span><strong id="count-sales">—</strong><small>已审核订单范围</small></article>
+      <article><span>用友生产明细</span><strong id="count-production">—</strong><small>已审核或已关闭</small></article>
+      <article><span>转换平台记录</span><strong id="count-interface">—</strong><small>销售及生产订单</small></article>
+      <article><span>勤哲记录</span><strong id="count-mes">—</strong><small>本次读取范围</small></article>
+      <article class="metric-warning"><span>订单标识问题</span><strong id="count-findings">—</strong><small>本页检查项；全域结果见异常统计</small></article>
+      <article><span>关联待核查</span><strong id="count-unmatched">—</strong><small>需结合证据核查</small></article>
+    </section>
+    <section class="workspace">
+      <div class="workspace-heading"><div class="tabs" role="tablist" aria-label="查看内容"><button id="tab-all" type="button" role="tab" aria-selected="true" data-kind="all">全部核对明细</button><button id="tab-findings" type="button" role="tab" aria-selected="false" data-kind="findings">核对问题</button><button id="tab-unmatched" type="button" role="tab" aria-selected="false" data-kind="unmatched">关联待核查</button></div><button id="export-button" type="button" class="secondary" disabled>导出当前范围</button></div>
+      <form id="search-form" class="search-bar"><label for="query-input">查询条件</label><input id="query-input" type="search" placeholder="生产编号、订单号、存货、质量编号或完整问题名称" autocomplete="off"><button class="secondary" type="submit">查询</button><button id="reset-search" class="text-button" type="button">清空</button><span id="result-summary" class="result-summary">等待盘点结果</span></form>
+      <div class="table-viewport" id="table-viewport"><table><thead><tr><th class="production-number">生产编号</th><th>销售订单 / 明细</th><th>生产订单 / 明细</th><th>存货编码</th><th>销售质量编号</th><th>生产质量编号</th><th>勤哲质量编号原值</th><th class="findings-column">核对结果</th><th class="action-column">详情</th></tr></thead><tbody id="records-body"><tr><td colspan="9" class="empty-state"><strong>从第一次全量盘点开始</strong><span>完整读取三套系统后，查看订单关联、差异和原始证据。</span></td></tr></tbody></table></div>
+      <div class="table-footer"><p>未关联不等于漏转；显示的差异需结合原始证据核查。</p><div class="pagination"><button id="previous-page" class="secondary" type="button" disabled>上一页</button><span id="page-label">—</span><button id="next-page" class="secondary" type="button" disabled>下一页</button></div></div>
+    </section>
+    <section class="source-window" aria-label="各系统查询时间"><strong>数据来源</strong><div id="source-reads">尚无完整读取记录。</div><button id="coverage-button" class="coverage-button" type="button" disabled>查询及核对范围</button><p>查询数量含尚未对应到订单的记录，详见查询及核对范围。三个系统分别查询；任一系统查询失败，本次盘点失败。</p></section>
+  </main>
+  <div id="drawer-overlay" class="drawer-overlay" hidden><aside id="detail-drawer" class="detail-drawer" role="dialog" aria-modal="true" aria-labelledby="detail-title" tabindex="-1"><header class="drawer-heading"><div><div class="eyebrow">原单据内容与核对依据</div><h2 id="detail-title">订单核对详情</h2></div><button id="close-drawer" type="button" class="close-button" aria-label="关闭明细">×</button></header><div id="detail-content" class="detail-content"></div></aside></div>
+</body>
+</html>

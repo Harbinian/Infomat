@@ -1,4 +1,4 @@
-# 3000 RBAC 与 RACI 数据结构
+# MDM平台 RBAC 与 RACI 数据结构
 
 ## 1. 人员身份与系统维护主体
 
@@ -34,11 +34,11 @@ person_roles → roles → role_permissions → permissions
 | 字段 | 规则 |
 |---|---|
 | `status` | `active`、`legacy`或`retired` |
-| `role_group` | `system`、`mdm`或`legacy` |
+| `role_group` | `system`、`mdm`、`directory`或`legacy`；已有分组约束由显式人事角色迁移兼容扩展 |
 | `is_core`/`protected_core` | 固定治理模型标记 |
 | `model_version` | 当前固定模型版本 |
 
-只有当前模型的七个`active`角色产生权限。
+当前固定模型为`rbac-raci-v5-2026-10-19`，九个角色分为系统、MDM和目录维护三组，合计二十二项权限、十三项RACI说明活动。只有状态为`active`且模型版本匹配的角色可以产生对应权限；仍须核对人员授权、部门、有效期和事项关系。v3目标按职责v4、人事角色v5顺序显式升级，保留角色ID与已有授权；不能只换代码或批量停用旧账号代替升级。
 
 ### `person_roles`
 
@@ -108,8 +108,10 @@ person_roles → roles → role_permissions → permissions
 
 ## 6. 历史数据处理
 
+以下停用、撤销及退休规则仅描述旧身份基线转换批次，不适用于已有v3/v4/v5目标的日常维护或增量升级。当前升级及恢复条件见[迁移手册](RBAC-RACI-Migration-Runbook.md)，历史正文见[2026-11-11整理前快照](../../../docs/archives/2026-11-11-mdm-documentation/apps/mdm-platform/docs/RBAC-RACI-DB-Schema.md.before.txt)。
+
 - 历史账号和角色关系不删除。
-- 非七个固定角色统一标记为`retired`，其角色权限关系删除，不再产生有效权限。
+- 旧基线批次把当时七个固定角色之外的角色标记为`retired`，删除其权限关系并保留角色记录；不能据此退休当前v5新增的治理经办或目录维护角色。
 - 除受控`ADMIN001`外，迁移时所有旧账号停用，旧有效角色授权撤销。
 - 管理员逐项核对后，通过新接口授予角色并重新启用账号。
 - 缺少部门或最终责任人的记录只报告，不用默认值掩盖。

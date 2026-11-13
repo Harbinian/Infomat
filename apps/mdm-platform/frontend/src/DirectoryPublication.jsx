@@ -75,7 +75,7 @@ export function DirectoryPublication({api,kind,draft,setDraft,onPublished,select
     finally {if(downloadRequest.current===controller){downloadRequest.current=null;if(alive.current)setDownloadState(previous=>({...previous,busy:false}));}}
   }
   useEffect(()=>{if(selectedId!==undefined&&!draft){if(selectedId&&catalog)view(selectedId);else{detailRequest.current?.abort();setDetail(null);setSelected('');}}},[selectedId,catalog,draft]);
-  return <section className="card"><h2>{title}{master?'导入与发布记录':'导入与维护记录'}</h2><p>{master?'导入核对与正式发布分开。管理员可准备并核对，正式发布由具备治理发布权限的业务账号办理。':'组织和花名册导入由行政人事维护角色办理；核对并发布后直接更新3000目录，记录原因与修改前后内容。'}历史版本保留原始列和值。</p>
+  return <section className="card"><h2>{title}{master?'导入与发布记录':'导入与维护记录'}</h2><p>{master?'导入核对与正式发布分开。管理员可准备并核对，正式发布由具备治理发布权限的业务账号办理。':'组织和花名册导入由行政人事维护角色办理；核对并发布后直接更新MDM平台目录，记录原因与修改前后内容。'}历史版本保留原始列和值。</p>
     {message&&<StatusPanel title={message}/>}{error&&<StatusPanel kind="error" title="目录导入或读取未完成" onRetry={()=>setRevision(n=>n+1)}>{error.code==='PUBLICATION_DUPLICATE_KEY'?'唯一标识重复（忽略首尾空格和大小写后比较），请修正文件再读取。':error.status===422?'文件或列映射未通过校验。请核对发布名称、工作表、唯一标识、重复编码及必填列，再重新读取或核对。':identityFailure(error)}</StatusPanel>}
     {!catalog&&!error&&<StatusPanel kind="loading" title="正在读取发布状态…"/>}
     {catalog&&!catalog.status.ready&&<StatusPanel title="发布记录表尚未准备"/>}

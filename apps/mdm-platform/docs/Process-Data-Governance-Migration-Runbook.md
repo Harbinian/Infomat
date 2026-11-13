@@ -41,12 +41,12 @@ npm run migrate:process-data-governance:rollback
 ## 4. 应用步骤
 
 1. 再次执行dry-run并保存脱敏结果。
-2. 停止可能写入3000的业务操作，确认备份时间晚于最后一次业务写入。
+2. 停止可能写入MDM平台的业务操作，确认备份时间晚于最后一次业务写入。
 3. 执行`npm run migrate:process-data-governance:apply`。
 4. 再次执行dry-run，结果必须为`applied`，六张表结构摘要全部匹配，行数均为0。
 5. 核对迁移前后的已发布流程版本数量、`process_design_versions`关键摘要和引用关系一致。
 6. 开启前在隔离环境验证多个已发布版本、固定来源、重复建立及角色权限。
-7. 按本次授权设置`PROCESS_DATA_GOVERNANCE_ENABLED=1`，重启3000并验证`GET /api/ready`和`GET /api/process-data-governance/status`。无需填写旧试点版本配置；页面无已发布的受支持原生版本时显示空状态，不自动补建。
+7. 按本次授权设置`PROCESS_DATA_GOVERNANCE_ENABLED=1`，重启MDM平台并验证`GET /api/ready`和`GET /api/process-data-governance/status`。无需填写旧试点版本配置；页面无已发布的受支持原生版本时显示空状态，不自动补建。
 
 迁移只建空表和写入迁移键，不回填历史工作包。
 

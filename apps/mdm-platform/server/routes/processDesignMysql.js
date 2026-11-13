@@ -88,8 +88,8 @@ async function assertCanEditDraft(req, repo, draft) {
 async function assertCanEditDraftContent(req, repo, draft) {
   await assertCanEditDraft(req, repo, draft);
   if (supportsNativeProcess(text(draft.schema_version))) {
-    throw httpError(409, '正式流程草稿正文不能在3000直接修改；请回到3001修改后上传新修订', {
-      error: '正式流程草稿正文不能在3000直接修改；请回到3001修改后上传新修订',
+    throw httpError(409, '正式流程草稿正文不能在MDM平台直接修改；请回到3001修改后上传新修订', {
+      error: '正式流程草稿正文不能在MDM平台直接修改；请回到3001修改后上传新修订',
       code: 'V7_CONTENT_READ_ONLY'
     });
   }

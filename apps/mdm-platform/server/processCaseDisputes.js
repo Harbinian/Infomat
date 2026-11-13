@@ -10,6 +10,14 @@ const fail = (code, message, statusCode = 409) => Object.assign(new Error(messag
 const id = value => { const n = identityInteger(value); if (n === null) throw fail('INPUT_INVALID', '事项或人员标识无效', 422); return String(n); };
 const parse = value => typeof value === 'string' ? JSON.parse(value) : value;
 async function one(db, sql, params = []) { return (await db.execute(sql, params))[0][0] || null; }
+async function escalationDepartmentSnapshots(db, materials) {
+  const ids = materials.positions.map(position => position.department_id);
+  const [departments] = await db.execute(`SELECT CAST(id AS CHAR) id,name FROM departments WHERE id IN (${ids.map(() => '?').join(',')}) FOR SHARE`, ids);
+  const names = new Map(departments.map(department => [String(department.id), department.name]));
+  // Positions have already passed the related-department check. Capture names
+  // for this new event only; never trust supplied names or rewrite old events.
+  return { ...materials, positions: materials.positions.map(position => ({ ...position, department_name: names.get(position.department_id) || null })) };
+}
 async function currentActor(db, session, write = false) {
   const subject = sessionSubject(session);
   if (subject.kind === 'system_admin') {
@@ -20,7 +28,7 @@ async function currentActor(db, session, write = false) {
   const authority = await readPersonAuthority(db, session, subject.personId, { currentRead: write });
   if (!authority.valid) throw fail('IDENTITY_CHANGED', '身份或授权已变化，请重新登录', 401);
   if (write && authority.readOnly) throw fail('ADMIN_READ_ONLY', '管理员不能办理流程争议', 403);
-  return { ...session, personId: authority.user.personId, departmentId: authority.user.current_department_id,
+  return { ...session, personId: authority.user.personId, personName: authority.user.personName || authority.user.name || null, departmentId: authority.user.current_department_id,
     permissions: authority.permissions, roleCodes: authority.roleCodes, readOnly: authority.readOnly };
 }
 async function context(db, caseId, lock = false) {
@@ -75,6 +83,29 @@ async function currentDisputeEventId(db,caseId) {
   const event=await one(db,'SELECT CAST(id AS CHAR) AS dispute_event_id FROM process_v7_preview_events WHERE case_id=? AND event_type=? ORDER BY id DESC LIMIT 1',[String(caseId),EVENT]);
   return event?.dispute_event_id || '0';
 }
+async function currentDisputeReviewState(db, caseRow, items) {
+  const event = await one(db, 'SELECT CAST(id AS CHAR) event_id,decision,basis_text,payload_json FROM process_v7_preview_events WHERE case_id=? AND event_type=? ORDER BY id DESC LIMIT 1', [String(caseRow.id), EVENT]);
+  if (!event) return { event_id: '0', revision_return: null };
+  const value = parse(event.payload_json);
+  const result = { event_id: event.event_id, revision_return: null };
+  // Unknown historical payloads remain readable; they do not establish a new
+  // continuation task or gain any write authority from this projection.
+  if (!value || value.schema_version !== 'process-dispute-v1' || !Array.isArray(value.item_keys)) return result;
+  if (caseRow.status === 'closed' || disputeState(caseRow, items, value) !== 'awaiting_revision') return result;
+  // Optional reassignment retains the pending revision decision. Its own basis
+  // must not be presented as the decision group's reason for returning content.
+  const decision = value.action === 'decide' && event.decision === 'return_for_revision' ? event
+    : await one(db, `SELECT CAST(id AS CHAR) event_id,basis_text FROM process_v7_preview_events
+      WHERE case_id=? AND event_type=? AND id<=? AND decision='return_for_revision'
+      AND JSON_UNQUOTE(JSON_EXTRACT(payload_json,'$.stage'))='awaiting_revision'
+      AND JSON_UNQUOTE(JSON_EXTRACT(payload_json,'$.source_revision_no'))=?
+      AND JSON_UNQUOTE(JSON_EXTRACT(payload_json,'$.source_content_hash'))=? ORDER BY id DESC LIMIT 1`,
+    [String(caseRow.id), EVENT, event.event_id, String(caseRow.current_revision_no), caseRow.current_content_hash]);
+  result.revision_return = { state: 'awaiting_revision', case_id: String(caseRow.id),
+    source_revision_no: Number(caseRow.current_revision_no), source_content_hash: caseRow.current_content_hash,
+    event_id: event.event_id, decision_event_id: decision?.event_id || null, decision_basis: decision?.basis_text || null };
+  return result;
+}
 async function assertCaseDisputeResolved(db, caseRow) {
   const event = await one(db, `SELECT payload_json FROM process_v7_preview_events WHERE case_id=? AND event_type=? ORDER BY id DESC LIMIT 1`, [String(caseRow.id), EVENT]);
   if (!event) return;
@@ -98,7 +129,7 @@ async function recordResolvedDispute(db, caseRow, actor) {
   if(!previous)return;
   const c=await context(db,caseRow.id,true);
   if(c.state!=='resolved'||!c.value||c.value.stage==='resolved')return;
-  const value={...c.value,stage:'resolved',action:'department_recheck_completed',request_id:crypto.randomUUID(),
+  const value={...c.value,actor_snapshot:{person_id:actor.personId,person_name:actor.personName||null},stage:'resolved',action:'department_recheck_completed',request_id:crypto.randomUUID(),
     request_hash:null,previous_event_id:c.event.id};
   await db.execute(`INSERT INTO process_v7_preview_events(case_id,revision_id,event_type,actor_user_id,actor_person_id,actor_department_id,actor_role_code,basis_text,payload_json)
     VALUES (?,?,?,?,?,?,?,?,?)`,[c.row.id,c.row.current_revision_id,EVENT,String(actor.personId),String(actor.personId),actor.departmentId==null?null:String(actor.departmentId),actor.roleCode||null,'相关部门已分别重新核对当前修订，原协调及决定记录保留',JSON.stringify(value)]);
@@ -121,8 +152,11 @@ function makeProcessCaseDisputes(pool) {
         if (qualification.valid && !qualification.readOnly && qualification.permissions.has('governance:handle-assigned-conflict') && qualification.roleCodes.has('data_conflict_handler')) candidates.push(person);
       }
     }
-    return { case_id: c.row.id, source_revision_no: c.row.current_revision_no, source_content_hash: c.row.current_content_hash,
+    const coordinator = c.value?.coordinator_person_id
+      ? await one(db, 'SELECT person_name FROM person WHERE person_id=CAST(? AS SIGNED)', [id(c.value.coordinator_person_id)]) : null;
+    return { case_id: c.row.id, process_name: c.row.process_name, source_revision_no: c.row.current_revision_no, source_content_hash: c.row.current_content_hash,
       event_id: c.event?.id || '0', state: c.state, coordinator_person_id: c.value?.coordinator_person_id || null,
+      coordinator_person_name: coordinator?.person_name || null,
       related_departments: [...new Map(c.items.filter(i => c.state !== 'unassigned' && c.value?.item_keys?.includes(i.stable_item_key) || i.status === 'disputed').flatMap(i => [[String(i.origin_department_id),i.origin_department_name],[String(i.target_department_id),i.target_department_name]])).entries()].map(([department_id,department_name])=>({department_id,department_name})),
       history: history.map(e => ({...e, payload: parse(e.payload_json), payload_json: undefined, created_at: new Date(Number(e.created_epoch)*1000).toISOString(),created_epoch:undefined})), allowed_actions, candidates };
   }
@@ -167,14 +201,14 @@ function makeProcessCaseDisputes(pool) {
       let escalation = c.value?.escalation_materials || null;
       if (input.action === 'escalate') {
         const departments=[...new Set(c.items.filter(i=>itemKeys.includes(i.stable_item_key)).flatMap(i=>[String(i.origin_department_id),String(i.target_department_id)]))];
-        escalation = require('./processDisputeMaterials').escalationMaterials(input.escalation_materials,departments);
+        escalation = await escalationDepartmentSnapshots(db, require('./processDisputeMaterials').escalationMaterials(input.escalation_materials,departments));
         stage = 'escalated';
       }
       if (input.action === 'decide') {
         // Legacy escalations retain their record; missing materials must be
         // supplied explicitly before a new decision can rely on that escalation.
         const departments=[...new Set(c.items.filter(i=>itemKeys.includes(i.stable_item_key)).flatMap(i=>[String(i.origin_department_id),String(i.target_department_id)]))];
-        escalation = require('./processDisputeMaterials').escalationMaterials(input.escalation_materials || escalation,departments);
+        escalation = await escalationDepartmentSnapshots(db, require('./processDisputeMaterials').escalationMaterials(input.escalation_materials || escalation,departments));
         if (!['recheck','return_for_revision'].includes(input.decision)) throw fail('INPUT_INVALID', '请选择重新核对或退回修订', 422);
         stage = input.decision === 'return_for_revision' ? 'awaiting_revision' : 'awaiting_recheck';
       }
@@ -191,6 +225,7 @@ function makeProcessCaseDisputes(pool) {
         await db.execute('UPDATE process_v7_preview_cases SET status=? WHERE id=?', [status, c.row.id]);
       }
       const value = { schema_version:'process-dispute-v1',request_id:input.request_id,request_hash:requestHash,action:input.action,
+        actor_snapshot:{person_id:who.personId,person_name:who.personName||null},
         stage,coordinator_person_id:coordinator,item_keys:itemKeys,was_escalated:Boolean(input.action==='assign' && c.state==='unassigned' ? false : c.value?.was_escalated || input.action==='escalate'),
         source_revision_no:c.row.current_revision_no,source_content_hash:c.row.current_content_hash,
         escalation_materials:escalation,
@@ -222,4 +257,4 @@ function makeProcessCaseDisputes(pool) {
   }
   return {detail:(session,caseId)=>detail(pool,session,caseId),act,workbench};
 }
-module.exports = { makeProcessCaseDisputes, assertCaseDisputeResolved, recordResolvedDispute, hasDisputeContext, currentDisputeEventId, disputeState, actions };
+module.exports = { makeProcessCaseDisputes, assertCaseDisputeResolved, recordResolvedDispute, hasDisputeContext, currentDisputeEventId, currentDisputeReviewState, disputeState, actions };

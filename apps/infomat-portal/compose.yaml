@@ -1,0 +1,20 @@
+name: infomat-portal
+services:
+  portal:
+    build: .
+    image: infomat-portal:all-ip-20261112
+    restart: unless-stopped
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    ports:
+      - "0.0.0.0:8080:8080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8080/api/health').then(async r=>{const b=await r.json();if(!r.ok||b.service!=='infomat-portal'||b.status!=='ok')process.exitCode=1}).catch(()=>{process.exitCode=1})"]
+      interval: 30s
+      timeout: 5s
+      start_period: 5s
+      retries: 3

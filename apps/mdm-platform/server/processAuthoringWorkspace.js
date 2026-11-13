@@ -122,7 +122,7 @@ function transactionalPool(db) {
   return { ...nested, getConnection: async () => nested };
 }
 async function assertReady(db) {
-  if (!enabled()) throw fail('DISABLED', '3000内流程编制候选功能尚未开启', 503);
+  if (!enabled()) throw fail('DISABLED', 'MDM平台内流程编制候选功能尚未开启', 503);
   if (!(await schema.inspectSchema(db)).ready) throw fail('SCHEMA_REQUIRED', '流程编制草稿结构尚未显式准备，保存入口保持关闭', 503);
 }
 async function draftRow(db, id) {

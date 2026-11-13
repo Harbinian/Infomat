@@ -1,0 +1,3 @@
+SELECT d.MoDId,d.MoId,h.MoCode,d.OrderDId,d.InvCode,d.Qty,d.Status
+FROM dbo.mom_orderdetail d JOIN dbo.mom_order h ON h.MoId=d.MoId
+WHERE d.MoDId IN(1000052810,1000035390,1000035393,1000035396,1000035399,1000000479,1000000481,1000000483)

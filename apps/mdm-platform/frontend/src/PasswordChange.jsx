@@ -28,15 +28,17 @@ export function PasswordChange({ api, user, required = false, onChanged, onLogou
       if (controller.signal.aborted) return;
       setValues({ current: '', next: '', repeat: '' }); setDirty(false); onChanged();
     } catch (failure) {
-      if (!controller.signal.aborted) setError(failure.status === 400 || failure.status === 403
-        ? '密码修改未完成，请核对当前密码、新密码要求及登录状态后重试。'
-        : failure.message);
+      if (!controller.signal.aborted) setError(failure.status === 400 && failure.code === 'PASSWORD_REUSE_NOT_ALLOWED'
+        ? '新密码不能与当前密码相同，请填写不同的新密码。'
+        : failure.status === 400 || failure.status === 403
+          ? '密码修改未完成，请核对当前密码、新密码要求及登录状态后重试。'
+          : failure.message);
     } finally { if (!controller.signal.aborted) setBusy(false); }
   }
   return <section className="card password-change" aria-labelledby="password-required-title">
     <h2 id="password-required-title" tabIndex={-1}>{required ? '请先修改当前账号密码' : '修改本人密码'}</h2>
     <p>当前账号：{user.personName || user.name || user.employeeNo || '系统维护账号'}。{required ? '完成修改并重新登录后才能办理业务。' : '修改成功后需要使用新密码重新登录。'}</p>
-    <p>新密码至少 10 位，同时包含字母和数字，不能包含工号。提交后会核对密码是否符合要求；未通过时，页面会提示重新填写。</p>
+    <p>新密码至少 10 位，同时包含字母和数字，不能包含工号，也不能与当前密码相同。提交后会核对密码是否符合要求；未通过时，页面会提示重新填写。</p>
     <form onSubmit={submit} noValidate aria-busy={busy}>
       <FormField id="change-password-current" label="当前密码" type="password" autoComplete="current-password" disabled={busy} value={values.current} error={errors.current} onChange={e => update('current', e.target.value)} />
       <FormField id="change-password-next" label="新密码" type="password" autoComplete="new-password" disabled={busy} value={values.next} error={errors.next} onChange={e => update('next', e.target.value)} />
