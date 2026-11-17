@@ -6,6 +6,8 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { Store } from './store.mjs';
 import { executeCommand, getPublicState, importMaterials, ReviewError } from './domain.mjs';
+import { loadReviewContext } from './review-context.mjs';
+import { loadReviewRound, withReviewRound } from './review-round.mjs';
 
 const appDir = fileURLToPath(new URL('.', import.meta.url));
 const loopbackHosts = ['127.0.0.1', 'localhost'];
@@ -49,7 +51,9 @@ async function readJson(request) {
 }
 
 export function createApp({ dataDir, store = new Store({ dataDir }), publicDir = path.join(appDir, 'public'),
-  allowedHosts = loopbackHosts, network = 'loopback' } = {}) {
+  allowedHosts = loopbackHosts, network = 'loopback', reviewContext = loadReviewContext(process.env.REVIEW_CONTEXT_PATH), reviewRound = loadReviewRound(process.env.REVIEW_ROUND_PATH) } = {}) {
+  withReviewRound(store.read(),reviewRound);
+  const publicState=userId=>withReviewRound(getPublicState(store.read(),userId),reviewRound);
   const sessions = new Map();
   const sessionCookie = request => String(request.headers.cookie || '').split(';').map(value => value.trim()).find(value => value.startsWith('review_session='))?.slice('review_session='.length);
   const sessionFor = request => {
@@ -102,7 +106,8 @@ export function createApp({ dataDir, store = new Store({ dataDir }), publicDir =
         if (request.headers['sec-fetch-site'] && !['same-origin', 'none'].includes(request.headers['sec-fetch-site'])) deny('不允许跨站写入', 'INVALID_ORIGIN');
       }
       if (pathname === '/api/health' && request.method === 'GET') {
-        json(response, 200, { service: 'process-review-service', version: '0.1.0', mode: 'local-isolated', storage: 'isolated-sqlite', formalIntegration: false, network }); return;
+        const round=withReviewRound(store.read(),reviewRound).reviewRound;
+        json(response, 200, { service: 'process-review-service', version: '0.1.0', jointReviewContract: 'continuous-joint-review-v1', mode: 'local-isolated', storage: 'isolated-sqlite', formalIntegration: false, network, reviewContextDigest:reviewContext?.digest, reviewContext:reviewContext?.summary,reviewRound:round?{label:round.label,digest:round.digest,retainOnly:round.retainOnly,capturedAt:round.capturedAt,currentCount:round.currentCount,historyCount:round.historyCount,departments:round.departments}:null }); return;
       }
       if (pathname === '/api/session') {
         if (request.method === 'GET') { json(response, 200, sessionResult(session)); return; }
@@ -126,26 +131,34 @@ export function createApp({ dataDir, store = new Store({ dataDir }), publicDir =
       }
       if (!session) deny('请先选择本地演练身份', 'AUTH_REQUIRED', 401);
       if (request.method === 'POST' && !equal(request.headers['x-review-csrf'], session.csrfToken)) deny('会话校验已变化，请核对身份后重试', 'INVALID_CSRF');
-      if (pathname === '/api/bootstrap' && request.method === 'GET') { json(response, 200, getPublicState(store.read(), session.userId)); return; }
+      if (pathname === '/api/bootstrap' && request.method === 'GET') { json(response, 200, {...publicState(session.userId),reviewContext:reviewContext?.summary}); return; }
+      const supportingMatch=pathname.match(/^\/api\/review-support\/([a-f0-9]{64})$/);
+      if(supportingMatch && request.method==='GET') {
+        const source=reviewContext?.supporting.get(supportingMatch[1]);
+        if(!source)deny('补充材料不存在','NOT_FOUND',404);
+        response.writeHead(200,{'Content-Type':'application/json; charset=utf-8','Content-Disposition':'attachment; filename="review-support.json"'});
+        response.end(source.rawText);return;
+      }
       const materialMatch = pathname.match(/^\/api\/materials\/([A-Za-z0-9-]+)$/);
       if (materialMatch && request.method === 'GET') {
-        const metadata = store.read().materials.find(material => material.id === materialMatch[1]);
+        const metadata = publicState(session.userId).materials.find(material => material.id === materialMatch[1]);
         if (!metadata) deny('材料不存在', 'NOT_FOUND', 404);
-        json(response, 200, { ...metadata, ...store.material(metadata.id) }); return;
+        json(response, 200, { ...metadata, ...store.material(metadata.id),reviewContext:reviewContext?.bySha.get(metadata.sha256) }); return;
       }
       if (pathname === '/api/commands' && request.method === 'POST') {
         const body = await readJson(request);
         const state = executeCommand(store, { type: body.type, payload: body.payload, expectedRevision: body.expectedRevision, actorId: session.userId });
-        json(response, 200, { state: getPublicState(state, session.userId) }); return;
+        json(response, 200, { state: withReviewRound(getPublicState(state, session.userId),reviewRound) }); return;
       }
       if (pathname === '/api/import' && request.method === 'POST') {
+        if(reviewRound?.retainOnly)deny('本轮仅接收第19周共享目录中已核对的提交材料，请先核对并更新清单','REVIEW_ROUND_LOCKED',403);
         const body = await readJson(request);
         const state = importMaterials(store, { files: body.files, expectedRevision: body.expectedRevision, actorId: session.userId });
-        json(response, 200, { state: getPublicState(state, session.userId) }); return;
+        json(response, 200, { state: withReviewRound(getPublicState(state, session.userId),reviewRound) }); return;
       }
       if (pathname === '/api/export' && request.method === 'GET') {
-        const state = getPublicState(store.read(), session.userId);
-        json(response, 200, { format: 'process-review-local-export-v1', mode: 'local-isolated', exportedAt: new Date().toISOString(), ...state, materials: state.materials.map(material => ({ ...material, ...store.material(material.id) })) }, { 'Content-Disposition': 'attachment; filename="process-review-local-export.json"' }); return;
+        const state = publicState(session.userId);
+        json(response, 200, { format: 'process-review-local-export-v1', mode: 'local-isolated', exportedAt: new Date().toISOString(), ...state, reviewContextDigest:reviewContext?.digest,reviewContext:reviewContext?.catalog,materials: state.materials.map(material => ({ ...material, ...store.material(material.id) })) }, { 'Content-Disposition': 'attachment; filename="process-review-local-export.json"' }); return;
       }
       deny('接口不存在', 'NOT_FOUND', 404);
     } catch (error) {

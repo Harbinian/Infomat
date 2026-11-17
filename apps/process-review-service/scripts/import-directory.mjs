@@ -33,7 +33,7 @@ for (const path of paths) {
   const sourcePath = relative(sourceRoot, path).replaceAll('\\', '/');
   try {
     const document = JSON.parse(content.replace(/^\uFEFF/, ''));
-    if (document.schema_version !== 'process-governance-v8') throw new Error('Unsupported schema version');
+    if (!['process-governance-v8','process-governance-v9'].includes(document.schema_version)) throw new Error('Unsupported schema version');
     if (!document.process?.process_name || !Array.isArray(document.behaviors) || !Array.isArray(document.flow_relations)) throw new Error('Missing process or graph arrays');
     const themeId = suggestTheme(document.process.process_name, sourcePath);
     files.push({ sourcePath, content });

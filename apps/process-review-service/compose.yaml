@@ -3,16 +3,30 @@ name: infomat-process-review
 services:
   review:
     build: .
-    image: infomat-process-review:workspace-20261112130123
+    image: infomat-process-review:joint-review-week19-20261116-ca51f668d88b
     restart: unless-stopped
     environment:
       REVIEW_LAN_IP: "${REVIEW_LAN_IP:?Set the host LAN IPv4 addresses separated by commas}"
+      REVIEW_CONTEXT_PATH: /review-input/review-context.json
+      REVIEW_ROUND_PATH: /review-input/review-round.json
     ports:
       - "0.0.0.0:3090:3090"
     volumes:
       - review-data:/data
+      - type: bind
+        source: ../../artifacts/process-review-service/week19-only-20261116-4d83d388/review-round.json
+        target: /review-input/review-round.json
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ../../artifacts/process-review-service/week19-only-20261116-4d83d388/review-context.json
+        target: /review-input/review-context.json
+        read_only: true
+        bind:
+          create_host_path: false
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3090/api/health').then(r=>r.json()).then(h=>{if(h.service!=='process-review-service'||h.network!=='lan'||h.formalIntegration!==false)process.exitCode=1}).catch(()=>{process.exitCode=1})"]
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3090/api/health').then(r=>r.json()).then(h=>{if(h.service!=='process-review-service'||h.jointReviewContract!=='continuous-joint-review-v1'||h.network!=='lan'||h.formalIntegration!==false||h.reviewRound?.retainOnly!==true)process.exitCode=1}).catch(()=>{process.exitCode=1})"]
       interval: 10s
       timeout: 3s
       retries: 3
@@ -20,4 +34,4 @@ services:
 volumes:
   review-data:
     external: true
-    name: infomat-process-review-data
+    name: infomat-process-review-week19-only-4d83d388

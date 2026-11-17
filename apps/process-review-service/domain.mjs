@@ -3,6 +3,7 @@ import { themes, departments, suggestTheme } from './topics.mjs';
 import { materialWalkEdits, nextWalkIndex, projectWalkDocument, walkEditFields, walkEditText, walkElement, walkRemovalBlockers } from './public/walk-edits.js';
 import { actorSelectionError } from './public/actor-selection.js';
 import organizationCatalog from './config/organization-catalog.json' with { type: 'json' };
+import { executeJointCommand } from './joint-review.mjs';
 
 export class ReviewError extends Error {
   constructor(message, code = 'VALIDATION', status = 400) { super(message); this.code = code; this.status = status; }
@@ -58,7 +59,7 @@ export function createInitialState() {
       { id: 'local-recorder', name: '会议记录员（演练）', department: 'PMO', roles: ['participant', 'recorder'] },
       ...departments.map((department, index) => ({ id: `local-dept-${String(index + 1).padStart(2, '0')}`, name: `${department}代表（演练）`, department, roles: ['participant', 'representative'] })),
       { id: 'local-authority', name: '制度决定人（演练）', department: '制度决定', roles: ['participant', 'authority'] }
-    ], materials: [], batches: themes.map(theme => ({ id: `batch-${theme.id}`, title: theme.name, themeId: theme.id, materialIds: [], memberIds: [], leadId: '', recorderId: '', requiredDepartments: [], status: 'planned', coverage: {}, presenter: { materialId: '', nodeRef: '' }, createdBy: 'system', createdAt: now(), history: [], initialization: true })), opinions: [], issues: [], observations: [], audit: []
+    ], materials: [], batches: themes.map(theme => ({ id: `batch-${theme.id}`, title: theme.name, themeId: theme.id, materialIds: [], memberIds: [], leadId: '', recorderId: '', requiredDepartments: [], status: 'planned', coverage: {}, presenter: { materialId: '', nodeRef: '' }, createdBy: 'system', createdAt: now(), history: [], initialization: true })), opinions: [], issues: [], observations: [], jointReviews: [], audit: []
   };
 }
 export const initialState = createInitialState();
@@ -80,7 +81,7 @@ function readMaterialFile(file) {
   let document;
   try { document = JSON.parse(rawText.replace(/^\uFEFF/, '')); } catch { fail('材料不是有效 JSON'); }
   assert(document && typeof document === 'object' && !Array.isArray(document), '材料根对象无效');
-  assert(document.schema_version === 'process-governance-v8', '仅支持 process-governance-v8；原文件未被修改', 'UNSUPPORTED_SCHEMA');
+  assert(['process-governance-v8','process-governance-v9'].includes(document.schema_version), '仅支持 process-governance-v8 或 process-governance-v9；原文件未被修改', 'UNSUPPORTED_SCHEMA');
   assert(document.process && typeof document.process === 'object' && !Array.isArray(document.process), '材料缺少 process 对象');
   for (const key of ['behaviors', 'flow_relations', 'data_objects', 'forms', 'terms']) {
     assert(document[key] === undefined || Array.isArray(document[key]), `${key}应为数组`);
@@ -261,6 +262,7 @@ export function executeCommand(store, { type, payload, expectedRevision, actorId
   assert(payload && typeof payload === 'object' && !Array.isArray(payload), '操作内容必须为对象');
   return store.transaction(expectedRevision, actorId, type, state => {
     const actor = record(state, 'users', actorId);
+    if (type.startsWith('joint.')) return executeJointCommand(store, state, actor, type, payload);
     const p = payload;
     let targetId = '';
     switch (type) {

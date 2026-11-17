@@ -4,9 +4,10 @@ import {classifyHandoffs} from './handoffs.js';
 import {renderPage, renderOpinionActions, renderOpinionConflict, renderWalkCoverage, renderWalkDetails, renderWalkDiscussion, renderWalkHistory} from './views.js';
 import {runAction} from './forms.js';
 import {materialWalkEdits, projectWalkDocument, walkElement, walkElementIndex, walkEndpoints} from './walk-edits.js';
+import {isCurrentMaterial} from './material-scope.js';
 
-const routes = [['overview','◫','评审总览'],['materials','▤','材料与版本'],['batches','▦','批次计划'],['walk','◇','流程走查'],['opinions','▧','我的意见'],['issues','☷','问题台账'],['observations','◎','系统性问题观察']];
-const emptyState = {revision:0,users:[],themes:[],materials:[],batches:[],opinions:[],issues:[],observations:[],audit:[],currentUser:null,organizationCatalog:null};
+const routes = [['overview','◫','评审总览'],['joint','◉','联合评审事项'],['materials','▤','材料与版本'],['batches','▦','批次计划'],['lineage','▥','数据血缘评审'],['walk','◇','流程走查'],['opinions','▧','我的意见'],['issues','☷','问题台账'],['observations','◎','系统性问题观察']];
+const emptyState = {revision:0,users:[],themes:[],materials:[],batches:[],opinions:[],issues:[],observations:[],jointReviews:[],audit:[],currentUser:null,organizationCatalog:null,reviewRound:null};
 const state = {...emptyState};
 let session;
 let graph;
@@ -20,8 +21,8 @@ let renderedRevision;
 const documents = new Map();
 let displayedWalk;
 const opinionBuffers = new Map();
-const filters = {materials:{query:'',theme:'',department:'',status:''},opinions:{query:'',status:''},issues:{query:'',status:''}};
-const view = {route:'overview',materialId:'',batchId:'',walkThemeId:'',selectedNode:null,selectedRelation:null,laneId:'',detailTab:'node',follow:false,issueId:'',compare:false,compareLeft:'',compareRight:'',projection:false,handoffFocus:false};
+const filters = {materials:{query:'',theme:'',department:'',status:''},walk:{query:'',department:''},history:{query:'',theme:'',department:'',status:''},lineage:{query:'',department:''},opinions:{query:'',status:''},issues:{query:'',status:''}};
+const view = {route:'overview',materialId:'',batchId:'',walkThemeId:'',materialScope:'current',selectedNode:null,selectedRelation:null,laneId:'',detailTab:'node',follow:false,issueId:'',compare:false,compareLeft:'',compareRight:'',projection:false,handoffFocus:false};
 let lastFollowedPosition;
 const main = document.querySelector('#main');
 const context = {
@@ -128,12 +129,16 @@ async function loadMaterial(id){
   if(!documents.has(id)) documents.set(id,await request(`/api/materials/${encodeURIComponent(id)}`));
   return documents.get(id);
 }
-function setWalkScope({materialId='',batchId='',themeId=''}){
+function setWalkScope({materialId='',batchId='',themeId='',materialScope='current'}){
   view.materialId=materialId;view.batchId=batchId;view.walkThemeId=themeId;view.follow=false;
+  view.materialScope=materialId?(isCurrentMaterial(state,materialId)?'current':'history'):materialScope;
+  filters.walk={query:'',department:''};
   lastFollowedPosition=undefined;
   view.selectedNode=null;view.selectedRelation=null;view.laneId='';
 }
-function navigate(route){view.route=route;view.compare=false;if(route!=='walk')view.projection=false;const rendering=render();main.scrollTop=0;return rendering;}
+function navigate(route){
+  view.route=route;view.compare=false;if(route!=='walk')view.projection=false;const rendering=render();main.scrollTop=0;return rendering;
+}
 function focusIssue(id){
   if(view.route!=='issues'||view.issueId!==id)return;
   main.querySelector('.issue-select[aria-pressed="true"]')?.focus({preventScroll:true});
@@ -373,7 +378,7 @@ async function saveOpinion(submit){
   toast(buffer.dirty?'提交前的内容已保存，保存期间补充的输入仍待提交。':submit?'意见已提交，可在「我的意见」查看，记录员可在问题台账整理。':'草稿已保存，可在「我的意见」继续编辑。');
 }
 document.addEventListener('click',async event=>{
-  const route=event.target.closest('[data-route]');if(route){navigate(route.dataset.route);return;}
+  const route=event.target.closest('[data-route]');if(route){if(route.dataset.route==='walk')setWalkScope({});navigate(route.dataset.route);return;}
   const tab=event.target.closest('[data-detail-tab]');if(tab){view.detailTab=tab.dataset.detailTab;renderDetails();return;}
   const dataSection=event.target.closest('[data-walk-data-section]');
   if(dataSection){
@@ -388,11 +393,12 @@ document.addEventListener('click',async event=>{
   const target=event.target.closest('[data-action]');if(!target||target.disabled)return;
   const {action,id}=target.dataset;
   try{
-    if(action==='open-material'){setWalkScope({materialId:id});navigate('walk');}
+    if(action==='open-lineage-material'){setWalkScope({materialId:id});view.detailTab='lineage';navigate('walk');}
+    else if(action==='open-material'){setWalkScope({materialId:id});navigate('walk');}
     else if(action==='open-batch'){setWalkScope({batchId:id});navigate('walk');}
     else if(action==='open-assigned-batch'){setWalkScope({batchId:id,materialId:view.materialId});navigate('walk');}
     else if(action==='browse-theme'){setWalkScope({themeId:id});navigate('walk');}
-    else if(action==='browse-all-materials'){setWalkScope({materialId:view.materialId});navigate('walk');}
+    else if(action==='browse-all-materials'){setWalkScope({materialId:view.route==='walk'?view.materialId:'',materialScope:view.route==='walk'?view.materialScope:'current'});navigate('walk');}
     else if(action==='graph-fit'){view.laneId='';view.selectedNode=null;view.selectedRelation=null;graph?.fit();renderDetails();}
     else if(action==='graph-entry')locateWalkEntry();
     else if(action==='graph-readable'){
@@ -426,8 +432,13 @@ document.addEventListener('click',async event=>{
     else if(action==='present'){await command('batch.present',{batchId:view.batchId,materialId:view.materialId,nodeRef:view.selectedNode?.behavior_ref||''});toast('主持投屏位置已更新；其他人的个人浏览保持独立。');}
     else if(action==='theme-materials'){filters.materials={query:'',department:'',status:'',theme:id};navigate('materials');}
     else if(action==='pending-materials'){filters.materials={query:'',theme:'',status:'pending',department:context.role('representative')?state.currentUser.department:''};navigate('materials');}
-    else if(action==='browse-flow')navigate('walk');
-    else if(action==='go-page')navigate(id);
+    else if(action==='clear-walk-filters'){
+      filters.walk={query:'',department:''};
+      for(const input of main.querySelectorAll('[data-filter^="walk."]'))input.value='';
+      refreshListFilterRegions();
+    }
+    else if(action==='browse-flow'){setWalkScope({});navigate('walk');}
+    else if(action==='go-page'){if(id==='walk')setWalkScope({});navigate(id);}
     else if(action==='issue-status'){filters.issues.status=id;navigate('issues');}
     else await runAction(action,id,context);
   }catch(error){notice(error.message,true);}
@@ -436,11 +447,18 @@ function applyListFilter(input){
   const [page,key]=input.dataset.filter.split('.');
   if(page!==view.route||filters[page][key]===input.value)return;
   filters[page][key]=input.value;
+  refreshListFilterRegions();
+}
+function refreshListFilterRegions(){
   const markup=document.createElement('template');
   markup.innerHTML=renderPage(context);
   for(const region of main.querySelectorAll('[data-filter-region]')){
     const next=markup.content.querySelector(`[data-filter-region="${region.dataset.filterRegion}"]`);
-    if(next)region.replaceChildren(...next.childNodes);
+    if(next){
+      const selectedValue=next.value;
+      region.replaceChildren(...next.childNodes);
+      if(region instanceof HTMLSelectElement)region.value=selectedValue;
+    }
   }
 }
 document.addEventListener('input',event=>{
@@ -458,7 +476,8 @@ document.addEventListener('compositionend',event=>{
 document.addEventListener('change',async event=>{
   const target=event.target;
   if(target.matches('select[data-filter]'))applyListFilter(target);
-  if(target.id==='walk-material'){view.materialId=target.value;view.selectedNode=null;view.selectedRelation=null;view.laneId='';render();}
+  if(target.id==='walk-material'&&target.value){view.materialId=target.value;view.materialScope=isCurrentMaterial(state,target.value)?'current':'history';view.selectedNode=null;view.selectedRelation=null;view.laneId='';render();}
+  if(target.id==='walk-scope'){setWalkScope({materialScope:target.value});render();}
   if(target.id==='walk-batch'){setWalkScope({batchId:target.value});render();}
   if(target.id==='follow-presenter'){
     view.follow=target.checked;lastFollowedPosition=undefined;
@@ -487,6 +506,7 @@ async function followPresenter(){
   if(!target||target.key===lastFollowedPosition)return;
   if(view.materialId!==target.materialId){
     view.materialId=target.materialId;view.selectedNode=null;view.selectedRelation=null;view.laneId='';
+    view.materialScope=isCurrentMaterial(state,target.materialId)?'current':'history';
     const rendering=render(), generation=renderGeneration;
     await rendering;
     if(generation!==renderGeneration||presenterTarget()?.key!==target.key)return;
@@ -543,7 +563,7 @@ async function start(){
           if(coverage)coverage.innerHTML=renderWalkCoverage(context);
         }
         if(inWalk)syncWalkDiscussion();
-        if(['opinions','issues','batches','materials'].includes(view.route)&&renderedRevision!==state.revision&&!editing&&!document.activeElement?.matches('input, select'))await render();
+        if(['joint','opinions','issues','batches','materials','history'].includes(view.route)&&renderedRevision!==state.revision&&!editing&&!document.activeElement?.matches('input, select'))await render();
         const pendingPresenter=presenterTarget();
         const presenterWaiting=pendingPresenter&&pendingPresenter.key!==lastFollowedPosition;
         if(presenterWaiting&&!editing)await followPresenter();

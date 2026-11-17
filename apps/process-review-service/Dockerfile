@@ -5,7 +5,7 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund \
     && install -d -o node -g node /data
 
-COPY domain.mjs server.mjs store.mjs topics.mjs ./
+COPY domain.mjs joint-review.mjs server.mjs store.mjs topics.mjs review-context.mjs review-round.mjs ./
 COPY config/organization-catalog.json ./config/organization-catalog.json
 COPY public ./public
 

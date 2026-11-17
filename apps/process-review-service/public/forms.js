@@ -2,13 +2,15 @@ import {openDialog,choices,array,escape as e,dateTime} from './ui.js';
 import {projectWalkDocument, walkEditFields, walkEditText, walkElement, walkElementIndex, walkEndpoints,walkElementLabel,walkRemovalBlockers} from './walk-edits.js';
 import {batchFreezeBlockers, walkCoverageReadiness} from './review-status.js';
 import {actorSelectionError} from './actor-selection.js';
+import {isCurrentMaterial,materialSource} from './material-scope.js';
+import {runJointAction} from './joint-review.js';
 
 const text = (name,label,extra={})=>({name,label,...extra});
 const long = (name,label,extra={})=>({name,label,type:'textarea',full:true,...extra});
 const select = (name,label,items,extra={})=>({name,label,type:'select',choices:items,...extra});
 const checks = (name,label,items,extra={})=>({name,label,type:'checks',choices:items,full:true,...extra});
 const userChoices = (c,predicate=()=>true)=>c.state.users.filter(predicate).map(user=>({value:user.id,label:`${user.name} · ${user.department||'公共角色'}`}));
-const materialChoices = c=>c.state.materials.map(item=>({value:item.id,label:`${item.name}（${item.sourceDepartment||'待认领'} / ${item.sourcePath.split(/[\\/]/).slice(-2).join('/')}）`}));
+const materialChoices = c=>c.state.materials.map(item=>({value:item.id,label:`${item.name}（${item.sourceDepartment||'待认领'} / ${materialSource(item).split(/[\\/]/).slice(-3).join('/')}）`}));
 const departments = c=>[...new Set((array(c.state.departments).length?c.state.departments:c.state.users.filter(item=>array(item.roles).includes('representative')).map(item=>item.department)).filter(value=>typeof value==='string'&&value))].map(value=>({value,label:value}));
 function open(c,config){openDialog({...config,userId:c.user.id,baseRevision:c.state.revision,getRevision:()=>c.state.revision});}
 function openIssue(c,issueId,config){open(c,{...config,onSaved:()=>c.focusIssue(issueId)});}
@@ -130,6 +132,7 @@ function issueFields(c,issue){
   return [text('title','问题标题',{required:true,full:true}),long('description','问题描述与事实依据',{required:true}),long('impact','影响与待决定事项',{required:true}),select('scope','影响范围',[{value:'department',label:'部门内'},{value:'cross_department',label:'跨部门'},{value:'policy',label:'涉及制度决定'}],{required:true}),checks('affectedDepartments','受影响部门',departments(c)),checks('materialIds','关联材料快照',materialChoices(c)),checks('opinionIds','引用已提交意见',c.state.opinions.filter(item=>item.status==='submitted').map(item=>({value:item.id,label:`${c.userName(item.authorId)}：${item.text.slice(0,100)}`}))),...assignment];
 }
 export async function runAction(action,id,c){
+  if(await runJointAction(action,id,c))return;
   const walkAction=/^(create|edit|remove)-walk-(step|relation)$/.exec(action);
   if(walkAction){openWalkElement(c,walkAction[2],walkAction[1]);return;}
   const material=c.state.materials.find(item=>item.id===id);
@@ -155,13 +158,13 @@ export async function runAction(action,id,c){
     const existing=batch||{},occupied=new Set(c.state.batches.filter(item=>item.id!==existing.id).flatMap(item=>item.materialIds||[]));
     const metadata=new Map(c.state.materials.map(item=>[item.id,item]));
     const matchesTheme=item=>metadata.get(item.value).themeId===batch?.themeId;
-    const available=materialChoices(c).filter(item=>!occupied.has(item.value))
+    const available=materialChoices(c).filter(item=>!occupied.has(item.value)&&(isCurrentMaterial(c.state,item.value)||array(existing.materialIds).includes(item.value)))
       .sort((a,b)=>Number(matchesTheme(b))-Number(matchesTheme(a)))
       .map(item=>{
         const material=metadata.get(item.value);
-        return {...item,label:`${item.label} · ${material.status==='confirmed'?'已确认':'待代表确认'} · ${c.themeName(material.themeId)}`};
+        return {...item,label:`${item.label} · ${material.status==='confirmed'?'已确认':'待代表确认'} · ${c.themeName(material.themeId)}${isCurrentMaterial(c.state,material.id)?'':' · 历史快照（原选材保留）'}`};
       });
-    open(c,{key:`batch:${id||'new'}`,title:batch?'编辑评审批次计划':'创建评审批次',description:'主讲、记录员和交接部门均由本计划明确选择。冻结前可调整；冻结后参与者与材料清单不可修改。',values:{...existing},fields:[text('title','批次名称',{required:true,full:true}),...(!batch?[select('themeId','评审主题',choices(c.state.themes),{required:true,full:true})]:[]),checks('materialIds','选入材料快照',available,{help:'只列出尚未分入其他主批次的材料。冻结要求每份材料都已确认，且主题与批次一致。'}),checks('memberIds','参与演练身份',userChoices(c),{help:'参与者均须能够读取本批次全部评审材料；请包含主讲、记录员和各交接部门代表。'}),select('leadId','主讲 / 主持',userChoices(c)),select('recorderId','记录员',userChoices(c,user=>array(user.roles).includes('recorder'))),checks('requiredDepartments','必须反馈的交接部门',departments(c),{help:'走查完成前，所有明确选中的部门均须对该材料快照留下反馈。'})],submit:'保存批次计划',onSubmit:async(values,revision)=>{await c.command(batch?'batch.update':'batch.create',{...(batch?{batchId:id}:{}),...values},revision);c.toast('批次计划已保存。');}});return;
+    open(c,{key:`batch:${id||'new'}`,title:batch?'编辑评审批次计划':'创建评审批次',description:'主讲、记录员和交接部门均由本计划明确选择。冻结前可调整；冻结后参与者与材料清单不可修改。',values:{...existing},fields:[text('title','批次名称',{required:true,full:true}),...(!batch?[select('themeId','评审主题',choices(c.state.themes),{required:true,full:true})]:[]),checks('materialIds','选入材料快照',available,{help:'新增选材只列本轮尚未分入其他主批次的材料；既有历史选材原样保留。冻结要求每份材料都已确认，且主题与批次一致。'}),checks('memberIds','参与演练身份',userChoices(c),{help:'参与者均须能够读取本批次全部评审材料；请包含主讲、记录员和各交接部门代表。'}),select('leadId','主讲 / 主持',userChoices(c)),select('recorderId','记录员',userChoices(c,user=>array(user.roles).includes('recorder'))),checks('requiredDepartments','必须反馈的交接部门',departments(c),{help:'走查完成前，所有明确选中的部门均须对该材料快照留下反馈。'})],submit:'保存批次计划',onSubmit:async(values,revision)=>{await c.command(batch?'batch.update':'batch.create',{...(batch?{batchId:id}:{}),...values},revision);c.toast('批次计划已保存。');}});return;
   }
   if(action==='freeze-batch'){
     if(batchFreezeBlockers(batch,c.state).length){c.render();c.toast('冻结前还有待办理事项，请核对批次卡片。');return;}

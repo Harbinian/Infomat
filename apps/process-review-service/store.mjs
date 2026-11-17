@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { createInitialState, ReviewError } from './domain.mjs';
+import { validateJointState } from './joint-review.mjs';
 
 export const defaultDataDir = fileURLToPath(new URL('../../artifacts/process-review-service/local/', import.meta.url));
 
@@ -32,6 +33,7 @@ export class Store {
     if (state.mode !== 'local-isolated' || !Number.isSafeInteger(state.revision) || state.revision < 0 || !['themes', 'users', 'departments', 'materials', 'batches', 'opinions', 'issues', 'observations'].every(key => Array.isArray(state[key]))) {
       throw new ReviewError('本地存储结构不完整，已停止写入并保留原数据', 'INVALID_STORAGE', 500);
     }
+    validateJointState(state);
     state.audit = this.db.prepare('SELECT * FROM audit ORDER BY sequence').all().map(row => ({ id: row.id, sequence: row.sequence, actorId: row.actor_id, time: row.time, operation: row.operation, detail: JSON.parse(row.detail) }));
     return state;
   }
